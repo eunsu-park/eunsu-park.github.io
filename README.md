@@ -1,84 +1,92 @@
-<a href="https://jekyll-themes.com">
-<img src="https://img.shields.io/badge/featured%20on-JT-red.svg" height="20" alt="Jekyll Themes Shield" >
-</a>
+# 개인 이력서 웹사이트
 
-# Orbit
-> This theme is designed by Xiaoying Riley at [3rd Wave Media](http://themes.3rdwavemedia.com/).
-> Visit her [website](http://themes.3rdwavemedia.com/) for more themes.
+Jekyll 기반 이력서 웹사이트입니다. GitHub Pages를 통해 자동으로 호스팅됩니다.
 
-I have made this into a Jekyll Theme. Checkout the live demo [here](https://online-cv.webjeda.com).
+**라이브 사이트**: [www.eunsu.me](https://www.eunsu.me)
 
-<table>
-  <tr>
-    <th>Desktop</th>
-    <th>Mobile</th>
-  </tr>
-  <tr>
-    <td>
-        <img src="https://online-cv.webjeda.com/assets/images/desktop.png?raw=true" width="600"/>
-    </td>
-    <td>
-        <img src="https://online-cv.webjeda.com/assets/images/mobile.png?raw=true" width="250"/>
-    </td>
-  </tr>
-</table>
+## 빠른 시작: 내용 수정하기
 
-## Installation
+각 페이지의 내용은 `_data/` 폴더의 YAML 파일에서 관리됩니다:
 
-* [Fork](https://github.com/sharu725/online-cv/fork) the repository
-* Go to settings and set master branch as Github Pages source.
-* Your new site should be ready at `https://<username>.github.io/online-cv/`
-* Printable version of the site can be found at `https://<username>.github.io/online-cv/print`. Use a third party link https://pdflayer.com/, https://www.web2pdfconvert.com/ etc to get the printable PDF.
+| 파일 | 설명 |
+|------|------|
+| `_data/data.yml` | 메인 CV (프로필, 학력, 경력 등) |
+| `_data/publications.yml` | 전체 논문 목록 |
+| `_data/portfolio.yml` | 연구 자료/포트폴리오 |
+| `_data/share.yml` | 공유 파일 목록 |
 
-Change all the details from one place: ``_data/data.yml``
+GitHub에서 바로 수정하거나, 로컬에서 수정 후 push하면 자동으로 반영됩니다.
 
-## To preview/edit locally with docker
+## 페이지 구조
 
-```sh
-docker-compose up
+| URL | 설명 |
+|-----|------|
+| `/` | 메인 CV 페이지 |
+| `/publications` | 전체 논문 목록 |
+| `/portfolio` | 연구 자료/포트폴리오 |
+| `/share` | 외부 공유용 파일 |
+| `/print` | 인쇄용 페이지 |
+
+## 메인 CV 수정 항목 (`_data/data.yml`)
+
+| 섹션 | 설명 |
+|------|------|
+| `sidebar` | 프로필 사진, 연락처, 언어, 관심분야 |
+| `career-profile` | 간략한 자기소개 |
+| `education` | 학력 |
+| `experiences` | 경력 |
+| `publications` | 논문 (제1저자, 요약) |
+| `projects` | 연구 과제 (PI) |
+| `patents` | 특허 |
+
+## 프로필 사진 변경
+
+1. 새 이미지를 `assets/images/` 폴더에 저장
+2. `_data/data.yml`의 `avatar` 값을 새 파일명으로 변경
+
+## 테마 색상 변경
+
+`_config.yml` 파일에서 `theme_skin` 값 변경:
+
+```yaml
+theme_skin: ceramic   # 선택: blue, turquoise, green, berry, orange, ceramic
 ```
 
-*docker-compose.yml* file is used to create a container that is reachable under http://localhost:4000.
-Changes *_data/data.yml* will be visible after a while.
+## 로컬에서 미리보기 (선택사항)
 
-### Local machine
+변경사항을 GitHub에 올리기 전에 로컬에서 확인하고 싶다면:
 
-* Get the repo into your machine 
 ```bash
-git clone https://github.com/sharu725/online-cv.git
-```
-* Install required ruby gems
-```bash
+# Ruby가 설치되어 있어야 합니다
 bundle install
-```
-* Serve the site locally
-```bash
 bundle exec jekyll serve
 ```
-* Navigate to `http://localhost:4000`
 
+브라우저에서 `http://localhost:4000` 접속
 
-## Skins
+## 폴더 구조
 
-There are 6 color schemes available:
+```
+├── _data/
+│   ├── data.yml           # ⭐ 메인 CV 내용
+│   ├── publications.yml   # 논문 목록
+│   ├── portfolio.yml      # 포트폴리오 항목
+│   └── share.yml          # 공유 파일 목록
+├── _config.yml            # 사이트 설정 (테마, URL 등)
+├── _includes/             # HTML 템플릿 조각
+├── _layouts/              # 페이지 레이아웃
+├── _sass/                 # 스타일시트
+├── assets/                # 이미지, CSS, JS
+├── _archive/              # 미사용 파일 보관
+├── index.html             # 메인 페이지
+├── publications.html      # 논문 페이지
+├── portfolio.html         # 포트폴리오 페이지
+├── share.html             # 공유 페이지
+└── print.html             # 인쇄용 페이지
+```
 
-| Blue | Turquoise | Green |
-|---------|---------|---------|
-| <img src="https://online-cv.webjeda.com/assets/images/blue.jpg" width="300"/> | <img src="https://online-cv.webjeda.com/assets/images/turquoise.jpg" width="300"/> | <img src="https://online-cv.webjeda.com/assets/images/green.jpg" width="300"/> |
+## 원본 테마
 
-| Berry | Orange | Ceramic |
-|---------|---------|---------|
-| <img src="https://online-cv.webjeda.com/assets/images/berry.jpg" width="300"/> | <img src="https://online-cv.webjeda.com/assets/images/orange.jpg" width="300"/> | <img src="https://online-cv.webjeda.com/assets/images/ceramic.jpg" width="300"/> |
-
-## Credits
-
-Thanks to [Nelson Estevão](https://github.com/nelsonmestevao) for all the [contributions](https://github.com/sharu725/online-cv/commits?author=nelsonmestevao).
-
-Thanks to [t-h-e(sfrost)](https://github.com/t-h-e) for all the [contributions](https://github.com/sharu725/online-cv/commits?author=t-h-e).
-
-Check out for more themes: [**Jekyll Themes**](http://jekyll-themes.com).
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=sharu725/online-cv&type=Date)](https://star-history.com/#sharu725/online-cv&Date)
-
+이 사이트는 [Orbit](https://github.com/sharu725/online-cv) 테마를 기반으로 합니다.
+- 디자인: [Xiaoying Riley](http://themes.3rdwavemedia.com/)
+- Jekyll 포팅: [sharu725](https://github.com/sharu725)

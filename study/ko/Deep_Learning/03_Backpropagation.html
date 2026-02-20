@@ -1,0 +1,506 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>03. 역전파 이해 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Deep_Learning/">Deep Learning</a>
+    <span class="separator">/</span>
+    <span class="current">03. 역전파 이해</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>03. 역전파 이해</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Deep_Learning/02_Neural_Network_Basics.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">02. 신경망 기초</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Deep_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Deep_Learning/04_Training_Techniques.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">04. 학습 기법</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#1">1. 역전파란?</a><ul>
+<li><a href="#_2">핵심 아이디어</a></li>
+</ul>
+</li>
+<li><a href="#2-chain-rule">2. 체인 룰 (Chain Rule)</a><ul>
+<li><a href="#_3">수식</a></li>
+<li><a href="#_4">예시</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 단일 뉴런의 역전파</a><ul>
+<li><a href="#_5">순전파</a></li>
+<li><a href="#_6">역전파 (기울기 계산)</a></li>
+</ul>
+</li>
+<li><a href="#4">4. 손실 함수</a><ul>
+<li><a href="#mse-mean-squared-error">MSE (Mean Squared Error)</a></li>
+<li><a href="#cross-entropy">Cross-Entropy (분류)</a></li>
+<li><a href="#softmax-cross-entropy">Softmax + Cross-Entropy 결합</a></li>
+</ul>
+</li>
+<li><a href="#5-mlp">5. MLP 역전파</a><ul>
+<li><a href="#_7">구조</a></li>
+<li><a href="#_8">순전파</a></li>
+<li><a href="#_9">역전파</a></li>
+</ul>
+</li>
+<li><a href="#6-numpy">6. NumPy 구현 핵심</a></li>
+<li><a href="#7-pytorch">7. PyTorch의 자동 미분</a><ul>
+<li><a href="#_10">계산 그래프</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 기울기 소실/폭발 문제</a><ul>
+<li><a href="#vanishing-gradient">기울기 소실 (Vanishing Gradient)</a></li>
+<li><a href="#exploding-gradient">기울기 폭발 (Exploding Gradient)</a></li>
+</ul>
+</li>
+<li><a href="#9">9. 수치 기울기 검증</a></li>
+<li><a href="#_11">정리</a><ul>
+<li><a href="#_12">역전파의 핵심</a></li>
+<li><a href="#numpy">NumPy로 배우는 것</a></li>
+<li><a href="#pytorch">PyTorch로 넘어가면</a></li>
+</ul>
+</li>
+<li><a href="#_13">다음 단계</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="03">03. 역전파 이해<a class="header-link" href="#03" title="Permanent link">&para;</a></h1>
+<p><a href="./02_Neural_Network_Basics.md">이전: 신경망 기초</a> | <a href="./04_Training_Techniques.md">다음: 훈련 기법</a></p>
+<hr />
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>역전파(Backpropagation) 알고리즘의 원리 이해</li>
+<li>체인 룰(Chain Rule)을 이용한 기울기 계산</li>
+<li>NumPy로 역전파 직접 구현</li>
+</ul>
+<hr />
+<h2 id="1">1. 역전파란?<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<p>역전파는 신경망의 가중치를 학습하기 위한 알고리즘입니다.</p>
+<div class="highlight"><pre><span></span><code>순전파 (Forward):  입력 ──▶ 은닉층 ──▶ 출력 ──▶ 손실
+역전파 (Backward): 입력 ◀── 은닉층 ◀── 출력 ◀── 손실
+</code></pre></div>
+
+<h3 id="_2">핵심 아이디어<a class="header-link" href="#_2" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>순전파</strong>: 입력에서 출력까지 값 계산</li>
+<li><strong>손실 계산</strong>: 예측과 정답의 차이</li>
+<li><strong>역전파</strong>: 손실에서 입력 방향으로 기울기 전파</li>
+<li><strong>가중치 업데이트</strong>: 기울기를 이용해 가중치 조정</li>
+</ol>
+<hr />
+<h2 id="2-chain-rule">2. 체인 룰 (Chain Rule)<a class="header-link" href="#2-chain-rule" title="Permanent link">&para;</a></h2>
+<p>합성 함수의 미분 법칙입니다.</p>
+<h3 id="_3">수식<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>y = f(g(x))
+
+dy/dx = (dy/dg) × (dg/dx)
+</code></pre></div>
+
+<h3 id="_4">예시<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>z = x²
+y = sin(z)
+L = y²
+
+dL/dx = (dL/dy) × (dy/dz) × (dz/dx)
+      = 2y × cos(z) × 2x
+</code></pre></div>
+
+<hr />
+<h2 id="3">3. 단일 뉴런의 역전파<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="_5">순전파<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">z</span> <span class="o">=</span> <span class="n">w</span><span class="o">*</span><span class="n">x</span> <span class="o">+</span> <span class="n">b</span>      <span class="c1"># 선형 변환</span>
+<span class="n">a</span> <span class="o">=</span> <span class="n">sigmoid</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>    <span class="c1"># 활성화</span>
+<span class="n">L</span> <span class="o">=</span> <span class="p">(</span><span class="n">a</span> <span class="o">-</span> <span class="n">y</span><span class="p">)</span><span class="err">²</span>     <span class="c1"># 손실 (MSE)</span>
+</code></pre></div>
+
+<h3 id="_6">역전파 (기울기 계산)<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">dL</span><span class="o">/</span><span class="n">da</span> <span class="o">=</span> <span class="mi">2</span><span class="p">(</span><span class="n">a</span> <span class="o">-</span> <span class="n">y</span><span class="p">)</span>                    <span class="c1"># 손실의 활성화에 대한 기울기</span>
+<span class="n">da</span><span class="o">/</span><span class="n">dz</span> <span class="o">=</span> <span class="n">sigmoid</span><span class="p">(</span><span class="n">z</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">sigmoid</span><span class="p">(</span><span class="n">z</span><span class="p">))</span>  <span class="c1"># 시그모이드 미분</span>
+<span class="n">dz</span><span class="o">/</span><span class="n">dw</span> <span class="o">=</span> <span class="n">x</span>                           <span class="c1"># 선형 변환의 가중치에 대한 기울기</span>
+<span class="n">dz</span><span class="o">/</span><span class="n">db</span> <span class="o">=</span> <span class="mi">1</span>                           <span class="c1"># 선형 변환의 편향에 대한 기울기</span>
+
+<span class="c1"># 체인 룰 적용</span>
+<span class="n">dL</span><span class="o">/</span><span class="n">dw</span> <span class="o">=</span> <span class="p">(</span><span class="n">dL</span><span class="o">/</span><span class="n">da</span><span class="p">)</span> <span class="err">×</span> <span class="p">(</span><span class="n">da</span><span class="o">/</span><span class="n">dz</span><span class="p">)</span> <span class="err">×</span> <span class="p">(</span><span class="n">dz</span><span class="o">/</span><span class="n">dw</span><span class="p">)</span>
+<span class="n">dL</span><span class="o">/</span><span class="n">db</span> <span class="o">=</span> <span class="p">(</span><span class="n">dL</span><span class="o">/</span><span class="n">da</span><span class="p">)</span> <span class="err">×</span> <span class="p">(</span><span class="n">da</span><span class="o">/</span><span class="n">dz</span><span class="p">)</span> <span class="err">×</span> <span class="p">(</span><span class="n">dz</span><span class="o">/</span><span class="n">db</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4">4. 손실 함수<a class="header-link" href="#4" title="Permanent link">&para;</a></h2>
+<h3 id="mse-mean-squared-error">MSE (Mean Squared Error)<a class="header-link" href="#mse-mean-squared-error" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">L</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="n">n</span><span class="p">)</span> <span class="err">×</span> <span class="n">Σ</span><span class="p">(</span><span class="n">y_pred</span> <span class="o">-</span> <span class="n">y_true</span><span class="p">)</span><span class="err">²</span>
+<span class="n">dL</span><span class="o">/</span><span class="n">dy_pred</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="o">/</span><span class="n">n</span><span class="p">)</span> <span class="err">×</span> <span class="p">(</span><span class="n">y_pred</span> <span class="o">-</span> <span class="n">y_true</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="cross-entropy">Cross-Entropy (분류)<a class="header-link" href="#cross-entropy" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">L</span> <span class="o">=</span> <span class="o">-</span><span class="n">Σ</span> <span class="n">y_true</span> <span class="err">×</span> <span class="n">log</span><span class="p">(</span><span class="n">y_pred</span><span class="p">)</span>
+<span class="n">dL</span><span class="o">/</span><span class="n">dy_pred</span> <span class="o">=</span> <span class="o">-</span><span class="n">y_true</span> <span class="o">/</span> <span class="n">y_pred</span>  <span class="c1"># softmax와 결합 시 간단해짐</span>
+</code></pre></div>
+
+<h3 id="softmax-cross-entropy">Softmax + Cross-Entropy 결합<a class="header-link" href="#softmax-cross-entropy" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 놀라운 결과: 매우 간단해짐</span>
+<span class="n">dL</span><span class="o">/</span><span class="n">dz</span> <span class="o">=</span> <span class="n">y_pred</span> <span class="o">-</span> <span class="n">y_true</span>  <span class="c1"># softmax 입력에 대한 기울기</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-mlp">5. MLP 역전파<a class="header-link" href="#5-mlp" title="Permanent link">&para;</a></h2>
+<p>2층 MLP의 역전파 과정입니다.</p>
+<h3 id="_7">구조<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>입력(x) → [W1, b1] → ReLU → [W2, b2] → 출력(y)
+</code></pre></div>
+
+<h3 id="_8">순전파<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">z1</span> <span class="o">=</span> <span class="n">x</span> <span class="o">@</span> <span class="n">W1</span> <span class="o">+</span> <span class="n">b1</span>
+<span class="n">a1</span> <span class="o">=</span> <span class="n">relu</span><span class="p">(</span><span class="n">z1</span><span class="p">)</span>
+<span class="n">z2</span> <span class="o">=</span> <span class="n">a1</span> <span class="o">@</span> <span class="n">W2</span> <span class="o">+</span> <span class="n">b2</span>
+<span class="n">y_pred</span> <span class="o">=</span> <span class="n">z2</span>  <span class="c1"># 또는 softmax(z2)</span>
+</code></pre></div>
+
+<h3 id="_9">역전파<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 출력층</span>
+<span class="n">dL</span><span class="o">/</span><span class="n">dz2</span> <span class="o">=</span> <span class="n">y_pred</span> <span class="o">-</span> <span class="n">y_true</span>  <span class="c1"># (softmax + CE의 경우)</span>
+<span class="n">dL</span><span class="o">/</span><span class="n">dW2</span> <span class="o">=</span> <span class="n">a1</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">dL</span><span class="o">/</span><span class="n">dz2</span>
+<span class="n">dL</span><span class="o">/</span><span class="n">db2</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">dL</span><span class="o">/</span><span class="n">dz2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># 은닉층</span>
+<span class="n">dL</span><span class="o">/</span><span class="n">da1</span> <span class="o">=</span> <span class="n">dL</span><span class="o">/</span><span class="n">dz2</span> <span class="o">@</span> <span class="n">W2</span><span class="o">.</span><span class="n">T</span>
+<span class="n">dL</span><span class="o">/</span><span class="n">dz1</span> <span class="o">=</span> <span class="n">dL</span><span class="o">/</span><span class="n">da1</span> <span class="o">*</span> <span class="n">relu_derivative</span><span class="p">(</span><span class="n">z1</span><span class="p">)</span>
+<span class="n">dL</span><span class="o">/</span><span class="n">dW1</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">dL</span><span class="o">/</span><span class="n">dz1</span>
+<span class="n">dL</span><span class="o">/</span><span class="n">db1</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">dL</span><span class="o">/</span><span class="n">dz1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-numpy">6. NumPy 구현 핵심<a class="header-link" href="#6-numpy" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">MLP</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">cache</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;역전파: 기울기 계산&quot;&quot;&quot;</span>
+        <span class="n">a1</span><span class="p">,</span> <span class="n">z1</span> <span class="o">=</span> <span class="n">cache</span>
+
+        <span class="c1"># 출력층 기울기</span>
+        <span class="n">dz2</span> <span class="o">=</span> <span class="n">y_pred</span> <span class="o">-</span> <span class="n">y_true</span>
+        <span class="n">dW2</span> <span class="o">=</span> <span class="n">a1</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">dz2</span>
+        <span class="n">db2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dz2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># 은닉층 기울기 (체인 룰)</span>
+        <span class="n">da1</span> <span class="o">=</span> <span class="n">dz2</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">W2</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">dz1</span> <span class="o">=</span> <span class="n">da1</span> <span class="o">*</span> <span class="p">(</span><span class="n">z1</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># ReLU 미분</span>
+        <span class="n">dW1</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">dz1</span>
+        <span class="n">db1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dz1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;W1&#39;</span><span class="p">:</span> <span class="n">dW1</span><span class="p">,</span> <span class="s1">&#39;b1&#39;</span><span class="p">:</span> <span class="n">db1</span><span class="p">,</span> <span class="s1">&#39;W2&#39;</span><span class="p">:</span> <span class="n">dW2</span><span class="p">,</span> <span class="s1">&#39;b2&#39;</span><span class="p">:</span> <span class="n">db2</span><span class="p">}</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7-pytorch">7. PyTorch의 자동 미분<a class="header-link" href="#7-pytorch" title="Permanent link">&para;</a></h2>
+<p>PyTorch에서는 이 모든 과정이 자동입니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 순전파</span>
+<span class="n">y_pred</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">criterion</span><span class="p">(</span><span class="n">y_pred</span><span class="p">,</span> <span class="n">y_true</span><span class="p">)</span>
+
+<span class="c1"># 역전파 (자동!)</span>
+<span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+
+<span class="c1"># 기울기 접근</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fc1</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">grad</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="_10">계산 그래프<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">2.0</span><span class="p">],</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">x</span> <span class="o">**</span> <span class="mi">2</span>
+<span class="n">z</span> <span class="o">=</span> <span class="n">y</span> <span class="o">*</span> <span class="mi">3</span>
+<span class="n">z</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+
+<span class="c1"># x.grad = dz/dx = dz/dy × dy/dx = 3 × 2x = 12</span>
+</code></pre></div>
+
+<hr />
+<h2 id="8">8. 기울기 소실/폭발 문제<a class="header-link" href="#8" title="Permanent link">&para;</a></h2>
+<h3 id="vanishing-gradient">기울기 소실 (Vanishing Gradient)<a class="header-link" href="#vanishing-gradient" title="Permanent link">&para;</a></h3>
+<ul>
+<li>원인: 시그모이드/tanh의 미분이 0에 가까움</li>
+<li>해결: ReLU, 잔차 연결(Residual Connection)</li>
+</ul>
+<h3 id="exploding-gradient">기울기 폭발 (Exploding Gradient)<a class="header-link" href="#exploding-gradient" title="Permanent link">&para;</a></h3>
+<ul>
+<li>원인: 깊은 네트워크에서 기울기 누적</li>
+<li>해결: Gradient Clipping, Batch Normalization</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="c1"># PyTorch에서 Gradient Clipping</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">clip_grad_norm_</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">max_norm</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="9">9. 수치 기울기 검증<a class="header-link" href="#9" title="Permanent link">&para;</a></h2>
+<p>역전파 구현이 올바른지 확인하는 방법입니다.</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">numerical_gradient</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">h</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;수치 미분으로 기울기 계산&quot;&quot;&quot;</span>
+    <span class="n">grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">):</span>
+        <span class="n">x_plus</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">x_plus</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="n">h</span>
+        <span class="n">x_minus</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">x_minus</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-=</span> <span class="n">h</span>
+        <span class="n">grad</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="n">x_plus</span><span class="p">)</span> <span class="o">-</span> <span class="n">f</span><span class="p">(</span><span class="n">x_minus</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">h</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">grad</span>
+
+<span class="c1"># 검증</span>
+<span class="n">analytical_grad</span> <span class="o">=</span> <span class="n">backward</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>  <span class="c1"># 해석적 기울기</span>
+<span class="n">numerical_grad</span> <span class="o">=</span> <span class="n">numerical_gradient</span><span class="p">(</span><span class="n">loss_fn</span><span class="p">,</span> <span class="n">weights</span><span class="p">)</span>
+<span class="n">diff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">analytical_grad</span> <span class="o">-</span> <span class="n">numerical_grad</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">diff</span> <span class="o">&lt;</span> <span class="mf">1e-5</span><span class="p">,</span> <span class="s2">&quot;Gradient check failed!&quot;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_11">정리<a class="header-link" href="#_11" title="Permanent link">&para;</a></h2>
+<h3 id="_12">역전파의 핵심<a class="header-link" href="#_12" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>체인 룰</strong>: 합성 함수 미분의 핵심</li>
+<li><strong>국소적 계산</strong>: 각 층에서 독립적으로 기울기 계산</li>
+<li><strong>기울기 전파</strong>: 출력에서 입력 방향으로 전파</li>
+</ol>
+<h3 id="numpy">NumPy로 배우는 것<a class="header-link" href="#numpy" title="Permanent link">&para;</a></h3>
+<ul>
+<li>행렬의 전치와 곱셈의 의미</li>
+<li>활성화 함수 미분의 역할</li>
+<li>배치 처리에서의 기울기 합산</li>
+</ul>
+<h3 id="pytorch">PyTorch로 넘어가면<a class="header-link" href="#pytorch" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>loss.backward()</code> 한 줄로 모든 기울기 계산</li>
+<li>계산 그래프 자동 구성</li>
+<li>GPU 가속</li>
+</ul>
+<hr />
+<h2 id="_13">다음 단계<a class="header-link" href="#_13" title="Permanent link">&para;</a></h2>
+<p><a href="./04_Training_Techniques.md">04_Training_Techniques.md</a>에서 기울기를 이용한 가중치 업데이트 방법을 학습합니다.</p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Deep_Learning/02_Neural_Network_Basics.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">02. 신경망 기초</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Deep_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Deep_Learning/04_Training_Techniques.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">04. 학습 기법</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

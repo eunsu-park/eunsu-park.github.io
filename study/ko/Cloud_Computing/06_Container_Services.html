@@ -1,0 +1,1140 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>컨테이너 서비스 (ECS/EKS/Fargate vs GKE/Cloud Run) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Cloud_Computing/">Cloud Computing</a>
+    <span class="separator">/</span>
+    <span class="current">컨테이너 서비스 (ECS/EKS/Fargate vs GKE/Cloud Run)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>컨테이너 서비스 (ECS/EKS/Fargate vs GKE/Cloud Run)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Cloud_Computing/05_Serverless_Functions.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">서버리스 함수 (Lambda / Cloud Functions)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Cloud_Computing/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Cloud_Computing/07_Object_Storage.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">객체 스토리지 (S3 / Cloud Storage)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#1">1. 컨테이너 개요</a><ul>
+<li><a href="#11-vs-vm">1.1 컨테이너 vs VM</a></li>
+<li><a href="#12">1.2 서비스 비교</a></li>
+</ul>
+</li>
+<li><a href="#2">2. 컨테이너 레지스트리</a><ul>
+<li><a href="#21-aws-ecr-elastic-container-registry">2.1 AWS ECR (Elastic Container Registry)</a></li>
+<li><a href="#22-gcp-artifact-registry">2.2 GCP Artifact Registry</a></li>
+</ul>
+</li>
+<li><a href="#3-aws-ecs-elastic-container-service">3. AWS ECS (Elastic Container Service)</a><ul>
+<li><a href="#31-ecs">3.1 ECS 개념</a></li>
+<li><a href="#32-ecs">3.2 ECS 클러스터 생성</a></li>
+<li><a href="#33-ecs-service-connect">3.3 ECS Service Connect</a></li>
+<li><a href="#34-ecs-exec">3.4 ECS Exec (컨테이너 디버깅)</a></li>
+</ul>
+</li>
+<li><a href="#4-aws-eks-elastic-kubernetes-service">4. AWS EKS (Elastic Kubernetes Service)</a><ul>
+<li><a href="#41-eks">4.1 EKS 클러스터 생성</a></li>
+<li><a href="#42-eks-auto-mode">4.2 EKS Auto Mode</a></li>
+<li><a href="#43">4.3 애플리케이션 배포</a></li>
+</ul>
+</li>
+<li><a href="#5-gcp-gke-google-kubernetes-engine">5. GCP GKE (Google Kubernetes Engine)</a><ul>
+<li><a href="#51-gke">5.1 GKE 클러스터 생성</a></li>
+<li><a href="#52-gke-autopilot">5.2 GKE Autopilot 심화</a></li>
+<li><a href="#53">5.3 애플리케이션 배포</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 서버리스 컨테이너</a><ul>
+<li><a href="#61-aws-fargate">6.1 AWS Fargate</a></li>
+<li><a href="#62-gcp-cloud-run">6.2 GCP Cloud Run</a></li>
+<li><a href="#63-cloud-run-vs-app-runner">6.3 Cloud Run vs App Runner 비교</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 서비스 선택 가이드</a><ul>
+<li><a href="#71">7.1 결정 트리</a></li>
+<li><a href="#72">7.2 사용 사례별 권장</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 과금 비교</a><ul>
+<li><a href="#81-ecseks-vs-gke">8.1 ECS/EKS vs GKE</a></li>
+<li><a href="#82-cloud-run">8.2 Cloud Run 과금</a></li>
+</ul>
+</li>
+<li><a href="#9">9. 실습: 간단한 웹앱 배포</a><ul>
+<li><a href="#91-dockerfile">9.1 Dockerfile 준비</a></li>
+<li><a href="#92-gcp-cloud-run">9.2 GCP Cloud Run 배포</a></li>
+<li><a href="#93-aws-app-runner">9.3 AWS App Runner 배포</a></li>
+</ul>
+</li>
+<li><a href="#10">10. 다음 단계</a></li>
+<li><a href="#_1">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="ecseksfargate-vs-gkecloud-run">컨테이너 서비스 (ECS/EKS/Fargate vs GKE/Cloud Run)<a class="header-link" href="#ecseksfargate-vs-gkecloud-run" title="Permanent link">&para;</a></h1>
+<h2 id="1">1. 컨테이너 개요<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="11-vs-vm">1.1 컨테이너 vs VM<a class="header-link" href="#11-vs-vm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                     가상 머신 (VM)                          │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐                        │
+│  │  App A  │ │  App B  │ │  App C  │                        │
+│  ├─────────┤ ├─────────┤ ├─────────┤                        │
+│  │Guest OS │ │Guest OS │ │Guest OS │  ← 각 VM마다 OS        │
+│  └─────────┘ └─────────┘ └─────────┘                        │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │                    Hypervisor                           ││
+│  └─────────────────────────────────────────────────────────┘│
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │                    Host OS                              ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                       컨테이너                              │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐                        │
+│  │  App A  │ │  App B  │ │  App C  │                        │
+│  ├─────────┤ ├─────────┤ ├─────────┤                        │
+│  │  Libs   │ │  Libs   │ │  Libs   │  ← 라이브러리만        │
+│  └─────────┘ └─────────┘ └─────────┘                        │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │                  Container Runtime                      ││
+│  └─────────────────────────────────────────────────────────┘│
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │                    Host OS                              ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="12">1.2 서비스 비교<a class="header-link" href="#12" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>AWS</th>
+<th>GCP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>컨테이너 레지스트리</strong></td>
+<td>ECR</td>
+<td>Artifact Registry</td>
+</tr>
+<tr>
+<td><strong>컨테이너 오케스트레이션</strong></td>
+<td>ECS</td>
+<td>-</td>
+</tr>
+<tr>
+<td><strong>Kubernetes 관리형</strong></td>
+<td>EKS</td>
+<td>GKE</td>
+</tr>
+<tr>
+<td><strong>서버리스 컨테이너</strong></td>
+<td>Fargate</td>
+<td>Cloud Run</td>
+</tr>
+<tr>
+<td><strong>App Platform</strong></td>
+<td>App Runner</td>
+<td>Cloud Run</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2">2. 컨테이너 레지스트리<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="21-aws-ecr-elastic-container-registry">2.1 AWS ECR (Elastic Container Registry)<a class="header-link" href="#21-aws-ecr-elastic-container-registry" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. ECR 레포지토리 생성</span>
+aws<span class="w"> </span>ecr<span class="w"> </span>create-repository<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--repository-name<span class="w"> </span>my-app<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--region<span class="w"> </span>ap-northeast-2
+
+<span class="c1"># 2. Docker 로그인</span>
+aws<span class="w"> </span>ecr<span class="w"> </span>get-login-password<span class="w"> </span>--region<span class="w"> </span>ap-northeast-2<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>docker<span class="w"> </span>login<span class="w"> </span>--username<span class="w"> </span>AWS<span class="w"> </span>--password-stdin<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="m">123456789012</span>.dkr.ecr.ap-northeast-2.amazonaws.com
+
+<span class="c1"># 3. 이미지 빌드 및 태그</span>
+docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>my-app<span class="w"> </span>.
+docker<span class="w"> </span>tag<span class="w"> </span>my-app:latest<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="m">123456789012</span>.dkr.ecr.ap-northeast-2.amazonaws.com/my-app:latest
+
+<span class="c1"># 4. 이미지 푸시</span>
+docker<span class="w"> </span>push<span class="w"> </span><span class="m">123456789012</span>.dkr.ecr.ap-northeast-2.amazonaws.com/my-app:latest
+
+<span class="c1"># 5. 이미지 목록 확인</span>
+aws<span class="w"> </span>ecr<span class="w"> </span>list-images<span class="w"> </span>--repository-name<span class="w"> </span>my-app
+</code></pre></div>
+
+<h3 id="22-gcp-artifact-registry">2.2 GCP Artifact Registry<a class="header-link" href="#22-gcp-artifact-registry" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. Artifact Registry API 활성화</span>
+gcloud<span class="w"> </span>services<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>artifactregistry.googleapis.com
+
+<span class="c1"># 2. 레포지토리 생성</span>
+gcloud<span class="w"> </span>artifacts<span class="w"> </span>repositories<span class="w"> </span>create<span class="w"> </span>my-repo<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--repository-format<span class="o">=</span>docker<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--location<span class="o">=</span>asia-northeast3<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--description<span class="o">=</span><span class="s2">&quot;My Docker repository&quot;</span>
+
+<span class="c1"># 3. Docker 인증 설정</span>
+gcloud<span class="w"> </span>auth<span class="w"> </span>configure-docker<span class="w"> </span>asia-northeast3-docker.pkg.dev
+
+<span class="c1"># 4. 이미지 빌드 및 태그</span>
+docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>my-app<span class="w"> </span>.
+docker<span class="w"> </span>tag<span class="w"> </span>my-app:latest<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>asia-northeast3-docker.pkg.dev/PROJECT_ID/my-repo/my-app:latest
+
+<span class="c1"># 5. 이미지 푸시</span>
+docker<span class="w"> </span>push<span class="w"> </span>asia-northeast3-docker.pkg.dev/PROJECT_ID/my-repo/my-app:latest
+
+<span class="c1"># 6. 이미지 목록 확인</span>
+gcloud<span class="w"> </span>artifacts<span class="w"> </span>docker<span class="w"> </span>images<span class="w"> </span>list<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>asia-northeast3-docker.pkg.dev/PROJECT_ID/my-repo
+</code></pre></div>
+
+<hr />
+<h2 id="3-aws-ecs-elastic-container-service">3. AWS ECS (Elastic Container Service)<a class="header-link" href="#3-aws-ecs-elastic-container-service" title="Permanent link">&para;</a></h2>
+<h3 id="31-ecs">3.1 ECS 개념<a class="header-link" href="#31-ecs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                        ECS Cluster                          │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │                      Service                            ││
+│  │  ┌───────────────┐  ┌───────────────┐                   ││
+│  │  │    Task       │  │    Task       │  ← 컨테이너 그룹   ││
+│  │  │ ┌───────────┐ │  │ ┌───────────┐ │                   ││
+│  │  │ │ Container │ │  │ │ Container │ │                   ││
+│  │  │ └───────────┘ │  │ └───────────┘ │                   ││
+│  │  └───────────────┘  └───────────────┘                   ││
+│  └─────────────────────────────────────────────────────────┘│
+│  ┌───────────────────┐  ┌───────────────────┐               │
+│  │ EC2 Instance      │  │ Fargate           │               │
+│  │ (자체 관리)       │  │ (서버리스)        │               │
+│  └───────────────────┘  └───────────────────┘               │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="32-ecs">3.2 ECS 클러스터 생성<a class="header-link" href="#32-ecs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. 클러스터 생성 (Fargate)</span>
+aws<span class="w"> </span>ecs<span class="w"> </span>create-cluster<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--cluster-name<span class="w"> </span>my-cluster<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--capacity-providers<span class="w"> </span>FARGATE<span class="w"> </span>FARGATE_SPOT
+
+<span class="c1"># 2. Task Definition 생성</span>
+<span class="c1"># task-definition.json</span>
+<span class="o">{</span>
+<span class="w">    </span><span class="s2">&quot;family&quot;</span>:<span class="w"> </span><span class="s2">&quot;my-task&quot;</span>,
+<span class="w">    </span><span class="s2">&quot;networkMode&quot;</span>:<span class="w"> </span><span class="s2">&quot;awsvpc&quot;</span>,
+<span class="w">    </span><span class="s2">&quot;requiresCompatibilities&quot;</span>:<span class="w"> </span><span class="o">[</span><span class="s2">&quot;FARGATE&quot;</span><span class="o">]</span>,
+<span class="w">    </span><span class="s2">&quot;cpu&quot;</span>:<span class="w"> </span><span class="s2">&quot;256&quot;</span>,
+<span class="w">    </span><span class="s2">&quot;memory&quot;</span>:<span class="w"> </span><span class="s2">&quot;512&quot;</span>,
+<span class="w">    </span><span class="s2">&quot;executionRoleArn&quot;</span>:<span class="w"> </span><span class="s2">&quot;arn:aws:iam::123456789012:role/ecsTaskExecutionRole&quot;</span>,
+<span class="w">    </span><span class="s2">&quot;containerDefinitions&quot;</span>:<span class="w"> </span><span class="o">[</span>
+<span class="w">        </span><span class="o">{</span>
+<span class="w">            </span><span class="s2">&quot;name&quot;</span>:<span class="w"> </span><span class="s2">&quot;my-container&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;image&quot;</span>:<span class="w"> </span><span class="s2">&quot;123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/my-app:latest&quot;</span>,
+<span class="w">            </span><span class="s2">&quot;essential&quot;</span>:<span class="w"> </span>true,
+<span class="w">            </span><span class="s2">&quot;portMappings&quot;</span>:<span class="w"> </span><span class="o">[</span>
+<span class="w">                </span><span class="o">{</span>
+<span class="w">                    </span><span class="s2">&quot;containerPort&quot;</span>:<span class="w"> </span><span class="m">80</span>,
+<span class="w">                    </span><span class="s2">&quot;protocol&quot;</span>:<span class="w"> </span><span class="s2">&quot;tcp&quot;</span>
+<span class="w">                </span><span class="o">}</span>
+<span class="w">            </span><span class="o">]</span>,
+<span class="w">            </span><span class="s2">&quot;logConfiguration&quot;</span>:<span class="w"> </span><span class="o">{</span>
+<span class="w">                </span><span class="s2">&quot;logDriver&quot;</span>:<span class="w"> </span><span class="s2">&quot;awslogs&quot;</span>,
+<span class="w">                </span><span class="s2">&quot;options&quot;</span>:<span class="w"> </span><span class="o">{</span>
+<span class="w">                    </span><span class="s2">&quot;awslogs-group&quot;</span>:<span class="w"> </span><span class="s2">&quot;/ecs/my-task&quot;</span>,
+<span class="w">                    </span><span class="s2">&quot;awslogs-region&quot;</span>:<span class="w"> </span><span class="s2">&quot;ap-northeast-2&quot;</span>,
+<span class="w">                    </span><span class="s2">&quot;awslogs-stream-prefix&quot;</span>:<span class="w"> </span><span class="s2">&quot;ecs&quot;</span>
+<span class="w">                </span><span class="o">}</span>
+<span class="w">            </span><span class="o">}</span>
+<span class="w">        </span><span class="o">}</span>
+<span class="w">    </span><span class="o">]</span>
+<span class="o">}</span>
+
+aws<span class="w"> </span>ecs<span class="w"> </span>register-task-definition<span class="w"> </span>--cli-input-json<span class="w"> </span>file://task-definition.json
+
+<span class="c1"># 3. 서비스 생성</span>
+aws<span class="w"> </span>ecs<span class="w"> </span>create-service<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--cluster<span class="w"> </span>my-cluster<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--service-name<span class="w"> </span>my-service<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--task-definition<span class="w"> </span>my-task:1<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--desired-count<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--launch-type<span class="w"> </span>FARGATE<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--network-configuration<span class="w"> </span><span class="s2">&quot;awsvpcConfiguration={subnets=[subnet-xxx],securityGroups=[sg-xxx],assignPublicIp=ENABLED}&quot;</span>
+</code></pre></div>
+
+<h3 id="33-ecs-service-connect">3.3 ECS Service Connect<a class="header-link" href="#33-ecs-service-connect" title="Permanent link">&para;</a></h3>
+<p>ECS Service Connect는 별도의 프록시나 서비스 메시 설정 없이 서비스 간 통신을 위한 내장 서비스 메시 기능을 제공합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Service Connect가 포함된 서비스 정의</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;cluster&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my-cluster&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;serviceName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;backend-service&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;taskDefinition&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;backend-task:1&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;serviceConnectConfiguration&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;namespace&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my-app-namespace&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;services&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;portName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;discoveryName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;backend&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;clientAliases&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                    </span><span class="p">{</span>
+<span class="w">                        </span><span class="nt">&quot;port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;dnsName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;backend.local&quot;</span>
+<span class="w">                    </span><span class="p">}</span>
+<span class="w">                </span><span class="p">]</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;desiredCount&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;launchType&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;FARGATE&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;networkConfiguration&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;awsvpcConfiguration&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;subnets&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;subnet-xxx&quot;</span><span class="p">],</span>
+<span class="w">            </span><span class="nt">&quot;securityGroups&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;sg-xxx&quot;</span><span class="p">]</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>주요 장점:</strong>
+- 내장 서비스 디스커버리 (AWS Cloud Map 통합)
+- 서비스 간 자동 로드 밸런싱
+- 추가 에이전트 없이 트래픽 메트릭 및 관측성(Observability) 제공
+- 외부 서비스 메시(Istio, Consul) 불필요</p>
+<h3 id="34-ecs-exec">3.4 ECS Exec (컨테이너 디버깅)<a class="header-link" href="#34-ecs-exec" title="Permanent link">&para;</a></h3>
+<p>ECS Exec을 사용하면 실행 중인 컨테이너에 대화형 셸로 접근하여 디버깅할 수 있습니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 서비스에서 ECS Exec 활성화</span>
+aws<span class="w"> </span>ecs<span class="w"> </span>update-service<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--cluster<span class="w"> </span>my-cluster<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--service<span class="w"> </span>my-service<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--enable-execute-command
+
+<span class="c1"># 대화형 셸 세션 시작</span>
+aws<span class="w"> </span>ecs<span class="w"> </span>execute-command<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--cluster<span class="w"> </span>my-cluster<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--task<span class="w"> </span>TASK_ID<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--container<span class="w"> </span>my-container<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--interactive<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--command<span class="w"> </span><span class="s2">&quot;/bin/sh&quot;</span>
+
+<span class="c1"># 일회성 명령 실행</span>
+aws<span class="w"> </span>ecs<span class="w"> </span>execute-command<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--cluster<span class="w"> </span>my-cluster<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--task<span class="w"> </span>TASK_ID<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--container<span class="w"> </span>my-container<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--command<span class="w"> </span><span class="s2">&quot;cat /app/config.json&quot;</span>
+</code></pre></div>
+
+<blockquote>
+<p><strong>참고:</strong> ECS Exec을 사용하려면 태스크 역할에 <code>ssmmessages</code> 권한이 필요하며, 태스크 정의에 <code>initProcessEnabled: true</code>가 포함되어야 합니다.</p>
+</blockquote>
+<hr />
+<h2 id="4-aws-eks-elastic-kubernetes-service">4. AWS EKS (Elastic Kubernetes Service)<a class="header-link" href="#4-aws-eks-elastic-kubernetes-service" title="Permanent link">&para;</a></h2>
+<h3 id="41-eks">4.1 EKS 클러스터 생성<a class="header-link" href="#41-eks" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. eksctl 설치 (macOS)</span>
+brew<span class="w"> </span>install<span class="w"> </span>eksctl
+
+<span class="c1"># 2. 클러스터 생성</span>
+eksctl<span class="w"> </span>create<span class="w"> </span>cluster<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--name<span class="w"> </span>my-cluster<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--region<span class="w"> </span>ap-northeast-2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--nodegroup-name<span class="w"> </span>my-nodes<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--node-type<span class="w"> </span>t3.medium<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--nodes<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--nodes-min<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--nodes-max<span class="w"> </span><span class="m">4</span>
+
+<span class="c1"># 3. kubeconfig 업데이트</span>
+aws<span class="w"> </span>eks<span class="w"> </span>update-kubeconfig<span class="w"> </span>--name<span class="w"> </span>my-cluster<span class="w"> </span>--region<span class="w"> </span>ap-northeast-2
+
+<span class="c1"># 4. 클러스터 확인</span>
+kubectl<span class="w"> </span>get<span class="w"> </span>nodes
+</code></pre></div>
+
+<h3 id="42-eks-auto-mode">4.2 EKS Auto Mode<a class="header-link" href="#42-eks-auto-mode" title="Permanent link">&para;</a></h3>
+<p>EKS Auto Mode(2024년 말 출시)는 GKE Autopilot과 유사하게 노드 관리를 자동화하여 EKS 운영을 단순화합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Auto Mode로 EKS 클러스터 생성</span>
+eksctl<span class="w"> </span>create<span class="w"> </span>cluster<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--name<span class="w"> </span>my-auto-cluster<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--region<span class="w"> </span>ap-northeast-2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--auto-mode
+
+<span class="c1"># 또는 기존 클러스터에 Auto Mode 활성화</span>
+aws<span class="w"> </span>eks<span class="w"> </span>update-cluster-config<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--name<span class="w"> </span>my-cluster<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--compute-config<span class="w"> </span><span class="nv">enabled</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--kubernetes-network-config<span class="w"> </span><span class="s1">&#39;{&quot;elasticLoadBalancing&quot;:{&quot;enabled&quot;:true}}&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--storage-config<span class="w"> </span><span class="s1">&#39;{&quot;blockStorage&quot;:{&quot;enabled&quot;:true}}&#39;</span>
+</code></pre></div>
+
+<table>
+<thead>
+<tr>
+<th>기능</th>
+<th>EKS Standard</th>
+<th>EKS Auto Mode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>노드 프로비저닝</strong></td>
+<td>수동 (관리형 노드 그룹 또는 Karpenter)</td>
+<td>자동</td>
+</tr>
+<tr>
+<td><strong>노드 OS 업데이트</strong></td>
+<td>사용자 관리</td>
+<td>AWS 관리</td>
+</tr>
+<tr>
+<td><strong>로드 밸런서</strong></td>
+<td>AWS LB Controller 설치 필요</td>
+<td>내장</td>
+</tr>
+<tr>
+<td><strong>스토리지(EBS CSI)</strong></td>
+<td>EBS CSI 드라이버 설치 필요</td>
+<td>내장</td>
+</tr>
+<tr>
+<td><strong>과금</strong></td>
+<td>EC2 인스턴스 기반</td>
+<td>Pod 리소스 기반 (오버헤드 포함)</td>
+</tr>
+<tr>
+<td><strong>적합 대상</strong></td>
+<td>세밀한 제어 필요 시</td>
+<td>간소화된 운영</td>
+</tr>
+</tbody>
+</table>
+<h3 id="43">4.3 애플리케이션 배포<a class="header-link" href="#43" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># deployment.yaml</span>
+<span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">apps/v1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deployment</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-app</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-app</span>
+<span class="w">  </span><span class="nt">template</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">metadata</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-app</span>
+<span class="w">    </span><span class="nt">spec</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">containers</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-app</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/my-app:latest</span>
+<span class="w">        </span><span class="nt">ports</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">containerPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span>
+<span class="w">        </span><span class="nt">resources</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">requests</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;128Mi&quot;</span>
+<span class="w">            </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;250m&quot;</span>
+<span class="w">          </span><span class="nt">limits</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;256Mi&quot;</span>
+<span class="w">            </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;500m&quot;</span>
+<span class="nn">---</span>
+<span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Service</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-app-service</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LoadBalancer</span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-app</span>
+<span class="w">  </span><span class="nt">ports</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span>
+<span class="w">    </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># 배포</span>
+kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>deployment.yaml
+
+<span class="c1"># 상태 확인</span>
+kubectl<span class="w"> </span>get<span class="w"> </span>pods
+kubectl<span class="w"> </span>get<span class="w"> </span>services
+</code></pre></div>
+
+<hr />
+<h2 id="5-gcp-gke-google-kubernetes-engine">5. GCP GKE (Google Kubernetes Engine)<a class="header-link" href="#5-gcp-gke-google-kubernetes-engine" title="Permanent link">&para;</a></h2>
+<h3 id="51-gke">5.1 GKE 클러스터 생성<a class="header-link" href="#51-gke" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. GKE API 활성화</span>
+gcloud<span class="w"> </span>services<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>container.googleapis.com
+
+<span class="c1"># 2. 클러스터 생성 (Autopilot - 권장)</span>
+gcloud<span class="w"> </span>container<span class="w"> </span>clusters<span class="w"> </span>create-auto<span class="w"> </span>my-cluster<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--region<span class="o">=</span>asia-northeast3
+
+<span class="c1"># 또는 Standard 클러스터</span>
+gcloud<span class="w"> </span>container<span class="w"> </span>clusters<span class="w"> </span>create<span class="w"> </span>my-cluster<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--region<span class="o">=</span>asia-northeast3<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-nodes<span class="o">=</span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--machine-type<span class="o">=</span>e2-medium
+
+<span class="c1"># 3. 클러스터 인증 정보 가져오기</span>
+gcloud<span class="w"> </span>container<span class="w"> </span>clusters<span class="w"> </span>get-credentials<span class="w"> </span>my-cluster<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--region<span class="o">=</span>asia-northeast3
+
+<span class="c1"># 4. 클러스터 확인</span>
+kubectl<span class="w"> </span>get<span class="w"> </span>nodes
+</code></pre></div>
+
+<h3 id="52-gke-autopilot">5.2 GKE Autopilot 심화<a class="header-link" href="#52-gke-autopilot" title="Permanent link">&para;</a></h3>
+<p>GKE Autopilot은 Google이 노드, 스케일링, 보안을 포함한 전체 클러스터 인프라를 관리하는 완전 관리형 Kubernetes 모드입니다.</p>
+<p><strong>Autopilot vs Standard:</strong></p>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>Autopilot</th>
+<th>Standard</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>노드 관리</strong></td>
+<td>Google 자동 관리</td>
+<td>사용자 관리</td>
+</tr>
+<tr>
+<td><strong>과금</strong></td>
+<td>Pod 리소스 기반</td>
+<td>노드 기반</td>
+</tr>
+<tr>
+<td><strong>보안</strong></td>
+<td>강화된 기본값 (경량화 OS, Workload Identity, Shielded GKE 노드)</td>
+<td>수동 구성</td>
+</tr>
+<tr>
+<td><strong>확장성</strong></td>
+<td>자동 HPA/VPA</td>
+<td>수동/자동 구성</td>
+</tr>
+<tr>
+<td><strong>GPU 지원</strong></td>
+<td>지원 (L4, A100, H100, TPU)</td>
+<td>지원</td>
+</tr>
+<tr>
+<td><strong>Spot Pod</strong></td>
+<td>지원</td>
+<td>지원 (선점형 노드)</td>
+</tr>
+<tr>
+<td><strong>DaemonSet</strong></td>
+<td>허용 (과금 포함)</td>
+<td>허용</td>
+</tr>
+<tr>
+<td><strong>특권 Pod</strong></td>
+<td>불허</td>
+<td>허용</td>
+</tr>
+<tr>
+<td><strong>적합 대상</strong></td>
+<td>대부분의 워크로드, 비용 최적화</td>
+<td>세밀한 제어, 특수 커널 요구 시</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Autopilot 보안 기능 (기본 활성화):</strong>
+- <code>containerd</code> 기반 Container-Optimized OS
+- Workload Identity (노드 서비스 계정 키 불필요)
+- Shielded GKE 노드 (보안 부팅, 무결성 모니터링)
+- 네트워크 정책 적용
+- Pod 보안 표준 (기본 Baseline)
+- Binary Authorization 지원</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Autopilot에서 Spot Pod 배포 (최대 60-91% 비용 절감)</span>
+cat<span class="w"> </span><span class="s">&lt;&lt;EOF | kubectl apply -f -</span>
+<span class="s">apiVersion: apps/v1</span>
+<span class="s">kind: Deployment</span>
+<span class="s">metadata:</span>
+<span class="s">  name: batch-processor</span>
+<span class="s">spec:</span>
+<span class="s">  replicas: 5</span>
+<span class="s">  selector:</span>
+<span class="s">    matchLabels:</span>
+<span class="s">      app: batch-processor</span>
+<span class="s">  template:</span>
+<span class="s">    metadata:</span>
+<span class="s">      labels:</span>
+<span class="s">        app: batch-processor</span>
+<span class="s">    spec:</span>
+<span class="s">      nodeSelector:</span>
+<span class="s">        cloud.google.com/gke-spot: &quot;true&quot;</span>
+<span class="s">      terminationGracePeriodSeconds: 25</span>
+<span class="s">      containers:</span>
+<span class="s">      - name: worker</span>
+<span class="s">        image: asia-northeast3-docker.pkg.dev/PROJECT_ID/my-repo/worker:latest</span>
+<span class="s">        resources:</span>
+<span class="s">          requests:</span>
+<span class="s">            cpu: &quot;500m&quot;</span>
+<span class="s">            memory: &quot;1Gi&quot;</span>
+<span class="s">            # Autopilot에서 GPU 요청</span>
+<span class="s">            # nvidia.com/gpu: &quot;1&quot;</span>
+<span class="s">          limits:</span>
+<span class="s">            cpu: &quot;500m&quot;</span>
+<span class="s">            memory: &quot;1Gi&quot;</span>
+<span class="s">      tolerations:</span>
+<span class="s">      - key: cloud.google.com/gke-spot</span>
+<span class="s">        operator: Equal</span>
+<span class="s">        value: &quot;true&quot;</span>
+<span class="s">        effect: NoSchedule</span>
+<span class="s">EOF</span>
+</code></pre></div>
+
+<h3 id="53">5.3 애플리케이션 배포<a class="header-link" href="#53" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># deployment.yaml (GKE)</span>
+<span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">apps/v1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deployment</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-app</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">matchLabels</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-app</span>
+<span class="w">  </span><span class="nt">template</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">metadata</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-app</span>
+<span class="w">    </span><span class="nt">spec</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">containers</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-app</span>
+<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">asia-northeast3-docker.pkg.dev/PROJECT_ID/my-repo/my-app:latest</span>
+<span class="w">        </span><span class="nt">ports</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">containerPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span>
+<span class="w">        </span><span class="nt">resources</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">requests</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;128Mi&quot;</span>
+<span class="w">            </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;250m&quot;</span>
+<span class="w">          </span><span class="nt">limits</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">memory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;256Mi&quot;</span>
+<span class="w">            </span><span class="nt">cpu</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;500m&quot;</span>
+<span class="nn">---</span>
+<span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Service</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-app-service</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LoadBalancer</span>
+<span class="w">  </span><span class="nt">selector</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-app</span>
+<span class="w">  </span><span class="nt">ports</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span>
+<span class="w">    </span><span class="nt">targetPort</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>deployment.yaml
+kubectl<span class="w"> </span>get<span class="w"> </span>services
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 서버리스 컨테이너<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="61-aws-fargate">6.1 AWS Fargate<a class="header-link" href="#61-aws-fargate" title="Permanent link">&para;</a></h3>
+<p>Fargate는 서버 프로비저닝 없이 컨테이너를 실행합니다.</p>
+<p><strong>특징:</strong>
+- EC2 인스턴스 관리 불필요
+- 태스크 수준에서 리소스 정의
+- ECS 또는 EKS와 함께 사용</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># ECS + Fargate로 서비스 생성</span>
+aws<span class="w"> </span>ecs<span class="w"> </span>create-service<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--cluster<span class="w"> </span>my-cluster<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--service-name<span class="w"> </span>my-fargate-service<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--task-definition<span class="w"> </span>my-task:1<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--desired-count<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--launch-type<span class="w"> </span>FARGATE<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--platform-version<span class="w"> </span>LATEST<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--network-configuration<span class="w"> </span><span class="s2">&quot;awsvpcConfiguration={subnets=[subnet-xxx],securityGroups=[sg-xxx],assignPublicIp=ENABLED}&quot;</span>
+</code></pre></div>
+
+<h3 id="62-gcp-cloud-run">6.2 GCP Cloud Run<a class="header-link" href="#62-gcp-cloud-run" title="Permanent link">&para;</a></h3>
+<p>Cloud Run은 컨테이너를 서버리스로 실행합니다.</p>
+<p><strong>특징:</strong>
+- 완전 관리형
+- 요청 기반 자동 확장 (0까지)
+- 사용한 만큼만 과금
+- HTTP 트래픽 또는 이벤트 기반</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. 이미지 배포</span>
+gcloud<span class="w"> </span>run<span class="w"> </span>deploy<span class="w"> </span>my-service<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--image<span class="o">=</span>asia-northeast3-docker.pkg.dev/PROJECT_ID/my-repo/my-app:latest<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--region<span class="o">=</span>asia-northeast3<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--platform<span class="o">=</span>managed<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--allow-unauthenticated
+
+<span class="c1"># 2. 서비스 URL 확인</span>
+gcloud<span class="w"> </span>run<span class="w"> </span>services<span class="w"> </span>describe<span class="w"> </span>my-service<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--region<span class="o">=</span>asia-northeast3<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--format<span class="o">=</span><span class="s1">&#39;value(status.url)&#39;</span>
+
+<span class="c1"># 3. 트래픽 분할 (Blue/Green)</span>
+gcloud<span class="w"> </span>run<span class="w"> </span>services<span class="w"> </span>update-traffic<span class="w"> </span>my-service<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--region<span class="o">=</span>asia-northeast3<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--to-revisions<span class="o">=</span>my-service-00002-abc<span class="o">=</span><span class="m">50</span>,my-service-00001-xyz<span class="o">=</span><span class="m">50</span>
+</code></pre></div>
+
+<h3 id="63-cloud-run-vs-app-runner">6.3 Cloud Run vs App Runner 비교<a class="header-link" href="#63-cloud-run-vs-app-runner" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>GCP Cloud Run</th>
+<th>AWS App Runner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>소스</strong></td>
+<td>컨테이너 이미지, 소스 코드</td>
+<td>컨테이너 이미지, 소스 코드</td>
+</tr>
+<tr>
+<td><strong>최대 메모리</strong></td>
+<td>32GB</td>
+<td>12GB</td>
+</tr>
+<tr>
+<td><strong>최대 타임아웃</strong></td>
+<td>60분</td>
+<td>30분</td>
+</tr>
+<tr>
+<td><strong>0으로 스케일</strong></td>
+<td>지원</td>
+<td>지원 (옵션)</td>
+</tr>
+<tr>
+<td><strong>VPC 연결</strong></td>
+<td>지원</td>
+<td>지원</td>
+</tr>
+<tr>
+<td><strong>GPU</strong></td>
+<td>지원</td>
+<td>미지원</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7">7. 서비스 선택 가이드<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="71">7.1 결정 트리<a class="header-link" href="#71" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>서버리스 컨테이너가 필요한가?
+├── Yes → Cloud Run / Fargate / App Runner
+│         └── Kubernetes 기능 필요?
+│             ├── Yes → Fargate on EKS
+│             └── No → Cloud Run (GCP) / Fargate on ECS (AWS)
+└── No → Kubernetes가 필요한가?
+          ├── Yes → GKE (Autopilot/Standard) / EKS
+          └── No → ECS on EC2 / Compute Engine + Docker
+</code></pre></div>
+
+<h3 id="72">7.2 사용 사례별 권장<a class="header-link" href="#72" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>사용 사례</th>
+<th>AWS 권장</th>
+<th>GCP 권장</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>단순 웹앱</strong></td>
+<td>App Runner</td>
+<td>Cloud Run</td>
+</tr>
+<tr>
+<td><strong>마이크로서비스</strong></td>
+<td>ECS Fargate + Service Connect</td>
+<td>Cloud Run</td>
+</tr>
+<tr>
+<td><strong>K8s (간소화)</strong></td>
+<td>EKS Auto Mode</td>
+<td>GKE Autopilot</td>
+</tr>
+<tr>
+<td><strong>K8s (전체 제어)</strong></td>
+<td>EKS Standard</td>
+<td>GKE Standard</td>
+</tr>
+<tr>
+<td><strong>ML/GPU 워크로드</strong></td>
+<td>EKS + GPU</td>
+<td>GKE Autopilot + GPU</td>
+</tr>
+<tr>
+<td><strong>배치 작업</strong></td>
+<td>ECS Task</td>
+<td>Cloud Run Jobs</td>
+</tr>
+<tr>
+<td><strong>이벤트 처리</strong></td>
+<td>Fargate + EventBridge</td>
+<td>Cloud Run + Eventarc</td>
+</tr>
+<tr>
+<td><strong>비용 민감 배치</strong></td>
+<td>Fargate Spot</td>
+<td>Autopilot Spot Pod</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8">8. 과금 비교<a class="header-link" href="#8" title="Permanent link">&para;</a></h2>
+<h3 id="81-ecseks-vs-gke">8.1 ECS/EKS vs GKE<a class="header-link" href="#81-ecseks-vs-gke" title="Permanent link">&para;</a></h3>
+<p><strong>AWS ECS (Fargate):</strong></p>
+<div class="highlight"><pre><span></span><code>vCPU: $0.04048/시간 (서울)
+메모리: $0.004445/GB/시간 (서울)
+
+예: 0.5 vCPU, 1GB, 24시간
+= (0.5 × $0.04048 × 24) + (1 × $0.004445 × 24)
+= $0.49 + $0.11 = $0.60/일
+</code></pre></div>
+
+<p><strong>AWS EKS:</strong></p>
+<div class="highlight"><pre><span></span><code>클러스터: $0.10/시간 ($72/월)
++ 노드 비용 (EC2) 또는 Fargate 비용
+</code></pre></div>
+
+<p><strong>GCP GKE:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="n">Autopilot</span><span class="o">:</span><span class="w"> </span><span class="n">vCPU</span><span class="w"> </span><span class="n">$0</span><span class="o">.</span><span class="mi">0445</span><span class="sr">/시간, 메모리 $0.0049/GB/</span><span class="err">시간</span>
+<span class="n">Standard</span><span class="o">:</span><span class="w"> </span><span class="err">관리</span><span class="w"> </span><span class="err">수수료</span><span class="w"> </span><span class="n">$0</span><span class="o">.</span><span class="mi">10</span><span class="sr">/시간/</span><span class="err">클러스터</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="err">노드</span><span class="w"> </span><span class="err">비용</span>
+
+<span class="err">예</span><span class="o">:</span><span class="w"> </span><span class="n">Autopilot</span><span class="w"> </span><span class="mf">0.5</span><span class="w"> </span><span class="n">vCPU</span><span class="o">,</span><span class="w"> </span><span class="mi">1</span><span class="n">GB</span><span class="o">,</span><span class="w"> </span><span class="mi">24</span><span class="err">시간</span>
+<span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="mf">0.5</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="n">$0</span><span class="o">.</span><span class="mi">0445</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="mi">24</span><span class="o">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="o">(</span><span class="mi">1</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="n">$0</span><span class="o">.</span><span class="mi">0049</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="mi">24</span><span class="o">)</span>
+<span class="o">=</span><span class="w"> </span><span class="n">$0</span><span class="o">.</span><span class="mi">53</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">$0</span><span class="o">.</span><span class="mi">12</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">$0</span><span class="o">.</span><span class="mi">65</span><span class="o">/</span><span class="err">일</span>
+</code></pre></div>
+
+<h3 id="82-cloud-run">8.2 Cloud Run 과금<a class="header-link" href="#82-cloud-run" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>CPU: $0.00002400/vCPU-초 (요청 처리 중)
+메모리: $0.00000250/GB-초
+요청: $0.40/100만 요청
+
+무료 티어:
+- 200만 요청/월
+- 360,000 GB-초
+- 180,000 vCPU-초
+</code></pre></div>
+
+<hr />
+<h2 id="9">9. 실습: 간단한 웹앱 배포<a class="header-link" href="#9" title="Permanent link">&para;</a></h2>
+<h3 id="91-dockerfile">9.1 Dockerfile 준비<a class="header-link" href="#91-dockerfile" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c"># Dockerfile</span>
+<span class="k">FROM</span><span class="w"> </span><span class="s">python:3.12-slim</span>
+
+<span class="k">WORKDIR</span><span class="w"> </span><span class="s">/app</span>
+<span class="k">COPY</span><span class="w"> </span>requirements.txt<span class="w"> </span>.
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+
+<span class="k">COPY</span><span class="w"> </span>.<span class="w"> </span>.
+
+<span class="k">EXPOSE</span><span class="w"> </span><span class="s">8080</span>
+<span class="k">CMD</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;python&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;app.py&quot;</span><span class="p">]</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># app.py</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">flask</span><span class="w"> </span><span class="kn">import</span> <span class="n">Flask</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">hello</span><span class="p">():</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Hello from </span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;CLOUD_PROVIDER&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Container&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">!&quot;</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s1">&#39;0.0.0.0&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">8080</span><span class="p">)</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code># requirements.txt
+flask==3.0.0
+gunicorn==21.2.0
+</code></pre></div>
+
+<h3 id="92-gcp-cloud-run">9.2 GCP Cloud Run 배포<a class="header-link" href="#92-gcp-cloud-run" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 빌드 및 배포 (소스에서 직접)</span>
+gcloud<span class="w"> </span>run<span class="w"> </span>deploy<span class="w"> </span>my-app<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--source<span class="o">=</span>.<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--region<span class="o">=</span>asia-northeast3<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--allow-unauthenticated<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--set-env-vars<span class="o">=</span><span class="nv">CLOUD_PROVIDER</span><span class="o">=</span>GCP
+</code></pre></div>
+
+<h3 id="93-aws-app-runner">9.3 AWS App Runner 배포<a class="header-link" href="#93-aws-app-runner" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. ECR에 이미지 푸시 (앞서 설명한 방법)</span>
+
+<span class="c1"># 2. App Runner 서비스 생성</span>
+aws<span class="w"> </span>apprunner<span class="w"> </span>create-service<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--service-name<span class="w"> </span>my-app<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--source-configuration<span class="w"> </span><span class="s1">&#39;{</span>
+<span class="s1">        &quot;ImageRepository&quot;: {</span>
+<span class="s1">            &quot;ImageIdentifier&quot;: &quot;123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/my-app:latest&quot;,</span>
+<span class="s1">            &quot;ImageRepositoryType&quot;: &quot;ECR&quot;,</span>
+<span class="s1">            &quot;ImageConfiguration&quot;: {</span>
+<span class="s1">                &quot;Port&quot;: &quot;8080&quot;,</span>
+<span class="s1">                &quot;RuntimeEnvironmentVariables&quot;: {</span>
+<span class="s1">                    &quot;CLOUD_PROVIDER&quot;: &quot;AWS&quot;</span>
+<span class="s1">                }</span>
+<span class="s1">            }</span>
+<span class="s1">        },</span>
+<span class="s1">        &quot;AuthenticationConfiguration&quot;: {</span>
+<span class="s1">            &quot;AccessRoleArn&quot;: &quot;arn:aws:iam::123456789012:role/AppRunnerECRAccessRole&quot;</span>
+<span class="s1">        }</span>
+<span class="s1">    }&#39;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="10">10. 다음 단계<a class="header-link" href="#10" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./07_Object_Storage.md">07_Object_Storage.md</a> - 객체 스토리지</li>
+<li><a href="./09_Virtual_Private_Cloud.md">09_Virtual_Private_Cloud.md</a> - VPC 네트워킹</li>
+</ul>
+<hr />
+<h2 id="_1">참고 자료<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://docs.aws.amazon.com/ecs/">AWS ECS Documentation</a></li>
+<li><a href="https://docs.aws.amazon.com/eks/">AWS EKS Documentation</a></li>
+<li><a href="https://cloud.google.com/kubernetes-engine/docs">GCP GKE Documentation</a></li>
+<li><a href="https://cloud.google.com/run/docs">GCP Cloud Run Documentation</a></li>
+<li><a href="../Docker/">Docker/</a> - Docker 기초</li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Cloud_Computing/05_Serverless_Functions.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">서버리스 함수 (Lambda / Cloud Functions)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Cloud_Computing/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Cloud_Computing/07_Object_Storage.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">객체 스토리지 (S3 / Cloud Storage)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

@@ -1,0 +1,1045 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스레드와 멀티스레딩 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/OS_Theory/">OS Theory</a>
+    <span class="separator">/</span>
+    <span class="current">스레드와 멀티스레딩</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>스레드와 멀티스레딩</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/OS_Theory/02_Process_Concepts.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">프로세스 개념</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/OS_Theory/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/OS_Theory/04_CPU_Scheduling_Basics.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">CPU 스케줄링 기초</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_2">개요</a></li>
+<li><a href="#_3">목차</a></li>
+<li><a href="#1">1. 스레드란?</a><ul>
+<li><a href="#_4">정의</a></li>
+<li><a href="#_5">스레드가 필요한 이유</a></li>
+</ul>
+</li>
+<li><a href="#2-vs">2. 스레드 vs 프로세스</a><ul>
+<li><a href="#_6">공유하는 것과 독립적인 것</a></li>
+<li><a href="#_7">메모리 레이아웃 비교</a></li>
+<li><a href="#_8">비용 비교</a></li>
+</ul>
+</li>
+<li><a href="#3-tcb">3. 스레드 제어 블록 (TCB)</a><ul>
+<li><a href="#tcb">TCB 구조</a></li>
+<li><a href="#pcb-tcb">PCB와 TCB 관계</a></li>
+</ul>
+</li>
+<li><a href="#4">4. 사용자 스레드와 커널 스레드</a><ul>
+<li><a href="#user-level-threads">사용자 수준 스레드 (User-Level Threads)</a></li>
+<li><a href="#kernel-level-threads">커널 수준 스레드 (Kernel-Level Threads)</a></li>
+<li><a href="#_9">비교표</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 멀티스레딩 모델</a><ul>
+<li><a href="#many-to-one-n1">다대일 모델 (Many-to-One, N:1)</a></li>
+<li><a href="#one-to-one-11">일대일 모델 (One-to-One, 1:1)</a></li>
+<li><a href="#many-to-many-mn">다대다 모델 (Many-to-Many, M:N)</a></li>
+<li><a href="#_10">모델 비교</a></li>
+</ul>
+</li>
+<li><a href="#6-pthread-api">6. pthread API 기초</a><ul>
+<li><a href="#_11">스레드 생성과 종료</a></li>
+<li><a href="#pthread-api">pthread API 주요 함수</a></li>
+<li><a href="#_12">반환 값 받기</a></li>
+<li><a href="#detach">스레드 분리 (Detach)</a></li>
+<li><a href="#_13">스레드 안전 문제 예시</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 연습 문제</a><ul>
+<li><a href="#1_1">문제 1: 스레드와 프로세스</a></li>
+<li><a href="#2">문제 2: 멀티스레딩 모델</a></li>
+<li><a href="#3-pthread">문제 3: pthread 코드 분석</a></li>
+<li><a href="#4_1">문제 4: 스레드 생성</a></li>
+<li><a href="#5-tcb-pcb">문제 5: TCB와 PCB</a></li>
+</ul>
+</li>
+<li><a href="#_14">다음 단계</a></li>
+<li><a href="#_15">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="_1">스레드와 멀티스레딩<a class="header-link" href="#_1" title="Permanent link">&para;</a></h1>
+<h2 id="_2">개요<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<p>스레드(Thread)는 프로세스 내에서 실행되는 경량 실행 단위입니다. 이 레슨에서는 스레드와 프로세스의 차이, 사용자/커널 스레드, 멀티스레딩 모델, 그리고 pthread API를 학습합니다.</p>
+<hr />
+<h2 id="_3">목차<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-스레드란">스레드란?</a></li>
+<li><a href="#2-스레드-vs-프로세스">스레드 vs 프로세스</a></li>
+<li><a href="#3-스레드-제어-블록-tcb">스레드 제어 블록 (TCB)</a></li>
+<li><a href="#4-사용자-스레드와-커널-스레드">사용자 스레드와 커널 스레드</a></li>
+<li><a href="#5-멀티스레딩-모델">멀티스레딩 모델</a></li>
+<li><a href="#6-pthread-api-기초">pthread API 기초</a></li>
+<li><a href="#7-연습-문제">연습 문제</a></li>
+</ol>
+<hr />
+<h2 id="1">1. 스레드란?<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="_4">정의<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>스레드 (Thread) = 프로세스 내의 실행 흐름
+               = CPU 스케줄링의 기본 단위
+               = 경량 프로세스 (Lightweight Process)
+
+┌─────────────────────────────────────────────────────────┐
+│                    싱글 스레드 프로세스                   │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │  코드  │  데이터  │       힙       │    스택    │   │
+│  └─────────────────────────────────────────────────┘   │
+│               하나의 실행 흐름만 존재                    │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│                    멀티 스레드 프로세스                   │
+│  ┌────────────────────────────────────────────────────┐ │
+│  │  코드  │  데이터  │       힙       │               │ │
+│  └────────────────────────────────────────────────────┘ │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐              │
+│  │  스택1   │  │  스택2   │  │  스택3   │              │
+│  │ 스레드1  │  │ 스레드2  │  │ 스레드3  │              │
+│  └──────────┘  └──────────┘  └──────────┘              │
+│           세 개의 실행 흐름 (병렬 실행 가능)              │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_5">스레드가 필요한 이유<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌────────────────────────────────────────────────────────┐
+│                   스레드 사용 이점                       │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│ 1. 응답성 (Responsiveness)                             │
+│    - 하나의 스레드가 블로킹되어도 다른 스레드 실행        │
+│    - UI 스레드와 작업 스레드 분리                       │
+│                                                        │
+│ 2. 자원 공유 (Resource Sharing)                        │
+│    - 같은 주소 공간 공유                               │
+│    - IPC 없이 데이터 교환 가능                          │
+│                                                        │
+│ 3. 경제성 (Economy)                                    │
+│    - 프로세스 생성보다 스레드 생성이 빠름                 │
+│    - 컨텍스트 스위치 비용 감소                          │
+│                                                        │
+│ 4. 확장성 (Scalability)                                │
+│    - 멀티코어 CPU 활용                                 │
+│    - 각 스레드가 다른 코어에서 실행                      │
+│                                                        │
+└────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="2-vs">2. 스레드 vs 프로세스<a class="header-link" href="#2-vs" title="Permanent link">&para;</a></h2>
+<h3 id="_6">공유하는 것과 독립적인 것<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│                   스레드 간 공유/독립                     │
+├────────────────────────┬────────────────────────────────┤
+│       공유 (Shared)     │       독립 (Private)           │
+├────────────────────────┼────────────────────────────────┤
+│ • 코드 섹션            │ • 스레드 ID                     │
+│ • 데이터 섹션          │ • 프로그램 카운터 (PC)          │
+│ • 힙 영역              │ • 레지스터 집합                  │
+│ • 열린 파일            │ • 스택                          │
+│ • 신호 처리기          │ • 스케줄링 정보 (우선순위)       │
+│ • 현재 작업 디렉토리    │ • 시그널 마스크                  │
+│ • 사용자/그룹 ID       │ • errno 값                      │
+└────────────────────────┴────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_7">메모리 레이아웃 비교<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>프로세스 메모리:                멀티스레드 프로세스 메모리:
+
+┌─────────────┐                ┌─────────────────────────┐
+│   커널      │                │         커널            │
+├─────────────┤                ├─────────────────────────┤
+│   스택      │                │ 스레드1 │ 스레드2 │ 스레드3│
+│     ↓       │                │  스택   │  스택   │  스택  │
+│             │                │   ↓     │   ↓     │   ↓    │
+├ ─ ─ ─ ─ ─ ─ ┤                ├ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┤
+│             │                │                         │
+│     ↑       │                │           ↑             │
+│   힙        │                │         힙 (공유)        │
+├─────────────┤                ├─────────────────────────┤
+│   데이터    │                │       데이터 (공유)       │
+├─────────────┤                ├─────────────────────────┤
+│   코드      │                │       코드 (공유)        │
+└─────────────┘                └─────────────────────────┘
+</code></pre></div>
+
+<h3 id="_8">비용 비교<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│               프로세스 vs 스레드 비용 비교                │
+├───────────────────┬─────────────┬───────────────────────┤
+│       항목         │   프로세스   │        스레드         │
+├───────────────────┼─────────────┼───────────────────────┤
+│ 생성 시간         │    느림     │         빠름          │
+│ (Linux 기준)      │  ~10ms      │        ~1ms           │
+├───────────────────┼─────────────┼───────────────────────┤
+│ 컨텍스트 스위치    │    느림     │         빠름          │
+│                   │ TLB 플러시   │ TLB 유지 가능          │
+├───────────────────┼─────────────┼───────────────────────┤
+│ 메모리 사용       │    많음     │         적음          │
+│                   │ 독립된 공간  │  공유 공간            │
+├───────────────────┼─────────────┼───────────────────────┤
+│ 통신 비용         │    높음     │         낮음          │
+│                   │  IPC 필요   │  직접 메모리 접근      │
+├───────────────────┼─────────────┼───────────────────────┤
+│ 안정성            │    높음     │         낮음          │
+│                   │ 격리됨      │  하나가 죽으면 전체 영향│
+└───────────────────┴─────────────┴───────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="3-tcb">3. 스레드 제어 블록 (TCB)<a class="header-link" href="#3-tcb" title="Permanent link">&para;</a></h2>
+<h3 id="tcb">TCB 구조<a class="header-link" href="#tcb" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌───────────────────────────────────────────────────────┐
+│                   TCB (Thread Control Block)          │
+├───────────────────────────────────────────────────────┤
+│                                                       │
+│  ┌─────────────────────────────────────────────────┐  │
+│  │ 스레드 ID (TID)                                 │  │
+│  ├─────────────────────────────────────────────────┤  │
+│  │ 스레드 상태 (Running, Ready, Blocked...)        │  │
+│  ├─────────────────────────────────────────────────┤  │
+│  │ 프로그램 카운터 (PC)                            │  │
+│  ├─────────────────────────────────────────────────┤  │
+│  │ CPU 레지스터 (범용 레지스터, 플래그...)          │  │
+│  ├─────────────────────────────────────────────────┤  │
+│  │ 스택 포인터                                     │  │
+│  ├─────────────────────────────────────────────────┤  │
+│  │ 스케줄링 정보 (우선순위)                        │  │
+│  ├─────────────────────────────────────────────────┤  │
+│  │ 소속 프로세스 PCB 포인터                        │  │
+│  └─────────────────────────────────────────────────┘  │
+│                                                       │
+│  TCB는 PCB보다 훨씬 작음 (스레드 전환이 빠른 이유)     │
+│                                                       │
+└───────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="pcb-tcb">PCB와 TCB 관계<a class="header-link" href="#pcb-tcb" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│                        PCB                              │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │ PID, 메모리 정보, 열린 파일, 시그널 핸들러...      │  │
+│  │                                                   │  │
+│  │  스레드 목록:                                     │  │
+│  │  ┌───────────────────────────────────────────┐   │  │
+│  │  │     TCB1      │     TCB2      │    TCB3   │   │  │
+│  │  │ TID, PC, SP,  │ TID, PC, SP,  │ TID, PC,  │   │  │
+│  │  │ 레지스터, 상태 │ 레지스터, 상태 │ SP, ...   │   │  │
+│  │  └───────────────────────────────────────────┘   │  │
+│  │                                                   │  │
+│  └───────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="4">4. 사용자 스레드와 커널 스레드<a class="header-link" href="#4" title="Permanent link">&para;</a></h2>
+<h3 id="user-level-threads">사용자 수준 스레드 (User-Level Threads)<a class="header-link" href="#user-level-threads" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│              사용자 수준 스레드 (ULT)                    │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│   사용자 공간:                                          │
+│   ┌───────────────────────────────────────────────────┐ │
+│   │              응용 프로그램                         │ │
+│   │  ┌─────────────────────────────────────────────┐  │ │
+│   │  │  스레드1    스레드2    스레드3               │  │ │
+│   │  └─────────────────────────────────────────────┘  │ │
+│   │              ↑    ↑    ↑                         │ │
+│   │              └────┼────┘                         │ │
+│   │                   ↓                              │ │
+│   │         스레드 라이브러리                         │ │
+│   │         (스케줄링, 생성, 동기화)                  │ │
+│   └───────────────────────────────────────────────────┘ │
+│                       │                                 │
+│   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
+│                       │                                 │
+│   커널 공간:          ↓                                 │
+│   ┌───────────────────────────────────────────────────┐ │
+│   │              커널 (단일 스레드로 인식)              │ │
+│   │                                                   │ │
+│   │   커널은 프로세스만 알고, 스레드는 모름             │ │
+│   └───────────────────────────────────────────────────┘ │
+│                                                         │
+│   장점: 빠른 컨텍스트 스위치, 이식성                     │
+│   단점: 하나가 블로킹되면 전체 블로킹, 멀티코어 활용 불가 │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="kernel-level-threads">커널 수준 스레드 (Kernel-Level Threads)<a class="header-link" href="#kernel-level-threads" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│              커널 수준 스레드 (KLT)                      │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│   사용자 공간:                                          │
+│   ┌───────────────────────────────────────────────────┐ │
+│   │              응용 프로그램                         │ │
+│   │  ┌─────────────────────────────────────────────┐  │ │
+│   │  │  스레드1    스레드2    스레드3               │  │ │
+│   │  └─────────────────────────────────────────────┘  │ │
+│   └───────────────────────────────────────────────────┘ │
+│              │         │         │                      │
+│   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
+│              ↓         ↓         ↓                      │
+│   커널 공간:                                            │
+│   ┌───────────────────────────────────────────────────┐ │
+│   │              커널 스케줄러                         │ │
+│   │  ┌─────────────────────────────────────────────┐  │ │
+│   │  │ K-스레드1  K-스레드2  K-스레드3              │  │ │
+│   │  └─────────────────────────────────────────────┘  │ │
+│   │                                                   │ │
+│   │   커널이 각 스레드를 개별적으로 스케줄링           │ │
+│   └───────────────────────────────────────────────────┘ │
+│                                                         │
+│   장점: 멀티코어 활용, 블로킹 시 다른 스레드 실행        │
+│   단점: 느린 컨텍스트 스위치 (시스템 콜 필요)            │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_9">비교표<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌────────────────────┬────────────────────┬────────────────────┐
+│       특성         │    사용자 스레드    │    커널 스레드      │
+├────────────────────┼────────────────────┼────────────────────┤
+│ 관리 주체          │ 스레드 라이브러리   │ 운영체제 커널       │
+├────────────────────┼────────────────────┼────────────────────┤
+│ 생성/전환 속도     │ 빠름 (시스템콜 X)  │ 느림 (시스템콜 O)   │
+├────────────────────┼────────────────────┼────────────────────┤
+│ 멀티코어 활용      │ 불가능             │ 가능               │
+├────────────────────┼────────────────────┼────────────────────┤
+│ 블로킹 시스템콜    │ 전체 프로세스 블록  │ 해당 스레드만 블록  │
+├────────────────────┼────────────────────┼────────────────────┤
+│ OS 지원 필요       │ 불필요             │ 필요               │
+├────────────────────┼────────────────────┼────────────────────┤
+│ 예시               │ GNU Portable Threads│ Linux NPTL, Windows│
+└────────────────────┴────────────────────┴────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 멀티스레딩 모델<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="many-to-one-n1">다대일 모델 (Many-to-One, N:1)<a class="header-link" href="#many-to-one-n1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│                  다대일 모델 (N:1)                       │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│   사용자 공간:                                          │
+│   ┌─────────────────────────────────────────────────┐   │
+│   │  ULT1    ULT2    ULT3    ULT4    ULT5          │   │
+│   │   │       │       │       │       │            │   │
+│   │   └───────┼───────┼───────┼───────┘            │   │
+│   │           └───────┼───────┘                    │   │
+│   │                   ↓                            │   │
+│   │           스레드 라이브러리                     │   │
+│   └─────────────────────────────────────────────────┘   │
+│                       │                                 │
+│   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │
+│                       ↓                                 │
+│   커널 공간:    ┌──────────┐                            │
+│                 │  KLT 1   │                            │
+│                 └──────────┘                            │
+│                                                         │
+│   • 장점: 효율적인 스레드 관리                          │
+│   • 단점: 멀티코어 활용 불가, 하나 블로킹 시 전체 블로킹  │
+│   • 예시: 초기 Green Threads                            │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="one-to-one-11">일대일 모델 (One-to-One, 1:1)<a class="header-link" href="#one-to-one-11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│                  일대일 모델 (1:1)                       │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│   사용자 공간:                                          │
+│   ┌─────────────────────────────────────────────────┐   │
+│   │  ULT1    ULT2    ULT3    ULT4                  │   │
+│   │   │       │       │       │                    │   │
+│   └───┼───────┼───────┼───────┼────────────────────┘   │
+│       │       │       │       │                        │
+│   ━━━━│━━━━━━━│━━━━━━━│━━━━━━━│━━━━━━━━━━━━━━━━━━━━━━━ │
+│       ↓       ↓       ↓       ↓                        │
+│   커널 공간:                                            │
+│   ┌───────────────────────────────────────────────┐     │
+│   │  KLT1    KLT2    KLT3    KLT4                │     │
+│   └───────────────────────────────────────────────┘     │
+│                                                         │
+│   • 장점: 멀티코어 활용, 블로킹 시 다른 스레드 계속 실행  │
+│   • 단점: 커널 스레드 생성 오버헤드                      │
+│   • 예시: Linux NPTL, Windows, macOS                   │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="many-to-many-mn">다대다 모델 (Many-to-Many, M:N)<a class="header-link" href="#many-to-many-mn" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                  </span><span class="n">다대다</span><span class="w"> </span><span class="n">모델</span><span class="w"> </span><span class="p">(</span><span class="nl">M</span><span class="p">:</span><span class="n">N</span><span class="p">)</span><span class="w">                       </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="n">사용자</span><span class="w"> </span><span class="nl">공간</span><span class="p">:</span><span class="w">                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="err">┌─────────────────────────────────────────────────┐</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="n">ULT1</span><span class="w">  </span><span class="n">ULT2</span><span class="w">  </span><span class="n">ULT3</span><span class="w">  </span><span class="n">ULT4</span><span class="w">  </span><span class="n">ULT5</span><span class="w">  </span><span class="n">ULT6</span><span class="w">  </span><span class="n">ULT7</span><span class="w">     </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└─────┼─────┼─────┼─────┼─────┼─────┘</span><span class="w">       </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">         </span><span class="err">└─────┼─────┼─────┼─────┘</span><span class="w">             </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">               </span><span class="err">↓</span><span class="w">     </span><span class="err">↓</span><span class="w">     </span><span class="err">↓</span><span class="w">                   </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">           </span><span class="n">스레드</span><span class="w"> </span><span class="n">스케줄러</span><span class="w">                      </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└─────────────────────────────────────────────────┘</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                   </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="err">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                   </span><span class="err">↓</span><span class="w">     </span><span class="err">↓</span><span class="w">     </span><span class="err">↓</span><span class="w">                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="n">커널</span><span class="w"> </span><span class="nl">공간</span><span class="p">:</span><span class="w">                                            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="err">┌───────────────────────────────────────────────┐</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">      </span><span class="n">KLT1</span><span class="w">      </span><span class="n">KLT2</span><span class="w">      </span><span class="n">KLT3</span><span class="w">                </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└───────────────────────────────────────────────┘</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="mi">7</span><span class="n">개의</span><span class="w"> </span><span class="n">사용자</span><span class="w"> </span><span class="n">스레드가</span><span class="w"> </span><span class="mi">3</span><span class="n">개의</span><span class="w"> </span><span class="n">커널</span><span class="w"> </span><span class="n">스레드에</span><span class="w"> </span><span class="n">매핑</span><span class="w">          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="err">•</span><span class="w"> </span><span class="nl">장점</span><span class="p">:</span><span class="w"> </span><span class="n">유연성</span><span class="p">,</span><span class="w"> </span><span class="n">효율성과</span><span class="w"> </span><span class="n">병렬성의</span><span class="w"> </span><span class="n">균형</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="err">•</span><span class="w"> </span><span class="nl">단점</span><span class="p">:</span><span class="w"> </span><span class="n">구현</span><span class="w"> </span><span class="n">복잡성</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="err">•</span><span class="w"> </span><span class="nl">예시</span><span class="p">:</span><span class="w"> </span><span class="n">Solaris</span><span class="p">,</span><span class="w"> </span><span class="k">Go</span><span class="w"> </span><span class="n">goroutines</span><span class="w">                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="_10">모델 비교<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌──────────────┬──────────────┬──────────────┬──────────────┐
+│     특성      │   N:1       │    1:1      │    M:N      │
+├──────────────┼──────────────┼──────────────┼──────────────┤
+│ 병렬 실행     │ 불가능       │ 가능         │ 가능         │
+├──────────────┼──────────────┼──────────────┼──────────────┤
+│ 블로킹 문제   │ 전체 블로킹   │ 영향 없음    │ 부분적 영향  │
+├──────────────┼──────────────┼──────────────┼──────────────┤
+│ 스레드 생성   │ 빠름         │ 느림         │ 중간         │
+├──────────────┼──────────────┼──────────────┼──────────────┤
+│ 구현 복잡도   │ 낮음         │ 낮음         │ 높음         │
+├──────────────┼──────────────┼──────────────┼──────────────┤
+│ 스케일러빌리티│ 낮음         │ 높음         │ 높음         │
+├──────────────┼──────────────┼──────────────┼──────────────┤
+│ 현대 OS      │ 거의 사용 X   │ 주로 사용    │ 일부 사용    │
+└──────────────┴──────────────┴──────────────┴──────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="6-pthread-api">6. pthread API 기초<a class="header-link" href="#6-pthread-api" title="Permanent link">&para;</a></h2>
+<h3 id="_11">스레드 생성과 종료<a class="header-link" href="#_11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;pthread.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;unistd.h&gt;</span>
+
+<span class="c1">// 스레드가 실행할 함수</span>
+<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="nf">thread_function</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">arg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">thread_num</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="n">arg</span><span class="p">;</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;스레드 %d 시작</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">thread_num</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 작업 수행</span>
+<span class="w">    </span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;스레드 %d 종료</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">thread_num</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">pthread_t</span><span class="w"> </span><span class="n">threads</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">thread_args</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">};</span>
+
+<span class="w">    </span><span class="c1">// 스레드 생성</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">threads</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span>
+<span class="w">                                    </span><span class="n">thread_function</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">thread_args</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">result</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">perror</span><span class="p">(</span><span class="s">&quot;pthread_create failed&quot;</span><span class="p">);</span>
+<span class="w">            </span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// 모든 스레드가 종료될 때까지 대기</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">pthread_join</span><span class="p">(</span><span class="n">threads</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+<span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;스레드 %d join 완료</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">thread_args</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;메인 스레드 종료</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="cm">/*</span>
+<span class="cm">컴파일: gcc -pthread thread_example.c -o thread_example</span>
+
+<span class="cm">출력 (순서는 달라질 수 있음):</span>
+<span class="cm">스레드 1 시작</span>
+<span class="cm">스레드 2 시작</span>
+<span class="cm">스레드 3 시작</span>
+<span class="cm">스레드 1 종료</span>
+<span class="cm">스레드 2 종료</span>
+<span class="cm">스레드 3 종료</span>
+<span class="cm">스레드 1 join 완료</span>
+<span class="cm">스레드 2 join 완료</span>
+<span class="cm">스레드 3 join 완료</span>
+<span class="cm">메인 스레드 종료</span>
+<span class="cm">*/</span>
+</code></pre></div>
+
+<h3 id="pthread-api">pthread API 주요 함수<a class="header-link" href="#pthread-api" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌────────────────────────┬────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">        </span><span class="err">함수</span><span class="w">             </span><span class="err">│</span><span class="w">              </span><span class="err">설명</span><span class="w">                  </span><span class="err">│</span>
+<span class="err">├────────────────────────┼────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w"> </span><span class="n">pthread_create</span><span class="p">()</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="err">새</span><span class="w"> </span><span class="err">스레드</span><span class="w"> </span><span class="err">생성</span><span class="w">                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">pthread_join</span><span class="p">()</span><span class="w">         </span><span class="err">│</span><span class="w"> </span><span class="err">스레드</span><span class="w"> </span><span class="err">종료</span><span class="w"> </span><span class="err">대기</span><span class="w">                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">pthread_exit</span><span class="p">()</span><span class="w">         </span><span class="err">│</span><span class="w"> </span><span class="err">현재</span><span class="w"> </span><span class="err">스레드</span><span class="w"> </span><span class="err">종료</span><span class="w">                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">pthread_self</span><span class="p">()</span><span class="w">         </span><span class="err">│</span><span class="w"> </span><span class="err">현재</span><span class="w"> </span><span class="err">스레드</span><span class="w"> </span><span class="n">ID</span><span class="w"> </span><span class="err">반환</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">pthread_equal</span><span class="p">()</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">두</span><span class="w"> </span><span class="err">스레드</span><span class="w"> </span><span class="n">ID</span><span class="w"> </span><span class="err">비교</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">pthread_detach</span><span class="p">()</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="err">스레드</span><span class="w"> </span><span class="err">분리</span><span class="w"> </span><span class="p">(</span><span class="err">자동</span><span class="w"> </span><span class="err">자원</span><span class="w"> </span><span class="err">회수</span><span class="p">)</span><span class="w">         </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">pthread_cancel</span><span class="p">()</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="err">다른</span><span class="w"> </span><span class="err">스레드</span><span class="w"> </span><span class="err">취소</span><span class="w"> </span><span class="err">요청</span><span class="w">               </span><span class="err">│</span>
+<span class="err">├────────────────────────┼────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w"> </span><span class="n">pthread_mutex_init</span><span class="p">()</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="err">뮤텍스</span><span class="w"> </span><span class="err">초기화</span><span class="w">                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">pthread_mutex_lock</span><span class="p">()</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="err">뮤텍스</span><span class="w"> </span><span class="err">잠금</span><span class="w">                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">pthread_mutex_unlock</span><span class="p">()</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">뮤텍스</span><span class="w"> </span><span class="err">해제</span><span class="w">                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">pthread_mutex_destroy</span><span class="p">()</span><span class="err">│</span><span class="w"> </span><span class="err">뮤텍스</span><span class="w"> </span><span class="err">파괴</span><span class="w">                         </span><span class="err">│</span>
+<span class="err">├────────────────────────┼────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w"> </span><span class="n">pthread_cond_init</span><span class="p">()</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="err">조건</span><span class="w"> </span><span class="err">변수</span><span class="w"> </span><span class="err">초기화</span><span class="w">                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">pthread_cond_wait</span><span class="p">()</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="err">조건</span><span class="w"> </span><span class="err">변수</span><span class="w"> </span><span class="err">대기</span><span class="w">                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">pthread_cond_signal</span><span class="p">()</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">조건</span><span class="w"> </span><span class="err">변수</span><span class="w"> </span><span class="err">시그널</span><span class="w">                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">pthread_cond_broadcast</span><span class="p">()</span><span class="err">│</span><span class="w"> </span><span class="err">모든</span><span class="w"> </span><span class="err">대기</span><span class="w"> </span><span class="err">스레드에</span><span class="w"> </span><span class="err">시그널</span><span class="w">           </span><span class="err">│</span>
+<span class="err">└────────────────────────┴────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="_12">반환 값 받기<a class="header-link" href="#_12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;pthread.h&gt;</span>
+
+<span class="c1">// 정수의 제곱을 계산하고 반환</span>
+<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="nf">calculate_square</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">arg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">num</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="n">arg</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="w">    </span><span class="o">*</span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">num</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">num</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;스레드: %d의 제곱 = %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">num</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="n">result</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="n">result</span><span class="p">;</span><span class="w">  </span><span class="c1">// 힙에 할당된 결과 반환</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">pthread_t</span><span class="w"> </span><span class="kr">thread</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">num</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 스레드 생성</span>
+<span class="w">    </span><span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="kr">thread</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">calculate_square</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">num</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 스레드 종료 대기 및 결과 받기</span>
+<span class="w">    </span><span class="n">pthread_join</span><span class="p">(</span><span class="kr">thread</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">result</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;메인: 결과 = %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="p">(</span><span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="n">result</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">free</span><span class="p">(</span><span class="n">result</span><span class="p">);</span><span class="w">  </span><span class="c1">// 메모리 해제</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="cm">/*</span>
+<span class="cm">출력:</span>
+<span class="cm">스레드: 5의 제곱 = 25</span>
+<span class="cm">메인: 결과 = 25</span>
+<span class="cm">*/</span>
+</code></pre></div>
+
+<h3 id="detach">스레드 분리 (Detach)<a class="header-link" href="#detach" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;pthread.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;unistd.h&gt;</span>
+
+<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="nf">detached_thread</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">arg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;분리된 스레드 시작</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;분리된 스레드 종료</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">pthread_t</span><span class="w"> </span><span class="kr">thread</span><span class="p">;</span>
+<span class="w">    </span><span class="n">pthread_attr_t</span><span class="w"> </span><span class="n">attr</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 스레드 속성 초기화</span>
+<span class="w">    </span><span class="n">pthread_attr_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">attr</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 분리 상태로 설정</span>
+<span class="w">    </span><span class="n">pthread_attr_setdetachstate</span><span class="p">(</span><span class="o">&amp;</span><span class="n">attr</span><span class="p">,</span><span class="w"> </span><span class="n">PTHREAD_CREATE_DETACHED</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 분리된 스레드 생성</span>
+<span class="w">    </span><span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="kr">thread</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">attr</span><span class="p">,</span><span class="w"> </span><span class="n">detached_thread</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 속성 객체 파괴</span>
+<span class="w">    </span><span class="n">pthread_attr_destroy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">attr</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;메인 스레드: 분리된 스레드를 join하지 않아도 됨</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 분리된 스레드가 실행할 시간 확보</span>
+<span class="w">    </span><span class="n">sleep</span><span class="p">(</span><span class="mi">3</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;메인 스레드 종료</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="cm">/*</span>
+<span class="cm">분리된 스레드:</span>
+<span class="cm">- 종료 시 자동으로 자원 회수</span>
+<span class="cm">- pthread_join() 불필요 (오히려 에러)</span>
+<span class="cm">- 백그라운드 작업에 적합</span>
+<span class="cm">*/</span>
+</code></pre></div>
+
+<h3 id="_13">스레드 안전 문제 예시<a class="header-link" href="#_13" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;pthread.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="n">counter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w">  </span><span class="c1">// 공유 변수</span>
+
+<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="nf">increment</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">arg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1000000</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">counter</span><span class="o">++</span><span class="p">;</span><span class="w">  </span><span class="c1">// 경쟁 상태 (Race Condition)!</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">pthread_t</span><span class="w"> </span><span class="n">t1</span><span class="p">,</span><span class="w"> </span><span class="n">t2</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">t1</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">increment</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+<span class="w">    </span><span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">t2</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">increment</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">pthread_join</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+<span class="w">    </span><span class="n">pthread_join</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 예상: 2000000, 실제: 그보다 작은 값 (매번 다름)</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Counter: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">counter</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="cm">/*</span>
+<span class="cm">counter++ 연산은 원자적이지 않음:</span>
+<span class="cm">1. 메모리에서 counter 값 읽기</span>
+<span class="cm">2. 값 증가</span>
+<span class="cm">3. 메모리에 결과 저장</span>
+
+<span class="cm">두 스레드가 동시에 실행하면 값이 손실됨 (다음 레슨에서 해결)</span>
+<span class="cm">*/</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 연습 문제<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="1_1">문제 1: 스레드와 프로세스<a class="header-link" href="#1_1" title="Permanent link">&para;</a></h3>
+<p>다음 중 스레드가 공유하지 않는 것을 모두 고르세요.</p>
+<p>A. 코드 섹션
+B. 데이터 섹션
+C. 스택
+D. 힙
+E. 프로그램 카운터
+F. 열린 파일</p>
+<details>
+<summary>정답 보기</summary>
+
+**C, E**
+
+- 스택: 각 스레드는 자신만의 스택을 가짐 (지역 변수, 함수 호출 정보)
+- 프로그램 카운터: 각 스레드는 다른 위치의 코드를 실행할 수 있음
+
+나머지는 모두 스레드 간 공유됨.
+
+</details>
+
+<h3 id="2">문제 2: 멀티스레딩 모델<a class="header-link" href="#2" title="Permanent link">&para;</a></h3>
+<p>다음 설명에 맞는 멀티스레딩 모델을 고르세요.</p>
+<ol>
+<li>하나의 사용자 스레드가 블로킹되면 전체 프로세스가 블로킹된다.</li>
+<li>Linux NPTL이 사용하는 모델이다.</li>
+<li>커널 스레드 수보다 많은 사용자 스레드를 효율적으로 관리할 수 있다.</li>
+</ol>
+<p>보기: N:1, 1:1, M:N</p>
+<details>
+<summary>정답 보기</summary>
+
+1. **N:1 (다대일)** - 모든 사용자 스레드가 하나의 커널 스레드에 매핑되므로, 하나가 블로킹되면 전체가 블로킹됨
+2. **1:1 (일대일)** - Linux NPTL, Windows, macOS가 사용하는 모델
+3. **M:N (다대다)** - 여러 사용자 스레드를 적은 수의 커널 스레드에 매핑하여 효율적으로 관리
+
+</details>
+
+<h3 id="3-pthread">문제 3: pthread 코드 분석<a class="header-link" href="#3-pthread" title="Permanent link">&para;</a></h3>
+<p>다음 코드의 출력 결과로 가능한 것을 모두 고르세요.</p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;pthread.h&gt;</span>
+
+<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="nf">print_msg</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">arg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">msg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">arg</span><span class="p">;</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">msg</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">pthread_t</span><span class="w"> </span><span class="n">t1</span><span class="p">,</span><span class="w"> </span><span class="n">t2</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">t1</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">print_msg</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;A&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">t2</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">print_msg</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;B&quot;</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">pthread_join</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+<span class="w">    </span><span class="n">pthread_join</span><span class="p">(</span><span class="n">t2</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;C&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>A. ABC
+B. BAC
+C. CAB
+D. ACB</p>
+<details>
+<summary>정답 보기</summary>
+
+**A, B**
+
+- A와 B의 출력 순서는 스레드 스케줄링에 따라 달라질 수 있음
+- C는 항상 마지막 (두 스레드가 모두 join된 후 출력)
+- 따라서 가능한 출력: ABC 또는 BAC
+
+CAB, ACB는 불가능 (C는 join 이후에만 출력됨)
+
+</details>
+
+<h3 id="4_1">문제 4: 스레드 생성<a class="header-link" href="#4_1" title="Permanent link">&para;</a></h3>
+<p>다음 코드의 문제점을 설명하세요.</p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;pthread.h&gt;</span>
+
+<span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="nf">thread_func</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">arg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="o">*</span><span class="w"> </span><span class="n">num</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="o">*</span><span class="p">)</span><span class="n">arg</span><span class="p">;</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Thread: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="n">num</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">pthread_t</span><span class="w"> </span><span class="n">threads</span><span class="p">[</span><span class="mi">5</span><span class="p">];</span>
+
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">threads</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">thread_func</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">i</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">pthread_join</span><span class="p">(</span><span class="n">threads</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<details>
+<summary>정답 보기</summary>
+
+**문제: 경쟁 상태 (Race Condition)**
+
+모든 스레드가 같은 변수 `i`의 주소를 전달받음. 스레드가 실행될 때 `i`의 값이 이미 변경되어 있을 수 있음.
+
+예상 출력: 0, 1, 2, 3, 4
+실제 가능한 출력: 5, 5, 5, 5, 5 또는 2, 3, 4, 5, 5 등
+
+**해결 방법:**
+
+
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">thread_args</span><span class="p">[</span><span class="mi">5</span><span class="p">];</span>
+
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">thread_args</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="p">;</span>
+<span class="w">    </span><span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">threads</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">thread_func</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">thread_args</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+
+각 스레드에 별도의 인자 공간을 할당해야 함.
+
+</details>
+
+<h3 id="5-tcb-pcb">문제 5: TCB와 PCB<a class="header-link" href="#5-tcb-pcb" title="Permanent link">&para;</a></h3>
+<p>TCB가 PCB보다 작은 이유를 스레드의 특성과 연관지어 설명하세요.</p>
+<details>
+<summary>정답 보기</summary>
+
+TCB가 PCB보다 작은 이유:
+
+1. **자원 공유**: 스레드는 코드, 데이터, 힙, 열린 파일 등을 같은 프로세스의 다른 스레드와 공유함. 이 정보는 PCB에만 저장되고 TCB에는 저장할 필요가 없음.
+
+2. **TCB에 저장되는 정보가 적음**:
+   - 스레드 ID
+   - 프로그램 카운터
+   - 레지스터 집합
+   - 스택 포인터
+   - 스레드 상태
+   - 우선순위
+
+3. **PCB에 추가로 저장되는 정보**:
+   - 메모리 관리 정보 (페이지 테이블)
+   - 열린 파일 목록
+   - I/O 상태
+   - 계정 정보
+   - 시그널 핸들러
+
+결과적으로 스레드 컨텍스트 스위치가 프로세스 컨텍스트 스위치보다 빠름.
+
+</details>
+
+<hr />
+<h2 id="_14">다음 단계<a class="header-link" href="#_14" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./04_CPU_스케줄링_기초.md">04_CPU_스케줄링_기초.md</a> - CPU 스케줄링의 기본 개념</li>
+</ul>
+<hr />
+<h2 id="_15">참고 자료<a class="header-link" href="#_15" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://computing.llnl.gov/tutorials/pthreads/">POSIX Threads Programming</a></li>
+<li><a href="https://man7.org/linux/man-pages/man7/pthreads.7.html">Linux man pages - pthreads</a></li>
+<li><a href="https://pages.cs.wisc.edu/~remzi/OSTEP/threads-intro.pdf">OSTEP - Concurrency: Threads</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/OS_Theory/02_Process_Concepts.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">프로세스 개념</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/OS_Theory/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/OS_Theory/04_CPU_Scheduling_Basics.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">CPU 스케줄링 기초</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

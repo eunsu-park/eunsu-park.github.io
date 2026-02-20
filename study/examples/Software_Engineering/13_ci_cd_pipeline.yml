@@ -1,0 +1,245 @@
+# CI/CD Pipeline — GitHub Actions Workflow
+#
+# Demonstrates a complete software engineering CI/CD pipeline with:
+# - Multi-stage workflow: lint → test → build → deploy-staging → deploy-production
+# - Matrix strategy for testing across multiple Python versions
+# - Dependency caching to speed up runs
+# - Artifact upload for build outputs
+# - Environment protection rules for production gating
+# - Manual approval step before production deployment
+#
+# Usage: Place this file at .github/workflows/ci-cd.yml in your repository.
+
+name: CI/CD Pipeline
+
+# Trigger conditions
+on:
+  push:
+    branches: [main, develop]       # Run full pipeline on main; run CI only on develop
+  pull_request:
+    branches: [main]                # Run lint + test on every PR targeting main
+  workflow_dispatch:                # Allow manual runs from the GitHub UI
+    inputs:
+      deploy_env:
+        description: "Target environment (staging | production)"
+        required: false
+        default: staging
+
+# Cancel in-progress runs when a new commit is pushed to the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# ─────────────────────────────────────────────────────────────────
+# STAGE 1: Lint — fast static analysis before running tests
+# ─────────────────────────────────────────────────────────────────
+jobs:
+  lint:
+    name: Lint (ruff + mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Cache pip packages so subsequent runs skip the download step
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: lint-${{ runner.os }}-${{ hashFiles('requirements-dev.txt') }}
+          restore-keys: lint-${{ runner.os }}-
+
+      - name: Install linting tools
+        run: pip install ruff mypy
+
+      - name: Run ruff (style + import order)
+        run: ruff check . --output-format=github
+
+      - name: Run mypy (type checking)
+        run: mypy src/ --ignore-missing-imports
+
+  # ─────────────────────────────────────────────────────────────────
+  # STAGE 2: Test — matrix across Python versions
+  # ─────────────────────────────────────────────────────────────────
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    needs: lint                    # Only run tests if lint passes
+    runs-on: ubuntu-latest
+
+    # Test against multiple Python versions in parallel
+    strategy:
+      fail-fast: false             # Don't cancel siblings on first failure
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    services:
+      # Spin up a PostgreSQL container for integration tests
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: test-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements*.txt') }}
+          restore-keys: test-${{ runner.os }}-${{ matrix.python-version }}-
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run tests with coverage
+        env:
+          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+          APP_ENV: test
+        run: |
+          pytest tests/ \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --junitxml=junit-${{ matrix.python-version }}.xml \
+            -v
+
+      # Upload coverage report as an artifact for later inspection
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.12'   # Only upload once
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────────
+  # STAGE 3: Build — create Docker image and push to registry
+  # ─────────────────────────────────────────────────────────────────
+  build:
+    name: Build Docker Image
+    needs: test                    # Only build if all tests pass
+    runs-on: ubuntu-latest
+    # Only build on pushes to main (not on PRs)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}    # Pass image tag to deploy jobs
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract metadata for Docker tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha      # Reuse GitHub Actions layer cache
+          cache-to: type=gha,mode=max
+
+  # ─────────────────────────────────────────────────────────────────
+  # STAGE 4: Deploy to Staging
+  # ─────────────────────────────────────────────────────────────────
+  deploy-staging:
+    name: Deploy → Staging
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.example.com   # Shown as a link on the GitHub UI
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to staging via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: deploy
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            docker pull ${{ needs.build.outputs.image_tag }}
+            docker compose -f /opt/app/docker-compose.staging.yml up -d --no-deps app
+            docker system prune -f
+
+      - name: Run smoke tests against staging
+        run: |
+          sleep 10   # Wait for container to start
+          curl --fail https://staging.example.com/health
+
+  # ─────────────────────────────────────────────────────────────────
+  # STAGE 5: Deploy to Production (requires manual approval)
+  # ─────────────────────────────────────────────────────────────────
+  deploy-production:
+    name: Deploy → Production
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment:
+      name: production              # This environment has "Required reviewers" set in
+      url: https://example.com      # GitHub Settings → Environments → production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to production via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: deploy
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            docker pull ${{ needs.build.outputs.image_tag }}
+            # Rolling update: replace containers one by one (zero downtime)
+            docker compose -f /opt/app/docker-compose.prod.yml up -d \
+              --no-deps --scale app=2 app
+            sleep 15
+            docker compose -f /opt/app/docker-compose.prod.yml up -d \
+              --no-deps --scale app=1 app
+            docker system prune -f
+
+      - name: Notify Slack on successful deployment
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Deployment to production succeeded for `${{ github.repository }}`\nCommit: ${{ github.sha }}\nActor: ${{ github.actor }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

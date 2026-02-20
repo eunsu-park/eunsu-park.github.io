@@ -1,0 +1,1523 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>병렬 처리와 멀티코어 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Computer_Architecture/">Computer Architecture</a>
+    <span class="separator">/</span>
+    <span class="current">병렬 처리와 멀티코어</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>병렬 처리와 멀티코어</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Computer_Architecture/17_IO_Systems.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">입출력 시스템</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Computer_Architecture/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_2">개요</a></li>
+<li><a href="#_3">목차</a></li>
+<li><a href="#1">1. 병렬 처리의 필요성</a><ul>
+<li><a href="#11">1.1 단일 코어의 한계</a></li>
+<li><a href="#12">1.2 무어의 법칙과 데나드 스케일링</a></li>
+<li><a href="#13">1.3 병렬 처리의 이점</a></li>
+</ul>
+</li>
+<li><a href="#2-flynns-taxonomy">2. 플린 분류 (Flynn's Taxonomy)</a><ul>
+<li><a href="#21">2.1 분류 체계</a></li>
+<li><a href="#22-sisd-single-instruction-single-data">2.2 SISD (Single Instruction, Single Data)</a></li>
+<li><a href="#23-simd-single-instruction-multiple-data">2.3 SIMD (Single Instruction, Multiple Data)</a></li>
+<li><a href="#24-misd-multiple-instruction-single-data">2.4 MISD (Multiple Instruction, Single Data)</a></li>
+<li><a href="#25-mimd-multiple-instruction-multiple-data">2.5 MIMD (Multiple Instruction, Multiple Data)</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 멀티프로세서와 멀티코어</a><ul>
+<li><a href="#31-smp-symmetric-multi-processing">3.1 SMP (Symmetric Multi-Processing)</a></li>
+<li><a href="#32-numa-non-uniform-memory-access">3.2 NUMA (Non-Uniform Memory Access)</a></li>
+<li><a href="#33">3.3 멀티코어 프로세서</a></li>
+<li><a href="#34-smt">3.4 하이퍼스레딩 (SMT)</a></li>
+</ul>
+</li>
+<li><a href="#4">4. 캐시 일관성 문제</a><ul>
+<li><a href="#41">4.1 캐시 일관성이란?</a></li>
+<li><a href="#42">4.2 일관성 정의</a></li>
+<li><a href="#43">4.3 일관성 프로토콜 개요</a></li>
+</ul>
+</li>
+<li><a href="#5-mesi">5. 스누핑 프로토콜 (MESI)</a><ul>
+<li><a href="#51-mesi">5.1 MESI 상태</a></li>
+<li><a href="#52-mesi">5.2 MESI 상태 전이</a></li>
+<li><a href="#53-mesi">5.3 MESI 동작 예시</a></li>
+<li><a href="#54-moesi">5.4 MOESI 프로토콜</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 암달의 법칙과 구스타프슨 법칙</a><ul>
+<li><a href="#61-amdahls-law">6.1 암달의 법칙 (Amdahl's Law)</a></li>
+<li><a href="#62-gustafsons-law">6.2 구스타프슨 법칙 (Gustafson's Law)</a></li>
+<li><a href="#63">6.3 실제 병렬화 효율</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 동기화와 락</a><ul>
+<li><a href="#71">7.1 동기화의 필요성</a></li>
+<li><a href="#72">7.2 원자적 연산</a></li>
+<li><a href="#73-spinlock">7.3 스핀락 (Spinlock)</a></li>
+<li><a href="#74">7.4 뮤텍스와 세마포어</a></li>
+<li><a href="#75-lock-free">7.5 Lock-Free 알고리즘</a></li>
+</ul>
+</li>
+<li><a href="#8-gpu">8. GPU와 병렬 컴퓨팅</a><ul>
+<li><a href="#81-gpu">8.1 GPU 아키텍처</a></li>
+<li><a href="#82-cuda">8.2 CUDA 프로그래밍 모델</a></li>
+<li><a href="#83-cuda">8.3 CUDA 코드 예시</a></li>
+<li><a href="#84-gpu-vs-cpu">8.4 GPU vs CPU 사용 사례</a></li>
+</ul>
+</li>
+<li><a href="#9">9. 연습 문제</a><ul>
+<li><a href="#_4">기초 문제</a></li>
+<li><a href="#_5">중급 문제</a></li>
+<li><a href="#_6">심화 문제</a></li>
+</ul>
+</li>
+<li><a href="#_7">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="_1">병렬 처리와 멀티코어<a class="header-link" href="#_1" title="Permanent link">&para;</a></h1>
+<h2 id="_2">개요<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<p>단일 프로세서의 성능 향상이 물리적 한계에 도달하면서, 현대 컴퓨터는 멀티코어와 병렬 처리를 통해 성능을 높이고 있습니다. 이 레슨에서는 병렬 처리의 기본 개념, 멀티프로세서/멀티코어 아키텍처, 캐시 일관성 문제, 동기화 메커니즘, 그리고 GPU를 활용한 병렬 컴퓨팅까지 학습합니다.</p>
+<p><strong>난이도</strong>: ⭐⭐⭐⭐</p>
+<p><strong>선수 지식</strong>: CPU 구조, 캐시 메모리, 메모리 계층</p>
+<hr />
+<h2 id="_3">목차<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-병렬-처리의-필요성">병렬 처리의 필요성</a></li>
+<li><a href="#2-플린-분류-flynns-taxonomy">플린 분류 (Flynn's Taxonomy)</a></li>
+<li><a href="#3-멀티프로세서와-멀티코어">멀티프로세서와 멀티코어</a></li>
+<li><a href="#4-캐시-일관성-문제">캐시 일관성 문제</a></li>
+<li><a href="#5-스누핑-프로토콜-mesi">스누핑 프로토콜 (MESI)</a></li>
+<li><a href="#6-암달의-법칙과-구스타프슨-법칙">암달의 법칙과 구스타프슨 법칙</a></li>
+<li><a href="#7-동기화와-락">동기화와 락</a></li>
+<li><a href="#8-gpu와-병렬-컴퓨팅">GPU와 병렬 컴퓨팅</a></li>
+<li><a href="#9-연습-문제">연습 문제</a></li>
+</ol>
+<hr />
+<h2 id="1">1. 병렬 처리의 필요성<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="11">1.1 단일 코어의 한계<a class="header-link" href="#11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│              CPU 클럭 속도 발전 추이                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  클럭                                                        │
+│  (GHz)                                                      │
+│    │                                    ●──────● (정체)     │
+│  5 │                               ●────●                   │
+│    │                          ●────                         │
+│  4 │                     ●────                              │
+│    │                ●────                                   │
+│  3 │           ●────                                        │
+│    │      ●────                                             │
+│  2 │  ●────                                                 │
+│    │ ●                                                      │
+│  1 │●                                                       │
+│    │                                                        │
+│    └────────────────────────────────────────────────────    │
+│     1995    2000    2005    2010    2015    2020            │
+│                                                             │
+│  2005년 이후 클럭 속도 정체:                                 │
+│  - 전력 장벽 (Power Wall)                                   │
+│  - 발열 문제                                                │
+│  - 메모리 장벽 (Memory Wall)                                │
+│  - ILP 장벽                                                 │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="12">1.2 무어의 법칙과 데나드 스케일링<a class="header-link" href="#12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>무어의 법칙 (Moore&#39;s Law):
+- 트랜지스터 수 2년마다 2배 증가
+- 아직 유효 (둔화 중)
+
+데나드 스케일링 (Dennard Scaling):
+- 트랜지스터 크기 감소 → 전력 밀도 일정
+- 2006년경 붕괴
+
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│  데나드 스케일링 종료 후:                                     │
+│                                                             │
+│  트랜지스터 수 ↑  +  클럭 속도 정체  →  어떻게 활용?          │
+│                                                             │
+│  해결책: 멀티코어                                            │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                                                     │   │
+│  │   2005년 이전:        2005년 이후:                   │   │
+│  │                                                     │   │
+│  │   ┌─────────────┐    ┌─────┐ ┌─────┐ ┌─────┐      │   │
+│  │   │             │    │Core1│ │Core2│ │Core3│ ...  │   │
+│  │   │  단일 고성능  │    │     │ │     │ │     │      │   │
+│  │   │    코어     │    └─────┘ └─────┘ └─────┘      │   │
+│  │   │             │                                  │   │
+│  │   └─────────────┘    여러 개의 효율적인 코어        │   │
+│  │                                                     │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="13">1.3 병렬 처리의 이점<a class="header-link" href="#13" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>성능 향상:
+- 동시에 여러 작업 처리
+- 큰 문제를 작은 부분으로 나눠 병렬 해결
+
+에너지 효율:
+- 낮은 클럭의 여러 코어가 높은 클럭의 단일 코어보다 효율적
+- 전력 ∝ 전압² × 주파수
+
+신뢰성:
+- 한 코어 고장 시 다른 코어로 계속 동작
+- 결함 허용(Fault Tolerance)
+
+확장성:
+- 코어 수 증가로 성능 확장 가능
+- 수직 확장(코어 추가) + 수평 확장(노드 추가)
+</code></pre></div>
+
+<hr />
+<h2 id="2-flynns-taxonomy">2. 플린 분류 (Flynn's Taxonomy)<a class="header-link" href="#2-flynns-taxonomy" title="Permanent link">&para;</a></h2>
+<h3 id="21">2.1 분류 체계<a class="header-link" href="#21" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                   Flynn&#39;s Taxonomy                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│              │     Single Data     │    Multiple Data       │
+│              │        (SD)         │        (MD)            │
+│  ────────────┼─────────────────────┼────────────────────────│
+│              │                     │                        │
+│   Single     │       SISD          │       SIMD            │
+│ Instruction  │  (단일 명령어       │  (단일 명령어          │
+│     (SI)     │   단일 데이터)       │   다중 데이터)         │
+│              │                     │                        │
+│  ────────────┼─────────────────────┼────────────────────────│
+│              │                     │                        │
+│  Multiple    │       MISD          │       MIMD            │
+│ Instruction  │  (다중 명령어       │  (다중 명령어          │
+│     (MI)     │   단일 데이터)       │   다중 데이터)         │
+│              │                     │                        │
+│              │   (거의 없음)        │                        │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="22-sisd-single-instruction-single-data">2.2 SISD (Single Instruction, Single Data)<a class="header-link" href="#22-sisd-single-instruction-single-data" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>전통적인 폰 노이만 컴퓨터:
+
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│     Instruction Stream          Data Stream                 │
+│           │                         │                       │
+│           ▼                         ▼                       │
+│     ┌───────────┐             ┌───────────┐                │
+│     │    I1     │             │    D1     │                │
+│     │    I2     │             │    D2     │                │
+│     │    I3     │             │    D3     │                │
+│     │    ...    │             │    ...    │                │
+│     └─────┬─────┘             └─────┬─────┘                │
+│           │                         │                       │
+│           └───────────┬─────────────┘                       │
+│                       │                                     │
+│                       ▼                                     │
+│               ┌───────────────┐                            │
+│               │      CPU      │                            │
+│               │  (단일 코어)   │                            │
+│               └───────────────┘                            │
+│                                                             │
+│  예시: 초기 마이크로프로세서, 임베디드 시스템                  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="23-simd-single-instruction-multiple-data">2.3 SIMD (Single Instruction, Multiple Data)<a class="header-link" href="#23-simd-single-instruction-multiple-data" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">같은</span><span class="w"> </span><span class="err">연산을</span><span class="w"> </span><span class="err">여러</span><span class="w"> </span><span class="err">데이터에</span><span class="w"> </span><span class="err">동시</span><span class="w"> </span><span class="err">적용</span><span class="p">:</span>
+
+<span class="err">┌─────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="n">Single</span><span class="w"> </span><span class="n">Instruction</span><span class="w">              </span><span class="n">Multiple</span><span class="w"> </span><span class="n">Data</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">           </span><span class="err">│</span><span class="w">                    </span><span class="err">┌──────┬──────┬──────┐</span><span class="w">      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">           </span><span class="err">│</span><span class="w">                    </span><span class="err">│</span><span class="w">  </span><span class="n">D1</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">D2</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">D3</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">           </span><span class="err">▼</span><span class="w">                    </span><span class="err">└──┬───┴──┬───┴──┬───┘</span><span class="w">      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">┌───────────┐</span><span class="w">                 </span><span class="err">│</span><span class="w">      </span><span class="err">│</span><span class="w">      </span><span class="err">│</span><span class="w">          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">   </span><span class="n">ADD</span><span class="w">     </span><span class="err">│</span><span class="w">                 </span><span class="err">▼</span><span class="w">      </span><span class="err">▼</span><span class="w">      </span><span class="err">▼</span><span class="w">          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">└─────┬─────┘</span><span class="w">            </span><span class="err">┌────────────────────────┐</span><span class="w">    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">           </span><span class="err">│</span><span class="w">                  </span><span class="err">│</span><span class="w">     </span><span class="n">Processing</span><span class="w"> </span><span class="n">Units</span><span class="w">    </span><span class="err">│</span><span class="w">    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">           </span><span class="err">│</span><span class="w">                  </span><span class="err">│</span><span class="w">   </span><span class="err">┌────┐┌────┐┌────┐</span><span class="w">   </span><span class="err">│</span><span class="w">    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">           </span><span class="err">└─────────────────▶│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">PU1</span><span class="err">││</span><span class="w"> </span><span class="n">PU2</span><span class="err">││</span><span class="w"> </span><span class="n">PU3</span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                              </span><span class="err">│</span><span class="w">   </span><span class="err">└────┘└────┘└────┘</span><span class="w">   </span><span class="err">│</span><span class="w">    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                              </span><span class="err">└──────────┬─────────────┘</span><span class="w">    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                         </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                              </span><span class="err">┌──────────┴──────────┐</span><span class="w">       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                              </span><span class="err">│</span><span class="w">  </span><span class="n">R1</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">R2</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">R3</span><span class="w">  </span><span class="err">│</span><span class="w">       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                              </span><span class="err">└──────┴──────┴──────┘</span><span class="w">       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">예시</span><span class="p">:</span><span class="w">                                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Intel</span><span class="w"> </span><span class="n">SSE</span><span class="p">,</span><span class="w"> </span><span class="n">AVX</span><span class="w"> </span><span class="p">(</span><span class="mi">256</span><span class="o">/</span><span class="mi">512</span><span class="err">비트</span><span class="w"> </span><span class="err">벡터</span><span class="p">)</span><span class="w">                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">GPU의</span><span class="w"> </span><span class="err">워프</span><span class="o">/</span><span class="err">웨이브</span><span class="w">                                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="err">이미지</span><span class="w"> </span><span class="err">처리</span><span class="p">,</span><span class="w"> </span><span class="err">과학</span><span class="w"> </span><span class="err">계산</span><span class="w">                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">코드</span><span class="w"> </span><span class="err">예시</span><span class="w"> </span><span class="p">(</span><span class="n">AVX</span><span class="p">):</span><span class="w">                                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">__m256</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">_mm256_load_ps</span><span class="p">(</span><span class="n">arr1</span><span class="p">);</span><span class="w">                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">__m256</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">_mm256_load_ps</span><span class="p">(</span><span class="n">arr2</span><span class="p">);</span><span class="w">                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">__m256</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">_mm256_add_ps</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">);</span><span class="w">  </span><span class="o">//</span><span class="w"> </span><span class="mi">8</span><span class="err">개</span><span class="w"> </span><span class="nb nb-Type">float</span><span class="w"> </span><span class="err">동시</span><span class="w"> </span><span class="err">덧셈</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="24-misd-multiple-instruction-single-data">2.4 MISD (Multiple Instruction, Single Data)<a class="header-link" href="#24-misd-multiple-instruction-single-data" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>여러 명령어가 같은 데이터 스트림 처리:
+
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│     Multiple Instructions           Single Data             │
+│     ┌────────────────┐                  │                   │
+│     │ I1: Encrypt    │                  │                   │
+│     │ I2: Compress   │                  ▼                   │
+│     │ I3: Checksum   │             ┌─────────┐             │
+│     └───────┬────────┘             │  Data   │             │
+│             │                      └────┬────┘             │
+│             │                           │                   │
+│             ▼                           │                   │
+│      ┌────────────┐                     │                   │
+│      │ Pipeline   │◀────────────────────┘                   │
+│      │ of Units   │                                         │
+│      └────────────┘                                         │
+│                                                             │
+│  실제 사용 예:                                               │
+│  - 시스톨릭 어레이 (일부)                                    │
+│  - 결함 허용 시스템 (같은 계산 여러 번)                       │
+│  - 매우 드물게 사용됨                                        │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="25-mimd-multiple-instruction-multiple-data">2.5 MIMD (Multiple Instruction, Multiple Data)<a class="header-link" href="#25-mimd-multiple-instruction-multiple-data" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>가장 일반적인 병렬 컴퓨터 형태:
+
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│     Multiple Instructions           Multiple Data           │
+│     ┌────────────────┐         ┌────────────────────┐      │
+│     │ I1: func_A()   │         │ D1, D2, D3, D4     │      │
+│     │ I2: func_B()   │         │ D5, D6, D7, D8     │      │
+│     │ I3: func_C()   │         │ ...               │      │
+│     │ I4: func_D()   │         │                   │      │
+│     └───────┬────────┘         └─────────┬─────────┘      │
+│             │                            │                  │
+│             ▼                            ▼                  │
+│     ┌───────────────────────────────────────────────────┐  │
+│     │               Multiple Processors                  │  │
+│     │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ │  │
+│     │  │  CPU 1  │ │  CPU 2  │ │  CPU 3  │ │  CPU 4  │ │  │
+│     │  │ func_A()│ │ func_B()│ │ func_C()│ │ func_D()│ │  │
+│     │  │   D1    │ │   D5    │ │   D2    │ │   D8    │ │  │
+│     │  └─────────┘ └─────────┘ └─────────┘ └─────────┘ │  │
+│     └───────────────────────────────────────────────────┘  │
+│                                                             │
+│  예시:                                                      │
+│  - 멀티코어 프로세서                                        │
+│  - 멀티프로세서 서버                                        │
+│  - 클러스터, 슈퍼컴퓨터                                     │
+│                                                             │
+│  MIMD 분류:                                                 │
+│  - 공유 메모리 (Shared Memory): SMP, NUMA                  │
+│  - 분산 메모리 (Distributed Memory): 클러스터               │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="3">3. 멀티프로세서와 멀티코어<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="31-smp-symmetric-multi-processing">3.1 SMP (Symmetric Multi-Processing)<a class="header-link" href="#31-smp-symmetric-multi-processing" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                  SMP (대칭 다중 처리)                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│     ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐       │
+│     │  CPU 0  │ │  CPU 1  │ │  CPU 2  │ │  CPU 3  │       │
+│     │┌───────┐│ │┌───────┐│ │┌───────┐│ │┌───────┐│       │
+│     ││ Cache ││ ││ Cache ││ ││ Cache ││ ││ Cache ││       │
+│     │└───────┘│ │└───────┘│ │└───────┘│ │└───────┘│       │
+│     └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘       │
+│          │           │           │           │             │
+│          └───────────┴─────┬─────┴───────────┘             │
+│                            │                                │
+│                      System Bus                            │
+│                            │                                │
+│     ┌──────────────────────┴──────────────────────┐        │
+│     │                                             │        │
+│     │              Shared Memory                  │        │
+│     │            (모든 CPU 동등 접근)              │        │
+│     │                                             │        │
+│     └─────────────────────────────────────────────┘        │
+│                                                             │
+│  특징:                                                      │
+│  - 모든 프로세서가 메모리에 동등하게 접근 (UMA)              │
+│  - 어떤 CPU에서든 같은 코드 실행 가능                        │
+│  - 확장성 제한 (버스 경합)                                   │
+│  - 일반적으로 2-8 CPU                                       │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="32-numa-non-uniform-memory-access">3.2 NUMA (Non-Uniform Memory Access)<a class="header-link" href="#32-numa-non-uniform-memory-access" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    NUMA 아키텍처                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│          Node 0                        Node 1               │
+│     ┌──────────────────┐          ┌──────────────────┐     │
+│     │  CPU0    CPU1    │          │  CPU2    CPU3    │     │
+│     │  ┌───┐   ┌───┐   │          │  ┌───┐   ┌───┐   │     │
+│     │  │ $ │   │ $ │   │          │  │ $ │   │ $ │   │     │
+│     │  └─┬─┘   └─┬─┘   │          │  └─┬─┘   └─┬─┘   │     │
+│     │    └───┬───┘     │          │    └───┬───┘     │     │
+│     │        │         │          │        │         │     │
+│     │  ┌─────┴─────┐   │          │  ┌─────┴─────┐   │     │
+│     │  │ Local Mem │   │◀════════▶│  │ Local Mem │   │     │
+│     │  │  (빠름)    │   │Interconn│  │  (빠름)    │   │     │
+│     │  └───────────┘   │          │  └───────────┘   │     │
+│     └──────────────────┘          └──────────────────┘     │
+│                                                             │
+│  메모리 접근 시간:                                           │
+│  ┌────────────────────────────────────────────────────────┐│
+│  │ Local Memory (같은 노드):     ~100 사이클               ││
+│  │ Remote Memory (다른 노드):    ~300 사이클 (3배 느림)    ││
+│  └────────────────────────────────────────────────────────┘│
+│                                                             │
+│  특징:                                                      │
+│  - 로컬 메모리 접근이 원격 메모리보다 빠름                   │
+│  - 확장성 우수 (수백 CPU 가능)                              │
+│  - NUMA-aware 프로그래밍 필요                               │
+│  - 최신 서버의 표준 구조                                    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="33">3.3 멀티코어 프로세서<a class="header-link" href="#33" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                  현대 멀티코어 CPU                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐ │
+│  │                    CPU Die                             │ │
+│  │  ┌─────────────────────────────────────────────────┐  │ │
+│  │  │    Core 0           Core 1          Core 2      │  │ │
+│  │  │  ┌─────────┐      ┌─────────┐     ┌─────────┐  │  │ │
+│  │  │  │L1-I│L1-D│      │L1-I│L1-D│     │L1-I│L1-D│  │  │ │
+│  │  │  └────┴────┘      └────┴────┘     └────┴────┘  │  │ │
+│  │  │  ┌─────────┐      ┌─────────┐     ┌─────────┐  │  │ │
+│  │  │  │   L2    │      │   L2    │     │   L2    │  │  │ │
+│  │  │  └─────────┘      └─────────┘     └─────────┘  │  │ │
+│  │  └─────────────────────────────────────────────────┘  │ │
+│  │                          │                             │ │
+│  │  ┌───────────────────────┴───────────────────────┐    │ │
+│  │  │                  Shared L3 Cache               │    │ │
+│  │  │                   (8-64 MB)                    │    │ │
+│  │  └───────────────────────┬───────────────────────┘    │ │
+│  │                          │                             │ │
+│  │  ┌───────────────────────┴───────────────────────┐    │ │
+│  │  │            Memory Controller                   │    │ │
+│  │  │            + PCIe Controller                   │    │ │
+│  │  └───────────────────────────────────────────────┘    │ │
+│  └───────────────────────────────────────────────────────┘ │
+│                                                             │
+│  장점:                                                      │
+│  - 코어 간 통신 빠름 (온칩)                                 │
+│  - 전력 효율적                                              │
+│  - 공유 캐시로 데이터 공유 효율적                            │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="34-smt">3.4 하이퍼스레딩 (SMT)<a class="header-link" href="#34-smt" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│           Simultaneous Multi-Threading (SMT)                 │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  하나의 물리 코어에서 여러 스레드를 동시 실행:               │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                   Physical Core                      │   │
+│  │  ┌─────────────────────────────────────────────────┐│   │
+│  │  │ Thread 0 State │ Thread 1 State                 ││   │
+│  │  │  ┌───────────┐ │ ┌───────────┐                  ││   │
+│  │  │  │Registers  │ │ │Registers  │  ← 복제됨       ││   │
+│  │  │  │PC, Stack  │ │ │PC, Stack  │                  ││   │
+│  │  │  └───────────┘ │ └───────────┘                  ││   │
+│  │  └─────────────────────────────────────────────────┘│   │
+│  │                                                      │   │
+│  │  ┌─────────────────────────────────────────────────┐│   │
+│  │  │              Shared Resources                   ││   │
+│  │  │  ┌─────────┐ ┌─────────┐ ┌─────────┐          ││   │
+│  │  │  │  ALU    │ │  Cache  │ │ Branch  │  ← 공유  ││   │
+│  │  │  │         │ │         │ │Predictor│          ││   │
+│  │  │  └─────────┘ └─────────┘ └─────────┘          ││   │
+│  │  └─────────────────────────────────────────────────┘│   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  동작 원리:                                                 │
+│  - Thread 0가 메모리 대기 중 → Thread 1 실행               │
+│  - 실행 유닛 활용도 향상                                    │
+│  - 일반적으로 15-30% 성능 향상                              │
+│                                                             │
+│  OS에서의 표시:                                             │
+│  - 4코어 8스레드 = 8개의 논리 CPU로 인식                    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="4">4. 캐시 일관성 문제<a class="header-link" href="#4" title="Permanent link">&para;</a></h2>
+<h3 id="41">4.1 캐시 일관성이란?<a class="header-link" href="#41" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>문제 상황:
+
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│     Core 0                            Core 1                │
+│     Cache                             Cache                 │
+│   ┌─────────┐                       ┌─────────┐            │
+│   │ X = 10  │                       │ X = 10  │            │
+│   └─────────┘                       └─────────┘            │
+│        │                                 │                  │
+│        └─────────────┬───────────────────┘                  │
+│                      │                                      │
+│               ┌──────┴──────┐                              │
+│               │ Main Memory │                              │
+│               │   X = 10    │                              │
+│               └─────────────┘                              │
+│                                                             │
+│  1. 초기 상태: X = 10 (모두 동일)                           │
+│                                                             │
+│  2. Core 0이 X = 20으로 수정:                               │
+│                                                             │
+│     Core 0                            Core 1                │
+│     Cache                             Cache                 │
+│   ┌─────────┐                       ┌─────────┐            │
+│   │ X = 20  │ ← 수정됨              │ X = 10  │ ← 구버전!  │
+│   └─────────┘                       └─────────┘            │
+│                                                             │
+│  3. Core 1이 X를 읽으면 어떤 값?                            │
+│     - 10 (자신의 캐시) → 오래된 값! (일관성 위반)            │
+│     - 20 (Core 0의 값) → 일관성 유지                        │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="42">4.2 일관성 정의<a class="header-link" href="#42" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>캐시 일관성 (Cache Coherence) 조건:
+
+1. 프로그램 순서 보존:
+   - 같은 프로세서에서 쓰기 후 읽기는 쓴 값 반환
+
+2. 일관된 읽기 값:
+   - 다른 프로세서의 쓰기가 최종적으로 모든 프로세서에 보임
+
+3. 쓰기 직렬화:
+   - 같은 주소에 대한 쓰기는 모든 프로세서에 같은 순서로 보임
+
+┌─────────────────────────────────────────────────────────────┐
+│  예시:                                                      │
+│                                                             │
+│  초기: X = 0                                                │
+│                                                             │
+│  Core 0: X = 1                                              │
+│  Core 1: X = 2                                              │
+│                                                             │
+│  모든 프로세서가 본 X 값의 순서는 같아야 함:                  │
+│  - 모두 0 → 1 → 2 순서로 봄, 또는                           │
+│  - 모두 0 → 2 → 1 순서로 봄                                 │
+│                                                             │
+│  어떤 프로세서가 1 → 2 보고 다른 프로세서가 2 → 1 보면 안 됨 │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="43">4.3 일관성 프로토콜 개요<a class="header-link" href="#43" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>일관성 유지 방법:
+
+1. 스누핑 (Snooping) 프로토콜:
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│  - 버스 기반 시스템에 적합                                  │
+│  - 각 캐시가 버스 트래픽 감시 (스누핑)                       │
+│  - 관련 주소 발견 시 적절한 조치                            │
+│  - MESI, MOESI 등                                          │
+│                                                             │
+│     ┌─────┐     ┌─────┐     ┌─────┐                        │
+│     │Cache│     │Cache│     │Cache│  ← 모두 버스 감시      │
+│     └──┬──┘     └──┬──┘     └──┬──┘                        │
+│        │           │           │                            │
+│     ═══╪═══════════╪═══════════╪═════  (Shared Bus)        │
+│                    │                                        │
+│             ┌──────┴──────┐                                │
+│             │   Memory    │                                │
+│             └─────────────┘                                │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+2. 디렉토리 (Directory) 프로토콜:
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│  - 확장성 좋음 (NUMA에 적합)                                │
+│  - 중앙 디렉토리가 캐시 상태 추적                           │
+│  - 해당 캐시에만 메시지 전송                                │
+│                                                             │
+│     ┌─────┐           ┌─────┐           ┌─────┐           │
+│     │Cache│           │Cache│           │Cache│           │
+│     └──┬──┘           └──┬──┘           └──┬──┘           │
+│        │                 │                 │               │
+│        └────────┬────────┴────────┬────────┘               │
+│                 │                 │                         │
+│           ┌─────┴─────┐   ┌──────┴──────┐                  │
+│           │ Directory │   │   Memory    │                  │
+│           │ (상태 추적)│   │             │                  │
+│           └───────────┘   └─────────────┘                  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="5-mesi">5. 스누핑 프로토콜 (MESI)<a class="header-link" href="#5-mesi" title="Permanent link">&para;</a></h2>
+<h3 id="51-mesi">5.1 MESI 상태<a class="header-link" href="#51-mesi" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    MESI 프로토콜 상태                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  M (Modified):                                              │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ - 이 캐시만 복사본 보유                              │   │
+│  │ - 수정됨 (메모리와 불일치)                           │   │
+│  │ - 다른 캐시 접근 시 Write-back 필요                  │   │
+│  │ - 쓰기 가능                                          │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  E (Exclusive):                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ - 이 캐시만 복사본 보유                              │   │
+│  │ - 수정 안 됨 (메모리와 일치)                         │   │
+│  │ - 쓰기 시 M 상태로 전이 (무효화 불필요)              │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  S (Shared):                                                │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ - 여러 캐시가 복사본 보유 가능                       │   │
+│  │ - 메모리와 일치                                      │   │
+│  │ - 쓰기 시 다른 캐시 무효화 필요 → M 상태             │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  I (Invalid):                                               │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ - 유효한 데이터 없음                                 │   │
+│  │ - 캐시 라인 비어있음                                 │   │
+│  │ - 접근 시 캐시 미스                                  │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="52-mesi">5.2 MESI 상태 전이<a class="header-link" href="#52-mesi" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                   MESI 상태 전이 다이어그램                   │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│                      ┌─────────┐                            │
+│           Read miss  │         │  Read miss                 │
+│           (exclusive)│    I    │  (shared)                  │
+│             ┌────────│ Invalid │────────┐                   │
+│             │        │         │        │                   │
+│             │        └────┬────┘        │                   │
+│             │             │             │                   │
+│             │        Write│             │                   │
+│             │        miss │             │                   │
+│             │             │             │                   │
+│             ▼             │             ▼                   │
+│       ┌──────────┐        │      ┌──────────┐              │
+│       │    E     │        │      │    S     │              │
+│       │Exclusive │        │      │ Shared   │              │
+│       └────┬─────┘        │      └────┬─────┘              │
+│            │              │           │                     │
+│       Local│              │      Local│                     │
+│       Write│              │      Write│                     │
+│            │              │           │                     │
+│            ▼              ▼           ▼                     │
+│       ┌─────────────────────────────────┐                  │
+│       │            M                    │                  │
+│       │         Modified                │                  │
+│       └─────────────────────────────────┘                  │
+│                                                             │
+│  주요 전이:                                                 │
+│  - I → E: Read miss, 다른 캐시에 없음                       │
+│  - I → S: Read miss, 다른 캐시에 있음 (Shared 상태)         │
+│  - E → M: Local write (무효화 브로드캐스트 불필요)          │
+│  - S → M: Local write + 다른 캐시 무효화                    │
+│  - M/E/S → I: 다른 캐시의 쓰기로 무효화됨                   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="53-mesi">5.3 MESI 동작 예시<a class="header-link" href="#53-mesi" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│              MESI 프로토콜 동작 예시                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  초기: 변수 X는 어떤 캐시에도 없음 (메모리에만 X=0)          │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Step 1: Core 0이 X 읽기                              │   │
+│  │                                                     │   │
+│  │   Core 0 Cache     Core 1 Cache     Memory          │   │
+│  │   ┌─────────┐      ┌─────────┐      ┌─────────┐    │   │
+│  │   │ X=0 (E) │      │ X (I)   │      │ X = 0   │    │   │
+│  │   └─────────┘      └─────────┘      └─────────┘    │   │
+│  │   Exclusive (다른 캐시에 없음)                       │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Step 2: Core 1이 X 읽기                              │   │
+│  │                                                     │   │
+│  │   Core 0 Cache     Core 1 Cache     Memory          │   │
+│  │   ┌─────────┐      ┌─────────┐      ┌─────────┐    │   │
+│  │   │ X=0 (S) │      │ X=0 (S) │      │ X = 0   │    │   │
+│  │   └─────────┘      └─────────┘      └─────────┘    │   │
+│  │   E→S 전이 (다른 캐시에서 읽음)                      │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Step 3: Core 0이 X = 10 쓰기                         │   │
+│  │                                                     │   │
+│  │   Core 0: 무효화 메시지 브로드캐스트                  │   │
+│  │   Core 1: X를 Invalid로 변경                        │   │
+│  │                                                     │   │
+│  │   Core 0 Cache     Core 1 Cache     Memory          │   │
+│  │   ┌─────────┐      ┌─────────┐      ┌─────────┐    │   │
+│  │   │ X=10(M) │      │ X (I)   │      │ X = 0   │    │   │
+│  │   └─────────┘      └─────────┘      └─────────┘    │   │
+│  │   Modified (메모리와 불일치)                         │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Step 4: Core 1이 X 읽기                              │   │
+│  │                                                     │   │
+│  │   Core 1: Read miss, Core 0이 데이터 제공           │   │
+│  │   Core 0: Write-back to memory, S로 전이            │   │
+│  │                                                     │   │
+│  │   Core 0 Cache     Core 1 Cache     Memory          │   │
+│  │   ┌─────────┐      ┌─────────┐      ┌─────────┐    │   │
+│  │   │ X=10(S) │      │ X=10(S) │      │ X = 10  │    │   │
+│  │   └─────────┘      └─────────┘      └─────────┘    │   │
+│  │   M→S 전이, 메모리 갱신됨                           │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="54-moesi">5.4 MOESI 프로토콜<a class="header-link" href="#54-moesi" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>MOESI = MESI + Owner 상태:
+
+O (Owner):
+- 수정된 데이터의 유일한 소유자
+- 다른 캐시도 Shared 복사본 가질 수 있음
+- 메모리와 불일치 (Owner가 최신)
+- 다른 캐시 요청 시 Owner가 응답
+
+┌─────────────────────────────────────────────────────────────┐
+│  MOESI 장점:                                                │
+│  - Cache-to-Cache 전송 효율 증가                           │
+│  - Write-back 지연 가능                                    │
+│  - AMD 프로세서에서 주로 사용                               │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 암달의 법칙과 구스타프슨 법칙<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="61-amdahls-law">6.1 암달의 법칙 (Amdahl's Law)<a class="header-link" href="#61-amdahls-law" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>병렬화의 한계를 보여주는 법칙:
+
+┌─────────────────────────────────────────────────────────────┐
+│                     Amdahl&#39;s Law                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│                        1                                    │
+│  Speedup = ─────────────────────────                        │
+│            (1 - P) + P/N                                    │
+│                                                             │
+│  P: 병렬화 가능한 비율                                       │
+│  N: 프로세서 수                                             │
+│                                                             │
+│  예시: P = 90% (90% 병렬화 가능)                            │
+│                                                             │
+│  N=2:   Speedup = 1/(0.1 + 0.45) = 1.82x                   │
+│  N=4:   Speedup = 1/(0.1 + 0.225) = 3.08x                  │
+│  N=8:   Speedup = 1/(0.1 + 0.1125) = 4.71x                 │
+│  N=∞:   Speedup = 1/0.1 = 10x  ← 최대 한계!                │
+│                                                             │
+│  90%를 병렬화해도 최대 10배 성능 향상만 가능                 │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ Speedup                                              │   │
+│  │    │                              _______ P=99%     │   │
+│  │ 100│                        _____/                  │   │
+│  │    │                   ____/                        │   │
+│  │ 80 │              ____/                             │   │
+│  │    │         ____/              _______ P=95%       │   │
+│  │ 60 │    ____/              ____/                    │   │
+│  │    │___/              ____/                         │   │
+│  │ 40 │             ____/          _______ P=90%       │   │
+│  │    │        ____/          ____/                    │   │
+│  │ 20 │   ____/          ____/                         │   │
+│  │    │__/          ____/_______________________ P=75% │   │
+│  │    │        ____/___________________________        │   │
+│  │    └────────────────────────────────────────────    │   │
+│  │    1    10   100  1000  10000  프로세서 수          │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="62-gustafsons-law">6.2 구스타프슨 법칙 (Gustafson's Law)<a class="header-link" href="#62-gustafsons-law" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>문제 크기를 확장하면 더 많은 병렬화 가능:
+
+┌─────────────────────────────────────────────────────────────┐
+│                    Gustafson&#39;s Law                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Scaled Speedup = N + (1 - N) × S                          │
+│                                                             │
+│  또는:                                                      │
+│                                                             │
+│  Speedup = N - S × (N - 1)                                 │
+│                                                             │
+│  N: 프로세서 수                                             │
+│  S: 순차 부분의 비율 (고정된 시간)                          │
+│                                                             │
+│  핵심 아이디어:                                              │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                                                     │   │
+│  │  암달: &quot;문제 크기 고정, 프로세서 추가&quot;              │   │
+│  │        → 순차 부분이 병목                           │   │
+│  │                                                     │   │
+│  │  구스타프슨: &quot;시간 고정, 문제 크기 확장&quot;            │   │
+│  │             → 더 큰 문제를 같은 시간에 해결         │   │
+│  │             → 병렬 부분 비율 증가                   │   │
+│  │                                                     │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  예시:                                                      │
+│  - 1시간 안에 시뮬레이션 실행                               │
+│  - 프로세서 추가하면 더 정밀한 시뮬레이션 가능              │
+│  - 순차 부분(초기화 등)은 일정, 병렬 계산량 증가           │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="63">6.3 실제 병렬화 효율<a class="header-link" href="#63" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│              병렬화 효율 계산                                │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  효율 = Speedup / N                                        │
+│                                                             │
+│  이상적: 효율 = 1 (100%)                                   │
+│  현실적: 오버헤드로 인해 1보다 작음                         │
+│                                                             │
+│  오버헤드 요인:                                             │
+│  - 통신 시간 (프로세서 간 데이터 전송)                      │
+│  - 동기화 대기 시간                                        │
+│  - 로드 불균형 (작업 불균등 분배)                          │
+│  - 캐시 일관성 트래픽                                       │
+│  - 메모리 경합                                              │
+│                                                             │
+│  효율성 그래프:                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │ 효율                                                │   │
+│  │ 100%│────┐                                          │   │
+│  │     │    └────┐                                     │   │
+│  │ 80% │         └────┐                                │   │
+│  │     │              └────┐                           │   │
+│  │ 60% │                   └────┐                      │   │
+│  │     │                        └────┐                 │   │
+│  │ 40% │                             └────┐            │   │
+│  │     │                                  └────        │   │
+│  │ 20% │                                              │   │
+│  │     └─────────────────────────────────────────     │   │
+│  │     1   2   4   8   16  32  64  128 프로세서 수    │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  일반적으로 프로세서 수 증가 시 효율 감소                    │
+│  (수확 체감의 법칙)                                         │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 동기화와 락<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="71">7.1 동기화의 필요성<a class="header-link" href="#71" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">Race</span><span class="w"> </span><span class="n">Condition</span><span class="w"> </span><span class="err">예시</span><span class="p">:</span>
+
+<span class="err">┌─────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">  </span><span class="err">공유</span><span class="w"> </span><span class="err">변수</span><span class="p">:</span><span class="w"> </span><span class="n">counter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w">                                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Thread</span><span class="w"> </span><span class="mi">0</span><span class="w">              </span><span class="n">Thread</span><span class="w"> </span><span class="mi">1</span><span class="w">                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">─────────────────</span><span class="w">     </span><span class="err">─────────────────</span><span class="w">                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nb">load</span><span class="w">  </span><span class="n">counter</span><span class="w">         </span><span class="nb">load</span><span class="w">  </span><span class="n">counter</span><span class="w">         </span><span class="o">//</span><span class="w"> </span><span class="err">둘</span><span class="w"> </span><span class="err">다</span><span class="w"> </span><span class="mi">0</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">add</span><span class="w">   </span><span class="mi">1</span><span class="w">               </span><span class="n">add</span><span class="w">   </span><span class="mi">1</span><span class="w">               </span><span class="o">//</span><span class="w"> </span><span class="err">둘</span><span class="w"> </span><span class="err">다</span><span class="w"> </span><span class="mi">1</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">store</span><span class="w"> </span><span class="n">counter</span><span class="w">         </span><span class="n">store</span><span class="w"> </span><span class="n">counter</span><span class="w">         </span><span class="o">//</span><span class="w"> </span><span class="err">둘</span><span class="w"> </span><span class="err">다</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="err">저장│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">기대</span><span class="w"> </span><span class="err">결과</span><span class="p">:</span><span class="w"> </span><span class="n">counter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="w">                                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">실제</span><span class="w"> </span><span class="err">결과</span><span class="p">:</span><span class="w"> </span><span class="n">counter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="err">하나의</span><span class="w"> </span><span class="err">증가가</span><span class="w"> </span><span class="err">손실됨</span><span class="o">!</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="72">7.2 원자적 연산<a class="header-link" href="#72" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nx">하드웨어</span><span class="w"> </span><span class="nx">지원</span><span class="w"> </span><span class="nx">원자적</span><span class="w"> </span><span class="nx">연산</span><span class="p">:</span>
+
+<span class="err">┌─────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">Test</span><span class="o">-</span><span class="k">and</span><span class="o">-</span><span class="nx">Set</span><span class="w"> </span><span class="p">(</span><span class="nx">TAS</span><span class="p">):</span><span class="w">                                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌───────────────────────────────────────────────────┐</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nx">int</span><span class="w"> </span><span class="nx">TAS</span><span class="p">(</span><span class="nx">int</span><span class="w"> </span><span class="o">*</span><span class="nx">lock</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">                             </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="nx">int</span><span class="w"> </span><span class="nx">old</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="o">*</span><span class="nx">lock</span><span class="p">;</span><span class="w">   </span><span class="c1">// 읽기                   │     │</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="o">*</span><span class="nx">lock</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">         </span><span class="c1">// 쓰기      원자적으로    │     │</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="nx">old</span><span class="p">;</span><span class="w">        </span><span class="c1">// 반환      실행됨       │     │</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="p">}</span><span class="w">                                                </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└───────────────────────────────────────────────────┘</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">Compare</span><span class="o">-</span><span class="k">and</span><span class="o">-</span><span class="nx">Swap</span><span class="w"> </span><span class="p">(</span><span class="nx">CAS</span><span class="p">):</span><span class="w">                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌───────────────────────────────────────────────────┐</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="kt">bool</span><span class="w"> </span><span class="nx">CAS</span><span class="p">(</span><span class="nx">int</span><span class="w"> </span><span class="o">*</span><span class="kd">addr</span><span class="p">,</span><span class="w"> </span><span class="nx">int</span><span class="w"> </span><span class="nx">expected</span><span class="p">,</span><span class="w"> </span><span class="nx">int</span><span class="w"> </span><span class="nx">new</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">     </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="kd">addr</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nx">expected</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">                     </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">          </span><span class="o">*</span><span class="kd">addr</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">new</span><span class="p">;</span><span class="w">                </span><span class="nx">원자적으로</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">          </span><span class="k">return</span><span class="w"> </span><span class="kc">true</span><span class="p">;</span><span class="w">                </span><span class="nx">실행됨</span><span class="w">      </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="p">}</span><span class="w">                                            </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span><span class="w">                                </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="p">}</span><span class="w">                                                </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└───────────────────────────────────────────────────┘</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">Fetch</span><span class="o">-</span><span class="k">and</span><span class="o">-</span><span class="nx">Add</span><span class="p">:</span><span class="w">                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌───────────────────────────────────────────────────┐</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nx">int</span><span class="w"> </span><span class="nx">FAA</span><span class="p">(</span><span class="nx">int</span><span class="w"> </span><span class="o">*</span><span class="kd">addr</span><span class="p">,</span><span class="w"> </span><span class="nx">int</span><span class="w"> </span><span class="nx">val</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">                    </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="nx">int</span><span class="w"> </span><span class="nx">old</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="o">*</span><span class="kd">addr</span><span class="p">;</span><span class="w">                 </span><span class="nx">원자적으로</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="o">*</span><span class="kd">addr</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">old</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">val</span><span class="p">;</span><span class="w">               </span><span class="nx">실행됨</span><span class="w">      </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="nx">old</span><span class="p">;</span><span class="w">                                  </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="p">}</span><span class="w">                                                </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└───────────────────────────────────────────────────┘</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">x86</span><span class="w"> </span><span class="nx">명령어</span><span class="w"> </span><span class="nx">예시</span><span class="p">:</span><span class="w">                                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">LOCK</span><span class="w"> </span><span class="nx">XCHG</span><span class="w"> </span><span class="p">(</span><span class="nx">Test</span><span class="o">-</span><span class="k">and</span><span class="o">-</span><span class="nx">Set</span><span class="p">)</span><span class="w">                                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">LOCK</span><span class="w"> </span><span class="nx">CMPXCHG</span><span class="w"> </span><span class="p">(</span><span class="nx">Compare</span><span class="o">-</span><span class="k">and</span><span class="o">-</span><span class="nx">Swap</span><span class="p">)</span><span class="w">                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">LOCK</span><span class="w"> </span><span class="nx">XADD</span><span class="w"> </span><span class="p">(</span><span class="nx">Fetch</span><span class="o">-</span><span class="k">and</span><span class="o">-</span><span class="nx">Add</span><span class="p">)</span><span class="w">                               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="73-spinlock">7.3 스핀락 (Spinlock)<a class="header-link" href="#73-spinlock" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                    </span><span class="nt">스핀락</span><span class="w"> </span><span class="nt">구현</span><span class="w">                               </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nt">단순</span><span class="w"> </span><span class="nt">스핀락</span><span class="w"> </span><span class="o">(</span><span class="nt">Test-and-Set</span><span class="o">):</span><span class="w">                                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌───────────────────────────────────────────────────┐</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">void</span><span class="w"> </span><span class="nt">lock</span><span class="o">(</span><span class="nt">int</span><span class="w"> </span><span class="o">*</span><span class="nt">lock</span><span class="o">)</span><span class="w"> </span><span class="p">{</span><span class="w">                           </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="err">while</span><span class="w"> </span><span class="err">(TAS(lock)</span><span class="w"> </span><span class="err">==</span><span class="w"> </span><span class="err">1)</span><span class="w"> </span><span class="err">{</span><span class="w">                     </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">          </span><span class="err">//</span><span class="w"> </span><span class="err">스핀</span><span class="w"> </span><span class="err">(바쁜</span><span class="w"> </span><span class="err">대기)</span><span class="w">                       </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="p">}</span><span class="w">                                            </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">}</span><span class="w">                                                </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                   </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">void</span><span class="w"> </span><span class="nt">unlock</span><span class="o">(</span><span class="nt">int</span><span class="w"> </span><span class="o">*</span><span class="nt">lock</span><span class="o">)</span><span class="w"> </span><span class="p">{</span><span class="w">                         </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="err">*lock</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="err">0</span><span class="p">;</span><span class="w">                                   </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="p">}</span><span class="w">                                                </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└───────────────────────────────────────────────────┘</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nt">문제</span><span class="o">:</span><span class="w"> </span><span class="nt">TAS마다</span><span class="w"> </span><span class="nt">버스</span><span class="w"> </span><span class="nt">트래픽</span><span class="w"> </span><span class="nt">발생</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nt">Test-and-Test-and-Set</span><span class="w"> </span><span class="o">(</span><span class="nt">TTAS</span><span class="o">):</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌───────────────────────────────────────────────────┐</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">void</span><span class="w"> </span><span class="nt">lock</span><span class="o">(</span><span class="nt">int</span><span class="w"> </span><span class="o">*</span><span class="nt">lock</span><span class="o">)</span><span class="w"> </span><span class="p">{</span><span class="w">                           </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="err">while</span><span class="w"> </span><span class="err">(1)</span><span class="w"> </span><span class="err">{</span><span class="w">                                  </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">          </span><span class="err">while</span><span class="w"> </span><span class="err">(*lock</span><span class="w"> </span><span class="err">==</span><span class="w"> </span><span class="err">1)</span><span class="w"> </span><span class="err">{</span><span class="w">                     </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">              </span><span class="err">//</span><span class="w"> </span><span class="err">로컬</span><span class="w"> </span><span class="err">캐시에서</span><span class="w"> </span><span class="err">스핀</span><span class="w"> </span><span class="err">(버스</span><span class="w"> </span><span class="err">트래픽</span><span class="w"> </span><span class="err">없음)│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">          </span><span class="p">}</span><span class="w">                                        </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">          </span><span class="nt">if</span><span class="w"> </span><span class="o">(</span><span class="nt">TAS</span><span class="o">(</span><span class="nt">lock</span><span class="o">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nt">0</span><span class="o">)</span><span class="w"> </span><span class="p">{</span><span class="w">                    </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">              </span><span class="err">return</span><span class="p">;</span><span class="w">  </span><span class="err">//</span><span class="w"> </span><span class="err">락</span><span class="w"> </span><span class="err">획득</span><span class="w"> </span><span class="err">성공</span><span class="w">             </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">          </span><span class="p">}</span><span class="w">                                        </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="err">}</span><span class="w">                                            </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">}</span><span class="w">                                                </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└───────────────────────────────────────────────────┘</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nt">개선</span><span class="o">:</span><span class="w"> </span><span class="nt">락이</span><span class="w"> </span><span class="nt">해제될</span><span class="w"> </span><span class="nt">때까지</span><span class="w"> </span><span class="nt">로컬</span><span class="w"> </span><span class="nt">캐시에서</span><span class="w"> </span><span class="nt">대기</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="74">7.4 뮤텍스와 세마포어<a class="header-link" href="#74" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    동기화 프리미티브                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  뮤텍스 (Mutex):                                            │
+│  - Mutual Exclusion (상호 배제)                            │
+│  - 한 번에 하나의 스레드만 진입                             │
+│  - 소유권 있음 (획득한 스레드만 해제)                       │
+│                                                             │
+│  ┌───────────────────────────────────────────────────┐     │
+│  │  pthread_mutex_t mutex;                           │     │
+│  │  pthread_mutex_init(&amp;mutex, NULL);                │     │
+│  │                                                   │     │
+│  │  pthread_mutex_lock(&amp;mutex);                      │     │
+│  │  // Critical Section                              │     │
+│  │  pthread_mutex_unlock(&amp;mutex);                    │     │
+│  └───────────────────────────────────────────────────┘     │
+│                                                             │
+│  세마포어 (Semaphore):                                      │
+│  - 카운터 기반 동기화                                       │
+│  - N개 스레드 동시 접근 허용 가능                           │
+│  - 소유권 없음                                              │
+│                                                             │
+│  ┌───────────────────────────────────────────────────┐     │
+│  │  sem_t sem;                                       │     │
+│  │  sem_init(&amp;sem, 0, 3);  // 최대 3개 동시 접근     │     │
+│  │                                                   │     │
+│  │  sem_wait(&amp;sem);    // 카운터 감소, 0이면 대기    │     │
+│  │  // Critical Section                              │     │
+│  │  sem_post(&amp;sem);    // 카운터 증가, 대기자 깨움   │     │
+│  └───────────────────────────────────────────────────┘     │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="75-lock-free">7.5 Lock-Free 알고리즘<a class="header-link" href="#75-lock-free" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">               </span><span class="n">Lock</span><span class="o">-</span><span class="n">Free</span><span class="w"> </span><span class="err">카운터</span><span class="w"> </span><span class="err">예시</span><span class="w">                          </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nb nb-Type">void</span><span class="w"> </span><span class="n">increment</span><span class="p">(</span><span class="n">atomic_int</span><span class="w"> </span><span class="o">*</span><span class="n">counter</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="nb nb-Type">int</span><span class="w"> </span><span class="n">old</span><span class="p">,</span><span class="w"> </span><span class="n">new</span><span class="p">;</span><span class="w">                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="n">do</span><span class="w"> </span><span class="p">{</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">          </span><span class="n">old</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">atomic_load</span><span class="p">(</span><span class="n">counter</span><span class="p">);</span><span class="w">                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">          </span><span class="n">new</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">old</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="p">}</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">atomic_compare_exchange</span><span class="p">(</span><span class="n">counter</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">old</span><span class="p">,</span><span class="w"> </span><span class="n">new</span><span class="p">));</span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="p">}</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">동작</span><span class="p">:</span><span class="w">                                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">1.</span><span class="w"> </span><span class="err">현재</span><span class="w"> </span><span class="err">값</span><span class="w"> </span><span class="err">읽기</span><span class="w">                                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">2.</span><span class="w"> </span><span class="err">새</span><span class="w"> </span><span class="err">값</span><span class="w"> </span><span class="err">계산</span><span class="w">                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">3.</span><span class="w"> </span><span class="n">CAS로</span><span class="w"> </span><span class="err">원자적</span><span class="w"> </span><span class="err">갱신</span><span class="w"> </span><span class="err">시도</span><span class="w">                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">4.</span><span class="w"> </span><span class="err">실패하면</span><span class="w"> </span><span class="err">다시</span><span class="w"> </span><span class="err">시도</span><span class="w"> </span><span class="p">(</span><span class="err">다른</span><span class="w"> </span><span class="err">스레드가</span><span class="w"> </span><span class="err">수정함</span><span class="p">)</span><span class="w">              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">장점</span><span class="p">:</span><span class="w">                                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="err">락</span><span class="w"> </span><span class="err">대기</span><span class="w"> </span><span class="err">없음</span><span class="w">                                            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="err">데드락</span><span class="w"> </span><span class="err">불가능</span><span class="w">                                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="err">우선순위</span><span class="w"> </span><span class="err">역전</span><span class="w"> </span><span class="err">없음</span><span class="w">                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">단점</span><span class="p">:</span><span class="w">                                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="err">구현</span><span class="w"> </span><span class="err">복잡</span><span class="w">                                               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">ABA</span><span class="w"> </span><span class="err">문제</span><span class="w"> </span><span class="err">주의</span><span class="w"> </span><span class="err">필요</span><span class="w">                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<hr />
+<h2 id="8-gpu">8. GPU와 병렬 컴퓨팅<a class="header-link" href="#8-gpu" title="Permanent link">&para;</a></h2>
+<h3 id="81-gpu">8.1 GPU 아키텍처<a class="header-link" href="#81-gpu" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    GPU vs CPU 구조                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  CPU (Latency Optimized):                                  │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  ┌─────────────────────────────────────────────┐    │   │
+│  │  │              Large Cache                     │    │   │
+│  │  └─────────────────────────────────────────────┘    │   │
+│  │  ┌─────────────┐ ┌─────────────┐                    │   │
+│  │  │   Complex   │ │   Complex   │                    │   │
+│  │  │   Core 0    │ │   Core 1    │  (4-16 코어)       │   │
+│  │  │  (OoO, BP)  │ │  (OoO, BP)  │                    │   │
+│  │  └─────────────┘ └─────────────┘                    │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  특징: 복잡한 코어, 큰 캐시, 낮은 지연시간                   │
+│                                                             │
+│  GPU (Throughput Optimized):                               │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┐│   │
+│  │  │ S │ S │ S │ S │ S │ S │ S │ S │ S │ S │ S │ S ││   │
+│  │  │ M │ M │ M │ M │ M │ M │ M │ M │ M │ M │ M │ M ││   │
+│  │  └───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┘│   │
+│  │     (수천 개의 단순 코어/CUDA Core)                 │   │
+│  │  ┌─────────────────────────────────────────────┐    │   │
+│  │  │           Small Cache per SM                │    │   │
+│  │  └─────────────────────────────────────────────┘    │   │
+│  └─────────────────────────────────────────────────────┘   │
+│  특징: 단순한 코어 수천 개, 작은 캐시, 높은 처리량           │
+│                                                             │
+│  SM (Streaming Multiprocessor) 구조:                       │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  ┌─────────────────────────────────────────────┐    │   │
+│  │  │  32 CUDA Cores (1 Warp = 32 threads)        │    │   │
+│  │  │  각 코어는 동일 명령어 실행 (SIMT)            │    │   │
+│  │  └─────────────────────────────────────────────┘    │   │
+│  │  + Shared Memory (48KB)                              │   │
+│  │  + Register File (65536 × 32bit)                    │   │
+│  │  + Warp Scheduler                                    │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="82-cuda">8.2 CUDA 프로그래밍 모델<a class="header-link" href="#82-cuda" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    CUDA 실행 모델                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  계층 구조:                                                 │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                      Grid                           │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐  │   │
+│  │  │ Block   │ │ Block   │ │ Block   │ │ Block   │  │   │
+│  │  │ (0,0)   │ │ (1,0)   │ │ (2,0)   │ │ (3,0)   │  │   │
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘  │   │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐  │   │
+│  │  │ Block   │ │ Block   │ │ Block   │ │ Block   │  │   │
+│  │  │ (0,1)   │ │ (1,1)   │ │ (2,1)   │ │ (3,1)   │  │   │
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘  │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  Block 내부:                                                │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐│   │
+│  │  │ T0  │ T1  │ T2  │ T3  │ T4  │ T5  │ ... │T255 ││   │
+│  │  └─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘│   │
+│  │                                                     │   │
+│  │  256 Threads sharing Shared Memory                  │   │
+│  │  동기화: __syncthreads()                           │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+│  메모리 계층:                                               │
+│  - Global Memory: 모든 스레드 접근, 느림 (~500 cycles)     │
+│  - Shared Memory: 블록 내 공유, 빠름 (~5 cycles)           │
+│  - Register: 스레드 전용, 가장 빠름                        │
+│  - Constant Memory: 읽기 전용, 캐시됨                      │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="83-cuda">8.3 CUDA 코드 예시<a class="header-link" href="#83-cuda" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// 벡터 덧셈 CUDA 커널</span>
+
+<span class="kr">__global__</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="n">vectorAdd</span><span class="p">(</span><span class="kt">float</span><span class="w"> </span><span class="o">*</span><span class="n">A</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="o">*</span><span class="n">B</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="o">*</span><span class="n">C</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 전역 스레드 인덱스 계산</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nb">blockDim</span><span class="p">.</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">idx</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">N</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">C</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">A</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">B</span><span class="p">[</span><span class="n">idx</span><span class="p">];</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="n">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000000</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 호스트 메모리 할당</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="o">*</span><span class="n">h_A</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="p">)</span><span class="n">malloc</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="o">*</span><span class="n">h_B</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="p">)</span><span class="n">malloc</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="o">*</span><span class="n">h_C</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">float</span><span class="o">*</span><span class="p">)</span><span class="n">malloc</span><span class="p">(</span><span class="n">size</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 디바이스 메모리 할당</span>
+<span class="w">    </span><span class="kt">float</span><span class="w"> </span><span class="o">*</span><span class="n">d_A</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="n">d_B</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="n">d_C</span><span class="p">;</span>
+<span class="w">    </span><span class="n">cudaMalloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">d_A</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">);</span>
+<span class="w">    </span><span class="n">cudaMalloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">d_B</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">);</span>
+<span class="w">    </span><span class="n">cudaMalloc</span><span class="p">(</span><span class="o">&amp;</span><span class="n">d_C</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 데이터 복사 (Host → Device)</span>
+<span class="w">    </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">d_A</span><span class="p">,</span><span class="w"> </span><span class="n">h_A</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span>
+<span class="w">    </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">d_B</span><span class="p">,</span><span class="w"> </span><span class="n">h_B</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">cudaMemcpyHostToDevice</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 커널 실행 설정</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">threadsPerBlock</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">256</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">blocksPerGrid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">N</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">threadsPerBlock</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">threadsPerBlock</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 커널 실행</span>
+<span class="w">    </span><span class="n">vectorAdd</span><span class="o">&lt;&lt;&lt;</span><span class="n">blocksPerGrid</span><span class="p">,</span><span class="w"> </span><span class="n">threadsPerBlock</span><span class="o">&gt;&gt;&gt;</span><span class="p">(</span><span class="n">d_A</span><span class="p">,</span><span class="w"> </span><span class="n">d_B</span><span class="p">,</span><span class="w"> </span><span class="n">d_C</span><span class="p">,</span><span class="w"> </span><span class="n">N</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 결과 복사 (Device → Host)</span>
+<span class="w">    </span><span class="n">cudaMemcpy</span><span class="p">(</span><span class="n">h_C</span><span class="p">,</span><span class="w"> </span><span class="n">d_C</span><span class="p">,</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="n">cudaMemcpyDeviceToHost</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 메모리 해제</span>
+<span class="w">    </span><span class="n">cudaFree</span><span class="p">(</span><span class="n">d_A</span><span class="p">);</span><span class="w"> </span><span class="n">cudaFree</span><span class="p">(</span><span class="n">d_B</span><span class="p">);</span><span class="w"> </span><span class="n">cudaFree</span><span class="p">(</span><span class="n">d_C</span><span class="p">);</span>
+<span class="w">    </span><span class="n">free</span><span class="p">(</span><span class="n">h_A</span><span class="p">);</span><span class="w"> </span><span class="n">free</span><span class="p">(</span><span class="n">h_B</span><span class="p">);</span><span class="w"> </span><span class="n">free</span><span class="p">(</span><span class="n">h_C</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="84-gpu-vs-cpu">8.4 GPU vs CPU 사용 사례<a class="header-link" href="#84-gpu-vs-cpu" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                GPU vs CPU 적합한 작업                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  GPU 적합 (데이터 병렬):                                    │
+│  - 행렬 연산                                               │
+│  - 이미지/비디오 처리                                       │
+│  - 딥러닝 학습/추론                                        │
+│  - 물리 시뮬레이션                                         │
+│  - 암호화폐 마이닝                                         │
+│  - 과학 계산 (유체역학, 분자동역학)                         │
+│                                                             │
+│  CPU 적합 (태스크 병렬, 복잡한 제어 흐름):                  │
+│  - 운영체제                                                │
+│  - 데이터베이스                                            │
+│  - 웹 서버                                                 │
+│  - 컴파일러                                                │
+│  - 일반 응용 프로그램                                       │
+│                                                             │
+│  성능 비교 (대략적):                                        │
+│  ┌────────────────────────────────────────────────────┐    │
+│  │ 작업               │  CPU     │  GPU      │ 비율   │    │
+│  ├────────────────────────────────────────────────────┤    │
+│  │ 행렬 곱셈 (4K×4K)  │  10초    │  0.1초   │ 100x  │    │
+│  │ 이미지 필터        │  2초     │  0.05초  │ 40x   │    │
+│  │ 신경망 학습        │  100초   │  2초     │ 50x   │    │
+│  │ 정렬 알고리즘      │  5초     │  4초     │ 1.25x │    │
+│  │ 분기 많은 코드     │  1초     │  10초    │ 0.1x  │    │
+│  └────────────────────────────────────────────────────┘    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="9">9. 연습 문제<a class="header-link" href="#9" title="Permanent link">&para;</a></h2>
+<h3 id="_4">기초 문제<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p>Flynn's Taxonomy의 4가지 분류를 설명하시오.</p>
+</li>
+<li>
+<p>SMP와 NUMA의 차이점은?</p>
+</li>
+<li>
+<p>MESI 프로토콜의 4가지 상태를 설명하시오.</p>
+</li>
+</ol>
+<h3 id="_5">중급 문제<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p>프로그램의 80%가 병렬화 가능할 때, 암달의 법칙에 따른 8코어 시스템의 최대 성능 향상은?</p>
+</li>
+<li>
+<p>다음 코드에서 발생할 수 있는 Race Condition을 설명하고 해결책을 제시하시오:
+   <code>c
+   int counter = 0;
+   void increment() {
+       counter++;
+   }</code></p>
+</li>
+<li>
+<p>Test-and-Set과 Compare-and-Swap의 차이를 설명하시오.</p>
+</li>
+</ol>
+<h3 id="_6">심화 문제<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<ol>
+<li>MESI 프로토콜에서 다음 시나리오의 상태 전이를 추적하시오:</li>
+<li>Core 0이 X 읽기 (메모리에서)</li>
+<li>Core 1이 X 읽기</li>
+<li>Core 0이 X 쓰기</li>
+<li>
+<p>Core 1이 X 읽기</p>
+</li>
+<li>
+<p>GPU가 CPU보다 행렬 곱셈에서 빠른 이유를 설명하시오.</p>
+</li>
+<li>
+<p>Lock-Free 알고리즘의 장단점과 ABA 문제를 설명하시오.</p>
+</li>
+</ol>
+<details>
+<summary>정답</summary>
+
+1. Flynn's Taxonomy:
+   - SISD: 단일 명령어 단일 데이터 (전통적 CPU)
+   - SIMD: 단일 명령어 다중 데이터 (벡터 연산, GPU)
+   - MISD: 다중 명령어 단일 데이터 (거의 없음)
+   - MIMD: 다중 명령어 다중 데이터 (멀티코어)
+
+2. SMP vs NUMA:
+   - SMP: 모든 CPU가 메모리에 균일하게 접근 (UMA)
+   - NUMA: 로컬 메모리 접근이 원격보다 빠름, 확장성 우수
+
+3. MESI 상태:
+   - Modified: 수정됨, 유일한 복사본
+   - Exclusive: 수정 안 됨, 유일한 복사본
+   - Shared: 수정 안 됨, 여러 복사본 가능
+   - Invalid: 유효하지 않음
+
+4. 암달의 법칙 계산:
+   Speedup = 1 / (0.2 + 0.8/8) = 1 / (0.2 + 0.1) = 1/0.3 = 3.33배
+
+5. Race Condition 해결:
+   - 문제: counter++ 은 원자적이지 않음 (read-modify-write)
+   - 해결: 뮤텍스 사용, 또는 원자적 연산 사용 (atomic_fetch_add)
+
+6. TAS vs CAS:
+   - TAS: 항상 1로 설정, 이전 값 반환
+   - CAS: 예상 값과 일치할 때만 새 값으로 설정
+
+7. MESI 상태 전이:
+   - Core 0 읽기: Core0=E, Core1=I
+   - Core 1 읽기: Core0=S, Core1=S
+   - Core 0 쓰기: Core0=M, Core1=I (무효화)
+   - Core 1 읽기: Core0=S, Core1=S (Core0이 데이터 제공)
+
+8. GPU가 행렬 곱셈에서 빠른 이유:
+   - 높은 데이터 병렬성 (각 원소 독립 계산)
+   - 수천 개의 코어가 동시 실행
+   - 높은 메모리 대역폭
+   - 행렬 곱셈이 GPU 아키텍처에 최적화됨
+
+9. Lock-Free 알고리즘:
+   - 장점: 락 대기 없음, 데드락 불가능
+   - 단점: 구현 복잡, 디버깅 어려움
+   - ABA 문제: 값이 A→B→A로 변해도 CAS가 성공
+   - 해결: 태그/버전 카운터 사용, Hazard Pointers
+
+</details>
+
+<hr />
+<h2 id="_7">참고 자료<a class="header-link" href="#_7" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Computer Architecture: A Quantitative Approach (Hennessy &amp; Patterson)</li>
+<li>The Art of Multiprocessor Programming (Herlihy &amp; Shavit)</li>
+<li><a href="https://docs.nvidia.com/cuda/cuda-c-programming-guide/">NVIDIA CUDA Programming Guide</a></li>
+<li><a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel Optimization Manual</a></li>
+<li><a href="https://research.swtch.com/hwmm">Memory Consistency Models</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Computer_Architecture/17_IO_Systems.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">입출력 시스템</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Computer_Architecture/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

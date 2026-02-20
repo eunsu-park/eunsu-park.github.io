@@ -1,0 +1,147 @@
+# Docker Compose configuration for a 3-tier web application
+# Stack: Flask web app + PostgreSQL database + Redis cache
+# Version: 3.8 (supports most modern Docker features)
+
+version: '3.8'
+
+# ============================================================================
+# Services Definition
+# ============================================================================
+services:
+  # --------------------------------------------------------------------------
+  # Web Application (Flask)
+  # --------------------------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flask_web
+    ports:
+      - "5000:5000"
+    environment:
+      # Load from .env file
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://cache:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    networks:
+      - app-network
+    volumes:
+      # Mount code for development (comment out in production)
+      - ./app.py:/app/app.py:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # --------------------------------------------------------------------------
+  # PostgreSQL Database
+  # --------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: postgres_db
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      # Named volume for data persistence
+      - postgres_data:/var/lib/postgresql/data
+      # Optional: initialization scripts
+      # - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Security: Don't expose to host unless needed for development
+    # ports:
+    #   - "5432:5432"
+
+  # --------------------------------------------------------------------------
+  # Redis Cache
+  # --------------------------------------------------------------------------
+  cache:
+    image: redis:7-alpine
+    container_name: redis_cache
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      # Named volume for cache persistence (optional)
+      - redis_data:/data
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    # Security: Don't expose to host unless needed
+    # ports:
+    #   - "6379:6379"
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  app-network:
+    driver: bridge
+    # Optional: custom subnet
+    # ipam:
+    #   config:
+    #     - subnet: 172.28.0.0/16
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  postgres_data:
+    driver: local
+    # Optional: use a specific location on host
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /path/on/host/postgres_data
+
+  redis_data:
+    driver: local
+
+# ============================================================================
+# Usage Instructions
+# ============================================================================
+#
+# 1. Create .env file from .env.example:
+#    cp .env.example .env
+#
+# 2. Start all services:
+#    docker-compose up -d
+#
+# 3. View logs:
+#    docker-compose logs -f
+#
+# 4. Check service health:
+#    docker-compose ps
+#
+# 5. Stop all services:
+#    docker-compose down
+#
+# 6. Stop and remove volumes (WARNING: deletes data):
+#    docker-compose down -v
+#
+# 7. Rebuild after code changes:
+#    docker-compose up -d --build
+#
+# 8. Scale the web service:
+#    docker-compose up -d --scale web=3
+# ============================================================================

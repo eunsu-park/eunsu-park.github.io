@@ -1,0 +1,1412 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>단안 깊이 추정 (Monocular Depth Estimation) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Computer_Vision/">Computer Vision</a>
+    <span class="separator">/</span>
+    <span class="current">단안 깊이 추정 (Monocular Depth Estimation)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>단안 깊이 추정 (Monocular Depth Estimation)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Computer_Vision/21_3D_Vision_Basics.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">3D 비전 기초 (3D Vision Basics)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Computer_Vision/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Computer_Vision/23_SLAM_Introduction.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">SLAM 입문 (Visual SLAM Introduction)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">개요</a></li>
+<li><a href="#_2">목차</a></li>
+<li><a href="#1">1. 단안 깊이 추정 개요</a><ul>
+<li><a href="#_3">왜 단안 깊이 추정인가?</a></li>
+<li><a href="#_4">깊이 추정의 어려움</a></li>
+<li><a href="#_5">깊이 추정 방법론</a></li>
+</ul>
+</li>
+<li><a href="#2-midas">2. MiDaS 모델</a><ul>
+<li><a href="#midas">MiDaS 개요</a></li>
+<li><a href="#midas_1">MiDaS 사용하기</a></li>
+<li><a href="#opencv-dnn-midas">OpenCV DNN으로 MiDaS 실행</a></li>
+</ul>
+</li>
+<li><a href="#3-dpt-dense-prediction-transformer">3. DPT (Dense Prediction Transformer)</a><ul>
+<li><a href="#dpt">DPT 아키텍처</a></li>
+<li><a href="#dpt_1">DPT 구현</a></li>
+<li><a href="#depth-anything">Depth Anything 모델</a></li>
+</ul>
+</li>
+<li><a href="#4-structure-from-motion-sfm">4. Structure from Motion (SfM)</a><ul>
+<li><a href="#sfm">SfM 개요</a></li>
+<li><a href="#sfm_1">SfM 구현 (간단한 버전)</a></li>
+<li><a href="#sfm_2">다중 뷰 SfM</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 깊이 맵 응용</a><ul>
+<li><a href="#_6">깊이 기반 이미지 효과</a></li>
+<li><a href="#3d">3D 효과 생성</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 연습 문제</a><ul>
+<li><a href="#1-midas">문제 1: MiDaS 깊이 추정</a></li>
+<li><a href="#2">문제 2: 깊이 기반 배경 블러</a></li>
+<li><a href="#3-sfm-3d">문제 3: SfM으로 3D 복원</a></li>
+<li><a href="#4">문제 4: 실시간 깊이 추정</a></li>
+<li><a href="#5-3d">문제 5: 깊이 기반 3D 뷰어</a></li>
+</ul>
+</li>
+<li><a href="#_7">다음 단계</a></li>
+<li><a href="#_8">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="monocular-depth-estimation">단안 깊이 추정 (Monocular Depth Estimation)<a class="header-link" href="#monocular-depth-estimation" title="Permanent link">&para;</a></h1>
+<h2 id="_1">개요<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<p>단안 깊이 추정은 단일 2D 이미지에서 픽셀별 깊이 정보를 추정하는 기술입니다. MiDaS, DPT 같은 딥러닝 모델과 Structure from Motion (SfM)을 통한 기하학적 접근 방법을 다룹니다.</p>
+<p><strong>난이도</strong>: ⭐⭐⭐⭐</p>
+<p><strong>선수 지식</strong>: DNN 모듈, 특징점 검출/매칭, 카메라 캘리브레이션</p>
+<hr />
+<h2 id="_2">목차<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-단안-깊이-추정-개요">단안 깊이 추정 개요</a></li>
+<li><a href="#2-midas-모델">MiDaS 모델</a></li>
+<li><a href="#3-dpt-dense-prediction-transformer">DPT (Dense Prediction Transformer)</a></li>
+<li><a href="#4-structure-from-motion-sfm">Structure from Motion (SfM)</a></li>
+<li><a href="#5-깊이-맵-응용">깊이 맵 응용</a></li>
+<li><a href="#6-연습-문제">연습 문제</a></li>
+</ol>
+<hr />
+<h2 id="1">1. 단안 깊이 추정 개요<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="_3">왜 단안 깊이 추정인가?<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>스테레오 vs 단안 깊이 추정:
+
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  스테레오 비전                                                  │
+│  ┌───────────┐    ┌───────────┐                                 │
+│  │   📷      │    │     📷    │                                 │
+│  │   Left    │◄──►│   Right   │  두 카메라 필요                 │
+│  └───────────┘    └───────────┘                                 │
+│                                                                 │
+│  장점: 기하학적으로 정확, 절대 깊이 측정 가능                   │
+│  단점: 두 카메라 필요, 캘리브레이션 필수                        │
+│                                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  단안 깊이 추정                                                 │
+│  ┌───────────┐                                                  │
+│  │    📷     │  단일 카메라로 가능                              │
+│  │  Single   │  스마트폰, 드론, 로봇 등에 적합                  │
+│  └───────────┘                                                  │
+│                                                                 │
+│  장점: 단일 카메라, 간단한 설정, 이동 장치에 적합               │
+│  단점: 상대적 깊이, 스케일 모호성, 학습 데이터 의존             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_4">깊이 추정의 어려움<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>단안 깊이 추정의 본질적 모호성:
+
+동일한 2D 이미지를 생성하는 무한히 많은 3D 장면이 존재
+
+                        │
+                        │
+         ●              │         🎾  작은 공, 가까이
+        /│\             │
+         │              │
+                        │
+                        │         🏀  큰 공, 멀리
+    ───────────────────[📷]───────────────────
+
+같은 크기로 보임!
+
+해결 방법:
+1. 학습된 사전 지식 (딥러닝)
+   - 물체의 일반적인 크기
+   - 원근감 규칙
+   - 텍스처 그래디언트
+
+2. 다중 이미지 (SfM)
+   - 시점 변화를 이용
+   - 기하학적 제약
+
+3. 추가 센서
+   - LiDAR 보조
+   - 구조광 보조
+</code></pre></div>
+
+<h3 id="_5">깊이 추정 방법론<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nx">깊이</span><span class="w"> </span><span class="nx">추정</span><span class="w"> </span><span class="nx">접근법</span><span class="p">:</span>
+
+<span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w"> </span><span class="mi">1</span><span class="p">.</span><span class="w"> </span><span class="nx">지도</span><span class="w"> </span><span class="nx">학습</span><span class="w"> </span><span class="p">(</span><span class="nx">Supervised</span><span class="w"> </span><span class="nx">Learning</span><span class="p">)</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">RGB</span><span class="o">-</span><span class="nx">D</span><span class="w"> </span><span class="nx">데이터셋으로</span><span class="w"> </span><span class="nx">학습</span><span class="w">                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">Ground</span><span class="w"> </span><span class="nx">Truth</span><span class="w"> </span><span class="nx">깊이</span><span class="w"> </span><span class="nx">필요</span><span class="w">                                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">데이터셋</span><span class="p">:</span><span class="w"> </span><span class="nx">NYU</span><span class="w"> </span><span class="nx">Depth</span><span class="w"> </span><span class="nx">V2</span><span class="p">,</span><span class="w"> </span><span class="nx">KITTI</span><span class="p">,</span><span class="w"> </span><span class="nx">ScanNet</span><span class="w">                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="mi">2</span><span class="p">.</span><span class="w"> </span><span class="nx">자기지도</span><span class="w"> </span><span class="nx">학습</span><span class="w"> </span><span class="p">(</span><span class="k">Self</span><span class="o">-</span><span class="nx">supervised</span><span class="w"> </span><span class="nx">Learning</span><span class="p">)</span><span class="w">                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">스테레오</span><span class="w"> </span><span class="nx">쌍</span><span class="w"> </span><span class="nx">또는</span><span class="w"> </span><span class="nx">연속</span><span class="w"> </span><span class="nx">프레임으로</span><span class="w"> </span><span class="nx">학습</span><span class="w">                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">Ground</span><span class="w"> </span><span class="nx">Truth</span><span class="w"> </span><span class="nx">불필요</span><span class="w">                                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">Monodepth2</span><span class="p">,</span><span class="w"> </span><span class="nx">PackNet</span><span class="o">-</span><span class="nx">SfM</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="mi">3</span><span class="p">.</span><span class="w"> </span><span class="nx">제로샷</span><span class="w"> </span><span class="nx">학습</span><span class="w"> </span><span class="p">(</span><span class="nx">Zero</span><span class="o">-</span><span class="nx">shot</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nx">Cross</span><span class="o">-</span><span class="nx">domain</span><span class="p">)</span><span class="w">                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">다양한</span><span class="w"> </span><span class="nx">데이터셋에서</span><span class="w"> </span><span class="nx">사전</span><span class="w"> </span><span class="nx">학습</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">새로운</span><span class="w"> </span><span class="nx">도메인에</span><span class="w"> </span><span class="nx">일반화</span><span class="w">                                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">MiDaS</span><span class="p">,</span><span class="w"> </span><span class="nx">DPT</span><span class="p">,</span><span class="w"> </span><span class="nx">ZoeDepth</span><span class="w">                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="mi">4</span><span class="p">.</span><span class="w"> </span><span class="nx">기하학적</span><span class="w"> </span><span class="nx">방법</span><span class="w"> </span><span class="p">(</span><span class="nx">Geometric</span><span class="w"> </span><span class="nx">Methods</span><span class="p">)</span><span class="w">                            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">Structure</span><span class="w"> </span><span class="nx">from</span><span class="w"> </span><span class="nx">Motion</span><span class="w">                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">Multi</span><span class="o">-</span><span class="nx">View</span><span class="w"> </span><span class="nx">Stereo</span><span class="w">                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="o">-</span><span class="w"> </span><span class="nx">명시적</span><span class="w"> </span><span class="nx">기하학적</span><span class="w"> </span><span class="nx">제약</span><span class="w"> </span><span class="nx">사용</span><span class="w">                                  </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<hr />
+<h2 id="2-midas">2. MiDaS 모델<a class="header-link" href="#2-midas" title="Permanent link">&para;</a></h2>
+<h3 id="midas">MiDaS 개요<a class="header-link" href="#midas" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">MiDaS</span><span class="w"> </span><span class="p">(</span><span class="n">Mixing</span><span class="w"> </span><span class="n">Datasets</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">Monocular</span><span class="w"> </span><span class="n">Depth</span><span class="w"> </span><span class="n">Estimation</span><span class="p">):</span>
+
+<span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">핵심</span><span class="w"> </span><span class="err">아이디어</span><span class="p">:</span><span class="w"> </span><span class="err">다양한</span><span class="w"> </span><span class="err">데이터셋을</span><span class="w"> </span><span class="err">혼합하여</span><span class="w"> </span><span class="err">일반화</span><span class="w"> </span><span class="err">능력</span><span class="w"> </span><span class="err">향상</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">학습</span><span class="w"> </span><span class="err">데이터</span><span class="p">:</span><span class="w">                                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">ReDWeb</span><span class="w"> </span><span class="p">(</span><span class="err">인터넷</span><span class="w"> </span><span class="err">이미지</span><span class="p">)</span><span class="w">                                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">DIML</span><span class="w"> </span><span class="p">(</span><span class="err">실내</span><span class="p">)</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Movies</span><span class="w"> </span><span class="p">(</span><span class="err">영화</span><span class="w"> </span><span class="err">장면</span><span class="p">)</span><span class="w">                                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">MegaDepth</span><span class="w"> </span><span class="p">(</span><span class="err">야외</span><span class="p">)</span><span class="w">                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">WSVD</span><span class="w"> </span><span class="p">(</span><span class="err">비디오</span><span class="p">)</span><span class="w">                                                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">특징</span><span class="p">:</span><span class="w">                                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="err">스케일</span><span class="w"> </span><span class="err">불변</span><span class="w"> </span><span class="p">(</span><span class="n">scale</span><span class="o">-</span><span class="n">invariant</span><span class="p">)</span><span class="w"> </span><span class="err">손실</span><span class="w"> </span><span class="err">함수</span><span class="w">                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="err">상대적</span><span class="w"> </span><span class="err">깊이</span><span class="w"> </span><span class="err">예측</span><span class="w">                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="err">다양한</span><span class="w"> </span><span class="err">백본</span><span class="w"> </span><span class="p">(</span><span class="n">EfficientNet</span><span class="p">,</span><span class="w"> </span><span class="n">ResNeXt</span><span class="p">,</span><span class="w"> </span><span class="n">ViT</span><span class="p">)</span><span class="w">                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">모델</span><span class="w"> </span><span class="err">버전</span><span class="p">:</span><span class="w">                                                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌──────────────────┬───────────┬─────────────────────────┐</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">모델</span><span class="w">             </span><span class="err">│</span><span class="w"> </span><span class="err">입력</span><span class="w"> </span><span class="err">크기</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">특징</span><span class="w">                    </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">├──────────────────┼───────────┼─────────────────────────┤</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">MiDaS</span><span class="w"> </span><span class="n">v2</span><span class="o">.</span><span class="mi">1</span><span class="w"> </span><span class="n">Large</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="mi">384</span><span class="n">x384</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="err">고품질</span><span class="p">,</span><span class="w"> </span><span class="err">느림</span><span class="w">            </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">MiDaS</span><span class="w"> </span><span class="n">v2</span><span class="o">.</span><span class="mi">1</span><span class="w"> </span><span class="n">Small</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="mi">256</span><span class="n">x256</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="err">경량</span><span class="p">,</span><span class="w"> </span><span class="err">빠름</span><span class="w">              </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">MiDaS</span><span class="w"> </span><span class="n">v3</span><span class="w"> </span><span class="p">(</span><span class="n">DPT</span><span class="p">)</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="mi">384</span><span class="n">x384</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">Transformer</span><span class="w"> </span><span class="err">기반</span><span class="w">        </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">MiDaS</span><span class="w"> </span><span class="n">v3</span><span class="o">.</span><span class="mi">1</span><span class="w"> </span><span class="p">(</span><span class="n">DPT</span><span class="p">)</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">다양</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="err">최신</span><span class="p">,</span><span class="w"> </span><span class="err">다양한</span><span class="w"> </span><span class="err">백본</span><span class="w">       </span><span class="err">│</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└──────────────────┴───────────┴─────────────────────────┘</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="midas_1">MiDaS 사용하기<a class="header-link" href="#midas_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">load_midas_model</span><span class="p">(</span><span class="n">model_type</span><span class="o">=</span><span class="s1">&#39;DPT_Large&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;MiDaS 모델 로드 (PyTorch Hub)&quot;&quot;&quot;</span>
+
+    <span class="c1"># 모델 타입:</span>
+    <span class="c1"># - &#39;DPT_Large&#39;: 가장 정확</span>
+    <span class="c1"># - &#39;DPT_Hybrid&#39;: 균형</span>
+    <span class="c1"># - &#39;MiDaS_small&#39;: 가장 빠름</span>
+
+    <span class="n">model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">hub</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;intel-isl/MiDaS&#39;</span><span class="p">,</span> <span class="n">model_type</span><span class="p">)</span>
+
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+
+    <span class="c1"># 전처리 트랜스폼</span>
+    <span class="n">midas_transforms</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">hub</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;intel-isl/MiDaS&#39;</span><span class="p">,</span> <span class="s1">&#39;transforms&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">model_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;DPT_Large&#39;</span><span class="p">,</span> <span class="s1">&#39;DPT_Hybrid&#39;</span><span class="p">]:</span>
+        <span class="n">transform</span> <span class="o">=</span> <span class="n">midas_transforms</span><span class="o">.</span><span class="n">dpt_transform</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">transform</span> <span class="o">=</span> <span class="n">midas_transforms</span><span class="o">.</span><span class="n">small_transform</span>
+
+    <span class="k">return</span> <span class="n">model</span><span class="p">,</span> <span class="n">transform</span><span class="p">,</span> <span class="n">device</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">estimate_depth_midas</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">transform</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;MiDaS로 깊이 추정&quot;&quot;&quot;</span>
+
+    <span class="c1"># BGR → RGB</span>
+    <span class="n">img_rgb</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2RGB</span><span class="p">)</span>
+
+    <span class="c1"># 전처리</span>
+    <span class="n">input_batch</span> <span class="o">=</span> <span class="n">transform</span><span class="p">(</span><span class="n">img_rgb</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="c1"># 추론</span>
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="n">prediction</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">input_batch</span><span class="p">)</span>
+
+        <span class="c1"># 원본 크기로 리사이즈</span>
+        <span class="n">prediction</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">interpolate</span><span class="p">(</span>
+            <span class="n">prediction</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+            <span class="n">size</span><span class="o">=</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span>
+            <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;bicubic&#39;</span><span class="p">,</span>
+            <span class="n">align_corners</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+
+    <span class="n">depth_map</span> <span class="o">=</span> <span class="n">prediction</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">depth_map</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">normalize_depth</span><span class="p">(</span><span class="n">depth_map</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;깊이 맵 정규화 (시각화용)&quot;&quot;&quot;</span>
+
+    <span class="n">depth_min</span> <span class="o">=</span> <span class="n">depth_map</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+    <span class="n">depth_max</span> <span class="o">=</span> <span class="n">depth_map</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+
+    <span class="n">depth_normalized</span> <span class="o">=</span> <span class="p">(</span><span class="n">depth_map</span> <span class="o">-</span> <span class="n">depth_min</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">depth_max</span> <span class="o">-</span> <span class="n">depth_min</span><span class="p">)</span>
+    <span class="n">depth_normalized</span> <span class="o">=</span> <span class="p">(</span><span class="n">depth_normalized</span> <span class="o">*</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">depth_normalized</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">colorize_depth</span><span class="p">(</span><span class="n">depth_map</span><span class="p">,</span> <span class="n">colormap</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">COLORMAP_INFERNO</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;깊이 맵에 컬러맵 적용&quot;&quot;&quot;</span>
+
+    <span class="n">depth_norm</span> <span class="o">=</span> <span class="n">normalize_depth</span><span class="p">(</span><span class="n">depth_map</span><span class="p">)</span>
+    <span class="n">depth_colored</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">applyColorMap</span><span class="p">(</span><span class="n">depth_norm</span><span class="p">,</span> <span class="n">colormap</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">depth_colored</span>
+
+<span class="c1"># 사용 예</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+    <span class="c1"># 모델 로드</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;모델 로딩 중...&quot;</span><span class="p">)</span>
+    <span class="n">model</span><span class="p">,</span> <span class="n">transform</span><span class="p">,</span> <span class="n">device</span> <span class="o">=</span> <span class="n">load_midas_model</span><span class="p">(</span><span class="s1">&#39;DPT_Large&#39;</span><span class="p">)</span>
+
+    <span class="c1"># 이미지 로드</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;sample.jpg&#39;</span><span class="p">)</span>
+
+    <span class="c1"># 깊이 추정</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;깊이 추정 중...&quot;</span><span class="p">)</span>
+    <span class="n">depth</span> <span class="o">=</span> <span class="n">estimate_depth_midas</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">transform</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+
+    <span class="c1"># 시각화</span>
+    <span class="n">depth_colored</span> <span class="o">=</span> <span class="n">colorize_depth</span><span class="p">(</span><span class="n">depth</span><span class="p">)</span>
+
+    <span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s1">&#39;Original&#39;</span><span class="p">,</span> <span class="n">img</span><span class="p">)</span>
+    <span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s1">&#39;Depth&#39;</span><span class="p">,</span> <span class="n">depth_colored</span><span class="p">)</span>
+    <span class="n">cv2</span><span class="o">.</span><span class="n">waitKey</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="opencv-dnn-midas">OpenCV DNN으로 MiDaS 실행<a class="header-link" href="#opencv-dnn-midas" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MiDaSDepthEstimator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;OpenCV DNN으로 MiDaS 실행&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_path</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        model_path: ONNX 모델 경로</span>
+<span class="sd">        다운로드: https://github.com/isl-org/MiDaS/releases</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">net</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">dnn</span><span class="o">.</span><span class="n">readNetFromONNX</span><span class="p">(</span><span class="n">model_path</span><span class="p">)</span>
+
+        <span class="c1"># GPU 사용 (가능한 경우)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="o">.</span><span class="n">setPreferableBackend</span><span class="p">(</span><span class="n">cv2</span><span class="o">.</span><span class="n">dnn</span><span class="o">.</span><span class="n">DNN_BACKEND_OPENCV</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="o">.</span><span class="n">setPreferableTarget</span><span class="p">(</span><span class="n">cv2</span><span class="o">.</span><span class="n">dnn</span><span class="o">.</span><span class="n">DNN_TARGET_CPU</span><span class="p">)</span>
+
+        <span class="c1"># 입력 크기 (모델에 따라 다름)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">384</span><span class="p">,</span> <span class="mi">384</span><span class="p">)</span>  <span class="c1"># DPT_Large</span>
+        <span class="c1"># self.input_size = (256, 256)  # MiDaS_small</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">estimate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">img</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;깊이 추정&quot;&quot;&quot;</span>
+
+        <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+
+        <span class="c1"># 전처리</span>
+        <span class="n">blob</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">dnn</span><span class="o">.</span><span class="n">blobFromImage</span><span class="p">(</span>
+            <span class="n">img</span><span class="p">,</span>
+            <span class="n">scalefactor</span><span class="o">=</span><span class="mi">1</span><span class="o">/</span><span class="mf">255.0</span><span class="p">,</span>
+            <span class="n">size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input_size</span><span class="p">,</span>
+            <span class="n">mean</span><span class="o">=</span><span class="p">(</span><span class="mf">0.485</span><span class="p">,</span> <span class="mf">0.456</span><span class="p">,</span> <span class="mf">0.406</span><span class="p">),</span>  <span class="c1"># ImageNet mean</span>
+            <span class="n">swapRB</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">crop</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span>
+
+        <span class="c1"># 표준편차 정규화 (수동)</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.229</span><span class="p">,</span> <span class="mf">0.224</span><span class="p">,</span> <span class="mf">0.225</span><span class="p">])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">blob</span> <span class="o">=</span> <span class="n">blob</span> <span class="o">/</span> <span class="n">std</span>
+
+        <span class="c1"># 추론</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="o">.</span><span class="n">setInput</span><span class="p">(</span><span class="n">blob</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="o">.</span><span class="n">forward</span><span class="p">()</span>
+
+        <span class="c1"># 후처리</span>
+        <span class="n">depth</span> <span class="o">=</span> <span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># 원본 크기로 리사이즈</span>
+        <span class="n">depth</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">depth</span><span class="p">,</span> <span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">),</span> <span class="n">interpolation</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">INTER_CUBIC</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">depth</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">visualize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="n">colormap</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">COLORMAP_MAGMA</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;깊이 맵 시각화&quot;&quot;&quot;</span>
+
+        <span class="c1"># 정규화</span>
+        <span class="n">depth_norm</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">depth</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">NORM_MINMAX</span><span class="p">)</span>
+        <span class="n">depth_norm</span> <span class="o">=</span> <span class="n">depth_norm</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+
+        <span class="c1"># 컬러맵 적용</span>
+        <span class="n">depth_colored</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">applyColorMap</span><span class="p">(</span><span class="n">depth_norm</span><span class="p">,</span> <span class="n">colormap</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">depth_colored</span>
+
+<span class="c1"># 사용 예</span>
+<span class="n">estimator</span> <span class="o">=</span> <span class="n">MiDaSDepthEstimator</span><span class="p">(</span><span class="s1">&#39;midas_v21_384.onnx&#39;</span><span class="p">)</span>
+
+<span class="n">img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;sample.jpg&#39;</span><span class="p">)</span>
+<span class="n">depth</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">estimate</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+<span class="n">depth_vis</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">visualize</span><span class="p">(</span><span class="n">depth</span><span class="p">)</span>
+
+<span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s1">&#39;Depth&#39;</span><span class="p">,</span> <span class="n">depth_vis</span><span class="p">)</span>
+<span class="n">cv2</span><span class="o">.</span><span class="n">waitKey</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-dpt-dense-prediction-transformer">3. DPT (Dense Prediction Transformer)<a class="header-link" href="#3-dpt-dense-prediction-transformer" title="Permanent link">&para;</a></h2>
+<h3 id="dpt">DPT 아키텍처<a class="header-link" href="#dpt" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>DPT (Dense Prediction Transformer):
+
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  Vision Transformer (ViT) 기반 밀집 예측 모델                   │
+│                                                                 │
+│  입력: 이미지 (H × W × 3)                                       │
+│         │                                                       │
+│         ▼                                                       │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  Patch Embedding                                        │    │
+│  │  이미지를 패치로 분할 후 임베딩                         │    │
+│  │  패치 크기: 16×16                                       │    │
+│  └────────────────────────┬────────────────────────────────┘    │
+│                           │                                     │
+│                           ▼                                     │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  Transformer Encoder                                    │    │
+│  │  ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐               │    │
+│  │  │ Block │→│ Block │→│ Block │→│ Block │               │    │
+│  │  └───────┘ └───────┘ └───────┘ └───────┘               │    │
+│  │     │          │          │          │                  │    │
+│  │     └──────────┼──────────┼──────────┘                  │    │
+│  │                ▼          ▼          ▼                  │    │
+│  │         다중 스케일 특징 추출                           │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                           │                                     │
+│                           ▼                                     │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  Reassemble + Fusion                                    │    │
+│  │  다중 스케일 특징 융합                                  │    │
+│  └────────────────────────┬────────────────────────────────┘    │
+│                           │                                     │
+│                           ▼                                     │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  Head (Conv Layers)                                     │    │
+│  │  최종 깊이 맵 출력                                      │    │
+│  └────────────────────────┬────────────────────────────────┘    │
+│                           │                                     │
+│                           ▼                                     │
+│  출력: 깊이 맵 (H × W)                                          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="dpt_1">DPT 구현<a class="header-link" href="#dpt_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torchvision</span><span class="w"> </span><span class="kn">import</span> <span class="n">transforms</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">DPTDepthEstimator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;DPT 깊이 추정기&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_type</span><span class="o">=</span><span class="s1">&#39;DPT_Large&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        model_type: &#39;DPT_Large&#39;, &#39;DPT_Hybrid&#39;, &#39;DPT_SwinV2_L_384&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span>
+            <span class="s1">&#39;cuda&#39;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span>
+        <span class="p">)</span>
+
+        <span class="c1"># PyTorch Hub에서 모델 로드</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">hub</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;intel-isl/MiDaS&#39;</span><span class="p">,</span> <span class="n">model_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+
+        <span class="c1"># 전처리 트랜스폼 로드</span>
+        <span class="n">midas_transforms</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">hub</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;intel-isl/MiDaS&#39;</span><span class="p">,</span> <span class="s1">&#39;transforms&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transform</span> <span class="o">=</span> <span class="n">midas_transforms</span><span class="o">.</span><span class="n">dpt_transform</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">estimate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">img</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;깊이 추정&quot;&quot;&quot;</span>
+
+        <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+
+        <span class="c1"># BGR → RGB</span>
+        <span class="n">img_rgb</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2RGB</span><span class="p">)</span>
+
+        <span class="c1"># 전처리 및 추론</span>
+        <span class="n">input_batch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">img_rgb</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">prediction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="n">input_batch</span><span class="p">)</span>
+
+            <span class="c1"># 원본 크기로 보간</span>
+            <span class="n">prediction</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">interpolate</span><span class="p">(</span>
+                <span class="n">prediction</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+                <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">w</span><span class="p">),</span>
+                <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;bicubic&#39;</span><span class="p">,</span>
+                <span class="n">align_corners</span><span class="o">=</span><span class="kc">False</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+
+        <span class="n">depth</span> <span class="o">=</span> <span class="n">prediction</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">depth</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_metric_depth</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">10.0</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;상대 깊이 → 미터 단위 변환 (근사)&quot;&quot;&quot;</span>
+
+        <span class="c1"># MiDaS/DPT는 상대 깊이를 출력</span>
+        <span class="c1"># 절대 깊이로 변환하려면 스케일 추정 필요</span>
+
+        <span class="n">depth_metric</span> <span class="o">=</span> <span class="n">scale</span> <span class="o">/</span> <span class="p">(</span><span class="n">depth</span> <span class="o">+</span> <span class="mf">1e-6</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">depth_metric</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">estimate_depth_with_confidence</span><span class="p">(</span><span class="n">estimator</span><span class="p">,</span> <span class="n">img</span><span class="p">,</span> <span class="n">num_samples</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;몬테카를로 드롭아웃으로 깊이 불확실성 추정&quot;&quot;&quot;</span>
+
+    <span class="c1"># 참고: 실제로는 드롭아웃이 있는 모델이 필요</span>
+    <span class="c1"># 여기서는 데이터 증강으로 대체</span>
+
+    <span class="n">depths</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_samples</span><span class="p">):</span>
+        <span class="c1"># 약간의 이미지 변형</span>
+        <span class="n">augmented</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="c1"># 밝기 변화</span>
+        <span class="n">factor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mf">0.9</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">)</span>
+        <span class="n">augmented</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">augmented</span> <span class="o">*</span> <span class="n">factor</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+
+        <span class="n">depth</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">estimate</span><span class="p">(</span><span class="n">augmented</span><span class="p">)</span>
+        <span class="n">depths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">depth</span><span class="p">)</span>
+
+    <span class="n">depths</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">depths</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># 평균과 표준편차</span>
+    <span class="n">mean_depth</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">depths</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">std_depth</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">depths</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">mean_depth</span><span class="p">,</span> <span class="n">std_depth</span>
+</code></pre></div>
+
+<h3 id="depth-anything">Depth Anything 모델<a class="header-link" href="#depth-anything" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Depth Anything: 더 최신의 SOTA 모델</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">DepthAnythingEstimator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Depth Anything 모델 (2024)&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_size</span><span class="o">=</span><span class="s1">&#39;small&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        model_size: &#39;small&#39;, &#39;base&#39;, &#39;large&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">pipeline</span>
+
+        <span class="n">model_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;LiheYoung/depth-anything-</span><span class="si">{</span><span class="n">model_size</span><span class="si">}</span><span class="s2">-hf&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pipe</span> <span class="o">=</span> <span class="n">pipeline</span><span class="p">(</span>
+            <span class="n">task</span><span class="o">=</span><span class="s1">&#39;depth-estimation&#39;</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model_name</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">estimate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">img</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;깊이 추정&quot;&quot;&quot;</span>
+
+        <span class="c1"># BGR → RGB, PIL 변환</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+        <span class="n">img_rgb</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2RGB</span><span class="p">)</span>
+        <span class="n">img_pil</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="n">img_rgb</span><span class="p">)</span>
+
+        <span class="c1"># 추론</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">img_pil</span><span class="p">)</span>
+
+        <span class="c1"># 깊이 맵 추출</span>
+        <span class="n">depth</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;depth&#39;</span><span class="p">])</span>
+
+        <span class="c1"># 원본 크기로 리사이즈</span>
+        <span class="k">if</span> <span class="n">depth</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]:</span>
+            <span class="n">depth</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">depth</span><span class="p">,</span> <span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+        <span class="k">return</span> <span class="n">depth</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-structure-from-motion-sfm">4. Structure from Motion (SfM)<a class="header-link" href="#4-structure-from-motion-sfm" title="Permanent link">&para;</a></h2>
+<h3 id="sfm">SfM 개요<a class="header-link" href="#sfm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Structure from Motion (SfM):
+카메라 움직임을 이용해 3D 구조 복원
+
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  입력: 연속 이미지 (비디오 또는 다중 뷰 이미지)                 │
+│                                                                 │
+│  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐                   │
+│  │ t=1 │  │ t=2 │  │ t=3 │  │ t=4 │  │ t=5 │                   │
+│  └─────┘  └─────┘  └─────┘  └─────┘  └─────┘                   │
+│      │       │       │       │       │                          │
+│      └───────┴───────┴───────┴───────┘                          │
+│                      │                                          │
+│                      ▼                                          │
+│          ┌───────────────────────────┐                          │
+│          │  1. 특징점 검출 및 매칭   │                          │
+│          │     SIFT, ORB, SuperPoint │                          │
+│          └───────────────────────────┘                          │
+│                      │                                          │
+│                      ▼                                          │
+│          ┌───────────────────────────┐                          │
+│          │  2. 카메라 포즈 추정      │                          │
+│          │     Essential Matrix      │                          │
+│          │     PnP                   │                          │
+│          └───────────────────────────┘                          │
+│                      │                                          │
+│                      ▼                                          │
+│          ┌───────────────────────────┐                          │
+│          │  3. 삼각측량              │                          │
+│          │     3D 점 복원            │                          │
+│          └───────────────────────────┘                          │
+│                      │                                          │
+│                      ▼                                          │
+│          ┌───────────────────────────┐                          │
+│          │  4. 번들 조정             │                          │
+│          │     전역 최적화           │                          │
+│          └───────────────────────────┘                          │
+│                      │                                          │
+│                      ▼                                          │
+│  출력: 3D 포인트 클라우드 + 카메라 궤적                         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="sfm_1">SfM 구현 (간단한 버전)<a class="header-link" href="#sfm_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">SimpleSfM</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;간단한 2-뷰 SfM 구현&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">K</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        K: 카메라 내부 파라미터 행렬</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">K</span> <span class="o">=</span> <span class="n">K</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sift</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">SIFT_create</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bf</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">BFMatcher</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">detect_and_match</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">img1</span><span class="p">,</span> <span class="n">img2</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;특징점 검출 및 매칭&quot;&quot;&quot;</span>
+
+        <span class="c1"># 특징점 검출</span>
+        <span class="n">kp1</span><span class="p">,</span> <span class="n">desc1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sift</span><span class="o">.</span><span class="n">detectAndCompute</span><span class="p">(</span><span class="n">img1</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">kp2</span><span class="p">,</span> <span class="n">desc2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sift</span><span class="o">.</span><span class="n">detectAndCompute</span><span class="p">(</span><span class="n">img2</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="c1"># 매칭</span>
+        <span class="n">matches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bf</span><span class="o">.</span><span class="n">knnMatch</span><span class="p">(</span><span class="n">desc1</span><span class="p">,</span> <span class="n">desc2</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="c1"># 비율 테스트</span>
+        <span class="n">good_matches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">m</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">matches</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">distance</span> <span class="o">&lt;</span> <span class="mf">0.75</span> <span class="o">*</span> <span class="n">n</span><span class="o">.</span><span class="n">distance</span><span class="p">:</span>
+                <span class="n">good_matches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+
+        <span class="c1"># 매칭점 좌표</span>
+        <span class="n">pts1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">([</span><span class="n">kp1</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">queryIdx</span><span class="p">]</span><span class="o">.</span><span class="n">pt</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">good_matches</span><span class="p">])</span>
+        <span class="n">pts2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">([</span><span class="n">kp2</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">trainIdx</span><span class="p">]</span><span class="o">.</span><span class="n">pt</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">good_matches</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">pts1</span><span class="p">,</span> <span class="n">pts2</span><span class="p">,</span> <span class="n">good_matches</span><span class="p">,</span> <span class="n">kp1</span><span class="p">,</span> <span class="n">kp2</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">estimate_pose</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pts1</span><span class="p">,</span> <span class="n">pts2</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Essential Matrix로 상대 포즈 추정&quot;&quot;&quot;</span>
+
+        <span class="n">E</span><span class="p">,</span> <span class="n">mask</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">findEssentialMat</span><span class="p">(</span>
+            <span class="n">pts1</span><span class="p">,</span> <span class="n">pts2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">K</span><span class="p">,</span>
+            <span class="n">method</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">RANSAC</span><span class="p">,</span>
+            <span class="n">prob</span><span class="o">=</span><span class="mf">0.999</span><span class="p">,</span>
+            <span class="n">threshold</span><span class="o">=</span><span class="mf">1.0</span>
+        <span class="p">)</span>
+
+        <span class="c1"># R, t 복구</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">mask</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">recoverPose</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">pts1</span><span class="p">,</span> <span class="n">pts2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">K</span><span class="p">,</span> <span class="n">mask</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">R</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">mask</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">triangulate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pts1</span><span class="p">,</span> <span class="n">pts2</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;삼각측량으로 3D 점 복원&quot;&quot;&quot;</span>
+
+        <span class="c1"># 투영 행렬</span>
+        <span class="n">P1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">K</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">))])</span>
+        <span class="n">P2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">K</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">R</span><span class="p">,</span> <span class="n">t</span><span class="p">])</span>
+
+        <span class="c1"># 삼각측량</span>
+        <span class="n">pts1_h</span> <span class="o">=</span> <span class="n">pts1</span><span class="o">.</span><span class="n">T</span>  <span class="c1"># (2, N)</span>
+        <span class="n">pts2_h</span> <span class="o">=</span> <span class="n">pts2</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="n">points_4d</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">triangulatePoints</span><span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">P2</span><span class="p">,</span> <span class="n">pts1_h</span><span class="p">,</span> <span class="n">pts2_h</span><span class="p">)</span>
+
+        <span class="c1"># 동차 좌표 → 유클리드 좌표</span>
+        <span class="n">points_3d</span> <span class="o">=</span> <span class="n">points_4d</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="o">/</span> <span class="n">points_4d</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">points_3d</span><span class="o">.</span><span class="n">T</span>  <span class="c1"># (N, 3)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">filter_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pts1</span><span class="p">,</span> <span class="n">pts2</span><span class="p">,</span> <span class="n">points_3d</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;유효한 3D 점 필터링&quot;&quot;&quot;</span>
+
+        <span class="c1"># 재투영 오차 계산</span>
+        <span class="n">P2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">K</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">R</span><span class="p">,</span> <span class="n">t</span><span class="p">])</span>
+
+        <span class="n">projected</span> <span class="o">=</span> <span class="n">P2</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">points_3d</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">points_3d</span><span class="p">),</span> <span class="mi">1</span><span class="p">))])</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">projected</span> <span class="o">=</span> <span class="n">projected</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">projected</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">projected</span> <span class="o">=</span> <span class="n">projected</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="n">errors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">pts2</span> <span class="o">-</span> <span class="n">projected</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># 카메라 앞에 있는지 확인</span>
+        <span class="c1"># 첫 번째 카메라 기준</span>
+        <span class="n">valid_depth1</span> <span class="o">=</span> <span class="n">points_3d</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+        <span class="c1"># 두 번째 카메라 기준</span>
+        <span class="n">points_cam2</span> <span class="o">=</span> <span class="p">(</span><span class="n">R</span> <span class="o">@</span> <span class="n">points_3d</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">valid_depth2</span> <span class="o">=</span> <span class="n">points_cam2</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+        <span class="c1"># 재투영 오차 임계값</span>
+        <span class="n">valid_reproj</span> <span class="o">=</span> <span class="n">errors</span> <span class="o">&lt;</span> <span class="mf">2.0</span>
+
+        <span class="n">valid</span> <span class="o">=</span> <span class="n">valid_depth1</span> <span class="o">&amp;</span> <span class="n">valid_depth2</span> <span class="o">&amp;</span> <span class="n">valid_reproj</span>
+
+        <span class="k">return</span> <span class="n">points_3d</span><span class="p">[</span><span class="n">valid</span><span class="p">],</span> <span class="n">valid</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">img1</span><span class="p">,</span> <span class="n">img2</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;전체 SfM 파이프라인 실행&quot;&quot;&quot;</span>
+
+        <span class="c1"># 1. 특징점 매칭</span>
+        <span class="n">pts1</span><span class="p">,</span> <span class="n">pts2</span><span class="p">,</span> <span class="n">matches</span><span class="p">,</span> <span class="n">kp1</span><span class="p">,</span> <span class="n">kp2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">detect_and_match</span><span class="p">(</span><span class="n">img1</span><span class="p">,</span> <span class="n">img2</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;매칭점 수: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">pts1</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># 2. 포즈 추정</span>
+        <span class="n">R</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">inlier_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimate_pose</span><span class="p">(</span><span class="n">pts1</span><span class="p">,</span> <span class="n">pts2</span><span class="p">)</span>
+        <span class="n">pts1</span> <span class="o">=</span> <span class="n">pts1</span><span class="p">[</span><span class="n">inlier_mask</span><span class="p">]</span>
+        <span class="n">pts2</span> <span class="o">=</span> <span class="n">pts2</span><span class="p">[</span><span class="n">inlier_mask</span><span class="p">]</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;인라이어 수: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">pts1</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># 3. 삼각측량</span>
+        <span class="n">points_3d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">triangulate</span><span class="p">(</span><span class="n">pts1</span><span class="p">,</span> <span class="n">pts2</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+
+        <span class="c1"># 4. 필터링</span>
+        <span class="n">points_3d</span><span class="p">,</span> <span class="n">valid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_points</span><span class="p">(</span><span class="n">pts1</span><span class="p">,</span> <span class="n">pts2</span><span class="p">,</span> <span class="n">points_3d</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;유효한 3D 점 수: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">points_3d</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">points_3d</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">t</span>
+
+<span class="c1"># 사용 예</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+    <span class="p">[</span><span class="mi">800</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">320</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">800</span><span class="p">,</span> <span class="mi">240</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+<span class="n">sfm</span> <span class="o">=</span> <span class="n">SimpleSfM</span><span class="p">(</span><span class="n">K</span><span class="p">)</span>
+<span class="n">img1</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;image1.jpg&#39;</span><span class="p">)</span>
+<span class="n">img2</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;image2.jpg&#39;</span><span class="p">)</span>
+<span class="n">points_3d</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">t</span> <span class="o">=</span> <span class="n">sfm</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">img1</span><span class="p">,</span> <span class="n">img2</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="sfm_2">다중 뷰 SfM<a class="header-link" href="#sfm_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">IncrementalSfM</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;증분적 SfM&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">K</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">K</span> <span class="o">=</span> <span class="n">K</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sift</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">SIFT_create</span><span class="p">(</span><span class="n">nfeatures</span><span class="o">=</span><span class="mi">8000</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bf</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">BFMatcher</span><span class="p">()</span>
+
+        <span class="c1"># 전역 데이터</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">points_3d</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">point_colors</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera_poses</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keypoints_all</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">descriptors_all</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">img</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;새 이미지 추가&quot;&quot;&quot;</span>
+
+        <span class="n">gray</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2GRAY</span><span class="p">)</span>
+        <span class="n">kp</span><span class="p">,</span> <span class="n">desc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sift</span><span class="o">.</span><span class="n">detectAndCompute</span><span class="p">(</span><span class="n">gray</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">keypoints_all</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">kp</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">descriptors_all</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">desc</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keypoints_all</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx1</span><span class="p">,</span> <span class="n">idx2</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;첫 두 이미지로 초기화&quot;&quot;&quot;</span>
+
+        <span class="c1"># 매칭</span>
+        <span class="n">matches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bf</span><span class="o">.</span><span class="n">knnMatch</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">descriptors_all</span><span class="p">[</span><span class="n">idx1</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">descriptors_all</span><span class="p">[</span><span class="n">idx2</span><span class="p">],</span>
+            <span class="n">k</span><span class="o">=</span><span class="mi">2</span>
+        <span class="p">)</span>
+
+        <span class="n">good</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span> <span class="k">for</span> <span class="n">m</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">matches</span> <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">distance</span> <span class="o">&lt;</span> <span class="mf">0.7</span> <span class="o">*</span> <span class="n">n</span><span class="o">.</span><span class="n">distance</span><span class="p">]</span>
+
+        <span class="n">pts1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">keypoints_all</span><span class="p">[</span><span class="n">idx1</span><span class="p">][</span><span class="n">m</span><span class="o">.</span><span class="n">queryIdx</span><span class="p">]</span><span class="o">.</span><span class="n">pt</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">good</span><span class="p">])</span>
+        <span class="n">pts2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">keypoints_all</span><span class="p">[</span><span class="n">idx2</span><span class="p">][</span><span class="n">m</span><span class="o">.</span><span class="n">trainIdx</span><span class="p">]</span><span class="o">.</span><span class="n">pt</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">good</span><span class="p">])</span>
+
+        <span class="c1"># Essential Matrix</span>
+        <span class="n">E</span><span class="p">,</span> <span class="n">mask</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">findEssentialMat</span><span class="p">(</span><span class="n">pts1</span><span class="p">,</span> <span class="n">pts2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">K</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">mask</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">recoverPose</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">pts1</span><span class="p">,</span> <span class="n">pts2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">K</span><span class="p">)</span>
+
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="n">pts1</span> <span class="o">=</span> <span class="n">pts1</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+        <span class="n">pts2</span> <span class="o">=</span> <span class="n">pts2</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+
+        <span class="c1"># 삼각측량</span>
+        <span class="n">P1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">K</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">))])</span>
+        <span class="n">P2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">K</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">R</span><span class="p">,</span> <span class="n">t</span><span class="p">])</span>
+
+        <span class="n">points_4d</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">triangulatePoints</span><span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">P2</span><span class="p">,</span> <span class="n">pts1</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">pts2</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">points_3d</span> <span class="o">=</span> <span class="p">(</span><span class="n">points_4d</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="o">/</span> <span class="n">points_4d</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="c1"># 카메라 포즈 저장</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera_poses</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">{</span><span class="s1">&#39;R&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="s1">&#39;t&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">))},</span>
+            <span class="p">{</span><span class="s1">&#39;R&#39;</span><span class="p">:</span> <span class="n">R</span><span class="p">,</span> <span class="s1">&#39;t&#39;</span><span class="p">:</span> <span class="n">t</span><span class="p">}</span>
+        <span class="p">]</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;초기화 완료: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">points_3d</span><span class="p">)</span><span class="si">}</span><span class="s2"> 3D 점&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">register_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;새 이미지 등록 (PnP)&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">points_3d</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">points_3d</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;먼저 초기화가 필요합니다.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="c1"># 마지막으로 추가된 이미지와 매칭</span>
+        <span class="n">last_idx</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">camera_poses</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+
+        <span class="n">matches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bf</span><span class="o">.</span><span class="n">knnMatch</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">descriptors_all</span><span class="p">[</span><span class="n">last_idx</span><span class="p">],</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">descriptors_all</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span>
+            <span class="n">k</span><span class="o">=</span><span class="mi">2</span>
+        <span class="p">)</span>
+
+        <span class="n">good</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span> <span class="k">for</span> <span class="n">m</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">matches</span> <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">distance</span> <span class="o">&lt;</span> <span class="mf">0.7</span> <span class="o">*</span> <span class="n">n</span><span class="o">.</span><span class="n">distance</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">good</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">8</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;매칭점 부족&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="c1"># 3D-2D 대응점 (단순화: 이전 이미지의 매칭점 인덱스 사용)</span>
+        <span class="c1"># 실제로는 트랙 관리 필요</span>
+        <span class="n">obj_points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">img_points</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">good</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">points_3d</span><span class="p">)]:</span>
+            <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">queryIdx</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">points_3d</span><span class="p">):</span>
+                <span class="n">obj_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">points_3d</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">queryIdx</span><span class="p">])</span>
+                <span class="n">img_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">keypoints_all</span><span class="p">[</span><span class="n">idx</span><span class="p">][</span><span class="n">m</span><span class="o">.</span><span class="n">trainIdx</span><span class="p">]</span><span class="o">.</span><span class="n">pt</span>
+                <span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">obj_points</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">6</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;대응점 부족&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="n">obj_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">obj_points</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">img_points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">img_points</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+        <span class="c1"># PnP</span>
+        <span class="n">success</span><span class="p">,</span> <span class="n">rvec</span><span class="p">,</span> <span class="n">tvec</span><span class="p">,</span> <span class="n">inliers</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">solvePnPRansac</span><span class="p">(</span>
+            <span class="n">obj_points</span><span class="p">,</span> <span class="n">img_points</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">K</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">success</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;PnP 실패&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="n">R</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">Rodrigues</span><span class="p">(</span><span class="n">rvec</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">camera_poses</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;R&#39;</span><span class="p">:</span> <span class="n">R</span><span class="p">,</span> <span class="s1">&#39;t&#39;</span><span class="p">:</span> <span class="n">tvec</span><span class="p">})</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;이미지 </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2"> 등록 완료&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">bundle_adjust</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;번들 조정 (scipy 사용)&quot;&quot;&quot;</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">least_squares</span>
+
+        <span class="c1"># 간단한 번들 조정 구현</span>
+        <span class="c1"># 실제로는 g2o, Ceres 등 사용 권장</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;번들 조정은 별도 라이브러리 권장 (g2o, Ceres)&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_point_cloud</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;포인트 클라우드 반환&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">points_3d</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_camera_trajectory</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;카메라 궤적 반환&quot;&quot;&quot;</span>
+        <span class="n">positions</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">pose</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">camera_poses</span><span class="p">:</span>
+            <span class="n">R</span> <span class="o">=</span> <span class="n">pose</span><span class="p">[</span><span class="s1">&#39;R&#39;</span><span class="p">]</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">pose</span><span class="p">[</span><span class="s1">&#39;t&#39;</span><span class="p">]</span>
+            <span class="c1"># 카메라 위치 = -R^T * t</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="o">-</span><span class="n">R</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">t</span>
+            <span class="n">positions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pos</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 깊이 맵 응용<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="_6">깊이 기반 이미지 효과<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_bokeh_effect</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="n">focus_depth</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">aperture</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;깊이 기반 보케 효과 (피사계 심도 시뮬레이션)&quot;&quot;&quot;</span>
+
+    <span class="c1"># 깊이 정규화 (0-1)</span>
+    <span class="n">depth_norm</span> <span class="o">=</span> <span class="p">(</span><span class="n">depth</span> <span class="o">-</span> <span class="n">depth</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">depth</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">depth</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
+
+    <span class="c1"># 초점 거리에서의 편차 계산</span>
+    <span class="n">depth_diff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">depth_norm</span> <span class="o">-</span> <span class="n">focus_depth</span><span class="p">)</span>
+
+    <span class="c1"># 블러 강도 (초점에서 멀수록 강함)</span>
+    <span class="n">blur_strength</span> <span class="o">=</span> <span class="p">(</span><span class="n">depth_diff</span> <span class="o">/</span> <span class="n">aperture</span> <span class="o">*</span> <span class="mi">30</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">blur_strength</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">blur_strength</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">31</span><span class="p">)</span>
+
+    <span class="c1"># 블러 적용 (픽셀별로 다른 강도)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">blur_level</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">blur_strength</span> <span class="o">&gt;=</span> <span class="n">blur_level</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">blur_strength</span> <span class="o">&lt;</span> <span class="n">blur_level</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">blur_level</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">blurred</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ksize</span> <span class="o">=</span> <span class="n">blur_level</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">blurred</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="p">(</span><span class="n">ksize</span><span class="p">,</span> <span class="n">ksize</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">+=</span> <span class="n">blurred</span> <span class="o">*</span> <span class="n">mask</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">create_depth_fog</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="n">fog_color</span><span class="o">=</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">200</span><span class="p">),</span> <span class="n">max_fog</span><span class="o">=</span><span class="mf">0.8</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;깊이 기반 안개 효과&quot;&quot;&quot;</span>
+
+    <span class="c1"># 깊이 정규화</span>
+    <span class="n">depth_norm</span> <span class="o">=</span> <span class="p">(</span><span class="n">depth</span> <span class="o">-</span> <span class="n">depth</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">depth</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">depth</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
+
+    <span class="c1"># 안개 강도 (멀수록 강함)</span>
+    <span class="n">fog_factor</span> <span class="o">=</span> <span class="n">depth_norm</span> <span class="o">*</span> <span class="n">max_fog</span>
+
+    <span class="c1"># 안개 적용</span>
+    <span class="n">fog</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">fog_color</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">fog_factor</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">])</span>
+    <span class="n">result</span> <span class="o">+=</span> <span class="n">fog</span> <span class="o">*</span> <span class="n">fog_factor</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">depth_based_segmentation</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="n">num_layers</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;깊이 기반 레이어 분할&quot;&quot;&quot;</span>
+
+    <span class="c1"># 깊이 정규화</span>
+    <span class="n">depth_norm</span> <span class="o">=</span> <span class="p">(</span><span class="n">depth</span> <span class="o">-</span> <span class="n">depth</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">depth</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">depth</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
+
+    <span class="c1"># 깊이 구간으로 분할</span>
+    <span class="n">layers</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_layers</span><span class="p">):</span>
+        <span class="n">lower</span> <span class="o">=</span> <span class="n">i</span> <span class="o">/</span> <span class="n">num_layers</span>
+        <span class="n">upper</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">num_layers</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">depth_norm</span> <span class="o">&gt;=</span> <span class="n">lower</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">depth_norm</span> <span class="o">&lt;</span> <span class="n">upper</span><span class="p">)</span>
+
+        <span class="n">layer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+        <span class="n">layer</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">img</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+        <span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">layers</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">remove_background_with_depth</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;깊이 기반 배경 제거&quot;&quot;&quot;</span>
+
+    <span class="c1"># 깊이 정규화</span>
+    <span class="n">depth_norm</span> <span class="o">=</span> <span class="p">(</span><span class="n">depth</span> <span class="o">-</span> <span class="n">depth</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">depth</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">depth</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
+
+    <span class="c1"># 전경 마스크 (임계값보다 가까운 부분)</span>
+    <span class="n">foreground_mask</span> <span class="o">=</span> <span class="n">depth_norm</span> <span class="o">&lt;</span> <span class="n">threshold</span>
+
+    <span class="c1"># 마스크 정제</span>
+    <span class="n">kernel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">foreground_mask</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">morphologyEx</span><span class="p">(</span>
+        <span class="n">foreground_mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">MORPH_CLOSE</span><span class="p">,</span> <span class="n">kernel</span>
+    <span class="p">)</span>
+    <span class="n">foreground_mask</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">morphologyEx</span><span class="p">(</span>
+        <span class="n">foreground_mask</span><span class="p">,</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">MORPH_OPEN</span><span class="p">,</span> <span class="n">kernel</span>
+    <span class="p">)</span>
+
+    <span class="c1"># 배경 제거</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+    <span class="n">result</span><span class="p">[</span><span class="n">foreground_mask</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">img</span><span class="p">[</span><span class="n">foreground_mask</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">result</span><span class="p">,</span> <span class="n">foreground_mask</span>
+</code></pre></div>
+
+<h3 id="3d">3D 효과 생성<a class="header-link" href="#3d" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">create_3d_ken_burns</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="n">num_frames</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span> <span class="n">zoom</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Ken Burns 효과 (3D 카메라 움직임)&quot;&quot;&quot;</span>
+
+    <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">frames</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_frames</span><span class="p">):</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">i</span> <span class="o">/</span> <span class="p">(</span><span class="n">num_frames</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># 줌 팩터</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">zoom</span> <span class="o">*</span> <span class="n">t</span>
+
+        <span class="c1"># 깊이에 따른 시차</span>
+        <span class="n">parallax</span> <span class="o">=</span> <span class="p">(</span><span class="n">depth</span> <span class="o">-</span> <span class="n">depth</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">*</span> <span class="mf">0.001</span> <span class="o">*</span> <span class="n">t</span>
+
+        <span class="c1"># 새 좌표 계산</span>
+        <span class="n">y_coords</span><span class="p">,</span> <span class="n">x_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">h</span><span class="p">),</span> <span class="nb">range</span><span class="p">(</span><span class="n">w</span><span class="p">),</span> <span class="n">indexing</span><span class="o">=</span><span class="s1">&#39;ij&#39;</span><span class="p">)</span>
+
+        <span class="c1"># 중심 기준 스케일링</span>
+        <span class="n">new_x</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_coords</span> <span class="o">-</span> <span class="n">w</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">scale</span> <span class="o">+</span> <span class="n">w</span><span class="o">/</span><span class="mi">2</span> <span class="o">+</span> <span class="n">parallax</span>
+        <span class="n">new_y</span> <span class="o">=</span> <span class="p">(</span><span class="n">y_coords</span> <span class="o">-</span> <span class="n">h</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">scale</span> <span class="o">+</span> <span class="n">h</span><span class="o">/</span><span class="mi">2</span>
+
+        <span class="c1"># 리맵핑</span>
+        <span class="n">map_x</span> <span class="o">=</span> <span class="n">new_x</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">map_y</span> <span class="o">=</span> <span class="n">new_y</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+        <span class="n">frame</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">remap</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">map_x</span><span class="p">,</span> <span class="n">map_y</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">INTER_LINEAR</span><span class="p">)</span>
+        <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">frames</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">depth_aware_zoom</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">depth</span><span class="p">,</span> <span class="n">zoom_center</span><span class="p">,</span> <span class="n">zoom_factor</span><span class="o">=</span><span class="mf">2.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;깊이 인식 줌&quot;&quot;&quot;</span>
+
+    <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">cx</span><span class="p">,</span> <span class="n">cy</span> <span class="o">=</span> <span class="n">zoom_center</span>
+
+    <span class="c1"># 깊이 정규화</span>
+    <span class="n">depth_norm</span> <span class="o">=</span> <span class="p">(</span><span class="n">depth</span> <span class="o">-</span> <span class="n">depth</span><span class="o">.</span><span class="n">min</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">depth</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">depth</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
+
+    <span class="c1"># 깊이에 따라 다른 줌 적용 (가까운 물체는 더 많이 확대)</span>
+    <span class="n">depth_factor</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">depth_norm</span> <span class="o">*</span> <span class="mf">0.5</span>  <span class="c1"># 0.5 ~ 1.0</span>
+
+    <span class="c1"># 좌표 그리드</span>
+    <span class="n">y_coords</span><span class="p">,</span> <span class="n">x_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">h</span><span class="p">),</span> <span class="nb">range</span><span class="p">(</span><span class="n">w</span><span class="p">),</span> <span class="n">indexing</span><span class="o">=</span><span class="s1">&#39;ij&#39;</span><span class="p">)</span>
+
+    <span class="c1"># 줌 변환 (깊이별로 다른 스케일)</span>
+    <span class="n">effective_zoom</span> <span class="o">=</span> <span class="n">zoom_factor</span> <span class="o">*</span> <span class="n">depth_factor</span>
+
+    <span class="n">new_x</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_coords</span> <span class="o">-</span> <span class="n">cx</span><span class="p">)</span> <span class="o">/</span> <span class="n">effective_zoom</span> <span class="o">+</span> <span class="n">cx</span>
+    <span class="n">new_y</span> <span class="o">=</span> <span class="p">(</span><span class="n">y_coords</span> <span class="o">-</span> <span class="n">cy</span><span class="p">)</span> <span class="o">/</span> <span class="n">effective_zoom</span> <span class="o">+</span> <span class="n">cy</span>
+
+    <span class="c1"># 리맵핑</span>
+    <span class="n">map_x</span> <span class="o">=</span> <span class="n">new_x</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="n">map_y</span> <span class="o">=</span> <span class="n">new_y</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">remap</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">map_x</span><span class="p">,</span> <span class="n">map_y</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">INTER_LINEAR</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 연습 문제<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="1-midas">문제 1: MiDaS 깊이 추정<a class="header-link" href="#1-midas" title="Permanent link">&para;</a></h3>
+<p>MiDaS를 사용하여 이미지의 깊이를 추정하세요.</p>
+<p><strong>요구사항</strong>:
+- 모델 로드 및 추론
+- 깊이 맵 시각화 (컬러맵)
+- 여러 이미지에 대해 테스트</p>
+<details>
+<summary>힌트</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">hub</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;intel-isl/MiDaS&#39;</span><span class="p">,</span> <span class="s1">&#39;DPT_Large&#39;</span><span class="p">)</span>
+<span class="n">midas_transforms</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">hub</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;intel-isl/MiDaS&#39;</span><span class="p">,</span> <span class="s1">&#39;transforms&#39;</span><span class="p">)</span>
+<span class="n">transform</span> <span class="o">=</span> <span class="n">midas_transforms</span><span class="o">.</span><span class="n">dpt_transform</span>
+</code></pre></div>
+
+
+
+</details>
+
+<h3 id="2">문제 2: 깊이 기반 배경 블러<a class="header-link" href="#2" title="Permanent link">&para;</a></h3>
+<p>인물 사진에서 배경만 블러 처리하세요.</p>
+<p><strong>요구사항</strong>:
+- 깊이 추정
+- 전경/배경 분리
+- 배경에만 블러 적용
+- 자연스러운 경계 처리</p>
+<details>
+<summary>힌트</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="c1"># 깊이 기반 마스크 생성</span>
+<span class="n">threshold</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">depth</span><span class="p">,</span> <span class="mi">30</span><span class="p">)</span>  <span class="c1"># 가까운 30%를 전경으로</span>
+<span class="n">foreground_mask</span> <span class="o">=</span> <span class="n">depth</span> <span class="o">&lt;</span> <span class="n">threshold</span>
+
+<span class="c1"># 마스크 블러링 (경계 부드럽게)</span>
+<span class="n">mask_blur</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span>
+    <span class="n">foreground_mask</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="p">(</span><span class="mi">21</span><span class="p">,</span> <span class="mi">21</span><span class="p">),</span> <span class="mi">0</span>
+<span class="p">)</span>
+
+<span class="c1"># 배경 블러</span>
+<span class="n">background_blur</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">GaussianBlur</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="p">(</span><span class="mi">25</span><span class="p">,</span> <span class="mi">25</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># 합성</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">img</span> <span class="o">*</span> <span class="n">mask_blur</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">+</span> <span class="n">background_blur</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">mask_blur</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="kc">None</span><span class="p">])</span>
+</code></pre></div>
+
+
+
+</details>
+
+<h3 id="3-sfm-3d">문제 3: SfM으로 3D 복원<a class="header-link" href="#3-sfm-3d" title="Permanent link">&para;</a></h3>
+<p>두 이미지에서 3D 포인트 클라우드를 복원하세요.</p>
+<p><strong>요구사항</strong>:
+- 특징점 매칭
+- Essential Matrix 계산
+- 삼각측량
+- 포인트 클라우드 시각화</p>
+<details>
+<summary>힌트</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="c1"># Essential Matrix</span>
+<span class="n">E</span><span class="p">,</span> <span class="n">mask</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">findEssentialMat</span><span class="p">(</span><span class="n">pts1</span><span class="p">,</span> <span class="n">pts2</span><span class="p">,</span> <span class="n">K</span><span class="p">)</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">recoverPose</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">pts1</span><span class="p">,</span> <span class="n">pts2</span><span class="p">,</span> <span class="n">K</span><span class="p">)</span>
+
+<span class="c1"># 투영 행렬</span>
+<span class="n">P1</span> <span class="o">=</span> <span class="n">K</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">))])</span>
+<span class="n">P2</span> <span class="o">=</span> <span class="n">K</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">([</span><span class="n">R</span><span class="p">,</span> <span class="n">t</span><span class="p">])</span>
+
+<span class="c1"># 삼각측량</span>
+<span class="n">points_4d</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">triangulatePoints</span><span class="p">(</span><span class="n">P1</span><span class="p">,</span> <span class="n">P2</span><span class="p">,</span> <span class="n">pts1</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">pts2</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+<span class="n">points_3d</span> <span class="o">=</span> <span class="n">points_4d</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="o">/</span> <span class="n">points_4d</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+</code></pre></div>
+
+
+
+</details>
+
+<h3 id="4">문제 4: 실시간 깊이 추정<a class="header-link" href="#4" title="Permanent link">&para;</a></h3>
+<p>웹캠으로 실시간 깊이 추정을 구현하세요.</p>
+<p><strong>요구사항</strong>:
+- 경량 모델 사용 (MiDaS small)
+- FPS 측정 및 표시
+- 깊이 시각화</p>
+<details>
+<summary>힌트</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="c1"># 경량 모델</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">hub</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;intel-isl/MiDaS&#39;</span><span class="p">,</span> <span class="s1">&#39;MiDaS_small&#39;</span><span class="p">)</span>
+
+<span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="n">ret</span><span class="p">,</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">cap</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">depth</span> <span class="o">=</span> <span class="n">estimate_depth</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">transform</span><span class="p">)</span>
+    <span class="n">fps</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
+
+    <span class="n">cv2</span><span class="o">.</span><span class="n">putText</span><span class="p">(</span><span class="n">depth_vis</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;FPS: </span><span class="si">{</span><span class="n">fps</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+</details>
+
+<h3 id="5-3d">문제 5: 깊이 기반 3D 뷰어<a class="header-link" href="#5-3d" title="Permanent link">&para;</a></h3>
+<p>깊이 맵을 이용해 간단한 3D 뷰어를 만드세요.</p>
+<p><strong>요구사항</strong>:
+- 깊이 맵 → 포인트 클라우드 변환
+- Open3D로 시각화
+- 마우스로 회전/줌</p>
+<details>
+<summary>힌트</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">open3d</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">o3d</span>
+
+<span class="c1"># 포인트 클라우드 생성</span>
+<span class="n">pcd</span> <span class="o">=</span> <span class="n">o3d</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">PointCloud</span><span class="p">()</span>
+<span class="n">pcd</span><span class="o">.</span><span class="n">points</span> <span class="o">=</span> <span class="n">o3d</span><span class="o">.</span><span class="n">utility</span><span class="o">.</span><span class="n">Vector3dVector</span><span class="p">(</span><span class="n">points_3d</span><span class="p">)</span>
+<span class="n">pcd</span><span class="o">.</span><span class="n">colors</span> <span class="o">=</span> <span class="n">o3d</span><span class="o">.</span><span class="n">utility</span><span class="o">.</span><span class="n">Vector3dVector</span><span class="p">(</span><span class="n">colors</span> <span class="o">/</span> <span class="mf">255.0</span><span class="p">)</span>
+
+<span class="c1"># 시각화</span>
+<span class="n">o3d</span><span class="o">.</span><span class="n">visualization</span><span class="o">.</span><span class="n">draw_geometries</span><span class="p">([</span><span class="n">pcd</span><span class="p">])</span>
+</code></pre></div>
+
+
+
+</details>
+
+<hr />
+<h2 id="_7">다음 단계<a class="header-link" href="#_7" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./23_SLAM_Introduction.md">23_SLAM_Introduction.md</a> - Visual SLAM, ORB-SLAM, LiDAR SLAM, Loop Closure</li>
+</ul>
+<hr />
+<h2 id="_8">참고 자료<a class="header-link" href="#_8" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://github.com/isl-org/MiDaS">MiDaS GitHub</a></li>
+<li><a href="https://arxiv.org/abs/2103.13413">DPT Paper</a></li>
+<li><a href="https://github.com/LiheYoung/Depth-Anything">Depth Anything</a></li>
+<li><a href="https://cmsc426.github.io/sfm/">Structure from Motion Tutorial</a></li>
+<li><a href="https://docs.opencv.org/4.x/d4/d18/tutorial_sfm_scene_reconstruction.html">OpenCV SfM Tutorial</a></li>
+<li><a href="https://github.com/nianticlabs/monodepth2">Monodepth2</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Computer_Vision/21_3D_Vision_Basics.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">3D 비전 기초 (3D Vision Basics)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Computer_Vision/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Computer_Vision/23_SLAM_Introduction.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">SLAM 입문 (Visual SLAM Introduction)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

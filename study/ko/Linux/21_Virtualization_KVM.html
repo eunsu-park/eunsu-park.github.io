@@ -1,0 +1,934 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>가상화 (KVM) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Linux/">Linux</a>
+    <span class="separator">/</span>
+    <span class="current">가상화 (KVM)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>가상화 (KVM)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Linux/20_Kernel_Management.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">커널 관리</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Linux/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Linux/22_Ansible_Basics.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">Ansible 기초</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#_2">목차</a></li>
+<li><a href="#1-kvmqemu">1. KVM/QEMU 개요</a><ul>
+<li><a href="#_3">가상화 유형</a></li>
+<li><a href="#kvmqemu">KVM/QEMU 아키텍처</a></li>
+<li><a href="#libvirt">libvirt 관리 스택</a></li>
+</ul>
+</li>
+<li><a href="#2">2. 설치 및 설정</a><ul>
+<li><a href="#_4">하드웨어 가상화 지원 확인</a></li>
+<li><a href="#_5">패키지 설치</a></li>
+<li><a href="#_6">서비스 시작</a></li>
+<li><a href="#_7">연결 확인</a></li>
+</ul>
+</li>
+<li><a href="#3-vm">3. VM 생성</a><ul>
+<li><a href="#virt-install-vm">virt-install을 이용한 VM 생성</a></li>
+<li><a href="#_8">상세 옵션</a></li>
+<li><a href="#os">OS 변형 목록 확인</a></li>
+<li><a href="#xml-vm">XML 정의로 VM 생성</a></li>
+</ul>
+</li>
+<li><a href="#4-virsh">4. virsh 명령어</a><ul>
+<li><a href="#vm">VM 상태 관리</a></li>
+<li><a href="#vm_1">VM 정보 조회</a></li>
+<li><a href="#vm_2">VM 콘솔 접속</a></li>
+<li><a href="#vm_3">VM 리소스 변경</a></li>
+<li><a href="#vm_4">VM 삭제</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 네트워크 설정</a><ul>
+<li><a href="#nat">기본 NAT 네트워크</a></li>
+<li><a href="#_9">브릿지 네트워크 설정</a></li>
+<li><a href="#libvirt_1">libvirt 브릿지 네트워크 정의</a></li>
+<li><a href="#_10">격리된 네트워크</a></li>
+<li><a href="#vm_5">VM에 네트워크 인터페이스 추가</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 스토리지 관리</a><ul>
+<li><a href="#_11">스토리지 풀</a></li>
+<li><a href="#_12">볼륨 관리</a></li>
+<li><a href="#qemu-img">디스크 이미지 관리 (qemu-img)</a></li>
+<li><a href="#vm_6">VM에 디스크 추가</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 스냅샷과 마이그레이션</a><ul>
+<li><a href="#_13">스냅샷 관리</a></li>
+<li><a href="#_14">외부 스냅샷</a></li>
+<li><a href="#_15">라이브 마이그레이션</a></li>
+<li><a href="#_16">오프라인 마이그레이션</a></li>
+</ul>
+</li>
+<li><a href="#_17">연습 문제</a><ul>
+<li><a href="#1-vm">문제 1: VM 생성</a></li>
+<li><a href="#2_1">문제 2: 네트워크 설정</a></li>
+<li><a href="#3">문제 3: 스냅샷 관리</a></li>
+</ul>
+</li>
+<li><a href="#_18">정답</a><ul>
+<li><a href="#1">문제 1 정답</a></li>
+<li><a href="#2_2">문제 2 정답</a></li>
+<li><a href="#3_1">문제 3 정답</a></li>
+</ul>
+</li>
+<li><a href="#_19">다음 단계</a></li>
+<li><a href="#_20">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="kvm">가상화 (KVM)<a class="header-link" href="#kvm" title="Permanent link">&para;</a></h1>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<p>이 문서를 통해 다음을 학습합니다:</p>
+<ul>
+<li>KVM/QEMU 가상화 개념과 아키텍처</li>
+<li>libvirt와 virsh를 이용한 VM 관리</li>
+<li>가상 네트워크 설정</li>
+<li>스냅샷과 마이그레이션</li>
+</ul>
+<p><strong>난이도</strong>: ⭐⭐⭐⭐ (고급)</p>
+<hr />
+<h2 id="_2">목차<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-kvmqemu-개요">KVM/QEMU 개요</a></li>
+<li><a href="#2-설치-및-설정">설치 및 설정</a></li>
+<li><a href="#3-vm-생성">VM 생성</a></li>
+<li><a href="#4-virsh-명령어">virsh 명령어</a></li>
+<li><a href="#5-네트워크-설정">네트워크 설정</a></li>
+<li><a href="#6-스토리지-관리">스토리지 관리</a></li>
+<li><a href="#7-스냅샷과-마이그레이션">스냅샷과 마이그레이션</a></li>
+</ol>
+<hr />
+<h2 id="1-kvmqemu">1. KVM/QEMU 개요<a class="header-link" href="#1-kvmqemu" title="Permanent link">&para;</a></h2>
+<h3 id="_3">가상화 유형<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│  Type 1 (Bare-metal)          Type 2 (Hosted)               │
+│  ┌─────────────────┐          ┌─────────────────┐          │
+│  │ VM │ VM │ VM   │          │ VM │ VM │ VM   │          │
+│  ├─────────────────┤          ├─────────────────┤          │
+│  │   Hypervisor    │          │   Hypervisor    │          │
+│  ├─────────────────┤          ├─────────────────┤          │
+│  │    Hardware     │          │   Host OS       │          │
+│  └─────────────────┘          ├─────────────────┤          │
+│  ESXi, Xen, Hyper-V           │    Hardware     │          │
+│                               └─────────────────┘          │
+│                               VirtualBox, VMware Workstation│
+│                                                             │
+│  KVM은 Linux 커널이 Hypervisor 역할 (Type 1에 가까움)       │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="kvmqemu">KVM/QEMU 아키텍처<a class="header-link" href="#kvmqemu" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                       가상 머신                              │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  Guest OS (Linux, Windows, etc.)                     │   │
+│  └─────────────────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────────────────┤
+│  QEMU: 장치 에뮬레이션 (I/O, 네트워크, 디스크)              │
+├─────────────────────────────────────────────────────────────┤
+│  KVM 커널 모듈: CPU/메모리 가상화 (하드웨어 지원)           │
+├─────────────────────────────────────────────────────────────┤
+│  Linux 커널                                                  │
+├─────────────────────────────────────────────────────────────┤
+│  하드웨어 (VT-x/AMD-V, VT-d)                                │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="libvirt">libvirt 관리 스택<a class="header-link" href="#libvirt" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│  관리 도구                                                   │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │ virsh    │  │virt-manager│ │Cockpit   │  │ API      │   │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘   │
+│       │             │             │             │          │
+│       └─────────────┴─────────────┴─────────────┘          │
+│                           │                                 │
+│                    ┌──────┴──────┐                         │
+│                    │   libvirt   │                         │
+│                    │ (libvirtd)  │                         │
+│                    └──────┬──────┘                         │
+│                           │                                 │
+│  ┌────────────────────────┼────────────────────────┐       │
+│  │            │           │           │            │       │
+│  │  ┌─────┐   │   ┌─────┐│   ┌─────┐│   ┌─────┐  │       │
+│  │  │ KVM │   │   │ QEMU││   │ LXC ││   │ Xen │  │       │
+│  │  └─────┘   │   └─────┘│   └─────┘│   └─────┘  │       │
+│  └────────────────────────────────────────────────┘       │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="2">2. 설치 및 설정<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="_4">하드웨어 가상화 지원 확인<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># CPU 가상화 지원 확인</span>
+grep<span class="w"> </span>-E<span class="w"> </span><span class="s1">&#39;(vmx|svm)&#39;</span><span class="w"> </span>/proc/cpuinfo
+
+<span class="c1"># vmx: Intel VT-x</span>
+<span class="c1"># svm: AMD-V</span>
+
+<span class="c1"># 또는</span>
+lscpu<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>Virtualization
+
+<span class="c1"># KVM 모듈 확인</span>
+lsmod<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>kvm
+</code></pre></div>
+
+<h3 id="_5">패키지 설치<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Ubuntu/Debian</span>
+sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>qemu-kvm<span class="w"> </span>libvirt-daemon-system<span class="w"> </span>libvirt-clients<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>bridge-utils<span class="w"> </span>virt-manager<span class="w"> </span>virtinst
+
+<span class="c1"># RHEL/CentOS</span>
+sudo<span class="w"> </span>yum<span class="w"> </span>install<span class="w"> </span>qemu-kvm<span class="w"> </span>libvirt<span class="w"> </span>libvirt-python<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>libguestfs-tools<span class="w"> </span>virt-install<span class="w"> </span>virt-manager
+
+<span class="c1"># Fedora</span>
+sudo<span class="w"> </span>dnf<span class="w"> </span>install<span class="w"> </span>@virtualization
+</code></pre></div>
+
+<h3 id="_6">서비스 시작<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># libvirtd 시작</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>--now<span class="w"> </span>libvirtd
+
+<span class="c1"># 상태 확인</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>status<span class="w"> </span>libvirtd
+
+<span class="c1"># 사용자를 libvirt 그룹에 추가 (재로그인 필요)</span>
+sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>libvirt<span class="w"> </span><span class="nv">$USER</span>
+sudo<span class="w"> </span>usermod<span class="w"> </span>-aG<span class="w"> </span>kvm<span class="w"> </span><span class="nv">$USER</span>
+</code></pre></div>
+
+<h3 id="_7">연결 확인<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 로컬 연결 테스트</span>
+virsh<span class="w"> </span>-c<span class="w"> </span>qemu:///system<span class="w"> </span>list<span class="w"> </span>--all
+
+<span class="c1"># 또는 sudo 없이</span>
+virsh<span class="w"> </span>list<span class="w"> </span>--all
+
+<span class="c1"># 시스템 정보</span>
+virsh<span class="w"> </span>nodeinfo
+</code></pre></div>
+
+<hr />
+<h2 id="3-vm">3. VM 생성<a class="header-link" href="#3-vm" title="Permanent link">&para;</a></h2>
+<h3 id="virt-install-vm">virt-install을 이용한 VM 생성<a class="header-link" href="#virt-install-vm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 기본 VM 생성</span>
+virt-install<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--name<span class="w"> </span>ubuntu-vm<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--ram<span class="w"> </span><span class="m">2048</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--vcpus<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--disk<span class="w"> </span><span class="nv">path</span><span class="o">=</span>/var/lib/libvirt/images/ubuntu-vm.qcow2,size<span class="o">=</span><span class="m">20</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--os-variant<span class="w"> </span>ubuntu22.04<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--network<span class="w"> </span><span class="nv">bridge</span><span class="o">=</span>virbr0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--graphics<span class="w"> </span>vnc,listen<span class="o">=</span><span class="m">0</span>.0.0.0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--cdrom<span class="w"> </span>/path/to/ubuntu-22.04.iso<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--boot<span class="w"> </span>cdrom,hd
+</code></pre></div>
+
+<h3 id="_8">상세 옵션<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>virt-install<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--name<span class="w"> </span>centos-vm<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--memory<span class="w"> </span><span class="m">4096</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--vcpus<span class="w"> </span><span class="m">4</span>,maxvcpus<span class="o">=</span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--cpu<span class="w"> </span>host-passthrough<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--disk<span class="w"> </span><span class="nv">path</span><span class="o">=</span>/var/lib/libvirt/images/centos-vm.qcow2,size<span class="o">=</span><span class="m">40</span>,format<span class="o">=</span>qcow2,bus<span class="o">=</span>virtio<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--disk<span class="w"> </span><span class="nv">path</span><span class="o">=</span>/var/lib/libvirt/images/centos-data.qcow2,size<span class="o">=</span><span class="m">100</span>,format<span class="o">=</span>qcow2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--os-variant<span class="w"> </span>centos-stream9<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--network<span class="w"> </span><span class="nv">network</span><span class="o">=</span>default,model<span class="o">=</span>virtio<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--graphics<span class="w"> </span>spice,listen<span class="o">=</span><span class="m">0</span>.0.0.0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--video<span class="w"> </span>qxl<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--channel<span class="w"> </span>spicevmc<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--location<span class="w"> </span>/path/to/CentOS-Stream-9.iso<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--extra-args<span class="w"> </span><span class="s2">&quot;console=ttyS0,115200n8 serial&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--initrd-inject<span class="w"> </span>/path/to/kickstart.cfg<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--extra-args<span class="w"> </span><span class="s2">&quot;ks=file:/kickstart.cfg&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--noautoconsole
+</code></pre></div>
+
+<h3 id="os">OS 변형 목록 확인<a class="header-link" href="#os" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 지원하는 OS 목록</span>
+osinfo-query<span class="w"> </span>os
+
+<span class="c1"># 특정 OS 검색</span>
+osinfo-query<span class="w"> </span>os<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-i<span class="w"> </span>ubuntu
+osinfo-query<span class="w"> </span>os<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-i<span class="w"> </span>centos
+</code></pre></div>
+
+<h3 id="xml-vm">XML 정의로 VM 생성<a class="header-link" href="#xml-vm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># VM 정의 XML 예시 (/tmp/vm-definition.xml)</span>
+virsh<span class="w"> </span>define<span class="w"> </span>/tmp/vm-definition.xml
+
+<span class="c1"># 기존 VM의 XML 덤프</span>
+virsh<span class="w"> </span>dumpxml<span class="w"> </span>ubuntu-vm<span class="w"> </span>&gt;<span class="w"> </span>ubuntu-vm.xml
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="cm">&lt;!-- vm-definition.xml 예시 --&gt;</span>
+<span class="nt">&lt;domain</span><span class="w"> </span><span class="na">type=</span><span class="s">&#39;kvm&#39;</span><span class="nt">&gt;</span>
+<span class="w">  </span><span class="nt">&lt;name&gt;</span>test-vm<span class="nt">&lt;/name&gt;</span>
+<span class="w">  </span><span class="nt">&lt;memory</span><span class="w"> </span><span class="na">unit=</span><span class="s">&#39;GiB&#39;</span><span class="nt">&gt;</span>2<span class="nt">&lt;/memory&gt;</span>
+<span class="w">  </span><span class="nt">&lt;vcpu</span><span class="w"> </span><span class="na">placement=</span><span class="s">&#39;static&#39;</span><span class="nt">&gt;</span>2<span class="nt">&lt;/vcpu&gt;</span>
+<span class="w">  </span><span class="nt">&lt;os&gt;</span>
+<span class="w">    </span><span class="nt">&lt;type</span><span class="w"> </span><span class="na">arch=</span><span class="s">&#39;x86_64&#39;</span><span class="w"> </span><span class="na">machine=</span><span class="s">&#39;pc-q35-6.2&#39;</span><span class="nt">&gt;</span>hvm<span class="nt">&lt;/type&gt;</span>
+<span class="w">    </span><span class="nt">&lt;boot</span><span class="w"> </span><span class="na">dev=</span><span class="s">&#39;hd&#39;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/os&gt;</span>
+<span class="w">  </span><span class="nt">&lt;features&gt;</span>
+<span class="w">    </span><span class="nt">&lt;acpi/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;apic/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/features&gt;</span>
+<span class="w">  </span><span class="nt">&lt;cpu</span><span class="w"> </span><span class="na">mode=</span><span class="s">&#39;host-passthrough&#39;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;devices&gt;</span>
+<span class="w">    </span><span class="nt">&lt;emulator&gt;</span>/usr/bin/qemu-system-x86_64<span class="nt">&lt;/emulator&gt;</span>
+<span class="w">    </span><span class="nt">&lt;disk</span><span class="w"> </span><span class="na">type=</span><span class="s">&#39;file&#39;</span><span class="w"> </span><span class="na">device=</span><span class="s">&#39;disk&#39;</span><span class="nt">&gt;</span>
+<span class="w">      </span><span class="nt">&lt;driver</span><span class="w"> </span><span class="na">name=</span><span class="s">&#39;qemu&#39;</span><span class="w"> </span><span class="na">type=</span><span class="s">&#39;qcow2&#39;</span><span class="nt">/&gt;</span>
+<span class="w">      </span><span class="nt">&lt;source</span><span class="w"> </span><span class="na">file=</span><span class="s">&#39;/var/lib/libvirt/images/test-vm.qcow2&#39;</span><span class="nt">/&gt;</span>
+<span class="w">      </span><span class="nt">&lt;target</span><span class="w"> </span><span class="na">dev=</span><span class="s">&#39;vda&#39;</span><span class="w"> </span><span class="na">bus=</span><span class="s">&#39;virtio&#39;</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/disk&gt;</span>
+<span class="w">    </span><span class="nt">&lt;interface</span><span class="w"> </span><span class="na">type=</span><span class="s">&#39;network&#39;</span><span class="nt">&gt;</span>
+<span class="w">      </span><span class="nt">&lt;source</span><span class="w"> </span><span class="na">network=</span><span class="s">&#39;default&#39;</span><span class="nt">/&gt;</span>
+<span class="w">      </span><span class="nt">&lt;model</span><span class="w"> </span><span class="na">type=</span><span class="s">&#39;virtio&#39;</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/interface&gt;</span>
+<span class="w">    </span><span class="nt">&lt;graphics</span><span class="w"> </span><span class="na">type=</span><span class="s">&#39;vnc&#39;</span><span class="w"> </span><span class="na">port=</span><span class="s">&#39;-1&#39;</span><span class="w"> </span><span class="na">autoport=</span><span class="s">&#39;yes&#39;</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;console</span><span class="w"> </span><span class="na">type=</span><span class="s">&#39;pty&#39;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/devices&gt;</span>
+<span class="nt">&lt;/domain&gt;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-virsh">4. virsh 명령어<a class="header-link" href="#4-virsh" title="Permanent link">&para;</a></h2>
+<h3 id="vm">VM 상태 관리<a class="header-link" href="#vm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># VM 목록</span>
+virsh<span class="w"> </span>list<span class="w">             </span><span class="c1"># 실행 중인 VM</span>
+virsh<span class="w"> </span>list<span class="w"> </span>--all<span class="w">       </span><span class="c1"># 모든 VM</span>
+virsh<span class="w"> </span>list<span class="w"> </span>--inactive<span class="w">  </span><span class="c1"># 중지된 VM</span>
+
+<span class="c1"># VM 시작/중지</span>
+virsh<span class="w"> </span>start<span class="w"> </span>vm-name
+virsh<span class="w"> </span>shutdown<span class="w"> </span>vm-name<span class="w">     </span><span class="c1"># 정상 종료</span>
+virsh<span class="w"> </span>destroy<span class="w"> </span>vm-name<span class="w">      </span><span class="c1"># 강제 종료 (전원 차단)</span>
+virsh<span class="w"> </span>reboot<span class="w"> </span>vm-name
+
+<span class="c1"># VM 일시 정지/재개</span>
+virsh<span class="w"> </span><span class="nb">suspend</span><span class="w"> </span>vm-name
+virsh<span class="w"> </span>resume<span class="w"> </span>vm-name
+
+<span class="c1"># 자동 시작 설정</span>
+virsh<span class="w"> </span>autostart<span class="w"> </span>vm-name
+virsh<span class="w"> </span>autostart<span class="w"> </span>--disable<span class="w"> </span>vm-name
+</code></pre></div>
+
+<h3 id="vm_1">VM 정보 조회<a class="header-link" href="#vm_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 기본 정보</span>
+virsh<span class="w"> </span>dominfo<span class="w"> </span>vm-name
+
+<span class="c1"># 상세 설정 (XML)</span>
+virsh<span class="w"> </span>dumpxml<span class="w"> </span>vm-name
+
+<span class="c1"># CPU 정보</span>
+virsh<span class="w"> </span>vcpuinfo<span class="w"> </span>vm-name
+
+<span class="c1"># 메모리 정보</span>
+virsh<span class="w"> </span>dommemstat<span class="w"> </span>vm-name
+
+<span class="c1"># 블록 장치 정보</span>
+virsh<span class="w"> </span>domblklist<span class="w"> </span>vm-name
+virsh<span class="w"> </span>domblkinfo<span class="w"> </span>vm-name<span class="w"> </span>vda
+
+<span class="c1"># 네트워크 인터페이스</span>
+virsh<span class="w"> </span>domiflist<span class="w"> </span>vm-name
+virsh<span class="w"> </span>domifstat<span class="w"> </span>vm-name<span class="w"> </span>vnet0
+</code></pre></div>
+
+<h3 id="vm_2">VM 콘솔 접속<a class="header-link" href="#vm_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 시리얼 콘솔 (게스트 설정 필요)</span>
+virsh<span class="w"> </span>console<span class="w"> </span>vm-name
+
+<span class="c1"># VNC/SPICE 포트 확인</span>
+virsh<span class="w"> </span>domdisplay<span class="w"> </span>vm-name
+virsh<span class="w"> </span>vncdisplay<span class="w"> </span>vm-name
+
+<span class="c1"># virt-viewer로 접속</span>
+virt-viewer<span class="w"> </span>vm-name
+</code></pre></div>
+
+<h3 id="vm_3">VM 리소스 변경<a class="header-link" href="#vm_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># CPU 수 변경 (온라인)</span>
+virsh<span class="w"> </span>setvcpus<span class="w"> </span>vm-name<span class="w"> </span><span class="m">4</span><span class="w"> </span>--live
+
+<span class="c1"># 메모리 변경 (온라인, 사전 설정 필요)</span>
+virsh<span class="w"> </span>setmem<span class="w"> </span>vm-name<span class="w"> </span>4G<span class="w"> </span>--live
+
+<span class="c1"># 최대값 설정 (오프라인)</span>
+virsh<span class="w"> </span>setmaxmem<span class="w"> </span>vm-name<span class="w"> </span>8G<span class="w"> </span>--config
+virsh<span class="w"> </span>setvcpus<span class="w"> </span>vm-name<span class="w"> </span><span class="m">8</span><span class="w"> </span>--maximum<span class="w"> </span>--config
+
+<span class="c1"># XML 직접 편집</span>
+virsh<span class="w"> </span>edit<span class="w"> </span>vm-name
+</code></pre></div>
+
+<h3 id="vm_4">VM 삭제<a class="header-link" href="#vm_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># VM 정의 삭제 (디스크 유지)</span>
+virsh<span class="w"> </span>undefine<span class="w"> </span>vm-name
+
+<span class="c1"># VM과 관련 스토리지 삭제</span>
+virsh<span class="w"> </span>undefine<span class="w"> </span>vm-name<span class="w"> </span>--remove-all-storage
+
+<span class="c1"># NVRAM 포함 삭제 (UEFI)</span>
+virsh<span class="w"> </span>undefine<span class="w"> </span>vm-name<span class="w"> </span>--nvram
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 네트워크 설정<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="nat">기본 NAT 네트워크<a class="header-link" href="#nat" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 기본 네트워크 확인</span>
+virsh<span class="w"> </span>net-list<span class="w"> </span>--all
+
+<span class="c1"># 기본 네트워크 시작</span>
+virsh<span class="w"> </span>net-start<span class="w"> </span>default
+virsh<span class="w"> </span>net-autostart<span class="w"> </span>default
+
+<span class="c1"># 네트워크 정보</span>
+virsh<span class="w"> </span>net-info<span class="w"> </span>default
+virsh<span class="w"> </span>net-dumpxml<span class="w"> </span>default
+</code></pre></div>
+
+<h3 id="_9">브릿지 네트워크 설정<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Ubuntu: netplan 설정</span>
+<span class="c1"># /etc/netplan/01-bridge.yaml</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="nt">network</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">  </span><span class="nt">renderer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">networkd</span>
+<span class="w">  </span><span class="nt">ethernets</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">enp3s0</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">dhcp4</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">no</span>
+<span class="w">  </span><span class="nt">bridges</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">br0</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">interfaces</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">enp3s0</span>
+<span class="w">      </span><span class="nt">dhcp4</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">yes</span>
+<span class="w">      </span><span class="nt">parameters</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">stp</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">        </span><span class="nt">forward-delay</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># 적용</span>
+sudo<span class="w"> </span>netplan<span class="w"> </span>apply
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># RHEL/CentOS: NetworkManager</span>
+sudo<span class="w"> </span>nmcli<span class="w"> </span>connection<span class="w"> </span>add<span class="w"> </span><span class="nb">type</span><span class="w"> </span>bridge<span class="w"> </span>con-name<span class="w"> </span>br0<span class="w"> </span>ifname<span class="w"> </span>br0
+sudo<span class="w"> </span>nmcli<span class="w"> </span>connection<span class="w"> </span>add<span class="w"> </span><span class="nb">type</span><span class="w"> </span>ethernet<span class="w"> </span>con-name<span class="w"> </span>br0-slave-enp3s0<span class="w"> </span>ifname<span class="w"> </span>enp3s0<span class="w"> </span>master<span class="w"> </span>br0
+sudo<span class="w"> </span>nmcli<span class="w"> </span>connection<span class="w"> </span>modify<span class="w"> </span>br0<span class="w"> </span>ipv4.method<span class="w"> </span>auto
+sudo<span class="w"> </span>nmcli<span class="w"> </span>connection<span class="w"> </span>up<span class="w"> </span>br0
+</code></pre></div>
+
+<h3 id="libvirt_1">libvirt 브릿지 네트워크 정의<a class="header-link" href="#libvirt_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="cm">&lt;!-- /tmp/bridge-network.xml --&gt;</span>
+<span class="nt">&lt;network&gt;</span>
+<span class="w">  </span><span class="nt">&lt;name&gt;</span>host-bridge<span class="nt">&lt;/name&gt;</span>
+<span class="w">  </span><span class="nt">&lt;forward</span><span class="w"> </span><span class="na">mode=</span><span class="s">&#39;bridge&#39;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;bridge</span><span class="w"> </span><span class="na">name=</span><span class="s">&#39;br0&#39;</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/network&gt;</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># 네트워크 생성</span>
+virsh<span class="w"> </span>net-define<span class="w"> </span>/tmp/bridge-network.xml
+virsh<span class="w"> </span>net-start<span class="w"> </span>host-bridge
+virsh<span class="w"> </span>net-autostart<span class="w"> </span>host-bridge
+</code></pre></div>
+
+<h3 id="_10">격리된 네트워크<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="cm">&lt;!-- /tmp/isolated-network.xml --&gt;</span>
+<span class="nt">&lt;network&gt;</span>
+<span class="w">  </span><span class="nt">&lt;name&gt;</span>isolated<span class="nt">&lt;/name&gt;</span>
+<span class="w">  </span><span class="nt">&lt;bridge</span><span class="w"> </span><span class="na">name=</span><span class="s">&#39;virbr1&#39;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ip</span><span class="w"> </span><span class="na">address=</span><span class="s">&#39;192.168.100.1&#39;</span><span class="w"> </span><span class="na">netmask=</span><span class="s">&#39;255.255.255.0&#39;</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;dhcp&gt;</span>
+<span class="w">      </span><span class="nt">&lt;range</span><span class="w"> </span><span class="na">start=</span><span class="s">&#39;192.168.100.10&#39;</span><span class="w"> </span><span class="na">end=</span><span class="s">&#39;192.168.100.254&#39;</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/dhcp&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/ip&gt;</span>
+<span class="nt">&lt;/network&gt;</span>
+</code></pre></div>
+
+<h3 id="vm_5">VM에 네트워크 인터페이스 추가<a class="header-link" href="#vm_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 인터페이스 추가 (온라인)</span>
+virsh<span class="w"> </span>attach-interface<span class="w"> </span>vm-name<span class="w"> </span>network<span class="w"> </span>default<span class="w"> </span>--model<span class="w"> </span>virtio<span class="w"> </span>--live<span class="w"> </span>--config
+
+<span class="c1"># 인터페이스 제거</span>
+virsh<span class="w"> </span>detach-interface<span class="w"> </span>vm-name<span class="w"> </span>network<span class="w"> </span>--mac<span class="w"> </span><span class="m">52</span>:54:00:xx:xx:xx<span class="w"> </span>--live<span class="w"> </span>--config
+
+<span class="c1"># 인터페이스 목록</span>
+virsh<span class="w"> </span>domiflist<span class="w"> </span>vm-name
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 스토리지 관리<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="_11">스토리지 풀<a class="header-link" href="#_11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 기본 풀 (디렉토리 기반)</span>
+virsh<span class="w"> </span>pool-list<span class="w"> </span>--all
+
+<span class="c1"># 풀 생성 (디렉토리)</span>
+virsh<span class="w"> </span>pool-define-as<span class="w"> </span>mypool<span class="w"> </span>dir<span class="w"> </span>--target<span class="w"> </span>/var/lib/libvirt/images/mypool
+virsh<span class="w"> </span>pool-build<span class="w"> </span>mypool
+virsh<span class="w"> </span>pool-start<span class="w"> </span>mypool
+virsh<span class="w"> </span>pool-autostart<span class="w"> </span>mypool
+
+<span class="c1"># LVM 풀</span>
+virsh<span class="w"> </span>pool-define-as<span class="w"> </span>lvm-pool<span class="w"> </span>logical<span class="w"> </span>--source-name<span class="w"> </span>vg_vms<span class="w"> </span>--target<span class="w"> </span>/dev/vg_vms
+
+<span class="c1"># 풀 정보</span>
+virsh<span class="w"> </span>pool-info<span class="w"> </span>default
+</code></pre></div>
+
+<h3 id="_12">볼륨 관리<a class="header-link" href="#_12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 볼륨 목록</span>
+virsh<span class="w"> </span>vol-list<span class="w"> </span>default
+
+<span class="c1"># 볼륨 생성</span>
+virsh<span class="w"> </span>vol-create-as<span class="w"> </span>default<span class="w"> </span>disk1.qcow2<span class="w"> </span>20G<span class="w"> </span>--format<span class="w"> </span>qcow2
+
+<span class="c1"># 볼륨 정보</span>
+virsh<span class="w"> </span>vol-info<span class="w"> </span>disk1.qcow2<span class="w"> </span>--pool<span class="w"> </span>default
+virsh<span class="w"> </span>vol-dumpxml<span class="w"> </span>disk1.qcow2<span class="w"> </span>--pool<span class="w"> </span>default
+
+<span class="c1"># 볼륨 삭제</span>
+virsh<span class="w"> </span>vol-delete<span class="w"> </span>disk1.qcow2<span class="w"> </span>--pool<span class="w"> </span>default
+
+<span class="c1"># 볼륨 복제</span>
+virsh<span class="w"> </span>vol-clone<span class="w"> </span>disk1.qcow2<span class="w"> </span>disk1-clone.qcow2<span class="w"> </span>--pool<span class="w"> </span>default
+
+<span class="c1"># 볼륨 리사이즈</span>
+virsh<span class="w"> </span>vol-resize<span class="w"> </span>disk1.qcow2<span class="w"> </span>30G<span class="w"> </span>--pool<span class="w"> </span>default
+</code></pre></div>
+
+<h3 id="qemu-img">디스크 이미지 관리 (qemu-img)<a class="header-link" href="#qemu-img" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 이미지 생성</span>
+qemu-img<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>qcow2<span class="w"> </span>disk.qcow2<span class="w"> </span>20G
+
+<span class="c1"># 이미지 정보</span>
+qemu-img<span class="w"> </span>info<span class="w"> </span>disk.qcow2
+
+<span class="c1"># 이미지 변환</span>
+qemu-img<span class="w"> </span>convert<span class="w"> </span>-f<span class="w"> </span>raw<span class="w"> </span>-O<span class="w"> </span>qcow2<span class="w"> </span>disk.raw<span class="w"> </span>disk.qcow2
+qemu-img<span class="w"> </span>convert<span class="w"> </span>-f<span class="w"> </span>vmdk<span class="w"> </span>-O<span class="w"> </span>qcow2<span class="w"> </span>disk.vmdk<span class="w"> </span>disk.qcow2
+
+<span class="c1"># 이미지 리사이즈</span>
+qemu-img<span class="w"> </span>resize<span class="w"> </span>disk.qcow2<span class="w"> </span>+10G
+
+<span class="c1"># 스파스 이미지 압축</span>
+qemu-img<span class="w"> </span>convert<span class="w"> </span>-O<span class="w"> </span>qcow2<span class="w"> </span>-c<span class="w"> </span>disk.qcow2<span class="w"> </span>disk-compressed.qcow2
+</code></pre></div>
+
+<h3 id="vm_6">VM에 디스크 추가<a class="header-link" href="#vm_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 디스크 추가 (온라인)</span>
+virsh<span class="w"> </span>attach-disk<span class="w"> </span>vm-name<span class="w"> </span>/var/lib/libvirt/images/extra.qcow2<span class="w"> </span>vdb<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--driver<span class="w"> </span>qemu<span class="w"> </span>--subdriver<span class="w"> </span>qcow2<span class="w"> </span>--live<span class="w"> </span>--config
+
+<span class="c1"># 디스크 제거</span>
+virsh<span class="w"> </span>detach-disk<span class="w"> </span>vm-name<span class="w"> </span>vdb<span class="w"> </span>--live<span class="w"> </span>--config
+
+<span class="c1"># 블록 장치 목록</span>
+virsh<span class="w"> </span>domblklist<span class="w"> </span>vm-name
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 스냅샷과 마이그레이션<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="_13">스냅샷 관리<a class="header-link" href="#_13" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 스냅샷 생성</span>
+virsh<span class="w"> </span>snapshot-create-as<span class="w"> </span>vm-name<span class="w"> </span>snap1<span class="w"> </span><span class="s2">&quot;First snapshot&quot;</span><span class="w"> </span>--atomic
+
+<span class="c1"># 디스크만 스냅샷 (메모리 제외)</span>
+virsh<span class="w"> </span>snapshot-create-as<span class="w"> </span>vm-name<span class="w"> </span>snap-disk<span class="w"> </span>--disk-only<span class="w"> </span>--atomic
+
+<span class="c1"># 스냅샷 목록</span>
+virsh<span class="w"> </span>snapshot-list<span class="w"> </span>vm-name
+
+<span class="c1"># 스냅샷 정보</span>
+virsh<span class="w"> </span>snapshot-info<span class="w"> </span>vm-name<span class="w"> </span>snap1
+
+<span class="c1"># 스냅샷으로 복원</span>
+virsh<span class="w"> </span>snapshot-revert<span class="w"> </span>vm-name<span class="w"> </span>snap1
+
+<span class="c1"># 스냅샷 삭제</span>
+virsh<span class="w"> </span>snapshot-delete<span class="w"> </span>vm-name<span class="w"> </span>snap1
+
+<span class="c1"># 현재 스냅샷 확인</span>
+virsh<span class="w"> </span>snapshot-current<span class="w"> </span>vm-name
+</code></pre></div>
+
+<h3 id="_14">외부 스냅샷<a class="header-link" href="#_14" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 외부 스냅샷 생성 (운영 환경 권장)</span>
+virsh<span class="w"> </span>snapshot-create-as<span class="w"> </span>vm-name<span class="w"> </span>snap-external<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--diskspec<span class="w"> </span>vda,snapshot<span class="o">=</span>external<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--disk-only<span class="w"> </span>--atomic
+
+<span class="c1"># 외부 스냅샷 커밋 (병합)</span>
+virsh<span class="w"> </span>blockcommit<span class="w"> </span>vm-name<span class="w"> </span>vda<span class="w"> </span>--active<span class="w"> </span>--pivot
+
+<span class="c1"># 블록 작업 정보</span>
+virsh<span class="w"> </span>blockjob<span class="w"> </span>vm-name<span class="w"> </span>vda<span class="w"> </span>--info
+</code></pre></div>
+
+<h3 id="_15">라이브 마이그레이션<a class="header-link" href="#_15" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 대상 호스트 준비</span>
+<span class="c1"># - 동일한 libvirt 버전</span>
+<span class="c1"># - 공유 스토리지 (NFS, GlusterFS, Ceph 등)</span>
+<span class="c1"># - 네트워크 연결</span>
+
+<span class="c1"># 마이그레이션 실행</span>
+virsh<span class="w"> </span>migrate<span class="w"> </span>--live<span class="w"> </span>vm-name<span class="w"> </span>qemu+ssh://target-host/system
+
+<span class="c1"># 옵션과 함께</span>
+virsh<span class="w"> </span>migrate<span class="w"> </span>--live<span class="w"> </span>--persistent<span class="w"> </span>--undefinesource<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--copy-storage-all<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>vm-name<span class="w"> </span>qemu+ssh://target-host/system
+
+<span class="c1"># 터널 마이그레이션 (NAT 환경)</span>
+virsh<span class="w"> </span>migrate<span class="w"> </span>--live<span class="w"> </span>--p2p<span class="w"> </span>--tunnelled<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>vm-name<span class="w"> </span>qemu+ssh://target-host/system
+
+<span class="c1"># 마이그레이션 상태 확인</span>
+virsh<span class="w"> </span>domjobinfo<span class="w"> </span>vm-name
+</code></pre></div>
+
+<h3 id="_16">오프라인 마이그레이션<a class="header-link" href="#_16" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 원본에서 XML 덤프</span>
+virsh<span class="w"> </span>dumpxml<span class="w"> </span>vm-name<span class="w"> </span>&gt;<span class="w"> </span>vm.xml
+
+<span class="c1"># 디스크 이미지 복사</span>
+rsync<span class="w"> </span>-av<span class="w"> </span>/var/lib/libvirt/images/vm-disk.qcow2<span class="w"> </span>target-host:/var/lib/libvirt/images/
+
+<span class="c1"># 대상에서 정의</span>
+virsh<span class="w"> </span>define<span class="w"> </span>vm.xml
+
+<span class="c1"># 원본에서 삭제</span>
+virsh<span class="w"> </span>undefine<span class="w"> </span>vm-name
+</code></pre></div>
+
+<hr />
+<h2 id="_17">연습 문제<a class="header-link" href="#_17" title="Permanent link">&para;</a></h2>
+<h3 id="1-vm">문제 1: VM 생성<a class="header-link" href="#1-vm" title="Permanent link">&para;</a></h3>
+<p>virt-install을 사용하여 다음 사양의 VM을 생성하세요:
+- 이름: test-server
+- 메모리: 2GB
+- CPU: 2개
+- 디스크: 20GB (qcow2)
+- 네트워크: default (NAT)
+- 그래픽: VNC</p>
+<h3 id="2_1">문제 2: 네트워크 설정<a class="header-link" href="#2_1" title="Permanent link">&para;</a></h3>
+<p>격리된 내부 네트워크를 생성하세요:
+- 이름: internal
+- 대역: 10.10.10.0/24
+- DHCP: 10.10.10.100-200
+- NAT 없음</p>
+<h3 id="3">문제 3: 스냅샷 관리<a class="header-link" href="#3" title="Permanent link">&para;</a></h3>
+<ol>
+<li>VM의 스냅샷을 생성하세요</li>
+<li>VM에 변경을 가하세요 (파일 생성 등)</li>
+<li>스냅샷으로 복원하세요</li>
+<li>변경이 취소되었는지 확인하세요</li>
+</ol>
+<hr />
+<h2 id="_18">정답<a class="header-link" href="#_18" title="Permanent link">&para;</a></h2>
+<h3 id="1">문제 1 정답<a class="header-link" href="#1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>virt-install<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--name<span class="w"> </span>test-server<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--memory<span class="w"> </span><span class="m">2048</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--vcpus<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--disk<span class="w"> </span><span class="nv">path</span><span class="o">=</span>/var/lib/libvirt/images/test-server.qcow2,size<span class="o">=</span><span class="m">20</span>,format<span class="o">=</span>qcow2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--os-variant<span class="w"> </span>generic<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--network<span class="w"> </span><span class="nv">network</span><span class="o">=</span>default<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--graphics<span class="w"> </span>vnc,listen<span class="o">=</span><span class="m">0</span>.0.0.0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--cdrom<span class="w"> </span>/path/to/installer.iso<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--boot<span class="w"> </span>cdrom,hd
+</code></pre></div>
+
+<h3 id="2_2">문제 2 정답<a class="header-link" href="#2_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="cm">&lt;!-- /tmp/internal-net.xml --&gt;</span>
+<span class="nt">&lt;network&gt;</span>
+<span class="w">  </span><span class="nt">&lt;name&gt;</span>internal<span class="nt">&lt;/name&gt;</span>
+<span class="w">  </span><span class="nt">&lt;bridge</span><span class="w"> </span><span class="na">name=</span><span class="s">&#39;virbr-int&#39;</span><span class="nt">/&gt;</span>
+<span class="w">  </span><span class="nt">&lt;ip</span><span class="w"> </span><span class="na">address=</span><span class="s">&#39;10.10.10.1&#39;</span><span class="w"> </span><span class="na">netmask=</span><span class="s">&#39;255.255.255.0&#39;</span><span class="nt">&gt;</span>
+<span class="w">    </span><span class="nt">&lt;dhcp&gt;</span>
+<span class="w">      </span><span class="nt">&lt;range</span><span class="w"> </span><span class="na">start=</span><span class="s">&#39;10.10.10.100&#39;</span><span class="w"> </span><span class="na">end=</span><span class="s">&#39;10.10.10.200&#39;</span><span class="nt">/&gt;</span>
+<span class="w">    </span><span class="nt">&lt;/dhcp&gt;</span>
+<span class="w">  </span><span class="nt">&lt;/ip&gt;</span>
+<span class="nt">&lt;/network&gt;</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>virsh<span class="w"> </span>net-define<span class="w"> </span>/tmp/internal-net.xml
+virsh<span class="w"> </span>net-start<span class="w"> </span>internal
+virsh<span class="w"> </span>net-autostart<span class="w"> </span>internal
+</code></pre></div>
+
+<h3 id="3_1">문제 3 정답<a class="header-link" href="#3_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. 스냅샷 생성</span>
+virsh<span class="w"> </span>snapshot-create-as<span class="w"> </span>vm-name<span class="w"> </span>before-change<span class="w"> </span><span class="s2">&quot;Before changes&quot;</span>
+
+<span class="c1"># 2. VM 내에서 변경</span>
+virsh<span class="w"> </span>console<span class="w"> </span>vm-name
+<span class="c1"># (게스트 내에서) touch /tmp/test-file</span>
+
+<span class="c1"># 3. 스냅샷으로 복원</span>
+virsh<span class="w"> </span>snapshot-revert<span class="w"> </span>vm-name<span class="w"> </span>before-change
+
+<span class="c1"># 4. 확인 (파일이 없어야 함)</span>
+virsh<span class="w"> </span>console<span class="w"> </span>vm-name
+<span class="c1"># (게스트 내에서) ls /tmp/test-file  # 파일 없음</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_19">다음 단계<a class="header-link" href="#_19" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./22_Ansible_기초.md">22_Ansible_기초.md</a> - 인프라 자동화</li>
+</ul>
+<hr />
+<h2 id="_20">참고 자료<a class="header-link" href="#_20" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://libvirt.org/docs.html">libvirt Documentation</a></li>
+<li><a href="https://www.linux-kvm.org/page/Documents">KVM Documentation</a></li>
+<li><a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/configuring_and_managing_virtualization/index">Red Hat Virtualization Guide</a></li>
+<li><code>man virsh</code>, <code>man virt-install</code>, <code>man qemu-img</code></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Linux/20_Kernel_Management.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">커널 관리</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Linux/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Linux/22_Ansible_Basics.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">Ansible 기초</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

@@ -1,0 +1,859 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>14. PostgreSQL JSON/JSONB 기능 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/PostgreSQL/">PostgreSQL</a>
+    <span class="separator">/</span>
+    <span class="current">14. PostgreSQL JSON/JSONB 기능</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>14. PostgreSQL JSON/JSONB 기능</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/PostgreSQL/13_Backup_and_Operations.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">백업과 운영</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/PostgreSQL/15_Query_Optimization.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">15. PostgreSQL 쿼리 최적화 심화</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#_2">목차</a></li>
+<li><a href="#1-json-vs-jsonb">1. JSON vs JSONB</a><ul>
+<li><a href="#11">1.1 타입 비교</a></li>
+<li><a href="#12">1.2 기본 사용</a></li>
+</ul>
+</li>
+<li><a href="#2-json">2. JSON 데이터 저장</a><ul>
+<li><a href="#21-json">2.1 JSON 생성 함수</a></li>
+<li><a href="#22-json">2.2 JSON 데이터 수정</a></li>
+</ul>
+</li>
+<li><a href="#3-json">3. JSON 연산자</a><ul>
+<li><a href="#31">3.1 접근 연산자</a></li>
+<li><a href="#32-jsonb">3.2 비교 연산자 (JSONB 전용)</a></li>
+<li><a href="#33">3.3 조건 검색</a></li>
+</ul>
+</li>
+<li><a href="#4-json">4. JSON 함수</a><ul>
+<li><a href="#41">4.1 추출 함수</a></li>
+<li><a href="#42">4.2 변환 함수</a></li>
+<li><a href="#43">4.3 집계 함수</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 인덱싱과 성능</a><ul>
+<li><a href="#51-gin">5.1 GIN 인덱스</a></li>
+<li><a href="#52">5.2 인덱스 사용 확인</a></li>
+<li><a href="#53">5.3 성능 최적화</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 실전 패턴</a><ul>
+<li><a href="#61">6.1 스키마리스 테이블</a></li>
+<li><a href="#62-eav-entity-attribute-value">6.2 EAV (Entity-Attribute-Value) 대체</a></li>
+<li><a href="#63">6.3 버전 관리</a></li>
+<li><a href="#64-json-schema">6.4 JSON Schema 검증</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 연습 문제</a><ul>
+<li><a href="#1">연습 1: 사용자 설정 저장</a></li>
+<li><a href="#2-json_1">연습 2: JSON 집계 보고서</a></li>
+<li><a href="#3-json_1">연습 3: JSON 검색 최적화</a></li>
+<li><a href="#4-json_1">연습 4: 계층적 JSON 처리</a></li>
+</ul>
+</li>
+<li><a href="#_3">다음 단계</a></li>
+<li><a href="#_4">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="14-postgresql-jsonjsonb">14. PostgreSQL JSON/JSONB 기능<a class="header-link" href="#14-postgresql-jsonjsonb" title="Permanent link">&para;</a></h1>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>JSON과 JSONB 타입의 차이점 이해</li>
+<li>JSON 데이터 저장 및 조회</li>
+<li>JSON 연산자와 함수 활용</li>
+<li>GIN 인덱스를 통한 JSON 검색 최적화</li>
+</ul>
+<h2 id="_2">목차<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-json-vs-jsonb">JSON vs JSONB</a></li>
+<li><a href="#2-json-데이터-저장">JSON 데이터 저장</a></li>
+<li><a href="#3-json-연산자">JSON 연산자</a></li>
+<li><a href="#4-json-함수">JSON 함수</a></li>
+<li><a href="#5-인덱싱과-성능">인덱싱과 성능</a></li>
+<li><a href="#6-실전-패턴">실전 패턴</a></li>
+<li><a href="#7-연습-문제">연습 문제</a></li>
+</ol>
+<hr />
+<h2 id="1-json-vs-jsonb">1. JSON vs JSONB<a class="header-link" href="#1-json-vs-jsonb" title="Permanent link">&para;</a></h2>
+<h3 id="11">1.1 타입 비교<a class="header-link" href="#11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    JSON vs JSONB                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  JSON                          JSONB                        │
+│  ────────────────────         ────────────────────         │
+│  • 텍스트로 저장               • 바이너리로 저장            │
+│  • 입력 그대로 유지            • 파싱 후 저장               │
+│  • 공백/순서 보존              • 공백 제거, 키 정렬         │
+│  • 중복 키 허용                • 마지막 키 값만 유지        │
+│  • 저장 빠름                   • 저장 약간 느림             │
+│  • 처리 느림 (매번 파싱)       • 처리 빠름                  │
+│  • 인덱싱 제한적               • GIN 인덱스 지원            │
+│                                                             │
+│  권장: 대부분의 경우 JSONB 사용                             │
+│        JSON은 원본 형식 유지 필요할 때만 사용               │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="12">1.2 기본 사용<a class="header-link" href="#12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 테이블 생성</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">name</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span>
+<span class="w">    </span><span class="n">attributes</span><span class="w"> </span><span class="n">JSONB</span><span class="p">,</span><span class="w">    </span><span class="c1">-- JSONB 권장</span>
+<span class="w">    </span><span class="n">raw_data</span><span class="w"> </span><span class="n">JSON</span><span class="w">        </span><span class="c1">-- 원본 보존 필요 시</span>
+<span class="p">);</span>
+
+<span class="c1">-- 데이터 삽입</span>
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">attributes</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span>
+<span class="p">(</span><span class="s1">&#39;Laptop&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{&quot;brand&quot;: &quot;Dell&quot;, &quot;specs&quot;: {&quot;cpu&quot;: &quot;i7&quot;, &quot;ram&quot;: 16}}&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;Phone&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{&quot;brand&quot;: &quot;Apple&quot;, &quot;specs&quot;: {&quot;model&quot;: &quot;iPhone 15&quot;, &quot;storage&quot;: 256}}&#39;</span><span class="p">);</span>
+
+<span class="c1">-- JSON 형식 검증</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="s1">&#39;{&quot;valid&quot;: true}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 성공</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="s1">&#39;{invalid}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">;</span><span class="w">        </span><span class="c1">-- 오류: 유효하지 않은 JSON</span>
+</code></pre></div>
+
+<hr />
+<h2 id="2-json">2. JSON 데이터 저장<a class="header-link" href="#2-json" title="Permanent link">&para;</a></h2>
+<h3 id="21-json">2.1 JSON 생성 함수<a class="header-link" href="#21-json" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- json_build_object: 키-값 쌍으로 객체 생성</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">json_build_object</span><span class="p">(</span>
+<span class="w">    </span><span class="s1">&#39;name&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;John&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="s1">&#39;age&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span>
+<span class="w">    </span><span class="s1">&#39;active&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">true</span>
+<span class="p">);</span>
+<span class="c1">-- {&quot;name&quot;: &quot;John&quot;, &quot;age&quot;: 30, &quot;active&quot;: true}</span>
+
+<span class="c1">-- jsonb_build_object (JSONB 버전)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_build_object</span><span class="p">(</span>
+<span class="w">    </span><span class="s1">&#39;product&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Laptop&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="s1">&#39;price&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">999</span><span class="p">.</span><span class="mi">99</span>
+<span class="p">);</span>
+
+<span class="c1">-- json_build_array: 배열 생성</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">json_build_array</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;three&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">true</span><span class="p">,</span><span class="w"> </span><span class="k">null</span><span class="p">);</span>
+<span class="c1">-- [1, 2, &quot;three&quot;, true, null]</span>
+
+<span class="c1">-- row_to_json: 행을 JSON으로</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">row_to_json</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+<span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;test&#39;</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="n">t</span><span class="p">;</span>
+<span class="c1">-- {&quot;id&quot;: 1, &quot;name&quot;: &quot;test&quot;}</span>
+
+<span class="c1">-- to_jsonb: 값을 JSONB로 변환</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_jsonb</span><span class="p">(</span><span class="nb">ARRAY</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">]);</span>
+<span class="c1">-- [1, 2, 3]</span>
+
+<span class="c1">-- json_agg: 여러 행을 배열로</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">json_agg</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="p">;</span>
+<span class="c1">-- [&quot;Laptop&quot;, &quot;Phone&quot;]</span>
+
+<span class="c1">-- jsonb_object_agg: 키-값 쌍을 객체로</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_object_agg</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">id</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="p">;</span>
+<span class="c1">-- {&quot;Laptop&quot;: 1, &quot;Phone&quot;: 2}</span>
+</code></pre></div>
+
+<h3 id="22-json">2.2 JSON 데이터 수정<a class="header-link" href="#22-json" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- jsonb_set: 값 설정/추가</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">products</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">jsonb_set</span><span class="p">(</span><span class="n">attributes</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{specs,ram}&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;32&#39;</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Laptop&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 중첩 경로 추가 (create_if_missing = true)</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">products</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">jsonb_set</span><span class="p">(</span>
+<span class="w">    </span><span class="n">attributes</span><span class="p">,</span>
+<span class="w">    </span><span class="s1">&#39;{specs,gpu}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="s1">&#39;&quot;RTX 4090&quot;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="k">true</span><span class="w">  </span><span class="c1">-- 경로가 없으면 생성</span>
+<span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Laptop&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 여러 값 한 번에 수정</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">products</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;{&quot;color&quot;: &quot;silver&quot;, &quot;weight&quot;: 2.1}&#39;</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Laptop&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 키 삭제</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">products</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="s1">&#39;color&#39;</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Laptop&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 중첩 키 삭제</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">products</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">#-</span><span class="w"> </span><span class="s1">&#39;{specs,gpu}&#39;</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Laptop&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 배열 요소 추가</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">products</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">jsonb_set</span><span class="p">(</span>
+<span class="w">    </span><span class="n">attributes</span><span class="p">,</span>
+<span class="w">    </span><span class="s1">&#39;{tags}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="k">COALESCE</span><span class="p">(</span><span class="n">attributes</span><span class="o">-&gt;</span><span class="s1">&#39;tags&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;[]&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;&quot;new_tag&quot;&#39;</span>
+<span class="p">);</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-json">3. JSON 연산자<a class="header-link" href="#3-json" title="Permanent link">&para;</a></h2>
+<h3 id="31">3.1 접근 연산자<a class="header-link" href="#31" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- -&gt; : JSON 객체/배열 요소 (JSON 반환)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">attributes</span><span class="o">-&gt;</span><span class="s1">&#39;brand&#39;</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="p">;</span>
+<span class="c1">-- &quot;Dell&quot; (따옴표 포함 JSON)</span>
+
+<span class="c1">-- -&gt;&gt; : 텍스트로 추출</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">attributes</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;brand&#39;</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="p">;</span>
+<span class="c1">-- Dell (텍스트)</span>
+
+<span class="c1">-- #&gt; : 경로로 접근 (JSON 반환)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">attributes</span><span class="o">#&gt;</span><span class="s1">&#39;{specs,cpu}&#39;</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="p">;</span>
+<span class="c1">-- &quot;i7&quot;</span>
+
+<span class="c1">-- #&gt;&gt; : 경로로 접근 (텍스트 반환)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">attributes</span><span class="o">#&gt;&gt;</span><span class="s1">&#39;{specs,cpu}&#39;</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="p">;</span>
+<span class="c1">-- i7</span>
+
+<span class="c1">-- 배열 접근</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="s1">&#39;[1, 2, 3]&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="o">-&gt;</span><span class="mi">0</span><span class="p">;</span><span class="w">   </span><span class="c1">-- 1</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="s1">&#39;[1, 2, 3]&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="o">-&gt;-</span><span class="mi">1</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 3 (마지막)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="s1">&#39;[1, 2, 3]&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="o">-&gt;</span><span class="mi">10</span><span class="p">;</span><span class="w">  </span><span class="c1">-- NULL (범위 초과)</span>
+</code></pre></div>
+
+<h3 id="32-jsonb">3.2 비교 연산자 (JSONB 전용)<a class="header-link" href="#32-jsonb" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- = : 동등 비교</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">attributes</span><span class="o">-&gt;</span><span class="s1">&#39;brand&#39;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;&quot;Dell&quot;&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">;</span>
+
+<span class="c1">-- @&gt; : 포함 (왼쪽이 오른쪽 포함)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">@&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;brand&quot;: &quot;Dell&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">;</span>
+
+<span class="c1">-- &lt;@ : 포함됨 (오른쪽이 왼쪽 포함)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="s1">&#39;{&quot;brand&quot;: &quot;Dell&quot;, &quot;specs&quot;: {}}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="w"> </span><span class="o">&lt;@</span><span class="w"> </span><span class="n">attributes</span><span class="p">;</span>
+
+<span class="c1">-- ? : 키 존재</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s1">&#39;brand&#39;</span><span class="p">;</span>
+
+<span class="c1">-- ?| : 키 중 하나 존재 (OR)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">?|</span><span class="w"> </span><span class="nb">ARRAY</span><span class="p">[</span><span class="s1">&#39;brand&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;manufacturer&#39;</span><span class="p">];</span>
+
+<span class="c1">-- ?&amp; : 모든 키 존재 (AND)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">?&amp;</span><span class="w"> </span><span class="nb">ARRAY</span><span class="p">[</span><span class="s1">&#39;brand&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;specs&#39;</span><span class="p">];</span>
+
+<span class="c1">-- || : 병합</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="s1">&#39;{&quot;a&quot;: 1}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;{&quot;b&quot;: 2}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">;</span>
+<span class="c1">-- {&quot;a&quot;: 1, &quot;b&quot;: 2}</span>
+
+<span class="c1">-- - : 키 제거</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="s1">&#39;{&quot;a&quot;: 1, &quot;b&quot;: 2}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="s1">&#39;a&#39;</span><span class="p">;</span>
+<span class="c1">-- {&quot;b&quot;: 2}</span>
+
+<span class="c1">-- - : 배열 요소 제거 (인덱스)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="s1">&#39;[1, 2, 3]&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="c1">-- [1, 3]</span>
+
+<span class="c1">-- #- : 경로로 제거</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="s1">&#39;{&quot;a&quot;: {&quot;b&quot;: 2}}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="w"> </span><span class="o">#-</span><span class="w"> </span><span class="s1">&#39;{a,b}&#39;</span><span class="p">;</span>
+<span class="c1">-- {&quot;a&quot;: {}}</span>
+</code></pre></div>
+
+<h3 id="33">3.3 조건 검색<a class="header-link" href="#33" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 특정 값 포함</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">@&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;brand&quot;: &quot;Dell&quot;}&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 중첩 값 검색</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">@&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;specs&quot;: {&quot;cpu&quot;: &quot;i7&quot;}}&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 배열 내 값 검색</span>
+<span class="c1">-- 가정: attributes = {&quot;tags&quot;: [&quot;laptop&quot;, &quot;electronics&quot;]}</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">attributes</span><span class="o">-&gt;</span><span class="s1">&#39;tags&#39;</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s1">&#39;laptop&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 숫자 비교</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="p">(</span><span class="n">attributes</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;price&#39;</span><span class="p">)::</span><span class="nb">numeric</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">500</span><span class="p">;</span>
+
+<span class="c1">-- 존재하지 않는 키 확인</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="p">(</span><span class="n">attributes</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s1">&#39;discontinued&#39;</span><span class="p">);</span>
+
+<span class="c1">-- NULL 값 확인</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">attributes</span><span class="o">-&gt;</span><span class="s1">&#39;stock&#39;</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span>
+
+<span class="c1">-- JSON 값이 null인지 확인 (JSON null과 SQL NULL 다름)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">attributes</span><span class="o">-&gt;</span><span class="s1">&#39;stock&#39;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;null&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-json">4. JSON 함수<a class="header-link" href="#4-json" title="Permanent link">&para;</a></h2>
+<h3 id="41">4.1 추출 함수<a class="header-link" href="#41" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- jsonb_extract_path: 경로로 값 추출</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_extract_path</span><span class="p">(</span><span class="n">attributes</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;specs&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="p">;</span>
+
+<span class="c1">-- jsonb_extract_path_text: 텍스트로 추출</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_extract_path_text</span><span class="p">(</span><span class="n">attributes</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;specs&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="p">;</span>
+
+<span class="c1">-- jsonb_array_elements: 배열을 행으로 확장</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_array_elements</span><span class="p">(</span><span class="s1">&#39;[1, 2, 3]&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span>
+<span class="c1">-- 1</span>
+<span class="c1">-- 2</span>
+<span class="c1">-- 3</span>
+
+<span class="c1">-- jsonb_array_elements_text: 텍스트로 확장</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_array_elements_text</span><span class="p">(</span><span class="s1">&#39;[&quot;a&quot;, &quot;b&quot;, &quot;c&quot;]&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span>
+
+<span class="c1">-- jsonb_each: 객체를 키-값 행으로</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">jsonb_each</span><span class="p">(</span><span class="s1">&#39;{&quot;a&quot;: 1, &quot;b&quot;: 2}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span>
+<span class="c1">-- key | value</span>
+<span class="c1">-- a   | 1</span>
+<span class="c1">-- b   | 2</span>
+
+<span class="c1">-- jsonb_each_text: 텍스트 값으로</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">jsonb_each_text</span><span class="p">(</span><span class="s1">&#39;{&quot;a&quot;: 1, &quot;b&quot;: &quot;text&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span>
+
+<span class="c1">-- jsonb_object_keys: 키 목록</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_object_keys</span><span class="p">(</span><span class="s1">&#39;{&quot;a&quot;: 1, &quot;b&quot;: 2}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span>
+<span class="c1">-- a</span>
+<span class="c1">-- b</span>
+
+<span class="c1">-- jsonb_array_length: 배열 길이</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_array_length</span><span class="p">(</span><span class="s1">&#39;[1, 2, 3]&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span>
+<span class="c1">-- 3</span>
+</code></pre></div>
+
+<h3 id="42">4.2 변환 함수<a class="header-link" href="#42" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- jsonb_typeof: JSON 타입 확인</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_typeof</span><span class="p">(</span><span class="s1">&#39;&quot;string&quot;&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span><span class="w">  </span><span class="c1">-- string</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_typeof</span><span class="p">(</span><span class="s1">&#39;123&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span><span class="w">       </span><span class="c1">-- number</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_typeof</span><span class="p">(</span><span class="s1">&#39;true&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span><span class="w">      </span><span class="c1">-- boolean</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_typeof</span><span class="p">(</span><span class="s1">&#39;null&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span><span class="w">      </span><span class="c1">-- null</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_typeof</span><span class="p">(</span><span class="s1">&#39;[]&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span><span class="w">        </span><span class="c1">-- array</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_typeof</span><span class="p">(</span><span class="s1">&#39;{}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span><span class="w">        </span><span class="c1">-- object</span>
+
+<span class="c1">-- jsonb_strip_nulls: null 값 제거</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_strip_nulls</span><span class="p">(</span><span class="s1">&#39;{&quot;a&quot;: 1, &quot;b&quot;: null}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span>
+<span class="c1">-- {&quot;a&quot;: 1}</span>
+
+<span class="c1">-- jsonb_pretty: 보기 좋게 출력</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_pretty</span><span class="p">(</span><span class="s1">&#39;{&quot;a&quot;:1,&quot;b&quot;:2}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span>
+<span class="cm">/*</span>
+<span class="cm">{</span>
+<span class="cm">    &quot;a&quot;: 1,</span>
+<span class="cm">    &quot;b&quot;: 2</span>
+<span class="cm">}</span>
+<span class="cm">*/</span>
+
+<span class="c1">-- 배열을 PostgreSQL 배열로</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="nb">ARRAY</span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_array_elements_text</span><span class="p">(</span><span class="s1">&#39;[&quot;a&quot;, &quot;b&quot;]&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">));</span>
+<span class="c1">-- {a,b}</span>
+
+<span class="c1">-- PostgreSQL 배열을 JSON 배열로</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_jsonb</span><span class="p">(</span><span class="nb">ARRAY</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;b&#39;</span><span class="p">]);</span>
+<span class="c1">-- [&quot;a&quot;, &quot;b&quot;]</span>
+</code></pre></div>
+
+<h3 id="43">4.3 집계 함수<a class="header-link" href="#43" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 여러 행을 JSON 배열로</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_agg</span><span class="p">(</span><span class="n">attributes</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="p">;</span>
+
+<span class="c1">-- 필터링하여 집계</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_agg</span><span class="p">(</span><span class="n">attributes</span><span class="p">)</span><span class="w"> </span><span class="n">FILTER</span><span class="w"> </span><span class="p">(</span><span class="k">WHERE</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="s1">&#39;L%&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="p">;</span>
+
+<span class="c1">-- 객체로 집계</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_object_agg</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">attributes</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="p">;</span>
+
+<span class="c1">-- 배열 합치기</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">jsonb_agg</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="p">,</span><span class="w"> </span><span class="n">jsonb_array_elements</span><span class="p">(</span><span class="n">attributes</span><span class="o">-&gt;</span><span class="s1">&#39;tags&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">elem</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 인덱싱과 성능<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="51-gin">5.1 GIN 인덱스<a class="header-link" href="#51-gin" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 기본 GIN 인덱스 (모든 연산자 지원)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_products_attrs</span>
+<span class="k">ON</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">attributes</span><span class="p">);</span>
+
+<span class="c1">-- jsonb_path_ops (더 작고 빠름, @&gt; 연산만 지원)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_products_attrs_path</span>
+<span class="k">ON</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">attributes</span><span class="w"> </span><span class="n">jsonb_path_ops</span><span class="p">);</span>
+
+<span class="c1">-- 특정 키에 대한 인덱스</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_products_brand</span>
+<span class="k">ON</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">((</span><span class="n">attributes</span><span class="o">-&gt;</span><span class="s1">&#39;brand&#39;</span><span class="p">));</span>
+
+<span class="c1">-- B-tree 인덱스 (특정 값 비교용)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_products_brand_btree</span>
+<span class="k">ON</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="p">((</span><span class="n">attributes</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;brand&#39;</span><span class="p">));</span>
+
+<span class="c1">-- 함수 기반 인덱스</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_products_price</span>
+<span class="k">ON</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="p">(((</span><span class="n">attributes</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;price&#39;</span><span class="p">)::</span><span class="nb">numeric</span><span class="p">));</span>
+</code></pre></div>
+
+<h3 id="52">5.2 인덱스 사용 확인<a class="header-link" href="#52" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 실행 계획 확인</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="k">ANALYZE</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">@&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;brand&quot;: &quot;Dell&quot;}&#39;</span><span class="p">;</span>
+
+<span class="c1">-- GIN 인덱스가 사용되면:</span>
+<span class="c1">-- Bitmap Index Scan on idx_products_attrs</span>
+
+<span class="c1">-- 인덱스 크기 확인</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_indexes_size</span><span class="p">(</span><span class="s1">&#39;products&#39;</span><span class="p">));</span>
+</code></pre></div>
+
+<h3 id="53">5.3 성능 최적화<a class="header-link" href="#53" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 자주 사용하는 키는 별도 컬럼으로</span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">brand</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">100</span><span class="p">);</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">brand</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">attributes</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;brand&#39;</span><span class="p">;</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_products_brand_col</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">products</span><span class="p">(</span><span class="n">brand</span><span class="p">);</span>
+
+<span class="c1">-- Partial 인덱스</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_active_products</span>
+<span class="k">ON</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">attributes</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="p">(</span><span class="n">attributes</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;active&#39;</span><span class="p">)::</span><span class="nb">boolean</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="p">;</span>
+
+<span class="c1">-- 복합 인덱스</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_products_composite</span>
+<span class="k">ON</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">attributes</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;brand&#39;</span><span class="p">));</span>
+
+<span class="c1">-- 통계 업데이트</span>
+<span class="k">ANALYZE</span><span class="w"> </span><span class="n">products</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 실전 패턴<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="61">6.1 스키마리스 테이블<a class="header-link" href="#61" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 이벤트 로그 테이블</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">BIGSERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">event_type</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">occurred_at</span><span class="w"> </span><span class="n">TIMESTAMPTZ</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="n">NOW</span><span class="p">(),</span>
+<span class="w">    </span><span class="k">data</span><span class="w"> </span><span class="n">JSONB</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span>
+<span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_events_type</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">events</span><span class="p">(</span><span class="n">event_type</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_events_data</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="k">data</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_events_occurred</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">events</span><span class="p">(</span><span class="n">occurred_at</span><span class="p">);</span>
+
+<span class="c1">-- 이벤트 삽입</span>
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="p">(</span><span class="n">event_type</span><span class="p">,</span><span class="w"> </span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span>
+<span class="p">(</span><span class="s1">&#39;user_signup&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{&quot;user_id&quot;: 123, &quot;email&quot;: &quot;user@example.com&quot;}&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;purchase&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{&quot;user_id&quot;: 123, &quot;product_id&quot;: 456, &quot;amount&quot;: 99.99}&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;page_view&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{&quot;user_id&quot;: 123, &quot;page&quot;: &quot;/products&quot;, &quot;referrer&quot;: &quot;google&quot;}&#39;</span><span class="p">);</span>
+
+<span class="c1">-- 이벤트 조회</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">events</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">event_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;purchase&#39;</span>
+<span class="k">AND</span><span class="w"> </span><span class="p">(</span><span class="k">data</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;amount&#39;</span><span class="p">)::</span><span class="nb">numeric</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">50</span>
+<span class="k">AND</span><span class="w"> </span><span class="n">occurred_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">NOW</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">INTERVAL</span><span class="w"> </span><span class="s1">&#39;7 days&#39;</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="62-eav-entity-attribute-value">6.2 EAV (Entity-Attribute-Value) 대체<a class="header-link" href="#62-eav-entity-attribute-value" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 전통적 EAV (느림, 복잡)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">product_attributes_eav</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">product_id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">attribute_name</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span>
+<span class="w">    </span><span class="n">attribute_value</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">255</span><span class="p">)</span>
+<span class="p">);</span>
+
+<span class="c1">-- JSONB로 대체 (빠름, 간단)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">products_jsonb</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">name</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span>
+<span class="w">    </span><span class="n">base_price</span><span class="w"> </span><span class="nb">DECIMAL</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">    </span><span class="n">attributes</span><span class="w"> </span><span class="n">JSONB</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">&#39;{}&#39;</span>
+<span class="p">);</span>
+
+<span class="c1">-- 다양한 속성 저장</span>
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">products_jsonb</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">base_price</span><span class="p">,</span><span class="w"> </span><span class="n">attributes</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span>
+<span class="p">(</span><span class="s1">&#39;T-Shirt&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">29</span><span class="p">.</span><span class="mi">99</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{&quot;size&quot;: &quot;M&quot;, &quot;color&quot;: &quot;blue&quot;, &quot;material&quot;: &quot;cotton&quot;}&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;Laptop&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">999</span><span class="p">.</span><span class="mi">99</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{&quot;cpu&quot;: &quot;i7&quot;, &quot;ram&quot;: 16, &quot;storage&quot;: &quot;512GB SSD&quot;}&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;Book&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">.</span><span class="mi">99</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{&quot;author&quot;: &quot;John Doe&quot;, &quot;pages&quot;: 300, &quot;isbn&quot;: &quot;123-456&quot;}&#39;</span><span class="p">);</span>
+
+<span class="c1">-- 동적 필터링</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products_jsonb</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">@&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;color&quot;: &quot;blue&quot;}&#39;</span>
+<span class="k">OR</span><span class="w"> </span><span class="n">attributes</span><span class="w"> </span><span class="o">@&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;ram&quot;: 16}&#39;</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="63">6.3 버전 관리<a class="header-link" href="#63" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 문서 버전 관리</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">documents</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">title</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">200</span><span class="p">),</span>
+<span class="w">    </span><span class="n">current_version</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">    </span><span class="n">content</span><span class="w"> </span><span class="n">JSONB</span>
+<span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">document_versions</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">document_id</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="k">REFERENCES</span><span class="w"> </span><span class="n">documents</span><span class="p">(</span><span class="n">id</span><span class="p">),</span>
+<span class="w">    </span><span class="k">version</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">content</span><span class="w"> </span><span class="n">JSONB</span><span class="p">,</span>
+<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="n">TIMESTAMPTZ</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="n">NOW</span><span class="p">(),</span>
+<span class="w">    </span><span class="n">created_by</span><span class="w"> </span><span class="nb">INT</span>
+<span class="p">);</span>
+
+<span class="c1">-- 트리거로 버전 자동 저장</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">FUNCTION</span><span class="w"> </span><span class="n">save_document_version</span><span class="p">()</span>
+<span class="k">RETURNS</span><span class="w"> </span><span class="k">TRIGGER</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">$$</span>
+<span class="k">BEGIN</span>
+<span class="w">    </span><span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">document_versions</span><span class="w"> </span><span class="p">(</span><span class="n">document_id</span><span class="p">,</span><span class="w"> </span><span class="k">version</span><span class="p">,</span><span class="w"> </span><span class="n">content</span><span class="p">,</span><span class="w"> </span><span class="n">created_by</span><span class="p">)</span>
+<span class="w">    </span><span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="k">OLD</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="k">OLD</span><span class="p">.</span><span class="n">current_version</span><span class="p">,</span><span class="w"> </span><span class="k">OLD</span><span class="p">.</span><span class="n">content</span><span class="p">,</span><span class="w"> </span><span class="n">current_setting</span><span class="p">(</span><span class="s1">&#39;app.user_id&#39;</span><span class="p">)::</span><span class="nb">int</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">NEW</span><span class="p">.</span><span class="n">current_version</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="k">OLD</span><span class="p">.</span><span class="n">current_version</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">    </span><span class="k">RETURN</span><span class="w"> </span><span class="k">NEW</span><span class="p">;</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="err">$$</span><span class="w"> </span><span class="k">LANGUAGE</span><span class="w"> </span><span class="n">plpgsql</span><span class="p">;</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TRIGGER</span><span class="w"> </span><span class="n">tr_document_version</span>
+<span class="k">BEFORE</span><span class="w"> </span><span class="k">UPDATE</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">documents</span>
+<span class="k">FOR</span><span class="w"> </span><span class="k">EACH</span><span class="w"> </span><span class="k">ROW</span>
+<span class="k">WHEN</span><span class="w"> </span><span class="p">(</span><span class="k">OLD</span><span class="p">.</span><span class="n">content</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="k">NEW</span><span class="p">.</span><span class="n">content</span><span class="p">)</span>
+<span class="k">EXECUTE</span><span class="w"> </span><span class="k">FUNCTION</span><span class="w"> </span><span class="n">save_document_version</span><span class="p">();</span>
+</code></pre></div>
+
+<h3 id="64-json-schema">6.4 JSON Schema 검증<a class="header-link" href="#64-json-schema" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- CHECK 제약조건으로 간단한 검증</span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="k">CONSTRAINT</span><span class="w"> </span><span class="n">valid_attributes</span><span class="w"> </span><span class="k">CHECK</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">attributes</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s1">&#39;brand&#39;</span><span class="w"> </span><span class="k">AND</span>
+<span class="w">    </span><span class="n">jsonb_typeof</span><span class="p">(</span><span class="n">attributes</span><span class="o">-&gt;</span><span class="s1">&#39;brand&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;string&#39;</span>
+<span class="p">);</span>
+
+<span class="c1">-- 함수로 복잡한 검증</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">FUNCTION</span><span class="w"> </span><span class="n">validate_product_attributes</span><span class="p">(</span><span class="n">attrs</span><span class="w"> </span><span class="n">JSONB</span><span class="p">)</span>
+<span class="k">RETURNS</span><span class="w"> </span><span class="nb">BOOLEAN</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">$$</span>
+<span class="k">BEGIN</span>
+<span class="w">    </span><span class="c1">-- 필수 필드 확인</span>
+<span class="w">    </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="p">(</span><span class="n">attrs</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s1">&#39;brand&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">THEN</span>
+<span class="w">        </span><span class="k">RETURN</span><span class="w"> </span><span class="k">FALSE</span><span class="p">;</span>
+<span class="w">    </span><span class="k">END</span><span class="w"> </span><span class="k">IF</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">-- 타입 확인</span>
+<span class="w">    </span><span class="k">IF</span><span class="w"> </span><span class="n">jsonb_typeof</span><span class="p">(</span><span class="n">attrs</span><span class="o">-&gt;</span><span class="s1">&#39;brand&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s1">&#39;string&#39;</span><span class="w"> </span><span class="k">THEN</span>
+<span class="w">        </span><span class="k">RETURN</span><span class="w"> </span><span class="k">FALSE</span><span class="p">;</span>
+<span class="w">    </span><span class="k">END</span><span class="w"> </span><span class="k">IF</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">-- specs가 있으면 객체여야 함</span>
+<span class="w">    </span><span class="k">IF</span><span class="w"> </span><span class="n">attrs</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="s1">&#39;specs&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">jsonb_typeof</span><span class="p">(</span><span class="n">attrs</span><span class="o">-&gt;</span><span class="s1">&#39;specs&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s1">&#39;object&#39;</span><span class="w"> </span><span class="k">THEN</span>
+<span class="w">        </span><span class="k">RETURN</span><span class="w"> </span><span class="k">FALSE</span><span class="p">;</span>
+<span class="w">    </span><span class="k">END</span><span class="w"> </span><span class="k">IF</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">RETURN</span><span class="w"> </span><span class="k">TRUE</span><span class="p">;</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="err">$$</span><span class="w"> </span><span class="k">LANGUAGE</span><span class="w"> </span><span class="n">plpgsql</span><span class="w"> </span><span class="k">IMMUTABLE</span><span class="p">;</span>
+
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="k">CONSTRAINT</span><span class="w"> </span><span class="n">chk_attributes</span>
+<span class="k">CHECK</span><span class="w"> </span><span class="p">(</span><span class="n">validate_product_attributes</span><span class="p">(</span><span class="n">attributes</span><span class="p">));</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 연습 문제<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="1">연습 1: 사용자 설정 저장<a class="header-link" href="#1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 요구사항:</span>
+<span class="c1">-- 1. 사용자별 설정을 JSONB로 저장하는 테이블 생성</span>
+<span class="c1">-- 2. 기본 설정 병합 함수 작성</span>
+<span class="c1">-- 3. 특정 설정 조회/업데이트 함수 작성</span>
+
+<span class="c1">-- 스키마 및 함수 작성:</span>
+</code></pre></div>
+
+<h3 id="2-json_1">연습 2: JSON 집계 보고서<a class="header-link" href="#2-json_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 요구사항:</span>
+<span class="c1">-- 주문 테이블에서 다음 JSON 형식의 보고서 생성:</span>
+<span class="c1">-- {</span>
+<span class="c1">--   &quot;total_orders&quot;: 100,</span>
+<span class="c1">--   &quot;total_revenue&quot;: 5000.00,</span>
+<span class="c1">--   &quot;by_status&quot;: {&quot;pending&quot;: 20, &quot;completed&quot;: 80},</span>
+<span class="c1">--   &quot;top_products&quot;: [{&quot;id&quot;: 1, &quot;count&quot;: 50}, ...]</span>
+<span class="c1">-- }</span>
+
+<span class="c1">-- 쿼리 작성:</span>
+</code></pre></div>
+
+<h3 id="3-json_1">연습 3: JSON 검색 최적화<a class="header-link" href="#3-json_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 요구사항:</span>
+<span class="c1">-- 1. 100만 행의 이벤트 데이터 생성</span>
+<span class="c1">-- 2. 다양한 인덱스 비교</span>
+<span class="c1">-- 3. 최적의 인덱스 전략 수립</span>
+
+<span class="c1">-- 테스트 및 분석:</span>
+</code></pre></div>
+
+<h3 id="4-json_1">연습 4: 계층적 JSON 처리<a class="header-link" href="#4-json_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 요구사항:</span>
+<span class="c1">-- 조직 구조 JSON 데이터 처리:</span>
+<span class="c1">-- {&quot;name&quot;: &quot;CEO&quot;, &quot;children&quot;: [{&quot;name&quot;: &quot;CTO&quot;, &quot;children&quot;: [...]}]}</span>
+<span class="c1">-- 모든 노드 평면화, 경로 추출 등</span>
+
+<span class="c1">-- 재귀 CTE 활용:</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_3">다음 단계<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="15_Query_Optimization.md">15_쿼리_최적화_심화</a> - JSON 쿼리 최적화</li>
+<li><a href="17_Window_Functions.md">17_윈도우_함수_분석</a> - JSON과 윈도우 함수</li>
+<li><a href="https://www.postgresql.org/docs/current/functions-json.html">PostgreSQL JSON Documentation</a></li>
+</ul>
+<h2 id="_4">참고 자료<a class="header-link" href="#_4" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://www.postgresql.org/docs/current/functions-json.html">PostgreSQL JSON Functions</a></li>
+<li><a href="https://www.postgresql.org/docs/current/datatype-json.html">PostgreSQL JSON Types</a></li>
+<li><a href="https://www.postgresql.org/docs/current/gin.html">GIN Index</a></li>
+</ul>
+<hr />
+<p><a href="13_Backup_and_Operations.md">← 이전: 백업과 복구</a> | <a href="15_Query_Optimization.md">다음: 쿼리 최적화 심화 →</a> | <a href="00_Overview.md">목차</a></p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/PostgreSQL/13_Backup_and_Operations.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">백업과 운영</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/PostgreSQL/15_Query_Optimization.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">15. PostgreSQL 쿼리 최적화 심화</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

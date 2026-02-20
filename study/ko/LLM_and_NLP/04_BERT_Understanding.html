@@ -1,0 +1,761 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>04. BERT 이해 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/LLM_and_NLP/">LLM and NLP</a>
+    <span class="separator">/</span>
+    <span class="current">04. BERT 이해</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>04. BERT 이해</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/LLM_and_NLP/03_Transformer_Review.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">03. Transformer 복습</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/LLM_and_NLP/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/LLM_and_NLP/05_GPT_Understanding.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">05. GPT 이해</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#1-bert">1. BERT 개요</a><ul>
+<li><a href="#bidirectional-encoder-representations-from-transformers">Bidirectional Encoder Representations from Transformers</a></li>
+<li><a href="#_2">모델 크기</a></li>
+</ul>
+</li>
+<li><a href="#2">2. 입력 표현</a><ul>
+<li><a href="#_3">세 가지 임베딩의 합</a></li>
+<li><a href="#_4">특수 토큰</a></li>
+<li><a href="#_5">입력 구현</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 사전학습 목표</a><ul>
+<li><a href="#masked-language-model-mlm">Masked Language Model (MLM)</a></li>
+<li><a href="#next-sentence-prediction-nsp">Next Sentence Prediction (NSP)</a></li>
+</ul>
+</li>
+<li><a href="#4-bert">4. BERT 전체 구조</a></li>
+<li><a href="#5">5. 파인튜닝 패턴</a><ul>
+<li><a href="#single-sentence">문장 분류 (Single Sentence)</a></li>
+<li><a href="#ner">토큰 분류 (NER)</a></li>
+<li><a href="#qa">질의응답 (QA)</a></li>
+</ul>
+</li>
+<li><a href="#6-bert">6. BERT 변형 모델</a><ul>
+<li><a href="#roberta">RoBERTa</a></li>
+<li><a href="#albert">ALBERT</a></li>
+<li><a href="#distilbert">DistilBERT</a></li>
+<li><a href="#comparison">Comparison</a></li>
+</ul>
+</li>
+<li><a href="#7-huggingface-bert">7. HuggingFace BERT 사용</a><ul>
+<li><a href="#_6">기본 사용</a></li>
+<li><a href="#_7">분류 모델</a></li>
+<li><a href="#attention">Attention 시각화</a></li>
+</ul>
+</li>
+<li><a href="#8-bert">8. BERT 입력 포맷</a><ul>
+<li><a href="#single-sentence_1">Single Sentence</a></li>
+<li><a href="#sentence-pair">Sentence Pair</a></li>
+<li><a href="#huggingface-pair">HuggingFace에서 Pair 처리</a></li>
+</ul>
+</li>
+<li><a href="#_8">정리</a><ul>
+<li><a href="#_9">핵심 개념</a></li>
+<li><a href="#_10">핵심 코드</a></li>
+</ul>
+</li>
+<li><a href="#_11">다음 단계</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="04-bert">04. BERT 이해<a class="header-link" href="#04-bert" title="Permanent link">&para;</a></h1>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>BERT 아키텍처 이해</li>
+<li>사전학습 목표 (MLM, NSP)</li>
+<li>입력 표현</li>
+<li>다양한 BERT 변형</li>
+</ul>
+<hr />
+<h2 id="1-bert">1. BERT 개요<a class="header-link" href="#1-bert" title="Permanent link">&para;</a></h2>
+<h3 id="bidirectional-encoder-representations-from-transformers">Bidirectional Encoder Representations from Transformers<a class="header-link" href="#bidirectional-encoder-representations-from-transformers" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>BERT = Transformer 인코더 스택
+
+특징:
+- 양방향 문맥 이해
+- 사전학습 + 파인튜닝 패러다임
+- 다양한 NLP 태스크에 범용 적용
+</code></pre></div>
+
+<h3 id="_2">모델 크기<a class="header-link" href="#_2" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>모델</th>
+<th>레이어</th>
+<th>d_model</th>
+<th>헤드</th>
+<th>파라미터</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BERT-base</td>
+<td>12</td>
+<td>768</td>
+<td>12</td>
+<td>110M</td>
+</tr>
+<tr>
+<td>BERT-large</td>
+<td>24</td>
+<td>1024</td>
+<td>16</td>
+<td>340M</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2">2. 입력 표현<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="_3">세 가지 임베딩의 합<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nl">입력</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="n">CLS</span><span class="o">]</span><span class="w"> </span><span class="n">I</span><span class="w"> </span><span class="n">love</span><span class="w"> </span><span class="n">NLP</span><span class="w"> </span><span class="o">[</span><span class="n">SEP</span><span class="o">]</span><span class="w"> </span><span class="n">It</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">fun</span><span class="w"> </span><span class="o">[</span><span class="n">SEP</span><span class="o">]</span>
+
+<span class="n">Token</span><span class="w"> </span><span class="nl">Embedding</span><span class="p">:</span><span class="w">    </span><span class="o">[</span><span class="n">E_CLS, E_I, E_love, E_NLP, E_SEP, E_It, E_is, E_fun, E_SEP</span><span class="o">]</span>
+<span class="n">Segment</span><span class="w"> </span><span class="nl">Embedding</span><span class="p">:</span><span class="w">  </span><span class="o">[</span><span class="n">E_A,   E_A, E_A,    E_A,   E_A,   E_B,  E_B,  E_B,   E_B  </span><span class="o">]</span>
+<span class="k">Position</span><span class="w"> </span><span class="nl">Embedding</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="n">E_0,   E_1, E_2,    E_3,   E_4,   E_5,  E_6,  E_7,   E_8  </span><span class="o">]</span>
+<span class="w">                    </span><span class="err">─────────────────────────────────────────────────────────────</span>
+<span class="w">                    </span><span class="o">=</span><span class="w"> </span><span class="n">최종</span><span class="w"> </span><span class="n">입력</span><span class="w"> </span><span class="n">임베딩</span><span class="w"> </span><span class="p">(</span><span class="n">합</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="_4">특수 토큰<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>토큰</th>
+<th>역할</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[CLS]</td>
+<td>분류 태스크용 집계 토큰</td>
+</tr>
+<tr>
+<td>[SEP]</td>
+<td>문장 구분자</td>
+</tr>
+<tr>
+<td>[PAD]</td>
+<td>패딩</td>
+</tr>
+<tr>
+<td>[MASK]</td>
+<td>MLM에서 마스킹된 토큰</td>
+</tr>
+<tr>
+<td>[UNK]</td>
+<td>미등록 단어</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_5">입력 구현<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">BERTEmbedding</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">,</span> <span class="n">d_model</span><span class="o">=</span><span class="mi">768</span><span class="p">,</span> <span class="n">max_len</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span> <span class="n">dropout</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">token_embedding</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">d_model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">position_embedding</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">max_len</span><span class="p">,</span> <span class="n">d_model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">segment_embedding</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">d_model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">layer_norm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LayerNorm</span><span class="p">(</span><span class="n">d_model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">dropout</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_ids</span><span class="p">,</span> <span class="n">segment_ids</span><span class="p">):</span>
+        <span class="n">seq_len</span> <span class="o">=</span> <span class="n">input_ids</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># 위치 인덱스</span>
+        <span class="n">position_ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">seq_len</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">input_ids</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="c1"># 임베딩 합</span>
+        <span class="n">embeddings</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">token_embedding</span><span class="p">(</span><span class="n">input_ids</span><span class="p">)</span> <span class="o">+</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">position_embedding</span><span class="p">(</span><span class="n">position_ids</span><span class="p">)</span> <span class="o">+</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">segment_embedding</span><span class="p">(</span><span class="n">segment_ids</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="n">embeddings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_norm</span><span class="p">(</span><span class="n">embeddings</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span><span class="n">embeddings</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3">3. 사전학습 목표<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="masked-language-model-mlm">Masked Language Model (MLM)<a class="header-link" href="#masked-language-model-mlm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="mi">15</span><span class="o">%</span><span class="n">의</span><span class="w"> </span><span class="n">토큰을</span><span class="w"> </span><span class="nl">선택</span><span class="p">:</span>
+<span class="o">-</span><span class="w"> </span><span class="mi">80</span><span class="o">%</span><span class="err">:</span><span class="w"> </span><span class="o">[</span><span class="n">MASK</span><span class="o">]</span><span class="n">로</span><span class="w"> </span><span class="n">교체</span>
+<span class="o">-</span><span class="w"> </span><span class="mi">10</span><span class="o">%</span><span class="err">:</span><span class="w"> </span><span class="n">랜덤</span><span class="w"> </span><span class="n">토큰으로</span><span class="w"> </span><span class="n">교체</span>
+<span class="o">-</span><span class="w"> </span><span class="mi">10</span><span class="o">%</span><span class="err">:</span><span class="w"> </span><span class="n">그대로</span><span class="w"> </span><span class="n">유지</span>
+
+<span class="nl">예시</span><span class="p">:</span>
+<span class="nl">입력</span><span class="p">:</span><span class="w"> </span><span class="ss">&quot;The cat sat on the mat&quot;</span>
+<span class="w">     </span><span class="err">→</span><span class="w"> </span><span class="ss">&quot;The [MASK] sat on the mat&quot;</span>
+<span class="nl">목표</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="n">MASK</span><span class="o">]</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="ss">&quot;cat&quot;</span><span class="w"> </span><span class="n">예측</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">create_mlm_data</span><span class="p">(</span><span class="n">tokens</span><span class="p">,</span> <span class="n">vocab</span><span class="p">,</span> <span class="n">mask_prob</span><span class="o">=</span><span class="mf">0.15</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;MLM 학습 데이터 생성&quot;&quot;&quot;</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">100</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span>  <span class="c1"># -100은 손실 계산에서 무시</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">token</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tokens</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">mask_prob</span><span class="p">:</span>
+            <span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">vocab</span><span class="p">[</span><span class="n">token</span><span class="p">]</span>  <span class="c1"># 원래 토큰 ID</span>
+
+            <span class="n">rand</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">rand</span> <span class="o">&lt;</span> <span class="mf">0.8</span><span class="p">:</span>
+                <span class="n">tokens</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;[MASK]&#39;</span>
+            <span class="k">elif</span> <span class="n">rand</span> <span class="o">&lt;</span> <span class="mf">0.9</span><span class="p">:</span>
+                <span class="n">tokens</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">vocab</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+            <span class="c1"># else: 그대로 유지</span>
+
+    <span class="k">return</span> <span class="n">tokens</span><span class="p">,</span> <span class="n">labels</span>
+</code></pre></div>
+
+<h3 id="next-sentence-prediction-nsp">Next Sentence Prediction (NSP)<a class="header-link" href="#next-sentence-prediction-nsp" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nl">입력</span><span class="p">:</span><span class="w"> </span><span class="o">[</span><span class="n">CLS</span><span class="o">]</span><span class="w"> </span><span class="n">문장A</span><span class="w"> </span><span class="o">[</span><span class="n">SEP</span><span class="o">]</span><span class="w"> </span><span class="n">문장B</span><span class="w"> </span><span class="o">[</span><span class="n">SEP</span><span class="o">]</span>
+<span class="nl">목표</span><span class="p">:</span><span class="w"> </span><span class="n">문장B가</span><span class="w"> </span><span class="n">문장A의</span><span class="w"> </span><span class="n">실제</span><span class="w"> </span><span class="n">다음</span><span class="w"> </span><span class="n">문장인지</span><span class="w"> </span><span class="n">이진</span><span class="w"> </span><span class="n">분류</span>
+
+<span class="nl">예시</span><span class="p">:</span>
+<span class="n">긍정</span><span class="w"> </span><span class="p">(</span><span class="n">IsNext</span><span class="p">)</span><span class="err">:</span>
+<span class="w">    </span><span class="nl">A</span><span class="p">:</span><span class="w"> </span><span class="ss">&quot;The man went to the store&quot;</span>
+<span class="w">    </span><span class="nl">B</span><span class="p">:</span><span class="w"> </span><span class="ss">&quot;He bought a gallon of milk&quot;</span>
+
+<span class="n">부정</span><span class="w"> </span><span class="p">(</span><span class="n">NotNext</span><span class="p">)</span><span class="err">:</span>
+<span class="w">    </span><span class="nl">A</span><span class="p">:</span><span class="w"> </span><span class="ss">&quot;The man went to the store&quot;</span>
+<span class="w">    </span><span class="nl">B</span><span class="p">:</span><span class="w"> </span><span class="ss">&quot;Penguins are flightless birds&quot;</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BERTPreTrainingHeads</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d_model</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="c1"># MLM 헤드</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mlm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">d_model</span><span class="p">,</span> <span class="n">d_model</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">GELU</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">LayerNorm</span><span class="p">(</span><span class="n">d_model</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">d_model</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="c1"># NSP 헤드</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nsp</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">d_model</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sequence_output</span><span class="p">,</span> <span class="n">cls_output</span><span class="p">):</span>
+        <span class="n">mlm_scores</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mlm</span><span class="p">(</span><span class="n">sequence_output</span><span class="p">)</span>  <span class="c1"># (batch, seq, vocab)</span>
+        <span class="n">nsp_scores</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsp</span><span class="p">(</span><span class="n">cls_output</span><span class="p">)</span>       <span class="c1"># (batch, 2)</span>
+        <span class="k">return</span> <span class="n">mlm_scores</span><span class="p">,</span> <span class="n">nsp_scores</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-bert">4. BERT 전체 구조<a class="header-link" href="#4-bert" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BERT</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">,</span> <span class="n">d_model</span><span class="o">=</span><span class="mi">768</span><span class="p">,</span> <span class="n">num_heads</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span>
+                 <span class="n">num_layers</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">d_ff</span><span class="o">=</span><span class="mi">3072</span><span class="p">,</span> <span class="n">max_len</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span> <span class="n">dropout</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">embedding</span> <span class="o">=</span> <span class="n">BERTEmbedding</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">d_model</span><span class="p">,</span> <span class="n">max_len</span><span class="p">,</span> <span class="n">dropout</span><span class="p">)</span>
+
+        <span class="n">encoder_layer</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">TransformerEncoderLayer</span><span class="p">(</span>
+            <span class="n">d_model</span><span class="o">=</span><span class="n">d_model</span><span class="p">,</span>
+            <span class="n">nhead</span><span class="o">=</span><span class="n">num_heads</span><span class="p">,</span>
+            <span class="n">dim_feedforward</span><span class="o">=</span><span class="n">d_ff</span><span class="p">,</span>
+            <span class="n">dropout</span><span class="o">=</span><span class="n">dropout</span><span class="p">,</span>
+            <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">TransformerEncoder</span><span class="p">(</span><span class="n">encoder_layer</span><span class="p">,</span> <span class="n">num_layers</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_ids</span><span class="p">,</span> <span class="n">segment_ids</span><span class="p">,</span> <span class="n">attention_mask</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1"># 임베딩</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embedding</span><span class="p">(</span><span class="n">input_ids</span><span class="p">,</span> <span class="n">segment_ids</span><span class="p">)</span>
+
+        <span class="c1"># 패딩 마스크 변환</span>
+        <span class="k">if</span> <span class="n">attention_mask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># (batch, seq) → (batch, seq) with True for padding</span>
+            <span class="n">attention_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">attention_mask</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># 인코더</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">src_key_padding_mask</span><span class="o">=</span><span class="n">attention_mask</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output</span>  <span class="c1"># (batch, seq, d_model)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">BERTForPreTraining</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">,</span> <span class="n">d_model</span><span class="o">=</span><span class="mi">768</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bert</span> <span class="o">=</span> <span class="n">BERT</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">d_model</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">heads</span> <span class="o">=</span> <span class="n">BERTPreTrainingHeads</span><span class="p">(</span><span class="n">d_model</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_ids</span><span class="p">,</span> <span class="n">segment_ids</span><span class="p">,</span> <span class="n">attention_mask</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">sequence_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bert</span><span class="p">(</span><span class="n">input_ids</span><span class="p">,</span> <span class="n">segment_ids</span><span class="p">,</span> <span class="n">attention_mask</span><span class="p">)</span>
+        <span class="n">cls_output</span> <span class="o">=</span> <span class="n">sequence_output</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>  <span class="c1"># [CLS] 토큰</span>
+
+        <span class="n">mlm_scores</span><span class="p">,</span> <span class="n">nsp_scores</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">heads</span><span class="p">(</span><span class="n">sequence_output</span><span class="p">,</span> <span class="n">cls_output</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">mlm_scores</span><span class="p">,</span> <span class="n">nsp_scores</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 파인튜닝 패턴<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="single-sentence">문장 분류 (Single Sentence)<a class="header-link" href="#single-sentence" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BERTForSequenceClassification</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bert</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">,</span> <span class="n">dropout</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bert</span> <span class="o">=</span> <span class="n">bert</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">dropout</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">classifier</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">bert</span><span class="o">.</span><span class="n">embedding</span><span class="o">.</span><span class="n">token_embedding</span><span class="o">.</span><span class="n">embedding_dim</span><span class="p">,</span>
+                                    <span class="n">num_classes</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_ids</span><span class="p">,</span> <span class="n">segment_ids</span><span class="p">,</span> <span class="n">attention_mask</span><span class="p">):</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bert</span><span class="p">(</span><span class="n">input_ids</span><span class="p">,</span> <span class="n">segment_ids</span><span class="p">,</span> <span class="n">attention_mask</span><span class="p">)</span>
+        <span class="n">cls_output</span> <span class="o">=</span> <span class="n">output</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>  <span class="c1"># [CLS]</span>
+        <span class="n">cls_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span><span class="n">cls_output</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">classifier</span><span class="p">(</span><span class="n">cls_output</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="ner">토큰 분류 (NER)<a class="header-link" href="#ner" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BERTForTokenClassification</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bert</span><span class="p">,</span> <span class="n">num_labels</span><span class="p">,</span> <span class="n">dropout</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bert</span> <span class="o">=</span> <span class="n">bert</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">dropout</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">classifier</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">bert</span><span class="o">.</span><span class="n">embedding</span><span class="o">.</span><span class="n">token_embedding</span><span class="o">.</span><span class="n">embedding_dim</span><span class="p">,</span>
+                                    <span class="n">num_labels</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_ids</span><span class="p">,</span> <span class="n">segment_ids</span><span class="p">,</span> <span class="n">attention_mask</span><span class="p">):</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bert</span><span class="p">(</span><span class="n">input_ids</span><span class="p">,</span> <span class="n">segment_ids</span><span class="p">,</span> <span class="n">attention_mask</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">classifier</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>  <span class="c1"># (batch, seq, num_labels)</span>
+</code></pre></div>
+
+<h3 id="qa">질의응답 (QA)<a class="header-link" href="#qa" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BERTForQuestionAnswering</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bert</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bert</span> <span class="o">=</span> <span class="n">bert</span>
+        <span class="n">hidden_size</span> <span class="o">=</span> <span class="n">bert</span><span class="o">.</span><span class="n">embedding</span><span class="o">.</span><span class="n">token_embedding</span><span class="o">.</span><span class="n">embedding_dim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">qa_outputs</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_size</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># start, end</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_ids</span><span class="p">,</span> <span class="n">segment_ids</span><span class="p">,</span> <span class="n">attention_mask</span><span class="p">):</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bert</span><span class="p">(</span><span class="n">input_ids</span><span class="p">,</span> <span class="n">segment_ids</span><span class="p">,</span> <span class="n">attention_mask</span><span class="p">)</span>
+        <span class="n">logits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">qa_outputs</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>  <span class="c1"># (batch, seq, 2)</span>
+
+        <span class="n">start_logits</span> <span class="o">=</span> <span class="n">logits</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span>  <span class="c1"># (batch, seq)</span>
+        <span class="n">end_logits</span> <span class="o">=</span> <span class="n">logits</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">start_logits</span><span class="p">,</span> <span class="n">end_logits</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-bert">6. BERT 변형 모델<a class="header-link" href="#6-bert" title="Permanent link">&para;</a></h2>
+<h3 id="roberta">RoBERTa<a class="header-link" href="#roberta" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>변경점:
+- NSP 제거 (MLM만 사용)
+- 동적 마스킹 (매 에포크 다른 마스킹)
+- 더 큰 배치, 더 긴 학습
+- Byte-Level BPE 토크나이저
+
+결과: BERT보다 성능 향상
+</code></pre></div>
+
+<h3 id="albert">ALBERT<a class="header-link" href="#albert" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>변경점:
+- 임베딩 분해 (V×E, E×H → V×E, E&lt;&lt;H)
+- 레이어 파라미터 공유
+- NSP → SOP (Sentence Order Prediction)
+
+결과: 파라미터 대폭 감소, 유사 성능
+</code></pre></div>
+
+<h3 id="distilbert">DistilBERT<a class="header-link" href="#distilbert" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>변경점:
+- 지식 증류 (Teacher: BERT → Student: 작은 모델)
+- 6 레이어 (BERT의 절반)
+
+결과: 40% 작음, 60% 빠름, 97% 성능 유지
+</code></pre></div>
+
+<h3 id="comparison">Comparison<a class="header-link" href="#comparison" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>모델</th>
+<th>레이어</th>
+<th>파라미터</th>
+<th>속도</th>
+<th>특징</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BERT-base</td>
+<td>12</td>
+<td>110M</td>
+<td>1x</td>
+<td>기준</td>
+</tr>
+<tr>
+<td>RoBERTa</td>
+<td>12</td>
+<td>125M</td>
+<td>1x</td>
+<td>최적화된 학습</td>
+</tr>
+<tr>
+<td>ALBERT-base</td>
+<td>12</td>
+<td>12M</td>
+<td>1x</td>
+<td>파라미터 공유</td>
+</tr>
+<tr>
+<td>DistilBERT</td>
+<td>6</td>
+<td>66M</td>
+<td>2x</td>
+<td>지식 증류</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-huggingface-bert">7. HuggingFace BERT 사용<a class="header-link" href="#7-huggingface-bert" title="Permanent link">&para;</a></h2>
+<h3 id="_6">기본 사용<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">BertTokenizer</span><span class="p">,</span> <span class="n">BertModel</span>
+
+<span class="c1"># 토크나이저와 모델 로드</span>
+<span class="n">tokenizer</span> <span class="o">=</span> <span class="n">BertTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;bert-base-uncased&#39;</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">BertModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;bert-base-uncased&#39;</span><span class="p">)</span>
+
+<span class="c1"># 인코딩</span>
+<span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;Hello, how are you?&quot;</span>
+<span class="n">inputs</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;pt&#39;</span><span class="p">)</span>
+
+<span class="c1"># 순전파</span>
+<span class="n">outputs</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="o">**</span><span class="n">inputs</span><span class="p">)</span>
+
+<span class="c1"># 출력</span>
+<span class="n">last_hidden_state</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">last_hidden_state</span>  <span class="c1"># (1, seq, 768)</span>
+<span class="n">pooler_output</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">pooler_output</span>          <span class="c1"># (1, 768) - [CLS] 변환</span>
+</code></pre></div>
+
+<h3 id="_7">분류 모델<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">BertForSequenceClassification</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">BertForSequenceClassification</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
+    <span class="s1">&#39;bert-base-uncased&#39;</span><span class="p">,</span>
+    <span class="n">num_labels</span><span class="o">=</span><span class="mi">2</span>
+<span class="p">)</span>
+
+<span class="n">inputs</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="s2">&quot;I love this movie!&quot;</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;pt&#39;</span><span class="p">)</span>
+<span class="n">outputs</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="o">**</span><span class="n">inputs</span><span class="p">)</span>
+<span class="n">logits</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">logits</span>  <span class="c1"># (1, 2)</span>
+</code></pre></div>
+
+<h3 id="attention">Attention 시각화<a class="header-link" href="#attention" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">BertModel</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">BertModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;bert-base-uncased&#39;</span><span class="p">,</span> <span class="n">output_attentions</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">inputs</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="s2">&quot;The cat sat on the mat&quot;</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;pt&#39;</span><span class="p">)</span>
+<span class="n">outputs</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="o">**</span><span class="n">inputs</span><span class="p">)</span>
+
+<span class="c1"># Attention weights: (num_layers, batch, heads, seq, seq)</span>
+<span class="n">attentions</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">attentions</span>
+
+<span class="c1"># 첫 번째 레이어, 첫 번째 헤드</span>
+<span class="n">attn</span> <span class="o">=</span> <span class="n">attentions</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2 id="8-bert">8. BERT 입력 포맷<a class="header-link" href="#8-bert" title="Permanent link">&para;</a></h2>
+<h3 id="single-sentence_1">Single Sentence<a class="header-link" href="#single-sentence_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">[CLS] sentence [SEP]</span>
+<span class="na">segment_ids</span><span class="o">:</span><span class="w"> </span><span class="s">[0, 0, 0, ..., 0]</span>
+</code></pre></div>
+
+<h3 id="sentence-pair">Sentence Pair<a class="header-link" href="#sentence-pair" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">[CLS] sentence A [SEP] sentence B [SEP]</span>
+<span class="na">segment_ids</span><span class="o">:</span><span class="w"> </span><span class="s">[0, 0, ..., 0, 1, 1, ..., 1]</span>
+</code></pre></div>
+
+<h3 id="huggingface-pair">HuggingFace에서 Pair 처리<a class="header-link" href="#huggingface-pair" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 두 문장 입력</span>
+<span class="n">text_a</span> <span class="o">=</span> <span class="s2">&quot;How old are you?&quot;</span>
+<span class="n">text_b</span> <span class="o">=</span> <span class="s2">&quot;I am 25 years old.&quot;</span>
+
+<span class="n">inputs</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span>
+    <span class="n">text_a</span><span class="p">,</span> <span class="n">text_b</span><span class="p">,</span>
+    <span class="n">padding</span><span class="o">=</span><span class="s1">&#39;max_length&#39;</span><span class="p">,</span>
+    <span class="n">max_length</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+    <span class="n">truncation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;pt&#39;</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;token_type_ids&#39;</span><span class="p">])</span>  <span class="c1"># segment_ids</span>
+<span class="c1"># [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, ...]</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_8">정리<a class="header-link" href="#_8" title="Permanent link">&para;</a></h2>
+<h3 id="_9">핵심 개념<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>양방향 인코더</strong>: 전체 문맥을 양방향으로 이해</li>
+<li><strong>MLM</strong>: 마스킹된 토큰 예측으로 문맥 학습</li>
+<li><strong>NSP</strong>: 문장 관계 이해 (RoBERTa에서 제거)</li>
+<li><strong>[CLS] 토큰</strong>: 문장 수준 표현</li>
+<li><strong>Segment Embedding</strong>: 문장 구분</li>
+</ol>
+<h3 id="_10">핵심 코드<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># HuggingFace BERT</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">BertTokenizer</span><span class="p">,</span> <span class="n">BertModel</span>
+<span class="n">tokenizer</span> <span class="o">=</span> <span class="n">BertTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;bert-base-uncased&#39;</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">BertModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;bert-base-uncased&#39;</span><span class="p">)</span>
+
+<span class="c1"># 인코딩</span>
+<span class="n">inputs</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;pt&#39;</span><span class="p">)</span>
+<span class="n">outputs</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="o">**</span><span class="n">inputs</span><span class="p">)</span>
+<span class="n">cls_embedding</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">last_hidden_state</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>  <span class="c1"># [CLS]</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_11">다음 단계<a class="header-link" href="#_11" title="Permanent link">&para;</a></h2>
+<p><a href="./05_GPT_Understanding.md">05_GPT_Understanding.md</a>에서 GPT 모델과 자기회귀 언어 모델을 학습합니다.</p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/LLM_and_NLP/03_Transformer_Review.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">03. Transformer 복습</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/LLM_and_NLP/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/LLM_and_NLP/05_GPT_Understanding.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">05. GPT 이해</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

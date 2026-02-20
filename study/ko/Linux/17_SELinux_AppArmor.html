@@ -1,0 +1,992 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SELinux와 AppArmor - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Linux/">Linux</a>
+    <span class="separator">/</span>
+    <span class="current">SELinux와 AppArmor</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>SELinux와 AppArmor</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Linux/16_Storage_Management.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">16. 저장소 관리</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Linux/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Linux/18_Log_Management.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">로그 관리</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#_2">목차</a></li>
+<li><a href="#1">1. 필수 접근 제어 개요</a><ul>
+<li><a href="#dac-vs-mac">DAC vs MAC</a></li>
+<li><a href="#_3">보안 모듈 비교</a></li>
+</ul>
+</li>
+<li><a href="#2-selinux">2. SELinux 기초</a><ul>
+<li><a href="#selinux">SELinux 모드</a></li>
+<li><a href="#_4">영구적 모드 변경</a></li>
+<li><a href="#selinux_1">SELinux 컨텍스트</a></li>
+<li><a href="#_5">주요 타입</a></li>
+</ul>
+</li>
+<li><a href="#3-selinux">3. SELinux 정책 관리</a><ul>
+<li><a href="#_6">파일 컨텍스트 변경</a></li>
+<li><a href="#_7">영구적 컨텍스트 설정</a></li>
+<li><a href="#selinux_2">SELinux 불리언</a></li>
+<li><a href="#_8">주요 불리언 예시</a></li>
+<li><a href="#_9">포트 컨텍스트</a></li>
+</ul>
+</li>
+<li><a href="#4-selinux">4. SELinux 트러블슈팅</a><ul>
+<li><a href="#_10">감사 로그 확인</a></li>
+<li><a href="#audit2why">audit2why 사용</a></li>
+<li><a href="#audit2allow">audit2allow로 정책 생성</a></li>
+<li><a href="#sealert-gui">sealert 사용 (GUI/상세 분석)</a></li>
+<li><a href="#_11">일반적인 문제 해결</a></li>
+</ul>
+</li>
+<li><a href="#5-apparmor">5. AppArmor 기초</a><ul>
+<li><a href="#apparmor">AppArmor 상태 확인</a></li>
+<li><a href="#apparmor_1">AppArmor 모드</a></li>
+<li><a href="#_12">프로파일 위치</a></li>
+</ul>
+</li>
+<li><a href="#6-apparmor">6. AppArmor 프로파일</a><ul>
+<li><a href="#_13">프로파일 구조</a></li>
+<li><a href="#_14">권한 플래그</a></li>
+<li><a href="#_15">프로파일 작성 예시</a></li>
+<li><a href="#_16">자동 프로파일 생성</a></li>
+<li><a href="#abstractions">Abstractions 사용</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 실무 시나리오</a><ul>
+<li><a href="#1-selinux">시나리오 1: 웹 서버 커스텀 디렉토리 (SELinux)</a></li>
+<li><a href="#2-php-db-selinux">시나리오 2: PHP 애플리케이션 DB 연결 (SELinux)</a></li>
+<li><a href="#3-nginx-apparmor">시나리오 3: Nginx 커스텀 포트 (AppArmor)</a></li>
+<li><a href="#4-docker-selinux">시나리오 4: Docker와 SELinux</a></li>
+<li><a href="#5-apparmor_1">시나리오 5: 새 서비스 프로파일 생성 (AppArmor)</a></li>
+</ul>
+</li>
+<li><a href="#_17">연습 문제</a><ul>
+<li><a href="#1-selinux_1">문제 1: SELinux 컨텍스트</a></li>
+<li><a href="#2-apparmor">문제 2: AppArmor 프로파일</a></li>
+<li><a href="#3">문제 3: 트러블슈팅</a></li>
+</ul>
+</li>
+<li><a href="#_18">정답</a><ul>
+<li><a href="#1_1">문제 1 정답</a></li>
+<li><a href="#2">문제 2 정답</a></li>
+<li><a href="#3_1">문제 3 정답</a></li>
+</ul>
+</li>
+<li><a href="#_19">다음 단계</a></li>
+<li><a href="#_20">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="selinux-apparmor">SELinux와 AppArmor<a class="header-link" href="#selinux-apparmor" title="Permanent link">&para;</a></h1>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<p>이 문서를 통해 다음을 학습합니다:</p>
+<ul>
+<li>필수 접근 제어(MAC)의 개념과 필요성</li>
+<li>SELinux 모드와 정책 관리</li>
+<li>AppArmor 프로파일 작성 및 관리</li>
+<li>보안 모듈 트러블슈팅</li>
+</ul>
+<p><strong>난이도</strong>: ⭐⭐⭐⭐ (고급)</p>
+<hr />
+<h2 id="_2">목차<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-필수-접근-제어-개요">필수 접근 제어 개요</a></li>
+<li><a href="#2-selinux-기초">SELinux 기초</a></li>
+<li><a href="#3-selinux-정책-관리">SELinux 정책 관리</a></li>
+<li><a href="#4-selinux-트러블슈팅">SELinux 트러블슈팅</a></li>
+<li><a href="#5-apparmor-기초">AppArmor 기초</a></li>
+<li><a href="#6-apparmor-프로파일">AppArmor 프로파일</a></li>
+<li><a href="#7-실무-시나리오">실무 시나리오</a></li>
+</ol>
+<hr />
+<h2 id="1">1. 필수 접근 제어 개요<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="dac-vs-mac">DAC vs MAC<a class="header-link" href="#dac-vs-mac" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    접근 제어 비교                            │
+├─────────────────────────────────────────────────────────────┤
+│  DAC (Discretionary Access Control)                         │
+│  - 전통적인 Unix 권한 모델                                  │
+│  - 파일 소유자가 권한 결정                                  │
+│  - chmod, chown으로 관리                                    │
+│  - root는 모든 제한 우회 가능                               │
+├─────────────────────────────────────────────────────────────┤
+│  MAC (Mandatory Access Control)                             │
+│  - 시스템 정책이 접근 결정                                  │
+│  - 사용자가 정책 변경 불가                                  │
+│  - SELinux, AppArmor로 구현                                 │
+│  - root도 정책에 의해 제한됨                                │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_3">보안 모듈 비교<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>특성</th>
+<th>SELinux</th>
+<th>AppArmor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>기반 배포판</td>
+<td>RHEL/CentOS/Fedora</td>
+<td>Ubuntu/Debian/SUSE</td>
+</tr>
+<tr>
+<td>접근 방식</td>
+<td>레이블 기반</td>
+<td>경로 기반</td>
+</tr>
+<tr>
+<td>복잡도</td>
+<td>높음</td>
+<td>낮음</td>
+</tr>
+<tr>
+<td>세밀함</td>
+<td>매우 세밀</td>
+<td>중간</td>
+</tr>
+<tr>
+<td>학습 곡선</td>
+<td>가파름</td>
+<td>완만</td>
+</tr>
+<tr>
+<td>기본 정책</td>
+<td>포괄적</td>
+<td>제한적</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-selinux">2. SELinux 기초<a class="header-link" href="#2-selinux" title="Permanent link">&para;</a></h2>
+<h3 id="selinux">SELinux 모드<a class="header-link" href="#selinux" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 현재 모드 확인</span>
+getenforce
+<span class="c1"># Enforcing, Permissive, 또는 Disabled</span>
+
+<span class="c1"># 상세 상태 확인</span>
+sestatus
+
+<span class="c1"># 임시 모드 변경 (재부팅 시 복원)</span>
+sudo<span class="w"> </span>setenforce<span class="w"> </span><span class="m">0</span><span class="w">  </span><span class="c1"># Permissive</span>
+sudo<span class="w"> </span>setenforce<span class="w"> </span><span class="m">1</span><span class="w">  </span><span class="c1"># Enforcing</span>
+</code></pre></div>
+
+<h3 id="_4">영구적 모드 변경<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/selinux/config 편집</span>
+<span class="c1"># RHEL/CentOS</span>
+sudo<span class="w"> </span>vi<span class="w"> </span>/etc/selinux/config
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/selinux/config</span>
+<span class="na">SELINUX</span><span class="o">=</span><span class="s">enforcing</span><span class="w">     </span><span class="c1"># enforcing, permissive, disabled</span>
+<span class="na">SELINUXTYPE</span><span class="o">=</span><span class="s">targeted</span><span class="w">  </span><span class="c1"># targeted, minimum, mls</span>
+</code></pre></div>
+
+<h3 id="selinux_1">SELinux 컨텍스트<a class="header-link" href="#selinux_1" title="Permanent link">&para;</a></h3>
+<p>모든 파일, 프로세스, 포트에 보안 컨텍스트가 할당됩니다:</p>
+<div class="highlight"><pre><span></span><code><span class="err">사용자</span><span class="o">:</span><span class="err">역할</span><span class="o">:</span><span class="err">타입</span><span class="o">:</span><span class="err">레벨</span>
+<span class="n">user_u</span><span class="o">:</span><span class="n">role_r</span><span class="o">:</span><span class="n">type_t</span><span class="o">:</span><span class="n">s0</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># 파일 컨텍스트 확인</span>
+ls<span class="w"> </span>-Z<span class="w"> </span>/var/www/html/
+<span class="c1"># -rw-r--r--. root root unconfined_u:object_r:httpd_sys_content_t:s0 index.html</span>
+
+<span class="c1"># 프로세스 컨텍스트 확인</span>
+ps<span class="w"> </span>-eZ<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>httpd
+<span class="c1"># system_u:system_r:httpd_t:s0    12345 ?  00:00:01 httpd</span>
+
+<span class="c1"># 사용자 컨텍스트 확인</span>
+id<span class="w"> </span>-Z
+<span class="c1"># unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023</span>
+</code></pre></div>
+
+<h3 id="_5">주요 타입<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>타입</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>httpd_t</code></td>
+<td>Apache 웹 서버 프로세스</td>
+</tr>
+<tr>
+<td><code>httpd_sys_content_t</code></td>
+<td>웹 콘텐츠 파일</td>
+</tr>
+<tr>
+<td><code>mysqld_t</code></td>
+<td>MySQL 프로세스</td>
+</tr>
+<tr>
+<td><code>sshd_t</code></td>
+<td>SSH 데몬</td>
+</tr>
+<tr>
+<td><code>user_home_t</code></td>
+<td>사용자 홈 디렉토리</td>
+</tr>
+<tr>
+<td><code>tmp_t</code></td>
+<td>임시 파일</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-selinux">3. SELinux 정책 관리<a class="header-link" href="#3-selinux" title="Permanent link">&para;</a></h2>
+<h3 id="_6">파일 컨텍스트 변경<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 임시 변경 (재레이블링 시 복원)</span>
+chcon<span class="w"> </span>-t<span class="w"> </span>httpd_sys_content_t<span class="w"> </span>/var/www/custom/index.html
+
+<span class="c1"># 디렉토리 재귀적 변경</span>
+chcon<span class="w"> </span>-R<span class="w"> </span>-t<span class="w"> </span>httpd_sys_content_t<span class="w"> </span>/var/www/custom/
+
+<span class="c1"># 다른 파일의 컨텍스트 복사</span>
+chcon<span class="w"> </span>--reference<span class="o">=</span>/var/www/html/index.html<span class="w"> </span>/var/www/custom/index.html
+</code></pre></div>
+
+<h3 id="_7">영구적 컨텍스트 설정<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 정책에 컨텍스트 규칙 추가</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>fcontext<span class="w"> </span>-a<span class="w"> </span>-t<span class="w"> </span>httpd_sys_content_t<span class="w"> </span><span class="s2">&quot;/srv/www(/.*)?&quot;</span>
+
+<span class="c1"># 정책 적용</span>
+sudo<span class="w"> </span>restorecon<span class="w"> </span>-Rv<span class="w"> </span>/srv/www
+
+<span class="c1"># 컨텍스트 규칙 목록 확인</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>fcontext<span class="w"> </span>-l<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>httpd
+
+<span class="c1"># 규칙 삭제</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>fcontext<span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;/srv/www(/.*)?&quot;</span>
+</code></pre></div>
+
+<h3 id="selinux_2">SELinux 불리언<a class="header-link" href="#selinux_2" title="Permanent link">&para;</a></h3>
+<p>불리언은 SELinux 정책의 특정 기능을 켜고 끄는 스위치입니다:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 모든 불리언 목록</span>
+getsebool<span class="w"> </span>-a
+
+<span class="c1"># 특정 불리언 확인</span>
+getsebool<span class="w"> </span>httpd_can_network_connect
+
+<span class="c1"># 임시 변경</span>
+sudo<span class="w"> </span>setsebool<span class="w"> </span>httpd_can_network_connect<span class="w"> </span>on
+
+<span class="c1"># 영구 변경 (-P 옵션)</span>
+sudo<span class="w"> </span>setsebool<span class="w"> </span>-P<span class="w"> </span>httpd_can_network_connect<span class="w"> </span>on
+
+<span class="c1"># 불리언 검색</span>
+getsebool<span class="w"> </span>-a<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>httpd
+</code></pre></div>
+
+<h3 id="_8">주요 불리언 예시<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 웹 서버 관련</span>
+httpd_can_network_connect<span class="w">      </span><span class="c1"># 외부 네트워크 연결 허용</span>
+httpd_can_network_connect_db<span class="w">   </span><span class="c1"># DB 연결 허용</span>
+httpd_can_sendmail<span class="w">            </span><span class="c1"># 메일 전송 허용</span>
+httpd_enable_homedirs<span class="w">         </span><span class="c1"># 사용자 홈 디렉토리 접근</span>
+
+<span class="c1"># FTP 관련</span>
+ftpd_anon_write<span class="w">              </span><span class="c1"># 익명 쓰기 허용</span>
+ftpd_full_access<span class="w">             </span><span class="c1"># 전체 파일시스템 접근</span>
+
+<span class="c1"># 기타</span>
+samba_enable_home_dirs<span class="w">       </span><span class="c1"># Samba 홈 디렉토리 공유</span>
+</code></pre></div>
+
+<h3 id="_9">포트 컨텍스트<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 포트 레이블 확인</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>port<span class="w"> </span>-l<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>http
+<span class="c1"># http_port_t                    tcp      80, 81, 443, 488, 8008, 8009, 8443, 9000</span>
+
+<span class="c1"># 새 포트 추가</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>port<span class="w"> </span>-a<span class="w"> </span>-t<span class="w"> </span>http_port_t<span class="w"> </span>-p<span class="w"> </span>tcp<span class="w"> </span><span class="m">8080</span>
+
+<span class="c1"># 포트 삭제</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>port<span class="w"> </span>-d<span class="w"> </span>-t<span class="w"> </span>http_port_t<span class="w"> </span>-p<span class="w"> </span>tcp<span class="w"> </span><span class="m">8080</span>
+
+<span class="c1"># 포트 수정</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>port<span class="w"> </span>-m<span class="w"> </span>-t<span class="w"> </span>http_port_t<span class="w"> </span>-p<span class="w"> </span>tcp<span class="w"> </span><span class="m">8888</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-selinux">4. SELinux 트러블슈팅<a class="header-link" href="#4-selinux" title="Permanent link">&para;</a></h2>
+<h3 id="_10">감사 로그 확인<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># SELinux 거부 로그 확인</span>
+sudo<span class="w"> </span>ausearch<span class="w"> </span>-m<span class="w"> </span>avc<span class="w"> </span>-ts<span class="w"> </span>recent
+
+<span class="c1"># 특정 서비스 관련 로그</span>
+sudo<span class="w"> </span>ausearch<span class="w"> </span>-m<span class="w"> </span>avc<span class="w"> </span>-c<span class="w"> </span>httpd
+
+<span class="c1"># 읽기 쉬운 형식으로 변환</span>
+sudo<span class="w"> </span>ausearch<span class="w"> </span>-m<span class="w"> </span>avc<span class="w"> </span>-ts<span class="w"> </span>recent<span class="w"> </span><span class="p">|</span><span class="w"> </span>audit2why
+</code></pre></div>
+
+<h3 id="audit2why">audit2why 사용<a class="header-link" href="#audit2why" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 거부 이유 분석</span>
+sudo<span class="w"> </span>cat<span class="w"> </span>/var/log/audit/audit.log<span class="w"> </span><span class="p">|</span><span class="w"> </span>audit2why
+
+<span class="c1"># 예시 출력:</span>
+<span class="c1"># type=AVC msg=audit(...): avc:  denied  { read } for  pid=1234</span>
+<span class="c1"># comm=&quot;httpd&quot; name=&quot;index.html&quot; dev=&quot;sda1&quot; ino=12345</span>
+<span class="c1"># scontext=system_u:system_r:httpd_t:s0</span>
+<span class="c1"># tcontext=unconfined_u:object_r:user_home_t:s0 tclass=file</span>
+<span class="c1">#</span>
+<span class="c1"># Was caused by:</span>
+<span class="c1">#   Missing type enforcement (TE) allow rule.</span>
+</code></pre></div>
+
+<h3 id="audit2allow">audit2allow로 정책 생성<a class="header-link" href="#audit2allow" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 허용 규칙 생성 (확인만)</span>
+sudo<span class="w"> </span>ausearch<span class="w"> </span>-m<span class="w"> </span>avc<span class="w"> </span>-ts<span class="w"> </span>recent<span class="w"> </span><span class="p">|</span><span class="w"> </span>audit2allow
+
+<span class="c1"># 로컬 모듈로 컴파일</span>
+sudo<span class="w"> </span>ausearch<span class="w"> </span>-m<span class="w"> </span>avc<span class="w"> </span>-ts<span class="w"> </span>recent<span class="w"> </span><span class="p">|</span><span class="w"> </span>audit2allow<span class="w"> </span>-M<span class="w"> </span>mypolicy
+
+<span class="c1"># 모듈 설치</span>
+sudo<span class="w"> </span>semodule<span class="w"> </span>-i<span class="w"> </span>mypolicy.pp
+
+<span class="c1"># 설치된 모듈 확인</span>
+sudo<span class="w"> </span>semodule<span class="w"> </span>-l<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>mypolicy
+
+<span class="c1"># 모듈 제거</span>
+sudo<span class="w"> </span>semodule<span class="w"> </span>-r<span class="w"> </span>mypolicy
+</code></pre></div>
+
+<h3 id="sealert-gui">sealert 사용 (GUI/상세 분석)<a class="header-link" href="#sealert-gui" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># setroubleshoot 패키지 필요</span>
+sudo<span class="w"> </span>yum<span class="w"> </span>install<span class="w"> </span>setroubleshoot-server
+
+<span class="c1"># 분석 실행</span>
+sudo<span class="w"> </span>sealert<span class="w"> </span>-a<span class="w"> </span>/var/log/audit/audit.log
+
+<span class="c1"># 실시간 알림 확인</span>
+sudo<span class="w"> </span>sealert<span class="w"> </span>-l<span class="w"> </span><span class="s2">&quot;*&quot;</span>
+</code></pre></div>
+
+<h3 id="_11">일반적인 문제 해결<a class="header-link" href="#_11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 문제: 웹 서버가 파일을 읽지 못함</span>
+<span class="c1"># 1. 컨텍스트 확인</span>
+ls<span class="w"> </span>-Z<span class="w"> </span>/var/www/html/problem_file
+
+<span class="c1"># 2. 컨텍스트 수정</span>
+sudo<span class="w"> </span>restorecon<span class="w"> </span>-v<span class="w"> </span>/var/www/html/problem_file
+
+<span class="c1"># 문제: 커스텀 포트 사용 불가</span>
+<span class="c1"># 1. 현재 포트 레이블 확인</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>port<span class="w"> </span>-l<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="m">8080</span>
+
+<span class="c1"># 2. 포트 추가</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>port<span class="w"> </span>-a<span class="w"> </span>-t<span class="w"> </span>http_port_t<span class="w"> </span>-p<span class="w"> </span>tcp<span class="w"> </span><span class="m">8080</span>
+
+<span class="c1"># 문제: 네트워크 연결 거부</span>
+<span class="c1"># 1. 관련 불리언 확인</span>
+getsebool<span class="w"> </span>-a<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>httpd_can_network
+
+<span class="c1"># 2. 불리언 활성화</span>
+sudo<span class="w"> </span>setsebool<span class="w"> </span>-P<span class="w"> </span>httpd_can_network_connect<span class="w"> </span>on
+</code></pre></div>
+
+<hr />
+<h2 id="5-apparmor">5. AppArmor 기초<a class="header-link" href="#5-apparmor" title="Permanent link">&para;</a></h2>
+<h3 id="apparmor">AppArmor 상태 확인<a class="header-link" href="#apparmor" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Ubuntu/Debian</span>
+sudo<span class="w"> </span>aa-status
+
+<span class="c1"># 또는</span>
+sudo<span class="w"> </span>apparmor_status
+</code></pre></div>
+
+<p>예시 출력:</p>
+<div class="highlight"><pre><span></span><code><span class="n">apparmor</span><span class="w"> </span><span class="n">module</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">loaded</span><span class="o">.</span>
+<span class="mi">38</span><span class="w"> </span><span class="n">profiles</span><span class="w"> </span><span class="n">are</span><span class="w"> </span><span class="n">loaded</span><span class="o">.</span>
+<span class="mi">36</span><span class="w"> </span><span class="n">profiles</span><span class="w"> </span><span class="n">are</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">enforce</span><span class="w"> </span><span class="n">mode</span><span class="o">.</span>
+<span class="w">   </span><span class="o">/</span><span class="n">snap</span><span class="o">/</span><span class="n">snapd</span><span class="o">/</span><span class="mi">19457</span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">snapd</span><span class="o">/</span><span class="n">snap</span><span class="o">-</span><span class="n">confine</span>
+<span class="w">   </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">evince</span>
+<span class="w">   </span><span class="o">...</span>
+<span class="mi">2</span><span class="w"> </span><span class="n">profiles</span><span class="w"> </span><span class="n">are</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">complain</span><span class="w"> </span><span class="n">mode</span><span class="o">.</span>
+<span class="w">   </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">sbin</span><span class="o">/</span><span class="n">cups</span><span class="o">-</span><span class="n">browsed</span>
+<span class="w">   </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">sbin</span><span class="o">/</span><span class="n">cupsd</span>
+</code></pre></div>
+
+<h3 id="apparmor_1">AppArmor 모드<a class="header-link" href="#apparmor_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Enforce 모드: 정책 위반 차단</span>
+sudo<span class="w"> </span>aa-enforce<span class="w"> </span>/etc/apparmor.d/usr.sbin.nginx
+
+<span class="c1"># Complain 모드: 위반 로깅만 (차단 안 함)</span>
+sudo<span class="w"> </span>aa-complain<span class="w"> </span>/etc/apparmor.d/usr.sbin.nginx
+
+<span class="c1"># 프로파일 비활성화</span>
+sudo<span class="w"> </span>aa-disable<span class="w"> </span>/etc/apparmor.d/usr.sbin.nginx
+
+<span class="c1"># 프로파일 다시 로드</span>
+sudo<span class="w"> </span>apparmor_parser<span class="w"> </span>-r<span class="w"> </span>/etc/apparmor.d/usr.sbin.nginx
+</code></pre></div>
+
+<h3 id="_12">프로파일 위치<a class="header-link" href="#_12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 시스템 프로파일</span>
+ls<span class="w"> </span>/etc/apparmor.d/
+
+<span class="c1"># 주요 파일들</span>
+/etc/apparmor.d/usr.sbin.nginx<span class="w">    </span><span class="c1"># Nginx 프로파일</span>
+/etc/apparmor.d/usr.sbin.mysqld<span class="w">   </span><span class="c1"># MySQL 프로파일</span>
+/etc/apparmor.d/abstractions/<span class="w">     </span><span class="c1"># 공유 규칙</span>
+/etc/apparmor.d/tunables/<span class="w">         </span><span class="c1"># 변수 정의</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-apparmor">6. AppArmor 프로파일<a class="header-link" href="#6-apparmor" title="Permanent link">&para;</a></h2>
+<h3 id="_13">프로파일 구조<a class="header-link" href="#_13" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">#include &lt;tunables/global&gt;</span>
+
+<span class="o">/</span><span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">program</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="c1">#include &lt;abstractions/base&gt;</span>
+
+<span class="w">  </span><span class="c1"># 파일 접근 규칙</span>
+<span class="w">  </span><span class="o">/</span><span class="n">etc</span><span class="o">/</span><span class="n">myapp</span><span class="o">.</span><span class="n">conf</span><span class="w"> </span><span class="n">r</span><span class="p">,</span>
+<span class="w">  </span><span class="o">/</span><span class="k">var</span><span class="o">/</span><span class="nb">log</span><span class="o">/</span><span class="n">myapp</span><span class="o">.</span><span class="n">log</span><span class="w"> </span><span class="n">w</span><span class="p">,</span>
+<span class="w">  </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">myapp</span><span class="o">/**</span><span class="w"> </span><span class="n">r</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1"># 네트워크 규칙</span>
+<span class="w">  </span><span class="n">network</span><span class="w"> </span><span class="n">inet</span><span class="w"> </span><span class="n">stream</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1"># 실행 규칙</span>
+<span class="w">  </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">helper</span><span class="w"> </span><span class="n">ix</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="_14">권한 플래그<a class="header-link" href="#_14" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>플래그</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>r</code></td>
+<td>읽기</td>
+</tr>
+<tr>
+<td><code>w</code></td>
+<td>쓰기</td>
+</tr>
+<tr>
+<td><code>a</code></td>
+<td>추가</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>파일 잠금</td>
+</tr>
+<tr>
+<td><code>l</code></td>
+<td>링크</td>
+</tr>
+<tr>
+<td><code>m</code></td>
+<td>메모리 맵 실행</td>
+</tr>
+<tr>
+<td><code>x</code></td>
+<td>실행</td>
+</tr>
+<tr>
+<td><code>ix</code></td>
+<td>동일 프로파일로 실행</td>
+</tr>
+<tr>
+<td><code>px</code></td>
+<td>다른 프로파일로 실행</td>
+</tr>
+<tr>
+<td><code>ux</code></td>
+<td>제한 없이 실행</td>
+</tr>
+<tr>
+<td><code>Px</code></td>
+<td>px + 환경 정리</td>
+</tr>
+<tr>
+<td><code>Ux</code></td>
+<td>ux + 환경 정리</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_15">프로파일 작성 예시<a class="header-link" href="#_15" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/apparmor.d/usr.local.bin.myapp</span>
+<span class="c1">#include &lt;tunables/global&gt;</span>
+
+/usr/local/bin/myapp<span class="w"> </span><span class="o">{</span>
+<span class="w">  </span><span class="c1">#include &lt;abstractions/base&gt;</span>
+<span class="w">  </span><span class="c1">#include &lt;abstractions/nameservice&gt;</span>
+
+<span class="w">  </span><span class="c1"># 설정 파일 읽기</span>
+<span class="w">  </span>/etc/myapp/**<span class="w"> </span>r,
+
+<span class="w">  </span><span class="c1"># 데이터 디렉토리</span>
+<span class="w">  </span>/var/lib/myapp/<span class="w"> </span>r,
+<span class="w">  </span>/var/lib/myapp/**<span class="w"> </span>rw,
+
+<span class="w">  </span><span class="c1"># 로그 파일</span>
+<span class="w">  </span>/var/log/myapp/<span class="w"> </span>r,
+<span class="w">  </span>/var/log/myapp/**<span class="w"> </span>rw,
+<span class="w">  </span>owner<span class="w"> </span>/var/log/myapp/*.log<span class="w"> </span>w,
+
+<span class="w">  </span><span class="c1"># 런타임 파일</span>
+<span class="w">  </span>/run/myapp.pid<span class="w"> </span>rw,
+<span class="w">  </span>/run/myapp.sock<span class="w"> </span>rw,
+
+<span class="w">  </span><span class="c1"># 라이브러리</span>
+<span class="w">  </span>/usr/lib/myapp/**<span class="w"> </span>rm,
+
+<span class="w">  </span><span class="c1"># 네트워크 접근</span>
+<span class="w">  </span>network<span class="w"> </span>inet<span class="w"> </span>tcp,
+<span class="w">  </span>network<span class="w"> </span>inet<span class="w"> </span>udp,
+
+<span class="w">  </span><span class="c1"># 시스템 호출 제한</span>
+<span class="w">  </span>deny<span class="w"> </span>@<span class="o">{</span>PROC<span class="o">}</span>/**<span class="w"> </span>w,
+<span class="w">  </span>deny<span class="w"> </span>/sys/**<span class="w"> </span>w,
+
+<span class="w">  </span><span class="c1"># 자식 프로세스</span>
+<span class="w">  </span>/usr/bin/logger<span class="w"> </span>Px,
+<span class="o">}</span>
+</code></pre></div>
+
+<h3 id="_16">자동 프로파일 생성<a class="header-link" href="#_16" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># aa-genprof로 프로파일 생성</span>
+sudo<span class="w"> </span>aa-genprof<span class="w"> </span>/usr/local/bin/myapp
+
+<span class="c1"># 프로그램을 실행하고 일반적인 작업 수행</span>
+<span class="c1"># aa-genprof가 접근을 모니터링하고 프로파일 생성</span>
+
+<span class="c1"># aa-logprof로 기존 프로파일 업데이트</span>
+sudo<span class="w"> </span>aa-logprof
+</code></pre></div>
+
+<h3 id="abstractions">Abstractions 사용<a class="header-link" href="#abstractions" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/apparmor.d/abstractions/ 내 공통 규칙</span>
+<span class="c1"># base          - 기본 시스템 접근</span>
+<span class="c1"># nameservice   - DNS, NSS 등</span>
+<span class="c1"># authentication - PAM, shadow 등</span>
+<span class="c1"># apache2-common - Apache 공통 규칙</span>
+<span class="c1"># mysql         - MySQL 클라이언트 접근</span>
+<span class="c1"># php           - PHP 관련 접근</span>
+</code></pre></div>
+
+<p>프로파일에서 사용:</p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;abstractions/base&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;abstractions/nameservice&gt;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 실무 시나리오<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="1-selinux">시나리오 1: 웹 서버 커스텀 디렉토리 (SELinux)<a class="header-link" href="#1-selinux" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 문제: /data/www에서 웹 콘텐츠 제공 시 403 에러</span>
+
+<span class="c1"># 1. 현재 컨텍스트 확인</span>
+ls<span class="w"> </span>-Zd<span class="w"> </span>/data/www
+<span class="c1"># drwxr-xr-x. root root unconfined_u:object_r:default_t:s0 /data/www</span>
+
+<span class="c1"># 2. 올바른 컨텍스트 설정</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>fcontext<span class="w"> </span>-a<span class="w"> </span>-t<span class="w"> </span>httpd_sys_content_t<span class="w"> </span><span class="s2">&quot;/data/www(/.*)?&quot;</span>
+sudo<span class="w"> </span>restorecon<span class="w"> </span>-Rv<span class="w"> </span>/data/www
+
+<span class="c1"># 3. 확인</span>
+ls<span class="w"> </span>-Zd<span class="w"> </span>/data/www
+<span class="c1"># drwxr-xr-x. root root unconfined_u:object_r:httpd_sys_content_t:s0 /data/www</span>
+</code></pre></div>
+
+<h3 id="2-php-db-selinux">시나리오 2: PHP 애플리케이션 DB 연결 (SELinux)<a class="header-link" href="#2-php-db-selinux" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 문제: PHP에서 원격 MySQL 연결 실패</span>
+
+<span class="c1"># 1. 로그 확인</span>
+sudo<span class="w"> </span>ausearch<span class="w"> </span>-m<span class="w"> </span>avc<span class="w"> </span>-c<span class="w"> </span>httpd<span class="w"> </span><span class="p">|</span><span class="w"> </span>audit2why
+
+<span class="c1"># 2. 불리언 확인</span>
+getsebool<span class="w"> </span>httpd_can_network_connect_db
+<span class="c1"># httpd_can_network_connect_db --&gt; off</span>
+
+<span class="c1"># 3. 불리언 활성화</span>
+sudo<span class="w"> </span>setsebool<span class="w"> </span>-P<span class="w"> </span>httpd_can_network_connect_db<span class="w"> </span>on
+</code></pre></div>
+
+<h3 id="3-nginx-apparmor">시나리오 3: Nginx 커스텀 포트 (AppArmor)<a class="header-link" href="#3-nginx-apparmor" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/apparmor.d/local/nginx</span>
+<span class="c1"># 로컬 커스터마이징용 파일</span>
+
+<span class="c1"># 추가 포트 허용</span>
+network<span class="w"> </span>inet<span class="w"> </span>stream,
+
+<span class="c1"># 추가 경로 허용</span>
+/data/nginx/**<span class="w"> </span>r,
+/var/log/nginx-custom/<span class="w"> </span>rw,
+/var/log/nginx-custom/**<span class="w"> </span>rw,
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># 프로파일 리로드</span>
+sudo<span class="w"> </span>apparmor_parser<span class="w"> </span>-r<span class="w"> </span>/etc/apparmor.d/usr.sbin.nginx
+</code></pre></div>
+
+<h3 id="4-docker-selinux">시나리오 4: Docker와 SELinux<a class="header-link" href="#4-docker-selinux" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Docker 컨테이너에서 호스트 볼륨 마운트</span>
+
+<span class="c1"># 방법 1: z 옵션 (공유 레이블)</span>
+docker<span class="w"> </span>run<span class="w"> </span>-v<span class="w"> </span>/data:/data:z<span class="w"> </span>myimage
+
+<span class="c1"># 방법 2: Z 옵션 (전용 레이블)</span>
+docker<span class="w"> </span>run<span class="w"> </span>-v<span class="w"> </span>/data:/data:Z<span class="w"> </span>myimage
+
+<span class="c1"># 방법 3: 수동 레이블 지정</span>
+sudo<span class="w"> </span>chcon<span class="w"> </span>-Rt<span class="w"> </span>svirt_sandbox_file_t<span class="w"> </span>/data
+docker<span class="w"> </span>run<span class="w"> </span>-v<span class="w"> </span>/data:/data<span class="w"> </span>myimage
+</code></pre></div>
+
+<h3 id="5-apparmor_1">시나리오 5: 새 서비스 프로파일 생성 (AppArmor)<a class="header-link" href="#5-apparmor_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. complain 모드로 시작</span>
+sudo<span class="w"> </span>aa-complain<span class="w"> </span>/usr/local/bin/newservice
+
+<span class="c1"># 2. 서비스 실행 및 모든 기능 테스트</span>
+
+<span class="c1"># 3. 로그에서 프로파일 업데이트</span>
+sudo<span class="w"> </span>aa-logprof
+
+<span class="c1"># 4. enforce 모드로 전환</span>
+sudo<span class="w"> </span>aa-enforce<span class="w"> </span>/usr/local/bin/newservice
+
+<span class="c1"># 5. 테스트</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_17">연습 문제<a class="header-link" href="#_17" title="Permanent link">&para;</a></h2>
+<h3 id="1-selinux_1">문제 1: SELinux 컨텍스트<a class="header-link" href="#1-selinux_1" title="Permanent link">&para;</a></h3>
+<p>다음 상황에서 어떤 명령을 사용해야 할까요?
+- <code>/opt/webapp</code> 디렉토리를 웹 서버 콘텐츠로 영구 설정
+- Apache가 8443 포트를 사용하도록 허용
+- httpd가 사용자 홈 디렉토리에 접근하도록 허용</p>
+<h3 id="2-apparmor">문제 2: AppArmor 프로파일<a class="header-link" href="#2-apparmor" title="Permanent link">&para;</a></h3>
+<p><code>/usr/local/bin/backup.sh</code> 스크립트가 다음 작업을 수행합니다:
+- <code>/etc/</code> 읽기
+- <code>/var/backup/</code>에 쓰기
+- <code>rsync</code> 실행
+- TCP 22번 포트 네트워크 접근</p>
+<p>이 스크립트의 AppArmor 프로파일을 작성하세요.</p>
+<h3 id="3">문제 3: 트러블슈팅<a class="header-link" href="#3" title="Permanent link">&para;</a></h3>
+<p>SELinux Enforcing 모드에서 웹 애플리케이션이 작동하지 않습니다:
+1. 문제를 진단하는 단계를 나열하세요
+2. 어떤 도구를 사용해야 할까요?</p>
+<hr />
+<h2 id="_18">정답<a class="header-link" href="#_18" title="Permanent link">&para;</a></h2>
+<h3 id="1_1">문제 1 정답<a class="header-link" href="#1_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 웹 콘텐츠 설정</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>fcontext<span class="w"> </span>-a<span class="w"> </span>-t<span class="w"> </span>httpd_sys_content_t<span class="w"> </span><span class="s2">&quot;/opt/webapp(/.*)?&quot;</span>
+sudo<span class="w"> </span>restorecon<span class="w"> </span>-Rv<span class="w"> </span>/opt/webapp
+
+<span class="c1"># 포트 추가</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>port<span class="w"> </span>-a<span class="w"> </span>-t<span class="w"> </span>http_port_t<span class="w"> </span>-p<span class="w"> </span>tcp<span class="w"> </span><span class="m">8443</span>
+
+<span class="c1"># 홈 디렉토리 접근 허용</span>
+sudo<span class="w"> </span>setsebool<span class="w"> </span>-P<span class="w"> </span>httpd_enable_homedirs<span class="w"> </span>on
+</code></pre></div>
+
+<h3 id="2">문제 2 정답<a class="header-link" href="#2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">#include &lt;tunables/global&gt;</span>
+
+<span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">local</span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">backup</span><span class="o">.</span><span class="n">sh</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="c1">#include &lt;abstractions/base&gt;</span>
+<span class="w">  </span><span class="c1">#include &lt;abstractions/bash&gt;</span>
+
+<span class="w">  </span><span class="c1"># 설정 읽기</span>
+<span class="w">  </span><span class="o">/</span><span class="n">etc</span><span class="o">/**</span><span class="w"> </span><span class="n">r</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1"># 백업 디렉토리</span>
+<span class="w">  </span><span class="o">/</span><span class="k">var</span><span class="o">/</span><span class="n">backup</span><span class="o">/</span><span class="w"> </span><span class="n">r</span><span class="p">,</span>
+<span class="w">  </span><span class="o">/</span><span class="k">var</span><span class="o">/</span><span class="n">backup</span><span class="o">/**</span><span class="w"> </span><span class="n">rw</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1"># rsync 실행</span>
+<span class="w">  </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">rsync</span><span class="w"> </span><span class="n">Px</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1"># SSH 네트워크</span>
+<span class="w">  </span><span class="n">network</span><span class="w"> </span><span class="n">inet</span><span class="w"> </span><span class="n">stream</span><span class="p">,</span>
+<span class="w">  </span><span class="n">network</span><span class="w"> </span><span class="n">inet6</span><span class="w"> </span><span class="n">stream</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="3_1">문제 3 정답<a class="header-link" href="#3_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. SELinux 로그 확인</span>
+sudo<span class="w"> </span>ausearch<span class="w"> </span>-m<span class="w"> </span>avc<span class="w"> </span>-ts<span class="w"> </span>recent
+
+<span class="c1"># 2. 원인 분석</span>
+sudo<span class="w"> </span>ausearch<span class="w"> </span>-m<span class="w"> </span>avc<span class="w"> </span>-ts<span class="w"> </span>recent<span class="w"> </span><span class="p">|</span><span class="w"> </span>audit2why
+
+<span class="c1"># 3. 상세 분석 (setroubleshoot 설치 시)</span>
+sudo<span class="w"> </span>sealert<span class="w"> </span>-a<span class="w"> </span>/var/log/audit/audit.log
+
+<span class="c1"># 4. 해결책 적용</span>
+<span class="c1"># - 컨텍스트 문제: restorecon, semanage fcontext</span>
+<span class="c1"># - 불리언 문제: setsebool</span>
+<span class="c1"># - 포트 문제: semanage port</span>
+<span class="c1"># - 정책 필요: audit2allow로 커스텀 모듈 생성</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_19">다음 단계<a class="header-link" href="#_19" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./18_Log_Management.md">18_Log_Management.md</a> - journald, rsyslog, logrotate 학습</li>
+</ul>
+<hr />
+<h2 id="_20">참고 자료<a class="header-link" href="#_20" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/using_selinux/index">SELinux User Guide (Red Hat)</a></li>
+<li><a href="https://gitlab.com/apparmor/apparmor/-/wikis/home">AppArmor Wiki</a></li>
+<li><a href="https://selinuxproject.org/page/Main_Page">SELinux Project Wiki</a></li>
+<li><code>man semanage</code>, <code>man restorecon</code>, <code>man audit2why</code></li>
+<li><code>man apparmor</code>, <code>man aa-status</code>, <code>man apparmor.d</code></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Linux/16_Storage_Management.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">16. 저장소 관리</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Linux/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Linux/18_Log_Management.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">로그 관리</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

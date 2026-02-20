@@ -1,0 +1,1045 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>04. 몬테카를로 방법 (Monte Carlo Methods) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Reinforcement_Learning/">Reinforcement Learning</a>
+    <span class="separator">/</span>
+    <span class="current">04. 몬테카를로 방법 (Monte Carlo Methods)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>04. 몬테카를로 방법 (Monte Carlo Methods)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Reinforcement_Learning/03_Dynamic_Programming.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">03. 동적 프로그래밍 (Dynamic Programming)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Reinforcement_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Reinforcement_Learning/05_TD_Learning.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">05. 시간차 학습 (Temporal Difference Learning)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#1">1. 몬테카를로 방법이란?</a><ul>
+<li><a href="#11">1.1 개요</a></li>
+<li><a href="#12-dp-vs-mc">1.2 DP vs MC 비교</a></li>
+<li><a href="#13">1.3 핵심 아이디어</a></li>
+</ul>
+</li>
+<li><a href="#2-return">2. 리턴 (Return) 계산</a><ul>
+<li><a href="#21">2.1 에피소드에서 리턴 계산</a></li>
+</ul>
+</li>
+<li><a href="#3-mc">3. MC 정책 평가</a><ul>
+<li><a href="#31-first-visit-mc-vs-every-visit-mc">3.1 First-visit MC vs Every-visit MC</a></li>
+<li><a href="#32-first-visit-mc">3.2 First-visit MC 구현</a></li>
+<li><a href="#33-every-visit-mc">3.3 Every-visit MC 구현</a></li>
+</ul>
+</li>
+<li><a href="#4-mc">4. MC 정책 제어</a><ul>
+<li><a href="#41-exploring-starts-es">4.1 Exploring Starts (ES)</a></li>
+<li><a href="#42-greedy">4.2 ε-greedy 정책</a></li>
+<li><a href="#43-on-policy-mc">4.3 On-policy MC 제어</a></li>
+</ul>
+</li>
+<li><a href="#5-off-policy-mc-importance-sampling">5. Off-policy MC (Importance Sampling)</a><ul>
+<li><a href="#51-off-policy">5.1 Off-policy 학습이란?</a></li>
+<li><a href="#52-importance-sampling">5.2 중요도 샘플링 (Importance Sampling)</a></li>
+<li><a href="#53-off-policy-mc">5.3 Off-policy MC 구현</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 블랙잭 예제</a><ul>
+<li><a href="#61">6.1 블랙잭 환경</a></li>
+<li><a href="#62-mc">6.2 블랙잭에서 MC 학습</a></li>
+</ul>
+</li>
+<li><a href="#7-mc">7. MC 방법의 장단점</a><ul>
+<li><a href="#71">7.1 장점</a></li>
+<li><a href="#72">7.2 단점</a></li>
+<li><a href="#73-dp-vs-mc">7.3 DP vs MC 요약</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 요약</a><ul>
+<li><a href="#_2">핵심 개념</a></li>
+<li><a href="#mc">MC 정책 평가 공식</a></li>
+<li><a href="#mc-q-">MC Q-함수 업데이트</a></li>
+</ul>
+</li>
+<li><a href="#9">9. 연습 문제</a></li>
+<li><a href="#_3">다음 단계</a></li>
+<li><a href="#_4">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="04-monte-carlo-methods">04. 몬테카를로 방법 (Monte Carlo Methods)<a class="header-link" href="#04-monte-carlo-methods" title="Permanent link">&para;</a></h1>
+<p><strong>난이도: ⭐⭐ (기초)</strong></p>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>몬테카를로(MC) 방법의 기본 개념 이해</li>
+<li>모델 프리(Model-Free) 학습의 의미 파악</li>
+<li>First-visit MC와 Every-visit MC의 차이 이해</li>
+<li>MC 정책 평가 및 제어 알고리즘 구현</li>
+<li>탐험의 중요성과 해결 방법 학습</li>
+</ul>
+<hr />
+<h2 id="1">1. 몬테카를로 방법이란?<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="11">1.1 개요<a class="header-link" href="#11" title="Permanent link">&para;</a></h3>
+<p><strong>몬테카를로(Monte Carlo, MC) 방법</strong>은 <strong>실제 경험(에피소드)</strong>으로부터 가치 함수를 추정하는 방법입니다. 환경 모델 없이 학습하는 <strong>모델 프리(Model-Free)</strong> 방법입니다.</p>
+<h3 id="12-dp-vs-mc">1.2 DP vs MC 비교<a class="header-link" href="#12-dp-vs-mc" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>특성</th>
+<th>동적 프로그래밍 (DP)</th>
+<th>몬테카를로 (MC)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>환경 모델</td>
+<td>필요 (P, R 알아야 함)</td>
+<td>불필요</td>
+</tr>
+<tr>
+<td>학습 방식</td>
+<td>계산 (부트스트래핑)</td>
+<td>샘플링 (경험)</td>
+</tr>
+<tr>
+<td>업데이트 시점</td>
+<td>매 스텝 가능</td>
+<td>에피소드 종료 후</td>
+</tr>
+<tr>
+<td>적용 환경</td>
+<td>에피소딕/연속</td>
+<td>에피소딕만</td>
+</tr>
+</tbody>
+</table>
+<h3 id="13">1.3 핵심 아이디어<a class="header-link" href="#13" title="Permanent link">&para;</a></h3>
+<p>$$V(s) \approx \text{평균}(\text{상태 } s \text{에서 시작한 에피소드들의 리턴})$$</p>
+<div class="highlight"><pre><span></span><code>에피소드 1: S₀ → S₁ → S₂ → ... → 종료, G₁ = 10
+에피소드 2: S₀ → S₃ → S₁ → ... → 종료, G₂ = 8
+에피소드 3: S₀ → S₂ → S₁ → ... → 종료, G₃ = 12
+
+V(S₀) = (10 + 8 + 12) / 3 = 10
+</code></pre></div>
+
+<hr />
+<h2 id="2-return">2. 리턴 (Return) 계산<a class="header-link" href="#2-return" title="Permanent link">&para;</a></h2>
+<h3 id="21">2.1 에피소드에서 리턴 계산<a class="header-link" href="#21" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">calculate_returns</span><span class="p">(</span><span class="n">episode</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mf">0.99</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    에피소드에서 각 상태의 리턴 계산</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        episode: [(state, action, reward), ...] 형태의 리스트</span>
+<span class="sd">        gamma: 할인율</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        returns: {state: return} 딕셔너리</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">G</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># 리턴 초기화</span>
+    <span class="n">returns</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># 역순으로 계산 (효율적인 계산)</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">episode</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">reward</span> <span class="o">=</span> <span class="n">episode</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="n">reward</span> <span class="o">+</span> <span class="n">gamma</span> <span class="o">*</span> <span class="n">G</span>  <span class="c1"># 할인된 리턴</span>
+        <span class="n">returns</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">G</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">returns</span>
+
+
+<span class="c1"># 예시</span>
+<span class="n">episode</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s1">&#39;s0&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+    <span class="p">(</span><span class="s1">&#39;s1&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+    <span class="p">(</span><span class="s1">&#39;s2&#39;</span><span class="p">,</span> <span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>  <span class="c1"># 목표 도달</span>
+<span class="p">]</span>
+
+<span class="n">returns</span> <span class="o">=</span> <span class="n">calculate_returns</span><span class="p">(</span><span class="n">episode</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mf">0.9</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">G</span><span class="p">)</span> <span class="ow">in</span> <span class="n">returns</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;t=</span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">state</span><span class="si">}</span><span class="s2">, G=</span><span class="si">{</span><span class="n">G</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># 출력:</span>
+<span class="c1"># t=2: s2, G=10.00</span>
+<span class="c1"># t=1: s1, G=8.00  (= -1 + 0.9 * 10)</span>
+<span class="c1"># t=0: s0, G=6.20  (= -1 + 0.9 * 8)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-mc">3. MC 정책 평가<a class="header-link" href="#3-mc" title="Permanent link">&para;</a></h2>
+<h3 id="31-first-visit-mc-vs-every-visit-mc">3.1 First-visit MC vs Every-visit MC<a class="header-link" href="#31-first-visit-mc-vs-every-visit-mc" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>방법</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First-visit MC</td>
+<td>에피소드에서 상태 s를 <strong>처음 방문했을 때만</strong> 리턴 기록</td>
+</tr>
+<tr>
+<td>Every-visit MC</td>
+<td>에피소드에서 상태 s를 <strong>방문할 때마다</strong> 리턴 기록</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="err">에피소드</span><span class="o">:</span><span class="w"> </span><span class="n">S₀</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">S₁</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">S₂</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">S₁</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">S₃</span><span class="w"> </span><span class="o">(</span><span class="err">종료</span><span class="o">)</span>
+<span class="w">                     </span><span class="err">↑</span><span class="w">      </span><span class="err">↑</span>
+<span class="w">              </span><span class="err">첫</span><span class="w"> </span><span class="err">방문</span><span class="w">   </span><span class="err">두</span><span class="w"> </span><span class="err">번째</span><span class="w"> </span><span class="err">방문</span>
+
+<span class="n">First</span><span class="o">-</span><span class="n">visit</span><span class="o">:</span><span class="w"> </span><span class="n">S₁의</span><span class="w"> </span><span class="err">첫</span><span class="w"> </span><span class="err">방문만</span><span class="w"> </span><span class="err">카운트</span>
+<span class="n">Every</span><span class="o">-</span><span class="n">visit</span><span class="o">:</span><span class="w"> </span><span class="n">S₁의</span><span class="w"> </span><span class="err">모든</span><span class="w"> </span><span class="err">방문</span><span class="w"> </span><span class="err">카운트</span>
+</code></pre></div>
+
+<h3 id="32-first-visit-mc">3.2 First-visit MC 구현<a class="header-link" href="#32-first-visit-mc" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">defaultdict</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">first_visit_mc_prediction</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">policy</span><span class="p">,</span> <span class="n">n_episodes</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mf">0.99</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    First-visit MC 정책 평가</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        env: Gymnasium 환경</span>
+<span class="sd">        policy: 정책 함수 policy(state) -&gt; action</span>
+<span class="sd">        n_episodes: 에피소드 수</span>
+<span class="sd">        gamma: 할인율</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        V: 상태 가치 함수</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># 각 상태의 리턴 합과 방문 횟수</span>
+    <span class="n">returns_sum</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">returns_count</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">V</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">episode_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_episodes</span><span class="p">):</span>
+        <span class="c1"># 에피소드 생성</span>
+        <span class="n">episode</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">state</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+        <span class="n">done</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">done</span><span class="p">:</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="n">policy</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+            <span class="n">next_state</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">terminated</span><span class="p">,</span> <span class="n">truncated</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+            <span class="n">episode</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">reward</span><span class="p">))</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">next_state</span>
+            <span class="n">done</span> <span class="o">=</span> <span class="n">terminated</span> <span class="ow">or</span> <span class="n">truncated</span>
+
+        <span class="c1"># First-visit: 각 상태의 첫 방문 인덱스 찾기</span>
+        <span class="n">visited</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># 역순으로 리턴 계산</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">episode</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">state_t</span><span class="p">,</span> <span class="n">action_t</span><span class="p">,</span> <span class="n">reward_t</span> <span class="o">=</span> <span class="n">episode</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+
+            <span class="n">G</span> <span class="o">=</span> <span class="n">gamma</span> <span class="o">*</span> <span class="n">G</span> <span class="o">+</span> <span class="n">reward_t</span>
+
+            <span class="c1"># First-visit 체크</span>
+            <span class="k">if</span> <span class="n">state_t</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">visited</span><span class="p">:</span>
+                <span class="n">visited</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">state_t</span><span class="p">)</span>
+                <span class="n">returns_sum</span><span class="p">[</span><span class="n">state_t</span><span class="p">]</span> <span class="o">+=</span> <span class="n">G</span>
+                <span class="n">returns_count</span><span class="p">[</span><span class="n">state_t</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">V</span><span class="p">[</span><span class="n">state_t</span><span class="p">]</span> <span class="o">=</span> <span class="n">returns_sum</span><span class="p">[</span><span class="n">state_t</span><span class="p">]</span> <span class="o">/</span> <span class="n">returns_count</span><span class="p">[</span><span class="n">state_t</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">episode_num</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">1000</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Episode </span><span class="si">{</span><span class="n">episode_num</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">n_episodes</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">V</span><span class="p">)</span>
+
+
+<span class="c1"># 사용 예시</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">gymnasium</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">gym</span>
+
+<span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s1">&#39;Blackjack-v1&#39;</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">random_policy</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;랜덤 정책&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">sample</span><span class="p">()</span>
+
+<span class="n">V</span> <span class="o">=</span> <span class="n">first_visit_mc_prediction</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">random_policy</span><span class="p">,</span> <span class="n">n_episodes</span><span class="o">=</span><span class="mi">50000</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">추정된 상태 수: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">V</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="33-every-visit-mc">3.3 Every-visit MC 구현<a class="header-link" href="#33-every-visit-mc" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">every_visit_mc_prediction</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">policy</span><span class="p">,</span> <span class="n">n_episodes</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mf">0.99</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Every-visit MC 정책 평가</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">returns_sum</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">returns_count</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">V</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">episode_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_episodes</span><span class="p">):</span>
+        <span class="n">episode</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">state</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+        <span class="n">done</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">done</span><span class="p">:</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="n">policy</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+            <span class="n">next_state</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">terminated</span><span class="p">,</span> <span class="n">truncated</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+            <span class="n">episode</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">reward</span><span class="p">))</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">next_state</span>
+            <span class="n">done</span> <span class="o">=</span> <span class="n">terminated</span> <span class="ow">or</span> <span class="n">truncated</span>
+
+        <span class="n">G</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># Every-visit: 모든 방문에서 업데이트</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">episode</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">state_t</span><span class="p">,</span> <span class="n">action_t</span><span class="p">,</span> <span class="n">reward_t</span> <span class="o">=</span> <span class="n">episode</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+
+            <span class="n">G</span> <span class="o">=</span> <span class="n">gamma</span> <span class="o">*</span> <span class="n">G</span> <span class="o">+</span> <span class="n">reward_t</span>
+
+            <span class="c1"># 모든 방문 카운트</span>
+            <span class="n">returns_sum</span><span class="p">[</span><span class="n">state_t</span><span class="p">]</span> <span class="o">+=</span> <span class="n">G</span>
+            <span class="n">returns_count</span><span class="p">[</span><span class="n">state_t</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">V</span><span class="p">[</span><span class="n">state_t</span><span class="p">]</span> <span class="o">=</span> <span class="n">returns_sum</span><span class="p">[</span><span class="n">state_t</span><span class="p">]</span> <span class="o">/</span> <span class="n">returns_count</span><span class="p">[</span><span class="n">state_t</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">V</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-mc">4. MC 정책 제어<a class="header-link" href="#4-mc" title="Permanent link">&para;</a></h2>
+<h3 id="41-exploring-starts-es">4.1 Exploring Starts (ES)<a class="header-link" href="#41-exploring-starts-es" title="Permanent link">&para;</a></h3>
+<p>모든 상태-행동 쌍에서 에피소드가 시작할 수 있다고 가정합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">mc_exploring_starts</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">n_episodes</span><span class="o">=</span><span class="mi">100000</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mf">0.99</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    MC with Exploring Starts</span>
+
+<span class="sd">    모든 (s, a) 쌍이 시작점이 될 수 있음을 가정</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n_states</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">observation_space</span><span class="o">.</span><span class="n">n</span>
+    <span class="n">n_actions</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">n</span>
+
+    <span class="c1"># Q 함수와 방문 횟수 초기화</span>
+    <span class="n">Q</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_actions</span><span class="p">))</span>
+    <span class="n">returns_sum</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_actions</span><span class="p">))</span>
+    <span class="n">returns_count</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_actions</span><span class="p">))</span>
+
+    <span class="c1"># 정책 (탐욕적)</span>
+    <span class="n">policy</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">episode_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_episodes</span><span class="p">):</span>
+        <span class="c1"># Exploring Starts: 랜덤한 상태와 행동으로 시작</span>
+        <span class="n">start_state</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">observation_space</span><span class="o">.</span><span class="n">sample</span><span class="p">()</span>
+        <span class="n">start_action</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">sample</span><span class="p">()</span>
+
+        <span class="c1"># 에피소드 생성</span>
+        <span class="n">episode</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">start_state</span>
+        <span class="n">action</span> <span class="o">=</span> <span class="n">start_action</span>
+
+        <span class="c1"># 첫 스텝</span>
+        <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+        <span class="n">env</span><span class="o">.</span><span class="n">unwrapped</span><span class="o">.</span><span class="n">s</span> <span class="o">=</span> <span class="n">state</span>  <span class="c1"># 상태 강제 설정 (환경에 따라 다름)</span>
+        <span class="n">next_state</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">terminated</span><span class="p">,</span> <span class="n">truncated</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+        <span class="n">episode</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">reward</span><span class="p">))</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">next_state</span>
+        <span class="n">done</span> <span class="o">=</span> <span class="n">terminated</span> <span class="ow">or</span> <span class="n">truncated</span>
+
+        <span class="c1"># 나머지 에피소드</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">done</span><span class="p">:</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="n">policy</span><span class="p">[</span><span class="n">state</span><span class="p">]</span>
+            <span class="n">next_state</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">terminated</span><span class="p">,</span> <span class="n">truncated</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+            <span class="n">episode</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">reward</span><span class="p">))</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">next_state</span>
+            <span class="n">done</span> <span class="o">=</span> <span class="n">terminated</span> <span class="ow">or</span> <span class="n">truncated</span>
+
+        <span class="c1"># 리턴 계산 및 Q 업데이트</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">visited</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">episode</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">state_t</span><span class="p">,</span> <span class="n">action_t</span><span class="p">,</span> <span class="n">reward_t</span> <span class="o">=</span> <span class="n">episode</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+            <span class="n">G</span> <span class="o">=</span> <span class="n">gamma</span> <span class="o">*</span> <span class="n">G</span> <span class="o">+</span> <span class="n">reward_t</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="n">state_t</span><span class="p">,</span> <span class="n">action_t</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">visited</span><span class="p">:</span>
+                <span class="n">visited</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">state_t</span><span class="p">,</span> <span class="n">action_t</span><span class="p">))</span>
+                <span class="n">returns_sum</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">]</span> <span class="o">+=</span> <span class="n">G</span>
+                <span class="n">returns_count</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">Q</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">returns_sum</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">]</span> <span class="o">/</span>
+                                        <span class="n">returns_count</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">])</span>
+
+                <span class="c1"># 정책 개선 (탐욕적)</span>
+                <span class="n">policy</span><span class="p">[</span><span class="n">state_t</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">Q</span><span class="p">[</span><span class="n">state_t</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">Q</span><span class="p">,</span> <span class="n">policy</span>
+</code></pre></div>
+
+<h3 id="42-greedy">4.2 ε-greedy 정책<a class="header-link" href="#42-greedy" title="Permanent link">&para;</a></h3>
+<p>Exploring Starts는 현실적이지 않으므로, <strong>ε-greedy</strong> 정책을 사용합니다.</p>
+<p>$$\pi(a|s) = \begin{cases}
+1 - \epsilon + \frac{\epsilon}{|A|} & \text{if } a = \arg\max_{a'} Q(s, a') \\
+\frac{\epsilon}{|A|} & \text{otherwise}
+\end{cases}$$</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">epsilon_greedy_policy</span><span class="p">(</span><span class="n">Q</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">n_actions</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    ε-탐욕 행동 선택</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        Q: 행동 가치 함수</span>
+<span class="sd">        state: 현재 상태</span>
+<span class="sd">        n_actions: 행동 수</span>
+<span class="sd">        epsilon: 탐험 확률</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        action: 선택된 행동</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
+        <span class="c1"># 탐험: 랜덤 행동</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">n_actions</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># 활용: 최선의 행동</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">Q</span><span class="p">[</span><span class="n">state</span><span class="p">])</span>
+</code></pre></div>
+
+<h3 id="43-on-policy-mc">4.3 On-policy MC 제어<a class="header-link" href="#43-on-policy-mc" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">mc_on_policy_control</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">n_episodes</span><span class="o">=</span><span class="mi">100000</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span>
+                         <span class="n">epsilon</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">epsilon_decay</span><span class="o">=</span><span class="mf">0.9999</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    On-policy MC 제어 (ε-greedy)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        env: Gymnasium 환경</span>
+<span class="sd">        n_episodes: 에피소드 수</span>
+<span class="sd">        gamma: 할인율</span>
+<span class="sd">        epsilon: 탐험율</span>
+<span class="sd">        epsilon_decay: epsilon 감소율</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Q: 행동 가치 함수</span>
+<span class="sd">        policy: 학습된 정책</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n_actions</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">n</span>
+
+    <span class="n">Q</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_actions</span><span class="p">))</span>
+    <span class="n">returns_sum</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_actions</span><span class="p">))</span>
+    <span class="n">returns_count</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_actions</span><span class="p">))</span>
+
+    <span class="n">episode_rewards</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">episode_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_episodes</span><span class="p">):</span>
+        <span class="n">episode</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">state</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+        <span class="n">done</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">total_reward</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># ε-greedy 정책으로 에피소드 생성</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">done</span><span class="p">:</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="n">epsilon_greedy_policy</span><span class="p">(</span><span class="n">Q</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">n_actions</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+            <span class="n">next_state</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">terminated</span><span class="p">,</span> <span class="n">truncated</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+
+            <span class="n">episode</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">reward</span><span class="p">))</span>
+            <span class="n">total_reward</span> <span class="o">+=</span> <span class="n">reward</span>
+
+            <span class="n">state</span> <span class="o">=</span> <span class="n">next_state</span>
+            <span class="n">done</span> <span class="o">=</span> <span class="n">terminated</span> <span class="ow">or</span> <span class="n">truncated</span>
+
+        <span class="n">episode_rewards</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">total_reward</span><span class="p">)</span>
+
+        <span class="c1"># Q 업데이트 (First-visit)</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">visited</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">episode</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">state_t</span><span class="p">,</span> <span class="n">action_t</span><span class="p">,</span> <span class="n">reward_t</span> <span class="o">=</span> <span class="n">episode</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+            <span class="n">G</span> <span class="o">=</span> <span class="n">gamma</span> <span class="o">*</span> <span class="n">G</span> <span class="o">+</span> <span class="n">reward_t</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="n">state_t</span><span class="p">,</span> <span class="n">action_t</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">visited</span><span class="p">:</span>
+                <span class="n">visited</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">state_t</span><span class="p">,</span> <span class="n">action_t</span><span class="p">))</span>
+                <span class="n">returns_sum</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">]</span> <span class="o">+=</span> <span class="n">G</span>
+                <span class="n">returns_count</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">Q</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">returns_sum</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">]</span> <span class="o">/</span>
+                                        <span class="n">returns_count</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">])</span>
+
+        <span class="c1"># epsilon 감소</span>
+        <span class="n">epsilon</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">epsilon</span> <span class="o">*</span> <span class="n">epsilon_decay</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">episode_num</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">10000</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">avg_reward</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">episode_rewards</span><span class="p">[</span><span class="o">-</span><span class="mi">1000</span><span class="p">:])</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Episode </span><span class="si">{</span><span class="n">episode_num</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">: avg_reward = </span><span class="si">{</span><span class="n">avg_reward</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">, &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;epsilon = </span><span class="si">{</span><span class="n">epsilon</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># 최종 탐욕적 정책</span>
+    <span class="n">policy</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">Q</span><span class="p">:</span>
+        <span class="n">policy</span><span class="p">[</span><span class="n">state</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">Q</span><span class="p">[</span><span class="n">state</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">Q</span><span class="p">),</span> <span class="n">policy</span><span class="p">,</span> <span class="n">episode_rewards</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-off-policy-mc-importance-sampling">5. Off-policy MC (Importance Sampling)<a class="header-link" href="#5-off-policy-mc-importance-sampling" title="Permanent link">&para;</a></h2>
+<h3 id="51-off-policy">5.1 Off-policy 학습이란?<a class="header-link" href="#51-off-policy" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>On-policy</strong>: 행동 정책 = 목표 정책 (같은 정책으로 탐험하고 학습)</li>
+<li><strong>Off-policy</strong>: 행동 정책 ≠ 목표 정책 (다른 정책으로 탐험하고 학습)</li>
+</ul>
+<div class="highlight"><pre><span></span><code>행동 정책 (Behavior Policy) b: 데이터 수집용
+목표 정책 (Target Policy) π: 학습하고자 하는 최적 정책
+</code></pre></div>
+
+<h3 id="52-importance-sampling">5.2 중요도 샘플링 (Importance Sampling)<a class="header-link" href="#52-importance-sampling" title="Permanent link">&para;</a></h3>
+<p>$$\mathbb{E}_b[X] = \sum_x x \cdot b(x) = \sum_x x \cdot \frac{\pi(x)}{b(x)} \cdot b(x) = \mathbb{E}_b\left[\frac{\pi(X)}{b(X)} X\right]$$</p>
+<p>중요도 샘플링 비율:
+$$\rho_{t:T-1} = \prod_{k=t}^{T-1} \frac{\pi(A_k | S_k)}{b(A_k | S_k)}$$</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">importance_sampling_ratio</span><span class="p">(</span><span class="n">episode</span><span class="p">,</span> <span class="n">target_policy</span><span class="p">,</span> <span class="n">behavior_policy</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    중요도 샘플링 비율 계산</span>
+
+<span class="sd">    ρ = π(a₀|s₀)/b(a₀|s₀) × π(a₁|s₁)/b(a₁|s₁) × ...</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rho</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">episode</span><span class="p">)):</span>
+        <span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">episode</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+        <span class="n">pi_prob</span> <span class="o">=</span> <span class="n">target_policy</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">)</span>  <span class="c1"># π(a|s)</span>
+        <span class="n">b_prob</span> <span class="o">=</span> <span class="n">behavior_policy</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">)</span>  <span class="c1"># b(a|s)</span>
+
+        <span class="k">if</span> <span class="n">b_prob</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>  <span class="c1"># 행동 정책에서 불가능한 행동</span>
+
+        <span class="n">rho</span> <span class="o">*=</span> <span class="n">pi_prob</span> <span class="o">/</span> <span class="n">b_prob</span>
+
+    <span class="k">return</span> <span class="n">rho</span>
+</code></pre></div>
+
+<h3 id="53-off-policy-mc">5.3 Off-policy MC 구현<a class="header-link" href="#53-off-policy-mc" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">mc_off_policy_prediction</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">target_policy</span><span class="p">,</span> <span class="n">behavior_policy</span><span class="p">,</span>
+                              <span class="n">n_episodes</span><span class="o">=</span><span class="mi">100000</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mf">0.99</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Off-policy MC 정책 평가 (Weighted Importance Sampling)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        target_policy: 목표 정책 (결정적) - π(s) -&gt; a</span>
+<span class="sd">        behavior_policy: 행동 정책 - b(s) -&gt; a (ε-greedy 등)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">Q</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">n</span><span class="p">))</span>
+    <span class="n">C</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">n</span><span class="p">))</span>  <span class="c1"># 가중치 합</span>
+
+    <span class="k">for</span> <span class="n">episode_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_episodes</span><span class="p">):</span>
+        <span class="c1"># 행동 정책으로 에피소드 생성</span>
+        <span class="n">episode</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">state</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+        <span class="n">done</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">done</span><span class="p">:</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="n">behavior_policy</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+            <span class="n">next_state</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">terminated</span><span class="p">,</span> <span class="n">truncated</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+            <span class="n">episode</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">reward</span><span class="p">))</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">next_state</span>
+            <span class="n">done</span> <span class="o">=</span> <span class="n">terminated</span> <span class="ow">or</span> <span class="n">truncated</span>
+
+        <span class="n">G</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">W</span> <span class="o">=</span> <span class="mf">1.0</span>  <span class="c1"># 중요도 샘플링 가중치</span>
+
+        <span class="c1"># 역순 처리</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">episode</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">state_t</span><span class="p">,</span> <span class="n">action_t</span><span class="p">,</span> <span class="n">reward_t</span> <span class="o">=</span> <span class="n">episode</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+            <span class="n">G</span> <span class="o">=</span> <span class="n">gamma</span> <span class="o">*</span> <span class="n">G</span> <span class="o">+</span> <span class="n">reward_t</span>
+
+            <span class="c1"># 가중 중요도 샘플링 업데이트</span>
+            <span class="n">C</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">]</span> <span class="o">+=</span> <span class="n">W</span>
+            <span class="n">Q</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">]</span> <span class="o">+=</span> <span class="n">W</span> <span class="o">/</span> <span class="n">C</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">G</span> <span class="o">-</span> <span class="n">Q</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">])</span>
+
+            <span class="c1"># 목표 정책에서의 행동</span>
+            <span class="n">target_action</span> <span class="o">=</span> <span class="n">target_policy</span><span class="p">(</span><span class="n">state_t</span><span class="p">)</span>
+
+            <span class="c1"># 행동이 목표 정책과 다르면 중단 (결정적 정책의 경우)</span>
+            <span class="k">if</span> <span class="n">action_t</span> <span class="o">!=</span> <span class="n">target_action</span><span class="p">:</span>
+                <span class="k">break</span>
+
+            <span class="c1"># 중요도 비율 업데이트</span>
+            <span class="c1"># π(a|s) = 1 (결정적), b(a|s) = 행동 정책 확률</span>
+            <span class="n">b_prob</span> <span class="o">=</span> <span class="n">behavior_policy_prob</span><span class="p">(</span><span class="n">state_t</span><span class="p">,</span> <span class="n">action_t</span><span class="p">)</span>  <span class="c1"># 구현 필요</span>
+            <span class="n">W</span> <span class="o">=</span> <span class="n">W</span> <span class="o">*</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">b_prob</span>
+
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">Q</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 블랙잭 예제<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="61">6.1 블랙잭 환경<a class="header-link" href="#61" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">gymnasium</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">gym</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">defaultdict</span>
+
+<span class="c1"># 블랙잭 환경</span>
+<span class="c1"># 상태: (플레이어 합, 딜러 오픈카드, 사용 가능한 에이스)</span>
+<span class="c1"># 행동: 0 = stick (패 유지), 1 = hit (카드 추가)</span>
+
+<span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s1">&#39;Blackjack-v1&#39;</span><span class="p">,</span> <span class="n">sab</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># sab: Sutton and Barto 버전</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;상태 공간:&quot;</span><span class="p">,</span> <span class="n">env</span><span class="o">.</span><span class="n">observation_space</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;행동 공간:&quot;</span><span class="p">,</span> <span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="62-mc">6.2 블랙잭에서 MC 학습<a class="header-link" href="#62-mc" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">learn_blackjack</span><span class="p">(</span><span class="n">n_episodes</span><span class="o">=</span><span class="mi">500000</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">0.1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;블랙잭에서 MC 제어&quot;&quot;&quot;</span>
+
+    <span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s1">&#39;Blackjack-v1&#39;</span><span class="p">,</span> <span class="n">sab</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">Q</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">returns_sum</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">returns_count</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_action</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">epsilon</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">sample</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">Q</span><span class="p">[</span><span class="n">state</span><span class="p">])</span>
+
+    <span class="n">wins</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">ep</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_episodes</span><span class="p">):</span>
+        <span class="n">episode</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">state</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+        <span class="n">done</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">done</span><span class="p">:</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="n">get_action</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">)</span>
+            <span class="n">next_state</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">terminated</span><span class="p">,</span> <span class="n">truncated</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+            <span class="n">episode</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">reward</span><span class="p">))</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">next_state</span>
+            <span class="n">done</span> <span class="o">=</span> <span class="n">terminated</span> <span class="ow">or</span> <span class="n">truncated</span>
+
+        <span class="k">if</span> <span class="n">episode</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>  <span class="c1"># 승리</span>
+            <span class="n">wins</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c1"># Q 업데이트</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">visited</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">episode</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">state_t</span><span class="p">,</span> <span class="n">action_t</span><span class="p">,</span> <span class="n">reward_t</span> <span class="o">=</span> <span class="n">episode</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+            <span class="n">G</span> <span class="o">=</span> <span class="n">gamma</span> <span class="o">*</span> <span class="n">G</span> <span class="o">+</span> <span class="n">reward_t</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="n">state_t</span><span class="p">,</span> <span class="n">action_t</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">visited</span><span class="p">:</span>
+                <span class="n">visited</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">state_t</span><span class="p">,</span> <span class="n">action_t</span><span class="p">))</span>
+                <span class="n">returns_sum</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">]</span> <span class="o">+=</span> <span class="n">G</span>
+                <span class="n">returns_count</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">Q</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">returns_sum</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">]</span> <span class="o">/</span>
+                                        <span class="n">returns_count</span><span class="p">[</span><span class="n">state_t</span><span class="p">][</span><span class="n">action_t</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">ep</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">50000</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">win_rate</span> <span class="o">=</span> <span class="n">wins</span> <span class="o">/</span> <span class="p">(</span><span class="n">ep</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Episode </span><span class="si">{</span><span class="n">ep</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">: 승률 = </span><span class="si">{</span><span class="n">win_rate</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">env</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">Q</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">visualize_blackjack_policy</span><span class="p">(</span><span class="n">Q</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;블랙잭 정책 시각화&quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== 사용 가능한 에이스가 없을 때 ===&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;딜러 카드:  A  2  3  4  5  6  7  8  9  10&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">50</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">player_sum</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">21</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;합계 </span><span class="si">{</span><span class="n">player_sum</span><span class="si">:</span><span class="s2">2d</span><span class="si">}</span><span class="s2">:  &quot;</span>
+        <span class="k">for</span> <span class="n">dealer</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">11</span><span class="p">):</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="p">(</span><span class="n">player_sum</span><span class="p">,</span> <span class="n">dealer</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">Q</span><span class="p">:</span>
+                <span class="n">action</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">Q</span><span class="p">[</span><span class="n">state</span><span class="p">])</span>
+                <span class="n">row</span> <span class="o">+=</span> <span class="s2">&quot;H  &quot;</span> <span class="k">if</span> <span class="n">action</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="s2">&quot;S  &quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">row</span> <span class="o">+=</span> <span class="s2">&quot;?  &quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== 사용 가능한 에이스가 있을 때 ===&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;딜러 카드:  A  2  3  4  5  6  7  8  9  10&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">50</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">player_sum</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">21</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;합계 </span><span class="si">{</span><span class="n">player_sum</span><span class="si">:</span><span class="s2">2d</span><span class="si">}</span><span class="s2">:  &quot;</span>
+        <span class="k">for</span> <span class="n">dealer</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">11</span><span class="p">):</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="p">(</span><span class="n">player_sum</span><span class="p">,</span> <span class="n">dealer</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">Q</span><span class="p">:</span>
+                <span class="n">action</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">Q</span><span class="p">[</span><span class="n">state</span><span class="p">])</span>
+                <span class="n">row</span> <span class="o">+=</span> <span class="s2">&quot;H  &quot;</span> <span class="k">if</span> <span class="n">action</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="s2">&quot;S  &quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">row</span> <span class="o">+=</span> <span class="s2">&quot;?  &quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+
+
+<span class="c1"># 학습 실행</span>
+<span class="n">Q</span> <span class="o">=</span> <span class="n">learn_blackjack</span><span class="p">(</span><span class="n">n_episodes</span><span class="o">=</span><span class="mi">500000</span><span class="p">)</span>
+<span class="n">visualize_blackjack_policy</span><span class="p">(</span><span class="n">Q</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7-mc">7. MC 방법의 장단점<a class="header-link" href="#7-mc" title="Permanent link">&para;</a></h2>
+<h3 id="71">7.1 장점<a class="header-link" href="#71" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>장점</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>모델 프리</td>
+<td>환경 모델 불필요</td>
+</tr>
+<tr>
+<td>편향 없음</td>
+<td>부트스트래핑 없이 실제 리턴 사용</td>
+</tr>
+<tr>
+<td>직관적</td>
+<td>평균 리턴 계산으로 간단함</td>
+</tr>
+<tr>
+<td>에피소드 독립</td>
+<td>에피소드별 병렬 처리 가능</td>
+</tr>
+</tbody>
+</table>
+<h3 id="72">7.2 단점<a class="header-link" href="#72" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>단점</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>높은 분산</td>
+<td>전체 리턴의 분산이 큼</td>
+</tr>
+<tr>
+<td>에피소드 종료 필요</td>
+<td>연속 태스크에 부적합</td>
+</tr>
+<tr>
+<td>느린 학습</td>
+<td>에피소드 끝까지 기다려야 함</td>
+</tr>
+<tr>
+<td>탐험 문제</td>
+<td>방문하지 않은 상태 학습 불가</td>
+</tr>
+</tbody>
+</table>
+<h3 id="73-dp-vs-mc">7.3 DP vs MC 요약<a class="header-link" href="#73-dp-vs-mc" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>                    DP                    MC
+              ─────────────          ─────────────
+필요 정보     환경 모델              경험 (에피소드)
+
+업데이트      V(s) ← Σ P(s&#39;|s,a)    V(s) ← 평균(G)
+방식          [R + γV(s&#39;)]
+
+편향          편향 있음              편향 없음
+              (부트스트랩)           (실제 리턴)
+
+분산          낮음                   높음
+              (기대값 계산)          (샘플 분산)
+
+적용 환경     유한 MDP               에피소딕 태스크
+</code></pre></div>
+
+<hr />
+<h2 id="8">8. 요약<a class="header-link" href="#8" title="Permanent link">&para;</a></h2>
+<h3 id="_2">핵심 개념<a class="header-link" href="#_2" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>개념</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>몬테카를로</td>
+<td>경험으로부터 학습</td>
+</tr>
+<tr>
+<td>First-visit</td>
+<td>첫 방문만 카운트</td>
+</tr>
+<tr>
+<td>Every-visit</td>
+<td>모든 방문 카운트</td>
+</tr>
+<tr>
+<td>On-policy</td>
+<td>행동 정책 = 목표 정책</td>
+</tr>
+<tr>
+<td>Off-policy</td>
+<td>행동 정책 ≠ 목표 정책</td>
+</tr>
+<tr>
+<td>Importance Sampling</td>
+<td>분포 보정을 위한 가중치</td>
+</tr>
+</tbody>
+</table>
+<h3 id="mc">MC 정책 평가 공식<a class="header-link" href="#mc" title="Permanent link">&para;</a></h3>
+<p>$$V(s) = \frac{1}{N(s)} \sum_{i=1}^{N(s)} G_i(s)$$</p>
+<h3 id="mc-q-">MC Q-함수 업데이트<a class="header-link" href="#mc-q-" title="Permanent link">&para;</a></h3>
+<p>$$Q(s, a) \leftarrow Q(s, a) + \frac{1}{N(s,a)} (G - Q(s, a))$$</p>
+<hr />
+<h2 id="9">9. 연습 문제<a class="header-link" href="#9" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong>First-visit vs Every-visit</strong>: 동일한 상태를 3번 방문하는 에피소드에서 두 방법의 차이를 계산하세요.</p>
+</li>
+<li>
+<p><strong>탐험 문제</strong>: ε-greedy에서 ε=0이면 어떤 문제가 발생하나요?</p>
+</li>
+<li>
+<p><strong>Importance Sampling</strong>: 목표 정책이 결정적이고 행동 정책이 ε-greedy일 때, 중요도 비율이 발산할 수 있는 경우는?</p>
+</li>
+<li>
+<p><strong>수렴 속도</strong>: MC의 분산이 높은 이유와 해결 방법을 설명하세요.</p>
+</li>
+</ol>
+<hr />
+<h2 id="_3">다음 단계<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<p>다음 레슨 <strong>05_TD_Learning.md</strong>에서는 DP의 부트스트래핑과 MC의 샘플링을 결합한 <strong>TD 학습</strong>을 배웁니다.</p>
+<hr />
+<h2 id="_4">참고 자료<a class="header-link" href="#_4" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Sutton &amp; Barto, "Reinforcement Learning: An Introduction", Chapter 5</li>
+<li>David Silver's RL Course, Lecture 4: Model-Free Prediction</li>
+<li><a href="https://gymnasium.farama.org/environments/toy_text/blackjack/">Gymnasium Blackjack</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Reinforcement_Learning/03_Dynamic_Programming.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">03. 동적 프로그래밍 (Dynamic Programming)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Reinforcement_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Reinforcement_Learning/05_TD_Learning.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">05. 시간차 학습 (Temporal Difference Learning)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

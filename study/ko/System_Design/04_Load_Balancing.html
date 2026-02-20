@@ -1,0 +1,1286 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로드 밸런싱 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/System_Design/">System Design</a>
+    <span class="separator">/</span>
+    <span class="current">로드 밸런싱</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>로드 밸런싱</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/System_Design/03_Network_Fundamentals_Review.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">네트워크 기초 복습</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/System_Design/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/System_Design/05_Reverse_Proxy_API_Gateway.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">리버스 프록시와 API 게이트웨이</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_2">개요</a></li>
+<li><a href="#_3">목차</a></li>
+<li><a href="#1">1. 로드 밸런싱이란?</a><ul>
+<li><a href="#11">1.1 정의</a></li>
+<li><a href="#12">1.2 로드 밸런서의 역할</a></li>
+</ul>
+</li>
+<li><a href="#2-l4-vs-l7">2. L4 vs L7 로드 밸런서</a><ul>
+<li><a href="#21-l4-transport-layer">2.1 L4 로드 밸런서 (Transport Layer)</a></li>
+<li><a href="#22-l7-application-layer">2.2 L7 로드 밸런서 (Application Layer)</a></li>
+<li><a href="#23">2.3 비교 요약</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 분배 알고리즘</a><ul>
+<li><a href="#31-round-robin">3.1 Round Robin</a></li>
+<li><a href="#32-weighted-round-robin">3.2 Weighted Round Robin</a></li>
+<li><a href="#33-least-connections">3.3 Least Connections</a></li>
+<li><a href="#34-ip-hash">3.4 IP Hash</a></li>
+<li><a href="#35">3.5 알고리즘 비교 요약</a></li>
+</ul>
+</li>
+<li><a href="#4-sticky-session">4. Sticky Session</a><ul>
+<li><a href="#41-sticky-session">4.1 Sticky Session이란?</a></li>
+<li><a href="#42-sticky-session">4.2 Sticky Session 구현 방법</a></li>
+<li><a href="#43-sticky-session">4.3 Sticky Session의 문제점</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 헬스 체크</a><ul>
+<li><a href="#51">5.1 헬스 체크란?</a></li>
+<li><a href="#52-active-vs-passive">5.2 Active vs Passive 헬스 체크</a></li>
+<li><a href="#53">5.3 헬스 체크 엔드포인트 설계</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 고가용성 구성</a><ul>
+<li><a href="#61-active-passive-hot-standby">6.1 Active-Passive (Hot Standby)</a></li>
+<li><a href="#62-active-active">6.2 Active-Active</a></li>
+<li><a href="#63">6.3 클라우드 로드밸런서</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 연습 문제</a><ul>
+<li><a href="#1_1">문제 1: 로드밸런서 선택</a></li>
+<li><a href="#2">문제 2: 분배 알고리즘 선택</a></li>
+<li><a href="#3_1">문제 3: 헬스 체크 설계</a></li>
+<li><a href="#4">문제 4: 아키텍처 설계</a></li>
+</ul>
+</li>
+<li><a href="#_4">정답</a><ul>
+<li><a href="#1_2">문제 1 정답</a></li>
+<li><a href="#2_1">문제 2 정답</a></li>
+<li><a href="#3_2">문제 3 정답</a></li>
+<li><a href="#4_1">문제 4 정답</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 다음 단계</a><ul>
+<li><a href="#_5">다음 레슨</a></li>
+<li><a href="#_6">관련 레슨</a></li>
+<li><a href="#_7">추천 실습</a></li>
+</ul>
+</li>
+<li><a href="#9">9. 참고 자료</a><ul>
+<li><a href="#_8">도구</a></li>
+<li><a href="#_9">문서</a></li>
+<li><a href="#_10">온라인 자료</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="_1">로드 밸런싱<a class="header-link" href="#_1" title="Permanent link">&para;</a></h1>
+<h2 id="_2">개요<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<p>이 문서에서는 로드 밸런싱(Load Balancing)의 핵심 개념을 다룹니다. L4/L7 로드 밸런서의 차이, 다양한 트래픽 분배 알고리즘, Sticky Session, 그리고 헬스 체크 메커니즘을 학습합니다.</p>
+<p><strong>난이도</strong>: ⭐⭐⭐
+<strong>예상 학습 시간</strong>: 2-3시간
+<strong>선수 지식</strong>: <a href="./03_Network_Fundamentals_Review.md">03_Network_Fundamentals_Review.md</a></p>
+<hr />
+<h2 id="_3">목차<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-로드-밸런싱이란">로드 밸런싱이란?</a></li>
+<li><a href="#2-l4-vs-l7-로드-밸런서">L4 vs L7 로드 밸런서</a></li>
+<li><a href="#3-분배-알고리즘">분배 알고리즘</a></li>
+<li><a href="#4-sticky-session">Sticky Session</a></li>
+<li><a href="#5-헬스-체크">헬스 체크</a></li>
+<li><a href="#6-고가용성-구성">고가용성 구성</a></li>
+<li><a href="#7-연습-문제">연습 문제</a></li>
+<li><a href="#8-다음-단계">다음 단계</a></li>
+<li><a href="#9-참고-자료">참고 자료</a></li>
+</ol>
+<hr />
+<h2 id="1">1. 로드 밸런싱이란?<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="11">1.1 정의<a class="header-link" href="#11" title="Permanent link">&para;</a></h3>
+<p>로드 밸런싱은 들어오는 네트워크 트래픽을 여러 서버에 분산시켜 시스템의 가용성과 성능을 향상시키는 기술입니다.</p>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                    </span><span class="n">로드</span><span class="w"> </span><span class="n">밸런싱</span><span class="w"> </span><span class="n">개념</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">로드</span><span class="w"> </span><span class="n">밸런서</span><span class="w"> </span><span class="nl">없이</span><span class="p">:</span><span class="w">                                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">Client</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="err">─────┐</span><span class="w">                                           </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">Client</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="err">─────┼─────────▶</span><span class="w"> </span><span class="n">Server</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">(</span><span class="n">과부하</span><span class="err">!</span><span class="p">)</span><span class="w">              </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">Client</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="err">─────┤</span><span class="w">                                           </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">     </span><span class="p">...</span><span class="w">        </span><span class="err">│</span><span class="w">                                           </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">Client</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="err">─────┘</span><span class="w">                                           </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nl">문제</span><span class="p">:</span><span class="w"> </span><span class="n">단일</span><span class="w"> </span><span class="n">서버</span><span class="w"> </span><span class="n">과부하</span><span class="p">,</span><span class="w"> </span><span class="n">장애</span><span class="w"> </span><span class="n">시</span><span class="w"> </span><span class="n">서비스</span><span class="w"> </span><span class="n">중단</span><span class="w">               </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">로드</span><span class="w"> </span><span class="n">밸런서</span><span class="w"> </span><span class="nl">적용</span><span class="p">:</span><span class="w">                                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">Client</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="err">─────┐</span><span class="w">         </span><span class="err">┌────────▶</span><span class="w"> </span><span class="n">Server</span><span class="w"> </span><span class="mi">1</span><span class="w">               </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">Client</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="err">─────┼─▶</span><span class="w"> </span><span class="o">[</span><span class="n">LB</span><span class="o">]</span><span class="w"> </span><span class="err">─┼────────▶</span><span class="w"> </span><span class="n">Server</span><span class="w"> </span><span class="mi">2</span><span class="w">               </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">Client</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="err">─────┤</span><span class="w">         </span><span class="err">└────────▶</span><span class="w"> </span><span class="n">Server</span><span class="w"> </span><span class="mi">3</span><span class="w">               </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">     </span><span class="p">...</span><span class="w">        </span><span class="err">│</span><span class="w">                                           </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">Client</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="err">─────┘</span><span class="w">                                           </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nl">해결</span><span class="p">:</span><span class="w"> </span><span class="n">부하</span><span class="w"> </span><span class="n">분산</span><span class="p">,</span><span class="w"> </span><span class="n">고가용성</span><span class="p">,</span><span class="w"> </span><span class="n">수평</span><span class="w"> </span><span class="n">확장</span><span class="w"> </span><span class="n">가능</span><span class="w">                 </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="12">1.2 로드 밸런서의 역할<a class="header-link" href="#12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                   로드 밸런서 주요 기능                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. 트래픽 분산                                                 │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ • 요청을 여러 서버에 균등하게 분배                         │ │
+│  │ • 서버별 처리 용량에 따라 가중치 적용 가능                 │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  2. 고가용성 (High Availability)                                │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ • 서버 장애 감지 및 트래픽 자동 전환                       │ │
+│  │ • 사용자는 장애를 인지하지 못함                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  3. 확장성                                                      │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ • 서버 추가/제거가 용이                                    │ │
+│  │ • 무중단 서버 교체 가능                                    │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  4. SSL 종료 (SSL Termination)                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ • LB에서 HTTPS 처리, 백엔드는 HTTP                         │ │
+│  │ • 서버 부하 감소, 인증서 관리 집중화                       │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  5. 세션 관리                                                   │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ • Sticky Session으로 같은 서버 유지                        │ │
+│  │ • 세션 데이터 일관성 보장                                  │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="2-l4-vs-l7">2. L4 vs L7 로드 밸런서<a class="header-link" href="#2-l4-vs-l7" title="Permanent link">&para;</a></h2>
+<h3 id="21-l4-transport-layer">2.1 L4 로드 밸런서 (Transport Layer)<a class="header-link" href="#21-l4-transport-layer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                  L4 로드 밸런서                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  OSI 4계층 (전송 계층) - TCP/UDP 레벨에서 동작                  │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  패킷 헤더 정보만 확인:                                    │ │
+│  │  ┌─────────────────────────────────────────────────┐       │ │
+│  │  │ Source IP    │ Dest IP     │ Source   │ Dest   │       │ │
+│  │  │ 203.0.113.50 │ 10.0.0.100  │ Port     │ Port   │       │ │
+│  │  │              │             │ 54321    │ 80     │       │ │
+│  │  └─────────────────────────────────────────────────┘       │ │
+│  │                       ↑                                    │ │
+│  │                  이 정보로 라우팅                          │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  동작 방식:                                                     │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Client ──▶ LB (10.0.0.100:80)                             │ │
+│  │                    │                                       │ │
+│  │           ┌────────┴────────┐                              │ │
+│  │           │ IP/Port 기반    │                              │ │
+│  │           │ 라우팅 결정     │                              │ │
+│  │           └────────┬────────┘                              │ │
+│  │                    │                                       │ │
+│  │          ┌─────────┼─────────┐                             │ │
+│  │          ▼         ▼         ▼                             │ │
+│  │     Server 1   Server 2   Server 3                         │ │
+│  │     10.0.1.1   10.0.1.2   10.0.1.3                         │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  장점:                                                          │
+│  • 빠른 처리 (패킷 내용 검사 안 함)                             │
+│  • 낮은 리소스 사용                                             │
+│  • 프로토콜에 독립적 (TCP, UDP 모두 가능)                       │
+│                                                                  │
+│  단점:                                                          │
+│  • 애플리케이션 인식 불가                                       │
+│  • URL 기반 라우팅 불가                                         │
+│  • 콘텐츠 기반 결정 불가                                        │
+│                                                                  │
+│  예시: AWS NLB, HAProxy (TCP mode), LVS                         │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="22-l7-application-layer">2.2 L7 로드 밸런서 (Application Layer)<a class="header-link" href="#22-l7-application-layer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                  L7 로드 밸런서                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  OSI 7계층 (애플리케이션 계층) - HTTP/HTTPS 레벨에서 동작       │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  HTTP 요청 내용 분석:                                      │ │
+│  │  ┌─────────────────────────────────────────────────┐       │ │
+│  │  │ GET /api/users HTTP/1.1                         │       │ │
+│  │  │ Host: api.example.com                           │       │ │
+│  │  │ Cookie: session=abc123                          │       │ │
+│  │  │ Authorization: Bearer xxx                       │       │ │
+│  │  │ Content-Type: application/json                  │       │ │
+│  │  └─────────────────────────────────────────────────┘       │ │
+│  │           ↑                                                │ │
+│  │      전체 내용 분석하여 라우팅                             │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  URL 기반 라우팅:                                               │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  /api/users/*   ──────────▶ User Service                   │ │
+│  │  /api/orders/*  ──────────▶ Order Service                  │ │
+│  │  /api/products/*──────────▶ Product Service                │ │
+│  │  /static/*      ──────────▶ CDN/Static Server              │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  호스트 기반 라우팅:                                            │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  api.example.com   ──────▶ API Servers                     │ │
+│  │  www.example.com   ──────▶ Web Servers                     │ │
+│  │  admin.example.com ──────▶ Admin Servers                   │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  장점:                                                          │
+│  • 콘텐츠 기반 스마트 라우팅                                    │
+│  • SSL 종료                                                     │
+│  • 요청/응답 수정 가능                                          │
+│  • A/B 테스트, 카나리 배포                                      │
+│                                                                  │
+│  단점:                                                          │
+│  • L4보다 느림 (패킷 분석 필요)                                 │
+│  • 더 많은 리소스 사용                                          │
+│  • HTTP/HTTPS에 한정                                            │
+│                                                                  │
+│  예시: AWS ALB, Nginx, HAProxy (HTTP mode), Envoy              │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="23">2.3 비교 요약<a class="header-link" href="#23" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>L4 로드 밸런서</th>
+<th>L7 로드 밸런서</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OSI 계층</td>
+<td>4 (Transport)</td>
+<td>7 (Application)</td>
+</tr>
+<tr>
+<td>분석 대상</td>
+<td>IP, Port</td>
+<td>HTTP 헤더, URL, 쿠키 등</td>
+</tr>
+<tr>
+<td>프로토콜</td>
+<td>TCP, UDP</td>
+<td>HTTP, HTTPS, WebSocket</td>
+</tr>
+<tr>
+<td>속도</td>
+<td>매우 빠름</td>
+<td>빠름</td>
+</tr>
+<tr>
+<td>리소스</td>
+<td>적음</td>
+<td>많음</td>
+</tr>
+<tr>
+<td>기능</td>
+<td>단순 분배</td>
+<td>스마트 라우팅, SSL, 캐싱</td>
+</tr>
+<tr>
+<td>사용 예</td>
+<td>게임 서버, DNS, 내부 통신</td>
+<td>웹 서비스, API</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3">3. 분배 알고리즘<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="31-round-robin">3.1 Round Robin<a class="header-link" href="#31-round-robin" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                      Round Robin                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  &quot;순서대로 돌아가며 분배&quot;                                       │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Request 1 ──▶ Server A                                    │ │
+│  │  Request 2 ──▶ Server B                                    │ │
+│  │  Request 3 ──▶ Server C                                    │ │
+│  │  Request 4 ──▶ Server A  (순환)                            │ │
+│  │  Request 5 ──▶ Server B                                    │ │
+│  │  Request 6 ──▶ Server C                                    │ │
+│  │       ...                                                  │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  장점:                                                          │
+│  • 구현이 간단                                                  │
+│  • 상태 저장 불필요                                             │
+│  • 균등 분배 (동일 성능 서버)                                   │
+│                                                                  │
+│  단점:                                                          │
+│  • 서버 성능 차이 미고려                                        │
+│  • 연결 지속 시간 미고려                                        │
+│                                                                  │
+│  적합: 서버 성능이 동일하고, 요청 처리 시간이 비슷한 경우       │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="32-weighted-round-robin">3.2 Weighted Round Robin<a class="header-link" href="#32-weighted-round-robin" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                  Weighted Round Robin                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  &quot;서버 성능에 따라 가중치 부여&quot;                                 │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Server A: Weight 5  (고성능)                              │ │
+│  │  Server B: Weight 3  (중성능)                              │ │
+│  │  Server C: Weight 2  (저성능)                              │ │
+│  │                                                            │ │
+│  │  10개 요청 분배:                                           │ │
+│  │  A A A A A B B B C C                                       │ │
+│  │  ▲─────────▲─────▲─▲                                       │ │
+│  │  5개       3개   2개                                       │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  적합: 서버 성능이 다를 때, 새 서버 점진적 투입 (canary)        │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="33-least-connections">3.3 Least Connections<a class="header-link" href="#33-least-connections" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    Least Connections                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  &quot;현재 연결이 가장 적은 서버에 분배&quot;                            │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  현재 상태:                                                │ │
+│  │  Server A: 5 connections                                   │ │
+│  │  Server B: 3 connections  ◀── 새 요청 할당                 │ │
+│  │  Server C: 7 connections                                   │ │
+│  │                                                            │ │
+│  │  새 요청 후:                                               │ │
+│  │  Server A: 5 connections                                   │ │
+│  │  Server B: 4 connections                                   │ │
+│  │  Server C: 7 connections                                   │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  Weighted Least Connections:                                    │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  (연결 수 / 가중치)가 가장 작은 서버에 할당                │ │
+│  │                                                            │ │
+│  │  Server A: 5 conn / weight 5 = 1.0                         │ │
+│  │  Server B: 3 conn / weight 2 = 1.5                         │ │
+│  │  Server C: 4 conn / weight 3 = 1.33                        │ │
+│  │                                                            │ │
+│  │  → Server A에 할당 (1.0이 가장 작음)                       │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  장점:                                                          │
+│  • 동적 부하 분산                                               │
+│  • 처리 시간이 다른 요청에 효과적                               │
+│                                                                  │
+│  적합: 요청 처리 시간이 다양할 때, 장기 연결 (WebSocket)        │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="34-ip-hash">3.4 IP Hash<a class="header-link" href="#34-ip-hash" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                       IP Hash                                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  &quot;클라이언트 IP를 해시하여 항상 같은 서버로&quot;                    │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  hash(Client IP) % 서버 수 = 서버 인덱스                   │ │
+│  │                                                            │ │
+│  │  Client 203.0.113.50:                                      │ │
+│  │    hash(203.0.113.50) = 12345                              │ │
+│  │    12345 % 3 = 0 ──▶ Server A                              │ │
+│  │                                                            │ │
+│  │  Client 198.51.100.25:                                     │ │
+│  │    hash(198.51.100.25) = 67890                             │ │
+│  │    67890 % 3 = 1 ──▶ Server B                              │ │
+│  │                                                            │ │
+│  │  ※ 같은 IP는 항상 같은 서버!                               │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  장점:                                                          │
+│  • Sticky Session 없이도 같은 서버 보장                         │
+│  • 캐시 효율성 (같은 사용자 = 같은 서버 캐시)                   │
+│                                                                  │
+│  단점:                                                          │
+│  • 서버 추가/제거 시 많은 사용자 재분배                         │
+│  • NAT 환경에서 불균형 (같은 공인 IP)                           │
+│                                                                  │
+│  대안: Consistent Hashing (서버 변경 시 영향 최소화)            │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="35">3.5 알고리즘 비교 요약<a class="header-link" href="#35" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>알고리즘</th>
+<th>동작</th>
+<th>장점</th>
+<th>단점</th>
+<th>사용 사례</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Round Robin</td>
+<td>순차 분배</td>
+<td>단순, 균등</td>
+<td>성능 차이 무시</td>
+<td>동일 서버</td>
+</tr>
+<tr>
+<td>Weighted RR</td>
+<td>가중치 분배</td>
+<td>성능 반영</td>
+<td>정적 가중치</td>
+<td>다양한 서버</td>
+</tr>
+<tr>
+<td>Least Conn</td>
+<td>최소 연결</td>
+<td>동적 분산</td>
+<td>상태 추적 필요</td>
+<td>긴 연결</td>
+</tr>
+<tr>
+<td>IP Hash</td>
+<td>IP 해시</td>
+<td>일관성</td>
+<td>불균형 가능</td>
+<td>세션 유지</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-sticky-session">4. Sticky Session<a class="header-link" href="#4-sticky-session" title="Permanent link">&para;</a></h2>
+<h3 id="41-sticky-session">4.1 Sticky Session이란?<a class="header-link" href="#41-sticky-session" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    Sticky Session                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  &quot;같은 사용자의 요청을 항상 같은 서버로&quot;                        │
+│                                                                  │
+│  문제 상황 (Sticky Session 없이):                               │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  User ──Request 1──▶ Server A (로그인, 세션 생성)          │ │
+│  │  User ──Request 2──▶ Server B (세션 없음? 로그아웃!)       │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  해결 (Sticky Session):                                         │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  User ──Request 1──▶ Server A (세션 생성)                  │ │
+│  │  User ──Request 2──▶ Server A (같은 서버!)                 │ │
+│  │  User ──Request 3──▶ Server A (같은 서버!)                 │ │
+│  │                                                            │ │
+│  │           ┌─────────────────────────────────────────┐      │ │
+│  │           │ Load Balancer                           │      │ │
+│  │           │ User A → Server A (Cookie/IP 기반)      │      │ │
+│  │           │ User B → Server B                       │      │ │
+│  │           │ User C → Server A                       │      │ │
+│  │           └─────────────────────────────────────────┘      │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="42-sticky-session">4.2 Sticky Session 구현 방법<a class="header-link" href="#42-sticky-session" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                Sticky Session 구현 방법                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. Cookie 기반                                                 │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  첫 요청:                                                  │ │
+│  │  Client ──────────▶ LB ──────────▶ Server A                │ │
+│  │         ◀──────────    ◀──────────                         │ │
+│  │    Set-Cookie: SERVERID=server-a                           │ │
+│  │                                                            │ │
+│  │  이후 요청:                                                │ │
+│  │  Client ──────────▶ LB (Cookie 확인) ──▶ Server A          │ │
+│  │    Cookie: SERVERID=server-a                               │ │
+│  │                                                            │ │
+│  │  장점: 가장 일반적, 안정적                                 │ │
+│  │  단점: 쿠키 비활성화 시 동작 안 함                         │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  2. Source IP 기반                                              │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Client IP 203.0.113.50 → 항상 Server A                    │ │
+│  │  Client IP 198.51.100.25 → 항상 Server B                   │ │
+│  │                                                            │ │
+│  │  장점: 쿠키 불필요                                         │ │
+│  │  단점: NAT, 프록시 환경에서 문제                           │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  3. Application Cookie (세션 ID)                                │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  앱에서 생성한 세션 ID (JSESSIONID 등) 활용                │ │
+│  │  Cookie: JSESSIONID=abc123 → hash(abc123) → Server A       │ │
+│  │                                                            │ │
+│  │  장점: 앱 세션과 일치                                      │ │
+│  │  단점: 첫 요청 시 쿠키 없음                                │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="43-sticky-session">4.3 Sticky Session의 문제점<a class="header-link" href="#43-sticky-session" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│               Sticky Session 문제점과 대안                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  문제점:                                                        │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  1. 부하 불균형                                            │ │
+│  │     특정 서버에 &quot;무거운&quot; 사용자가 몰릴 수 있음             │ │
+│  │                                                            │ │
+│  │  2. 장애 시 세션 손실                                      │ │
+│  │     서버 다운 → 해당 서버의 모든 사용자 세션 손실          │ │
+│  │                                                            │ │
+│  │  3. Auto Scaling 어려움                                    │ │
+│  │     서버 추가/제거 시 사용자 재분배 필요                   │ │
+│  │                                                            │ │
+│  │  4. 수평 확장 제한                                         │ │
+│  │     Stateful 아키텍처의 한계                               │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  대안 (Stateless 아키텍처):                                     │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  1. 외부 세션 저장소 (Redis, Memcached)                    │ │
+│  │     모든 서버가 같은 세션 데이터에 접근                    │ │
+│  │                                                            │ │
+│  │  2. JWT (JSON Web Token)                                   │ │
+│  │     세션 정보를 토큰에 포함, 서버 저장 불필요              │ │
+│  │                                                            │ │
+│  │  3. 데이터베이스 세션                                      │ │
+│  │     세션을 DB에 저장 (느리지만 확실)                       │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 헬스 체크<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="51">5.1 헬스 체크란?<a class="header-link" href="#51" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                      헬스 체크                                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  &quot;서버 상태를 주기적으로 확인하여 장애 감지&quot;                    │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │           Load Balancer                                    │ │
+│  │               │                                            │ │
+│  │    ┌──────────┼──────────┐                                 │ │
+│  │    │          │          │                                 │ │
+│  │    ▼          ▼          ▼                                 │ │
+│  │  Server A   Server B   Server C                            │ │
+│  │    ✓          ✓          ✗ (장애)                          │ │
+│  │                                                            │ │
+│  │  트래픽 분배: A, B만 (C 제외)                              │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  주기적으로:                                                    │
+│  1. 헬스 체크 요청 전송                                         │
+│  2. 응답 확인                                                   │
+│  3. 실패 횟수 누적                                              │
+│  4. 임계값 초과 시 서버 제외                                    │
+│  5. 복구 시 다시 포함                                           │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="52-active-vs-passive">5.2 Active vs Passive 헬스 체크<a class="header-link" href="#52-active-vs-passive" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│              Active vs Passive 헬스 체크                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Active Health Check (능동적)                                   │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  LB가 주기적으로 서버에 요청 전송                          │ │
+│  │                                                            │ │
+│  │  ┌──────┐   GET /health   ┌──────┐                         │ │
+│  │  │  LB  │ ───────────────▶│Server│                         │ │
+│  │  │      │ ◀───────────────│      │                         │ │
+│  │  └──────┘   200 OK        └──────┘                         │ │
+│  │                                                            │ │
+│  │  설정 예:                                                  │ │
+│  │  • 간격: 10초                                              │ │
+│  │  • 타임아웃: 5초                                           │ │
+│  │  • 실패 임계값: 3회                                        │ │
+│  │  • 복구 임계값: 2회                                        │ │
+│  │                                                            │ │
+│  │  장점: 트래픽 없이도 장애 감지                             │ │
+│  │  단점: 추가 부하, 네트워크 트래픽                          │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  Passive Health Check (수동적)                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  실제 요청의 응답을 모니터링                               │ │
+│  │                                                            │ │
+│  │  Client ──▶ LB ──▶ Server                                  │ │
+│  │                      │                                     │ │
+│  │              ┌───────┴───────┐                             │ │
+│  │              │ 5xx 에러?     │                             │ │
+│  │              │ 타임아웃?     │                             │ │
+│  │              │ 연결 실패?    │                             │ │
+│  │              └───────────────┘                             │ │
+│  │                      │                                     │ │
+│  │              실패 카운트 증가                              │ │
+│  │                                                            │ │
+│  │  장점: 추가 트래픽 없음, 실제 상황 반영                    │ │
+│  │  단점: 실제 사용자가 에러 경험                             │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  권장: Active + Passive 조합                                    │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="53">5.3 헬스 체크 엔드포인트 설계<a class="header-link" href="#53" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                헬스 체크 엔드포인트 설계                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. 단순 헬스 체크                                              │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  GET /health                                               │ │
+│  │                                                            │ │
+│  │  Response: 200 OK                                          │ │
+│  │  { &quot;status&quot;: &quot;healthy&quot; }                                   │ │
+│  │                                                            │ │
+│  │  용도: 프로세스 생존 확인                                  │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  2. 상세 헬스 체크                                              │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  GET /health/details                                       │ │
+│  │                                                            │ │
+│  │  Response:                                                 │ │
+│  │  {                                                         │ │
+│  │    &quot;status&quot;: &quot;healthy&quot;,                                    │ │
+│  │    &quot;version&quot;: &quot;1.2.3&quot;,                                     │ │
+│  │    &quot;uptime&quot;: &quot;3d 5h 20m&quot;,                                  │ │
+│  │    &quot;dependencies&quot;: {                                       │ │
+│  │      &quot;database&quot;: &quot;healthy&quot;,                                │ │
+│  │      &quot;redis&quot;: &quot;healthy&quot;,                                   │ │
+│  │      &quot;external_api&quot;: &quot;degraded&quot;                            │ │
+│  │    }                                                       │ │
+│  │  }                                                         │ │
+│  │                                                            │ │
+│  │  용도: 디버깅, 모니터링 대시보드                           │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  3. Readiness vs Liveness (Kubernetes)                          │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Liveness: 프로세스가 살아있는가?                          │ │
+│  │    GET /health/live                                        │ │
+│  │    실패 시: 컨테이너 재시작                                │ │
+│  │                                                            │ │
+│  │  Readiness: 트래픽 받을 준비가 되었는가?                   │ │
+│  │    GET /health/ready                                       │ │
+│  │    실패 시: 트래픽 제외 (재시작 안 함)                     │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 고가용성 구성<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="61-active-passive-hot-standby">6.1 Active-Passive (Hot Standby)<a class="header-link" href="#61-active-passive-hot-standby" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                  Active-Passive 구성                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  &quot;하나가 죽으면 대기 중인 다른 하나가 인수&quot;                     │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  정상 상태:                                                │ │
+│  │                                                            │ │
+│  │  Clients ──▶ VIP (10.0.0.100) ──▶ LB Primary (Active)      │ │
+│  │                                     │                      │ │
+│  │                                     │ Heartbeat            │ │
+│  │                                     ▼                      │ │
+│  │                               LB Secondary (Standby)       │ │
+│  │                                                            │ │
+│  │  장애 발생 시:                                             │ │
+│  │                                                            │ │
+│  │  Clients ──▶ VIP (10.0.0.100) ──▶ LB Primary (Down!)       │ │
+│  │                    │                                       │ │
+│  │                    │ VIP 인수 (Failover)                   │ │
+│  │                    ▼                                       │ │
+│  │               LB Secondary (Active)                        │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  구현: VRRP, Keepalived, Pacemaker                              │
+│  장점: 간단, 리소스 효율 (Standby는 대기만)                     │
+│  단점: Standby 리소스 낭비, 전환 시 짧은 다운타임               │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="62-active-active">6.2 Active-Active<a class="header-link" href="#62-active-active" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                   Active-Active 구성                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  &quot;두 로드밸런서가 동시에 트래픽 처리&quot;                           │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │                      DNS                                   │ │
+│  │                       │                                    │ │
+│  │            ┌──────────┴──────────┐                         │ │
+│  │            │                     │                         │ │
+│  │            ▼                     ▼                         │ │
+│  │     LB 1 (Active)          LB 2 (Active)                   │ │
+│  │     VIP: 10.0.0.100        VIP: 10.0.0.101                 │ │
+│  │            │                     │                         │ │
+│  │            └──────────┬──────────┘                         │ │
+│  │                       │                                    │ │
+│  │            ┌──────────┼──────────┐                         │ │
+│  │            ▼          ▼          ▼                         │ │
+│  │        Server 1   Server 2   Server 3                      │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  장애 시:                                                       │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  LB 1 (Down!) ──▶ DNS에서 제거 또는                        │ │
+│  │                  LB 2가 VIP 인수                           │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  장점: 리소스 100% 활용, 더 높은 처리량                         │
+│  단점: 구성 복잡, 상태 동기화 필요                              │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="63">6.3 클라우드 로드밸런서<a class="header-link" href="#63" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                  클라우드 로드밸런서                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  AWS:                                                           │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ • ALB (Application Load Balancer) - L7                     │ │
+│  │   URL/호스트 기반 라우팅, WebSocket, HTTP/2                │ │
+│  │                                                            │ │
+│  │ • NLB (Network Load Balancer) - L4                         │ │
+│  │   초저지연, 고정 IP, TCP/UDP                               │ │
+│  │                                                            │ │
+│  │ • CLB (Classic Load Balancer) - L4/L7 (레거시)             │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  GCP:                                                           │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ • HTTP(S) Load Balancer - L7, 글로벌                       │ │
+│  │ • TCP/UDP Load Balancer - L4, 리전별                       │ │
+│  │ • Internal Load Balancer - 내부 트래픽                     │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  장점:                                                          │
+│  • 관리형 서비스 (운영 부담 감소)                               │
+│  • 자동 확장, 고가용성 내장                                     │
+│  • Auto Scaling과 통합                                          │
+│  • 보안 기능 (WAF, DDoS 방어)                                   │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 연습 문제<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="1_1">문제 1: 로드밸런서 선택<a class="header-link" href="#1_1" title="Permanent link">&para;</a></h3>
+<p>다음 시나리오에 적합한 로드밸런서 유형(L4/L7)을 선택하고 이유를 설명하세요.</p>
+<p>a) 마이크로서비스 간 gRPC 통신
+b) 다국어 웹사이트 (URL: /ko/, /en/, /jp/)
+c) 실시간 게임 서버
+d) API 게이트웨이</p>
+<h3 id="2">문제 2: 분배 알고리즘 선택<a class="header-link" href="#2" title="Permanent link">&para;</a></h3>
+<p>다음 상황에 가장 적합한 분배 알고리즘을 선택하세요.</p>
+<p>a) 모든 서버가 동일한 스펙, 요청 처리 시간 비슷
+b) WebSocket 기반 채팅 서비스
+c) 새 서버를 점진적으로 투입 (canary)
+d) 서버 측 캐싱을 활용하는 서비스</p>
+<h3 id="3_1">문제 3: 헬스 체크 설계<a class="header-link" href="#3_1" title="Permanent link">&para;</a></h3>
+<p>전자상거래 서비스의 헬스 체크 엔드포인트를 설계하세요.</p>
+<p>조건:
+- 데이터베이스, Redis, 결제 API 의존
+- Kubernetes 환경
+- 빠른 장애 감지 필요</p>
+<h3 id="4">문제 4: 아키텍처 설계<a class="header-link" href="#4" title="Permanent link">&para;</a></h3>
+<p>일일 1억 요청을 처리하는 서비스의 로드밸런서 아키텍처를 설계하세요.</p>
+<p>조건:
+- 글로벌 사용자 (아시아, 북미, 유럽)
+- 99.99% 가용성 요구
+- 비용 최적화</p>
+<hr />
+<h2 id="_4">정답<a class="header-link" href="#_4" title="Permanent link">&para;</a></h2>
+<h3 id="1_2">문제 1 정답<a class="header-link" href="#1_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>a) gRPC 통신: L4 (NLB)
+   - gRPC는 HTTP/2 기반이지만 L4에서 충분
+   - 낮은 지연, 높은 처리량
+
+b) 다국어 웹사이트: L7 (ALB)
+   - URL 기반 라우팅 필요 (/ko → 한국어 서버)
+   - 호스트 헤더 분석
+
+c) 게임 서버: L4 (NLB)
+   - UDP 지원 필요
+   - 최소 지연 중요
+   - TCP/UDP 게임 프로토콜
+
+d) API 게이트웨이: L7 (ALB)
+   - URL/헤더 기반 라우팅
+   - 인증, Rate Limiting
+   - SSL 종료
+</code></pre></div>
+
+<h3 id="2_1">문제 2 정답<a class="header-link" href="#2_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>a) Round Robin
+   - 서버 동일, 요청 비슷 → 단순 순환이 효율적
+
+b) Least Connections
+   - WebSocket은 장기 연결
+   - 연결 수 기반 분배가 부하 분산에 효과적
+
+c) Weighted Round Robin
+   - 새 서버에 낮은 가중치 (예: 10%)
+   - 점진적으로 가중치 증가
+
+d) IP Hash 또는 Consistent Hashing
+   - 같은 사용자 → 같은 서버 → 캐시 히트율 증가
+</code></pre></div>
+
+<h3 id="3_2">문제 3 정답<a class="header-link" href="#3_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// GET /health/ready (Readiness)</span>
+<span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;healthy&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;checks&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;database&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;healthy&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;latency_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;redis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;healthy&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;latency_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;payment_api&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;healthy&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;latency_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// GET /health/live (Liveness)</span>
+<span class="p">{</span><span class="w"> </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;healthy&quot;</span><span class="w"> </span><span class="p">}</span>
+
+<span class="err">설정</span><span class="p">:</span>
+<span class="mi">-</span><span class="w"> </span><span class="err">Readi</span><span class="kc">ness</span><span class="p">:</span><span class="w"> </span><span class="err">간격</span><span class="w"> </span><span class="mi">5</span><span class="err">초</span><span class="p">,</span><span class="w"> </span><span class="err">실패</span><span class="w"> </span><span class="err">임계값</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="err">복구</span><span class="w"> </span><span class="err">임계값</span><span class="w"> </span><span class="mi">1</span>
+<span class="mi">-</span><span class="w"> </span><span class="err">Live</span><span class="kc">ness</span><span class="p">:</span><span class="w"> </span><span class="err">간격</span><span class="w"> </span><span class="mi">10</span><span class="err">초</span><span class="p">,</span><span class="w"> </span><span class="err">실패</span><span class="w"> </span><span class="err">임계값</span><span class="w"> </span><span class="mi">3</span>
+
+<span class="err">Readi</span><span class="kc">ness</span><span class="w"> </span><span class="err">실패</span><span class="w"> </span><span class="err">시</span><span class="p">:</span><span class="w"> </span><span class="err">트래픽</span><span class="w"> </span><span class="err">제외</span><span class="w"> </span><span class="err">(결제</span><span class="w"> </span><span class="err">등</span><span class="w"> </span><span class="err">의존성</span><span class="w"> </span><span class="err">문제)</span>
+<span class="err">Live</span><span class="kc">ness</span><span class="w"> </span><span class="err">실패</span><span class="w"> </span><span class="err">시</span><span class="p">:</span><span class="w"> </span><span class="err">컨테이너</span><span class="w"> </span><span class="err">재시작</span>
+</code></pre></div>
+
+<h3 id="4_1">문제 4 정답<a class="header-link" href="#4_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">아키텍처</span><span class="o">:</span>
+
+<span class="mi">1</span><span class="o">.</span><span class="w"> </span><span class="err">글로벌</span><span class="w"> </span><span class="err">로드밸런싱</span><span class="w"> </span><span class="o">(</span><span class="n">DNS</span><span class="o">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">AWS</span><span class="w"> </span><span class="n">Route</span><span class="w"> </span><span class="mi">53</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">Cloudflare</span><span class="w"> </span><span class="o">(</span><span class="n">Latency</span><span class="o">-</span><span class="n">based</span><span class="o">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="err">아시아</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="err">서울</span><span class="w"> </span><span class="err">리전</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="err">북미</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="err">버지니아</span><span class="w"> </span><span class="err">리전</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="err">유럽</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="err">프랑크푸르트</span><span class="w"> </span><span class="err">리전</span>
+
+<span class="mi">2</span><span class="o">.</span><span class="w"> </span><span class="err">리전별</span><span class="w"> </span><span class="err">구성</span><span class="o">:</span>
+<span class="w">   </span><span class="err">┌─────────────────────────────────┐</span>
+<span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">CDN</span><span class="w"> </span><span class="o">(</span><span class="n">CloudFront</span><span class="o">/</span><span class="n">Cloudflare</span><span class="o">)</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="err">←</span><span class="w"> </span><span class="err">정적</span><span class="w"> </span><span class="err">컨텐츠</span>
+<span class="w">   </span><span class="err">└─────────────────────────────────┘</span>
+<span class="w">                    </span><span class="err">│</span>
+<span class="w">   </span><span class="err">┌─────────────────────────────────┐</span>
+<span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">L7</span><span class="w"> </span><span class="n">Load</span><span class="w"> </span><span class="n">Balancer</span><span class="w"> </span><span class="o">(</span><span class="n">ALB</span><span class="o">)</span><span class="w">         </span><span class="err">│</span><span class="w"> </span><span class="err">←</span><span class="w"> </span><span class="n">URL</span><span class="w"> </span><span class="err">라우팅</span>
+<span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">Auto</span><span class="w"> </span><span class="n">Scaling</span><span class="w">                 </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">WAF</span><span class="w"> </span><span class="err">연동</span><span class="w">                     </span><span class="err">│</span>
+<span class="w">   </span><span class="err">└─────────────────────────────────┘</span>
+<span class="w">                    </span><span class="err">│</span>
+<span class="w">   </span><span class="err">┌─────────────────────────────────┐</span>
+<span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">Application</span><span class="w"> </span><span class="n">Servers</span><span class="w">            </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="o">(</span><span class="n">Auto</span><span class="w"> </span><span class="n">Scaling</span><span class="w"> </span><span class="n">Group</span><span class="o">)</span><span class="w">           </span><span class="err">│</span>
+<span class="w">   </span><span class="err">└─────────────────────────────────┘</span>
+
+<span class="mi">3</span><span class="o">.</span><span class="w"> </span><span class="err">가용성</span><span class="w"> </span><span class="err">확보</span><span class="o">:</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="err">다중</span><span class="w"> </span><span class="err">가용영역</span><span class="w"> </span><span class="o">(</span><span class="n">AZ</span><span class="o">)</span><span class="w"> </span><span class="err">배포</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="err">헬스</span><span class="w"> </span><span class="err">체크</span><span class="o">:</span><span class="w"> </span><span class="n">Active</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">Passive</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Cross</span><span class="o">-</span><span class="n">Zone</span><span class="w"> </span><span class="n">Load</span><span class="w"> </span><span class="n">Balancing</span><span class="w"> </span><span class="err">활성화</span>
+
+<span class="mi">4</span><span class="o">.</span><span class="w"> </span><span class="err">비용</span><span class="w"> </span><span class="err">최적화</span><span class="o">:</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Reserved</span><span class="w"> </span><span class="n">Instances</span><span class="w"> </span><span class="o">(</span><span class="err">예약</span><span class="w"> </span><span class="err">인스턴스</span><span class="o">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">CDN으로</span><span class="w"> </span><span class="n">Origin</span><span class="w"> </span><span class="err">부하</span><span class="w"> </span><span class="err">감소</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="err">리전별</span><span class="w"> </span><span class="err">트래픽</span><span class="w"> </span><span class="err">패턴에</span><span class="w"> </span><span class="err">따라</span><span class="w"> </span><span class="n">Auto</span><span class="w"> </span><span class="n">Scaling</span>
+</code></pre></div>
+
+<hr />
+<h2 id="8">8. 다음 단계<a class="header-link" href="#8" title="Permanent link">&para;</a></h2>
+<p>로드 밸런싱을 이해했다면, 리버스 프록시와 API 게이트웨이를 학습하세요.</p>
+<h3 id="_5">다음 레슨<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="./05_Reverse_Proxy_API_Gateway.md">05_Reverse_Proxy_API_Gateway.md</a></li>
+</ul>
+<h3 id="_6">관련 레슨<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="./02_Scalability_Basics.md">02_Scalability_Basics.md</a> - Stateless 아키텍처</li>
+<li><a href="./07_Distributed_Cache_Systems.md">07_Distributed_Cache_Systems.md</a> - 세션 저장소</li>
+</ul>
+<h3 id="_7">추천 실습<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Nginx로 로드밸런서 구성해보기</li>
+<li>HAProxy 설정 실습</li>
+<li>AWS ALB/NLB 비교 테스트</li>
+</ol>
+<hr />
+<h2 id="9">9. 참고 자료<a class="header-link" href="#9" title="Permanent link">&para;</a></h2>
+<h3 id="_8">도구<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="https://nginx.org/">Nginx</a> - 웹 서버 &amp; 로드밸런서</li>
+<li><a href="https://www.haproxy.org/">HAProxy</a> - 고성능 로드밸런서</li>
+<li><a href="https://www.envoyproxy.io/">Envoy</a> - 클라우드 네이티브 프록시</li>
+</ul>
+<h3 id="_9">문서<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="https://aws.amazon.com/elasticloadbalancing/">AWS Elastic Load Balancing</a></li>
+<li><a href="https://cloud.google.com/load-balancing">GCP Cloud Load Balancing</a></li>
+<li><a href="https://docs.nginx.com/nginx/admin-guide/load-balancer/">Nginx Load Balancing</a></li>
+</ul>
+<h3 id="_10">온라인 자료<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="https://www.nginx.com/blog/nginx-high-availability-with-haproxy/">High Availability Load Balancers</a></li>
+</ul>
+<hr />
+<p><strong>문서 정보</strong>
+- 최종 수정: 2024년
+- 난이도: ⭐⭐⭐
+- 예상 학습 시간: 2-3시간</p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/System_Design/03_Network_Fundamentals_Review.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">네트워크 기초 복습</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/System_Design/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/System_Design/05_Reverse_Proxy_API_Gateway.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">리버스 프록시와 API 게이트웨이</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

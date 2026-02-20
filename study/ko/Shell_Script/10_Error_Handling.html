@@ -1,0 +1,2056 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson 10: 에러 처리 및 디버깅 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Shell_Script/">Shell Script</a>
+    <span class="separator">/</span>
+    <span class="current">Lesson 10: 에러 처리 및 디버깅</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>Lesson 10: 에러 처리 및 디버깅</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Shell_Script/09_Process_Management.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">레슨 09: 프로세스 관리 및 작업 제어(Process Management and Job Control)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Shell_Script/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Shell_Script/11_Argument_Parsing.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">Lesson 11: 인수 파싱 및 CLI 인터페이스</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#1-set">1. set 옵션 심화</a><ul>
+<li><a href="#set-e-errexit">set -e (errexit)</a></li>
+<li><a href="#set-e">set -e의 주의사항</a></li>
+<li><a href="#set-u-nounset">set -u (nounset)</a></li>
+<li><a href="#set-o-pipefail">set -o pipefail</a></li>
+<li><a href="#set">set 옵션 비교</a></li>
+<li><a href="#_1">권장 스크립트 헤더</a></li>
+<li><a href="#set-e_1">set -e 일시적으로 비활성화</a></li>
+</ul>
+</li>
+<li><a href="#2-trap-err">2. trap ERR</a><ul>
+<li><a href="#err">기본 ERR 트랩</a></li>
+<li><a href="#_2">에러 컨텍스트 가져오기</a></li>
+<li><a href="#_3">스택 트레이스 생성</a></li>
+<li><a href="#_4">고급 에러 핸들러</a></li>
+<li><a href="#err-vs-exit">ERR vs EXIT 트랩</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 커스텀 에러 프레임워크</a><ul>
+<li><a href="#enum">에러 코드 열거형(Enum)</a></li>
+<li><a href="#_5">에러 함수</a></li>
+<li><a href="#try-catch">Try-Catch 시뮬레이션</a></li>
+<li><a href="#_6">완전한 에러 프레임워크</a></li>
+</ul>
+</li>
+<li><a href="#4">4. 방어적 코딩 패턴</a><ul>
+<li><a href="#_7">입력 검증</a></li>
+<li><a href="#_8">명령어 존재 여부 확인</a></li>
+<li><a href="#_9">안전한 임시 파일</a></li>
+<li><a href="#_10">락 파일</a></li>
+<li><a href="#_11">안전한 파일 작업</a></li>
+</ul>
+</li>
+<li><a href="#5-shellcheck">5. ShellCheck 정적 분석</a><ul>
+<li><a href="#shellcheck">일반적인 ShellCheck 경고</a></li>
+<li><a href="#shellcheck_1">ShellCheck 통합</a></li>
+<li><a href="#shellcheck_2">ShellCheck 설정</a></li>
+<li><a href="#_12">코드 내 경고 억제</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 디버깅 기법</a><ul>
+<li><a href="#set-x-xtrace">set -x (xtrace)</a></li>
+<li><a href="#ps4">향상된 추적을 위한 커스텀 PS4</a></li>
+<li><a href="#_13">선택적 디버깅</a></li>
+<li><a href="#set-v-verbose">set -v (verbose)</a></li>
+<li><a href="#bash-bashdb">Bash 디버거 (bashdb)</a></li>
+<li><a href="#_14">디버그 로깅</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 로깅 프레임워크</a><ul>
+<li><a href="#_15">간단한 로깅</a></li>
+<li><a href="#_16">다단계 로깅</a></li>
+<li><a href="#_17">파일 및 콘솔 로깅</a></li>
+<li><a href="#_18">로그 회전</a></li>
+<li><a href="#_19">구조화된 로깅</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 연습 문제</a><ul>
+<li><a href="#1">문제 1: 견고한 파일 프로세서</a></li>
+<li><a href="#2">문제 2: 입력 검증 라이브러리</a></li>
+<li><a href="#3_1">문제 3: 에러 복구를 갖춘 데이터베이스 백업</a></li>
+<li><a href="#4-shellcheck-ci">문제 4: ShellCheck CI 통합</a></li>
+<li><a href="#5">문제 5: 디버그 모드 프레임워크</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="lesson-10">Lesson 10: 에러 처리 및 디버깅<a class="header-link" href="#lesson-10" title="Permanent link">&para;</a></h1>
+<p><strong>난이도</strong>: ⭐⭐⭐</p>
+<p><strong>이전</strong>: <a href="./09_Process_Management.md">09_Process_Management.md</a> | <strong>다음</strong>: <a href="./11_Argument_Parsing.md">11_Argument_Parsing.md</a></p>
+<hr />
+<h2 id="1-set">1. set 옵션 심화<a class="header-link" href="#1-set" title="Permanent link">&para;</a></h2>
+<p><code>set</code> 명령어는 셸 동작 및 에러 처리를 제어합니다. 이러한 옵션을 이해하는 것은 견고한 스크립트를 작성하는 데 매우 중요합니다.</p>
+<h3 id="set-e-errexit">set -e (errexit)<a class="header-link" href="#set-e-errexit" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Exit immediately if any command returns non-zero</span>
+<span class="nb">set</span><span class="w"> </span>-e
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Starting...&quot;</span>
+<span class="nb">false</span><span class="w">  </span><span class="c1"># This will cause the script to exit</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;This won&#39;t be printed&quot;</span>
+</code></pre></div>
+
+<h3 id="set-e">set -e의 주의사항<a class="header-link" href="#set-e" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="nb">set</span><span class="w"> </span>-e
+
+<span class="c1"># set -e does NOT exit in these cases:</span>
+
+<span class="c1"># 1. Commands in conditions</span>
+<span class="k">if</span><span class="w"> </span>false<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Won&#39;t execute&quot;</span>
+<span class="k">fi</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Still running&quot;</span>
+
+<span class="c1"># 2. Commands with || or &amp;&amp;</span>
+<span class="nb">false</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;This runs&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Still running&quot;</span>
+
+<span class="c1"># 3. Commands in a pipeline (except the last one, unless pipefail is set)</span>
+<span class="nb">false</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Pipeline continues&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Still running&quot;</span>
+
+<span class="c1"># 4. Commands in functions called in conditions</span>
+check_something<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">false</span><span class="w">  </span><span class="c1"># Won&#39;t exit the script if called in condition</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="o">}</span>
+
+<span class="k">if</span><span class="w"> </span>check_something<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Won&#39;t execute&quot;</span>
+<span class="k">fi</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Still running after function&quot;</span>
+
+<span class="c1"># 5. Negated commands</span>
+!<span class="w"> </span><span class="nb">false</span><span class="w">  </span><span class="c1"># Won&#39;t exit</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Still running after negation&quot;</span>
+</code></pre></div>
+
+<h3 id="set-u-nounset">set -u (nounset)<a class="header-link" href="#set-u-nounset" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Exit if accessing undefined variable</span>
+<span class="nb">set</span><span class="w"> </span>-u
+
+<span class="nv">defined_var</span><span class="o">=</span><span class="s2">&quot;hello&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$defined_var</span><span class="s2">&quot;</span><span class="w">  </span><span class="c1"># OK</span>
+
+<span class="c1"># This will cause exit</span>
+<span class="c1"># echo &quot;$undefined_var&quot;  # Error: undefined_var: unbound variable</span>
+
+<span class="c1"># Safe way to check if variable is set</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">undefined_var</span><span class="k">:-</span><span class="nv">default_value</span><span class="si">}</span><span class="s2">&quot;</span><span class="w">  </span><span class="c1"># Prints: default_value</span>
+
+<span class="c1"># Check if variable is set before using</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">undefined_var</span><span class="p">+x</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Variable is set: </span><span class="nv">$undefined_var</span><span class="s2">&quot;</span>
+<span class="k">else</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Variable is not set&quot;</span>
+<span class="k">fi</span>
+
+<span class="c1"># Another pattern: use empty string as default</span>
+<span class="nv">value</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">undefined_var</span><span class="k">:-</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$value</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Value: </span><span class="nv">$value</span><span class="s2">&quot;</span>
+<span class="k">else</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Variable was undefined&quot;</span>
+<span class="k">fi</span>
+</code></pre></div>
+
+<h3 id="set-o-pipefail">set -o pipefail<a class="header-link" href="#set-o-pipefail" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Without pipefail</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Without pipefail:&quot;</span>
+<span class="nb">false</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Pipeline output&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Exit status: </span><span class="nv">$?</span><span class="s2">&quot;</span><span class="w">  </span><span class="c1"># 0 (from echo)</span>
+
+<span class="c1"># With pipefail</span>
+<span class="nb">set</span><span class="w"> </span>-o<span class="w"> </span>pipefail
+<span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;\nWith pipefail:&quot;</span>
+<span class="nb">false</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Pipeline output&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Exit status: </span><span class="nv">$?</span><span class="s2">&quot;</span><span class="w">  </span><span class="c1"># 1 (from false)</span>
+
+<span class="c1"># Practical example</span>
+<span class="nb">set</span><span class="w"> </span>-e
+<span class="nb">set</span><span class="w"> </span>-o<span class="w"> </span>pipefail
+
+<span class="c1"># This will exit the script if grep finds nothing</span>
+cat<span class="w"> </span>/var/log/syslog<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;error&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-10
+
+<span class="c1"># PIPESTATUS array contains exit codes of all pipeline commands</span>
+cat<span class="w"> </span>file.txt<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;pattern&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sort<span class="w"> </span><span class="p">|</span><span class="w"> </span>uniq
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Pipeline status: </span><span class="si">${</span><span class="nv">PIPESTATUS</span><span class="p">[@]</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="c1"># Prints something like: 0 1 0 0</span>
+<span class="c1"># (cat succeeded, grep failed, sort and uniq succeeded)</span>
+</code></pre></div>
+
+<h3 id="set">set 옵션 비교<a class="header-link" href="#set" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>옵션</th>
+<th>설명</th>
+<th>효과</th>
+<th>사용 시기</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>set -e</code></td>
+<td>errexit</td>
+<td>명령어 실패 시 종료</td>
+<td>프로덕션 스크립트</td>
+</tr>
+<tr>
+<td><code>set -u</code></td>
+<td>nounset</td>
+<td>정의되지 않은 변수 접근 시 종료</td>
+<td>오타를 조기에 발견</td>
+</tr>
+<tr>
+<td><code>set -o pipefail</code></td>
+<td>pipefail</td>
+<td>파이프라인 내 어떤 명령어라도 실패하면 실패</td>
+<td><code>set -e</code>와 함께</td>
+</tr>
+<tr>
+<td><code>set -x</code></td>
+<td>xtrace</td>
+<td>실행 전 명령어 출력</td>
+<td>디버깅</td>
+</tr>
+<tr>
+<td><code>set -v</code></td>
+<td>verbose</td>
+<td>셸 입력 라인 출력</td>
+<td>심층 디버깅</td>
+</tr>
+<tr>
+<td><code>set -n</code></td>
+<td>noexec</td>
+<td>명령어를 읽되 실행하지 않음</td>
+<td>문법 검사</td>
+</tr>
+<tr>
+<td><code>set -C</code></td>
+<td>noclobber</td>
+<td>출력 리디렉션이 파일을 덮어쓰는 것을 방지</td>
+<td>파일 보호</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_1">권장 스크립트 헤더<a class="header-link" href="#_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Strict mode</span>
+<span class="nb">set</span><span class="w"> </span>-euo<span class="w"> </span>pipefail
+<span class="nv">IFS</span><span class="o">=</span><span class="s1">$&#39;\n\t&#39;</span>
+
+<span class="c1"># Now script will:</span>
+<span class="c1"># - Exit on error (set -e)</span>
+<span class="c1"># - Exit on undefined variable (set -u)</span>
+<span class="c1"># - Exit if any pipeline command fails (set -o pipefail)</span>
+<span class="c1"># - Use safe IFS (newline and tab only)</span>
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Script running in strict mode&quot;</span>
+</code></pre></div>
+
+<h3 id="set-e_1">set -e 일시적으로 비활성화<a class="header-link" href="#set-e_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="nb">set</span><span class="w"> </span>-e
+
+<span class="c1"># Method 1: Use || true</span>
+<span class="nb">false</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">true</span><span class="w">  </span><span class="c1"># Won&#39;t exit</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Still running&quot;</span>
+
+<span class="c1"># Method 2: Use explicit if</span>
+<span class="k">if</span><span class="w"> </span>command_that_might_fail<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Success&quot;</span>
+<span class="k">else</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Failed, but handling it&quot;</span>
+<span class="k">fi</span>
+
+<span class="c1"># Method 3: Temporarily disable</span>
+<span class="nb">set</span><span class="w"> </span>+e
+command_that_might_fail
+<span class="nv">status</span><span class="o">=</span><span class="nv">$?</span>
+<span class="nb">set</span><span class="w"> </span>-e
+
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$status</span><span class="w"> </span>-ne<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Command failed with status </span><span class="nv">$status</span><span class="s2">&quot;</span>
+<span class="k">fi</span>
+
+<span class="c1"># Method 4: Use ! to negate (exit code becomes 0)</span>
+<span class="k">if</span><span class="w"> </span>!<span class="w"> </span>command_that_might_fail<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Command failed as expected&quot;</span>
+<span class="k">fi</span>
+</code></pre></div>
+
+<h2 id="2-trap-err">2. trap ERR<a class="header-link" href="#2-trap-err" title="Permanent link">&para;</a></h2>
+<p><code>ERR</code> 트랩은 명령어가 0이 아닌 종료 상태를 반환할 때 발생합니다 (<code>set -e</code>가 종료하지 않는 경우는 제외).</p>
+<h3 id="err">기본 ERR 트랩<a class="header-link" href="#err" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="nb">set</span><span class="w"> </span>-e
+
+error_handler<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error occurred in script&quot;</span>
+<span class="o">}</span>
+
+<span class="nb">trap</span><span class="w"> </span>error_handler<span class="w"> </span>ERR
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Starting...&quot;</span>
+<span class="nb">false</span><span class="w">  </span><span class="c1"># Triggers ERR trap</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;This won&#39;t be reached&quot;</span>
+</code></pre></div>
+
+<h3 id="_2">에러 컨텍스트 가져오기<a class="header-link" href="#_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="nb">set</span><span class="w"> </span>-e
+
+error_handler<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">exit_code</span><span class="o">=</span><span class="nv">$?</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">line_num</span><span class="o">=</span><span class="nv">$1</span>
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;========================================&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error occurred!&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Exit code: </span><span class="nv">$exit_code</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Line number: </span><span class="nv">$line_num</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Command: </span><span class="nv">$BASH_COMMAND</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;========================================&quot;</span>
+
+<span class="w">    </span><span class="c1"># Exit with same code</span>
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="nv">$exit_code</span>
+<span class="o">}</span>
+
+<span class="nb">trap</span><span class="w"> </span><span class="s1">&#39;error_handler $LINENO&#39;</span><span class="w"> </span>ERR
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Line 1&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Line 2&quot;</span>
+<span class="nb">false</span><span class="w">  </span><span class="c1"># Line 3 - will trigger error</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Line 4&quot;</span>
+</code></pre></div>
+
+<h3 id="_3">스택 트레이스 생성<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="nb">set</span><span class="w"> </span>-e
+
+print_stack_trace<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">frame</span><span class="o">=</span><span class="m">0</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Stack trace:&quot;</span>
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="nb">caller</span><span class="w"> </span><span class="nv">$frame</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">        </span><span class="o">((</span>frame++<span class="o">))</span>
+<span class="w">    </span><span class="k">done</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="nb">read</span><span class="w"> </span>line<span class="w"> </span>func<span class="w"> </span>file<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;  at </span><span class="nv">$func</span><span class="s2">() in </span><span class="nv">$file</span><span class="s2">:</span><span class="nv">$line</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">done</span>
+<span class="o">}</span>
+
+error_handler<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">exit_code</span><span class="o">=</span><span class="nv">$?</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">line_num</span><span class="o">=</span><span class="nv">$1</span>
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;========================================&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;ERROR: Command failed with exit code </span><span class="nv">$exit_code</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;  Line: </span><span class="nv">$line_num</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;  Command: </span><span class="nv">$BASH_COMMAND</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;========================================&quot;</span>
+
+<span class="w">    </span>print_stack_trace
+
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="nv">$exit_code</span>
+<span class="o">}</span>
+
+<span class="nb">trap</span><span class="w"> </span><span class="s1">&#39;error_handler $LINENO&#39;</span><span class="w"> </span>ERR
+
+<span class="k">function</span><span class="w"> </span>level3<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Level 3&quot;</span>
+<span class="w">    </span><span class="nb">false</span><span class="w">  </span><span class="c1"># Error here</span>
+<span class="o">}</span>
+
+<span class="k">function</span><span class="w"> </span>level2<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Level 2&quot;</span>
+<span class="w">    </span>level3
+<span class="o">}</span>
+
+<span class="k">function</span><span class="w"> </span>level1<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Level 1&quot;</span>
+<span class="w">    </span>level2
+<span class="o">}</span>
+
+level1
+</code></pre></div>
+
+<h3 id="_4">고급 에러 핸들러<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="nb">set</span><span class="w"> </span>-euo<span class="w"> </span>pipefail
+
+<span class="c1"># Get detailed function stack</span>
+get_function_stack<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">i</span><span class="o">=</span><span class="m">0</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">stack</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$i</span><span class="w"> </span>-lt<span class="w"> </span><span class="si">${#</span><span class="nv">FUNCNAME</span><span class="p">[@]</span><span class="si">}</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">        </span><span class="nb">local</span><span class="w"> </span><span class="nv">func</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">FUNCNAME</span><span class="p">[</span><span class="nv">$i</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="nb">local</span><span class="w"> </span><span class="nv">line</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_LINENO</span><span class="p">[</span><span class="nv">$i</span><span class="p">-1]</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="nb">local</span><span class="w"> </span><span class="nv">src</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[</span><span class="nv">$i</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+
+<span class="w">        </span><span class="c1"># Skip the error handler itself</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$func</span><span class="s2">&quot;</span><span class="w"> </span>!<span class="o">=</span><span class="w"> </span><span class="s2">&quot;error_handler&quot;</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$func</span><span class="s2">&quot;</span><span class="w"> </span>!<span class="o">=</span><span class="w"> </span><span class="s2">&quot;get_function_stack&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">            </span><span class="nv">stack</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">stack</span><span class="si">}</span><span class="s2">  → </span><span class="si">${</span><span class="nv">func</span><span class="si">}</span><span class="s2">() at </span><span class="si">${</span><span class="nv">src</span><span class="si">}</span><span class="s2">:</span><span class="si">${</span><span class="nv">line</span><span class="si">}</span><span class="s2">\n&quot;</span>
+<span class="w">        </span><span class="k">fi</span>
+
+<span class="w">        </span><span class="o">((</span>i++<span class="o">))</span>
+<span class="w">    </span><span class="k">done</span>
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$stack</span><span class="s2">&quot;</span>
+<span class="o">}</span>
+
+error_handler<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">exit_code</span><span class="o">=</span><span class="nv">$?</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">line_num</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_LINENO</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">src</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[1]</span><span class="si">}</span><span class="s2">&quot;</span>
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;╔════════════════════════════════════════════════════════════&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;║ ERROR DETECTED&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;╠════════════════════════════════════════════════════════════&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;║ Exit Code    : </span><span class="nv">$exit_code</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;║ Failed Command: </span><span class="nv">$BASH_COMMAND</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;║ Location     : </span><span class="nv">$src</span><span class="s2">:</span><span class="nv">$line_num</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;╠════════════════════════════════════════════════════════════&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;║ Call Stack:&quot;</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;╠════════════════════════════════════════════════════════════&quot;</span>
+<span class="w">    </span>get_function_stack
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;╚════════════════════════════════════════════════════════════&quot;</span>
+
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="nv">$exit_code</span>
+<span class="o">}</span>
+
+<span class="nb">trap</span><span class="w"> </span><span class="s1">&#39;error_handler&#39;</span><span class="w"> </span>ERR
+
+<span class="c1"># Test it</span>
+<span class="k">function</span><span class="w"> </span>inner_function<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Inner function executing...&quot;</span>
+<span class="w">    </span>nonexistent_command<span class="w">  </span><span class="c1"># This will fail</span>
+<span class="o">}</span>
+
+<span class="k">function</span><span class="w"> </span>outer_function<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Outer function executing...&quot;</span>
+<span class="w">    </span>inner_function
+<span class="o">}</span>
+
+outer_function
+</code></pre></div>
+
+<h3 id="err-vs-exit">ERR vs EXIT 트랩<a class="header-link" href="#err-vs-exit" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="nb">set</span><span class="w"> </span>-e
+
+<span class="c1"># ERR trap: only on error</span>
+<span class="nb">trap</span><span class="w"> </span><span class="s1">&#39;echo &quot;ERR trap: Command failed&quot;&#39;</span><span class="w"> </span>ERR
+
+<span class="c1"># EXIT trap: always on exit</span>
+<span class="nb">trap</span><span class="w"> </span><span class="s1">&#39;echo &quot;EXIT trap: Script exiting&quot;&#39;</span><span class="w"> </span>EXIT
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Normal execution&quot;</span>
+<span class="c1"># On normal exit, only EXIT trap runs</span>
+
+<span class="c1"># Uncomment to see both traps:</span>
+<span class="c1"># false</span>
+</code></pre></div>
+
+<h2 id="3">3. 커스텀 에러 프레임워크<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<p>재사용 가능한 에러 처리 프레임워크를 구축하면 스크립트의 유지보수성이 향상됩니다.</p>
+<h3 id="enum">에러 코드 열거형(Enum)<a class="header-link" href="#enum" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Define error codes as readonly constants</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_SUCCESS</span><span class="o">=</span><span class="m">0</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_GENERAL</span><span class="o">=</span><span class="m">1</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_MISUSE</span><span class="o">=</span><span class="m">2</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_NOINPUT</span><span class="o">=</span><span class="m">66</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_NOUSER</span><span class="o">=</span><span class="m">67</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_NOHOST</span><span class="o">=</span><span class="m">68</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_UNAVAILABLE</span><span class="o">=</span><span class="m">69</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_SOFTWARE</span><span class="o">=</span><span class="m">70</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_OSERR</span><span class="o">=</span><span class="m">71</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_OSFILE</span><span class="o">=</span><span class="m">72</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_CANTCREAT</span><span class="o">=</span><span class="m">73</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_IOERR</span><span class="o">=</span><span class="m">74</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_TEMPFAIL</span><span class="o">=</span><span class="m">75</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_PROTOCOL</span><span class="o">=</span><span class="m">76</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_NOPERM</span><span class="o">=</span><span class="m">77</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_CONFIG</span><span class="o">=</span><span class="m">78</span>
+
+<span class="c1"># Map codes to messages</span>
+<span class="nb">declare</span><span class="w"> </span>-A<span class="w"> </span><span class="nv">ERROR_MESSAGES</span><span class="o">=(</span>
+<span class="w">    </span><span class="o">[</span><span class="m">1</span><span class="o">]=</span><span class="s2">&quot;General error&quot;</span>
+<span class="w">    </span><span class="o">[</span><span class="m">2</span><span class="o">]=</span><span class="s2">&quot;Misuse of shell command&quot;</span>
+<span class="w">    </span><span class="o">[</span><span class="m">66</span><span class="o">]=</span><span class="s2">&quot;Input file missing or unreadable&quot;</span>
+<span class="w">    </span><span class="o">[</span><span class="m">67</span><span class="o">]=</span><span class="s2">&quot;User does not exist&quot;</span>
+<span class="w">    </span><span class="o">[</span><span class="m">68</span><span class="o">]=</span><span class="s2">&quot;Host does not exist&quot;</span>
+<span class="w">    </span><span class="o">[</span><span class="m">69</span><span class="o">]=</span><span class="s2">&quot;Service unavailable&quot;</span>
+<span class="w">    </span><span class="o">[</span><span class="m">70</span><span class="o">]=</span><span class="s2">&quot;Internal software error&quot;</span>
+<span class="w">    </span><span class="o">[</span><span class="m">71</span><span class="o">]=</span><span class="s2">&quot;System error&quot;</span>
+<span class="w">    </span><span class="o">[</span><span class="m">72</span><span class="o">]=</span><span class="s2">&quot;Critical OS file missing&quot;</span>
+<span class="w">    </span><span class="o">[</span><span class="m">73</span><span class="o">]=</span><span class="s2">&quot;Cannot create output file&quot;</span>
+<span class="w">    </span><span class="o">[</span><span class="m">74</span><span class="o">]=</span><span class="s2">&quot;I/O error&quot;</span>
+<span class="w">    </span><span class="o">[</span><span class="m">75</span><span class="o">]=</span><span class="s2">&quot;Temporary failure&quot;</span>
+<span class="w">    </span><span class="o">[</span><span class="m">76</span><span class="o">]=</span><span class="s2">&quot;Protocol error&quot;</span>
+<span class="w">    </span><span class="o">[</span><span class="m">77</span><span class="o">]=</span><span class="s2">&quot;Permission denied&quot;</span>
+<span class="w">    </span><span class="o">[</span><span class="m">78</span><span class="o">]=</span><span class="s2">&quot;Configuration error&quot;</span>
+<span class="o">)</span>
+
+<span class="c1"># Get error message for code</span>
+get_error_message<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">code</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">ERROR_MESSAGES</span><span class="p">[</span><span class="nv">$code</span><span class="p">]</span><span class="k">:-</span><span class="nv">Unknown</span><span class="p"> error</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="o">}</span>
+
+<span class="c1"># Usage</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error 66: </span><span class="k">$(</span>get_error_message<span class="w"> </span><span class="m">66</span><span class="k">)</span><span class="s2">&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error 77: </span><span class="k">$(</span>get_error_message<span class="w"> </span><span class="m">77</span><span class="k">)</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<h3 id="_5">에러 함수<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="nb">set</span><span class="w"> </span>-euo<span class="w"> </span>pipefail
+
+<span class="c1"># Color codes</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">RED</span><span class="o">=</span><span class="s1">&#39;\033[0;31m&#39;</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">YELLOW</span><span class="o">=</span><span class="s1">&#39;\033[1;33m&#39;</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">NC</span><span class="o">=</span><span class="s1">&#39;\033[0m&#39;</span><span class="w">  </span><span class="c1"># No Color</span>
+
+<span class="c1"># Error levels</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">ERROR_LEVEL_INFO</span><span class="o">=</span><span class="m">0</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">ERROR_LEVEL_WARN</span><span class="o">=</span><span class="m">1</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">ERROR_LEVEL_ERROR</span><span class="o">=</span><span class="m">2</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">ERROR_LEVEL_FATAL</span><span class="o">=</span><span class="m">3</span>
+
+<span class="c1"># Log with level</span>
+log_message<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">level</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">message</span><span class="o">=</span><span class="nv">$2</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">timestamp</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span><span class="s1">&#39;+%Y-%m-%d %H:%M:%S&#39;</span><span class="k">)</span>
+
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nv">$level</span><span class="w"> </span><span class="k">in</span>
+<span class="w">        </span><span class="nv">$ERROR_LEVEL_INFO</span><span class="o">)</span>
+<span class="w">            </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;[</span><span class="nv">$timestamp</span><span class="s2">] INFO: </span><span class="nv">$message</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">            </span><span class="p">;;</span>
+<span class="w">        </span><span class="nv">$ERROR_LEVEL_WARN</span><span class="o">)</span>
+<span class="w">            </span><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;[</span><span class="nv">$timestamp</span><span class="s2">] </span><span class="si">${</span><span class="nv">YELLOW</span><span class="si">}</span><span class="s2">WARN</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">: </span><span class="nv">$message</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">            </span><span class="p">;;</span>
+<span class="w">        </span><span class="nv">$ERROR_LEVEL_ERROR</span><span class="o">)</span>
+<span class="w">            </span><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;[</span><span class="nv">$timestamp</span><span class="s2">] </span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">ERROR</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">: </span><span class="nv">$message</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">            </span><span class="p">;;</span>
+<span class="w">        </span><span class="nv">$ERROR_LEVEL_FATAL</span><span class="o">)</span>
+<span class="w">            </span><span class="nb">echo</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;[</span><span class="nv">$timestamp</span><span class="s2">] </span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">FATAL</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">: </span><span class="nv">$message</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">            </span><span class="p">;;</span>
+<span class="w">    </span><span class="k">esac</span>
+<span class="o">}</span>
+
+<span class="c1"># Convenience functions</span>
+info<span class="o">()</span><span class="w"> </span><span class="o">{</span><span class="w"> </span>log_message<span class="w"> </span><span class="nv">$ERROR_LEVEL_INFO</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="o">}</span>
+warn<span class="o">()</span><span class="w"> </span><span class="o">{</span><span class="w"> </span>log_message<span class="w"> </span><span class="nv">$ERROR_LEVEL_WARN</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="o">}</span>
+error<span class="o">()</span><span class="w"> </span><span class="o">{</span><span class="w"> </span>log_message<span class="w"> </span><span class="nv">$ERROR_LEVEL_ERROR</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="o">}</span>
+fatal<span class="o">()</span><span class="w"> </span><span class="o">{</span><span class="w"> </span>log_message<span class="w"> </span><span class="nv">$ERROR_LEVEL_FATAL</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="o">}</span>
+
+<span class="c1"># Die function with exit code</span>
+die<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">code</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">shift</span>
+<span class="w">    </span>error<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$@</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="nv">$code</span>
+<span class="o">}</span>
+
+<span class="c1"># Assert function</span>
+assert<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">condition</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">shift</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">message</span><span class="o">=</span><span class="nv">$*</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span>!<span class="w"> </span><span class="nb">eval</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$condition</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span>die<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="s2">&quot;Assertion failed: </span><span class="nv">$message</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># Usage examples</span>
+info<span class="w"> </span><span class="s2">&quot;Script starting...&quot;</span>
+warn<span class="w"> </span><span class="s2">&quot;This is a warning&quot;</span>
+error<span class="w"> </span><span class="s2">&quot;This is an error (but doesn&#39;t exit)&quot;</span>
+assert<span class="w"> </span><span class="s2">&quot;[ -f /etc/passwd ]&quot;</span><span class="w"> </span><span class="s2">&quot;/etc/passwd must exist&quot;</span>
+assert<span class="w"> </span><span class="s2">&quot;[ 1 -eq 1 ]&quot;</span><span class="w"> </span><span class="s2">&quot;Math still works&quot;</span>
+<span class="c1"># fatal &quot;Critical error - exiting&quot;  # Uncomment to test</span>
+info<span class="w"> </span><span class="s2">&quot;Script completed&quot;</span>
+</code></pre></div>
+
+<h3 id="try-catch">Try-Catch 시뮬레이션<a class="header-link" href="#try-catch" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Try-catch simulation using subshells</span>
+try<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="c1"># Execute commands in subshell</span>
+<span class="w">    </span><span class="c1"># Return 0 if successful, 1 if any command fails</span>
+<span class="w">    </span><span class="o">(</span><span class="w"> </span><span class="nb">eval</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">)</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">$?</span>
+<span class="o">}</span>
+
+catch<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">exit_code</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">shift</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$exit_code</span><span class="w"> </span>-ne<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">eval</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="o">}</span>
+
+<span class="c1"># Usage</span>
+<span class="k">if</span><span class="w"> </span>try<span class="w"> </span><span class="s2">&quot;echo &#39;Attempting operation&#39;; false&quot;</span><span class="p">;</span><span class="w"> </span>catch<span class="w"> </span><span class="nv">$?</span><span class="w"> </span><span class="s2">&quot;echo &#39;Caught error!&#39;&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error was handled&quot;</span>
+<span class="k">fi</span>
+
+<span class="c1"># More complex example</span>
+perform_operation<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Attempting risky operation...&quot;</span>
+
+<span class="w">    </span><span class="c1"># Simulate some work</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="k">$((</span><span class="nv">RANDOM</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="m">2</span><span class="k">))</span><span class="w"> </span>-eq<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Operation succeeded&quot;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="w">    </span><span class="k">else</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Operation failed&quot;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="k">if</span><span class="w"> </span>try<span class="w"> </span><span class="s2">&quot;perform_operation&quot;</span><span class="p">;</span><span class="w"> </span>catch<span class="w"> </span><span class="nv">$?</span><span class="w"> </span><span class="s2">&quot;echo &#39;Operation failed, handling gracefully&#39;&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error was caught and handled&quot;</span>
+<span class="k">else</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Operation succeeded&quot;</span>
+<span class="k">fi</span>
+
+<span class="c1"># Alternative: using trap in subshell</span>
+try_with_trap<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="o">(</span>
+<span class="w">        </span><span class="nb">set</span><span class="w"> </span>-e
+<span class="w">        </span><span class="nb">trap</span><span class="w"> </span><span class="s1">&#39;return 1&#39;</span><span class="w"> </span>ERR
+<span class="w">        </span><span class="nb">eval</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="o">)</span>
+<span class="o">}</span>
+
+<span class="k">if</span><span class="w"> </span>try_with_trap<span class="w"> </span><span class="s2">&quot;echo &#39;Working...&#39;; false&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Success&quot;</span>
+<span class="k">else</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Caught error with trap method&quot;</span>
+<span class="k">fi</span>
+</code></pre></div>
+
+<h3 id="_6">완전한 에러 프레임워크<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="nb">set</span><span class="w"> </span>-euo<span class="w"> </span>pipefail
+
+<span class="c1"># ============================================================================</span>
+<span class="c1"># ERROR HANDLING FRAMEWORK</span>
+<span class="c1"># ============================================================================</span>
+
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">SCRIPT_NAME</span><span class="o">=</span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$0</span><span class="s2">&quot;</span><span class="k">)</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">SCRIPT_DIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span><span class="nb">cd</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>dirname<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$0</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">pwd</span><span class="k">)</span><span class="s2">&quot;</span>
+
+<span class="c1"># Exit codes</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_SUCCESS</span><span class="o">=</span><span class="m">0</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_GENERAL</span><span class="o">=</span><span class="m">1</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_INVALID_ARGS</span><span class="o">=</span><span class="m">2</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_FILE_NOT_FOUND</span><span class="o">=</span><span class="m">66</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">E_PERMISSION_DENIED</span><span class="o">=</span><span class="m">77</span>
+
+<span class="c1"># Colors</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">RED</span><span class="o">=</span><span class="s1">&#39;\033[0;31m&#39;</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">YELLOW</span><span class="o">=</span><span class="s1">&#39;\033[1;33m&#39;</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">GREEN</span><span class="o">=</span><span class="s1">&#39;\033[0;32m&#39;</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">NC</span><span class="o">=</span><span class="s1">&#39;\033[0m&#39;</span>
+
+<span class="c1"># Log file</span>
+<span class="nv">LOG_FILE</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">SCRIPT_DIR</span><span class="si">}</span><span class="s2">/</span><span class="si">${</span><span class="nv">SCRIPT_NAME</span><span class="si">}</span><span class="s2">.log&quot;</span>
+
+<span class="c1"># Initialize logging</span>
+init_logging<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">exec</span><span class="w"> </span><span class="m">3</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="m">4</span>&gt;<span class="p">&amp;</span><span class="m">2</span><span class="w">  </span><span class="c1"># Save stdout and stderr</span>
+<span class="w">    </span><span class="nb">exec</span><span class="w"> </span><span class="m">1</span>&gt;<span class="w"> </span>&gt;<span class="o">(</span>tee<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span><span class="o">)</span>
+<span class="w">    </span><span class="nb">exec</span><span class="w"> </span><span class="m">2</span>&gt;<span class="w"> </span>&gt;<span class="o">(</span>tee<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span><span class="o">)</span>
+<span class="o">}</span>
+
+<span class="c1"># Restore file descriptors</span>
+cleanup_logging<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">exec</span><span class="w"> </span><span class="m">1</span>&gt;<span class="p">&amp;</span><span class="m">3</span><span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">4</span>
+<span class="w">    </span><span class="nb">exec</span><span class="w"> </span><span class="m">3</span>&gt;<span class="p">&amp;</span>-<span class="w"> </span><span class="m">4</span>&gt;<span class="p">&amp;</span>-
+<span class="o">}</span>
+
+<span class="c1"># Logging functions</span>
+log<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;[</span><span class="k">$(</span>date<span class="w"> </span><span class="s1">&#39;+%Y-%m-%d %H:%M:%S&#39;</span><span class="k">)</span><span class="s2">] </span><span class="nv">$*</span><span class="s2">&quot;</span>
+<span class="o">}</span>
+
+log_info<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span>log<span class="w"> </span><span class="s2">&quot;INFO: </span><span class="nv">$*</span><span class="s2">&quot;</span>
+<span class="o">}</span>
+
+log_warn<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span>log<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">YELLOW</span><span class="si">}</span><span class="s2">WARN</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">: </span><span class="nv">$*</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="o">}</span>
+
+log_error<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span>log<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">RED</span><span class="si">}</span><span class="s2">ERROR</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">: </span><span class="nv">$*</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="o">}</span>
+
+log_success<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span>log<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">GREEN</span><span class="si">}</span><span class="s2">SUCCESS</span><span class="si">${</span><span class="nv">NC</span><span class="si">}</span><span class="s2">: </span><span class="nv">$*</span><span class="s2">&quot;</span>
+<span class="o">}</span>
+
+<span class="c1"># Error handler</span>
+error_handler<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">exit_code</span><span class="o">=</span><span class="nv">$?</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">line_num</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_LINENO</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&quot;</span>
+
+<span class="w">    </span>log_error<span class="w"> </span><span class="s2">&quot;Command failed with exit code </span><span class="nv">$exit_code</span><span class="s2"> at line </span><span class="nv">$line_num</span><span class="s2">&quot;</span>
+<span class="w">    </span>log_error<span class="w"> </span><span class="s2">&quot;Failed command: </span><span class="nv">$BASH_COMMAND</span><span class="s2">&quot;</span>
+
+<span class="w">    </span>cleanup_logging
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="nv">$exit_code</span>
+<span class="o">}</span>
+
+<span class="c1"># Setup traps</span>
+setup_traps<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">trap</span><span class="w"> </span>error_handler<span class="w"> </span>ERR
+<span class="w">    </span><span class="nb">trap</span><span class="w"> </span>cleanup_logging<span class="w"> </span>EXIT
+<span class="o">}</span>
+
+<span class="c1"># Die function</span>
+die<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">code</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">shift</span>
+<span class="w">    </span>log_error<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="nv">$code</span>
+<span class="o">}</span>
+
+<span class="c1"># Check if command exists</span>
+require_command<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">cmd</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span>!<span class="w"> </span><span class="nb">command</span><span class="w"> </span>-v<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$cmd</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">&amp;</span>&gt;/dev/null<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span>die<span class="w"> </span><span class="nv">$E_GENERAL</span><span class="w"> </span><span class="s2">&quot;Required command not found: </span><span class="nv">$cmd</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># Check if file exists</span>
+require_file<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">file</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>!<span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$file</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span>die<span class="w"> </span><span class="nv">$E_FILE_NOT_FOUND</span><span class="w"> </span><span class="s2">&quot;Required file not found: </span><span class="nv">$file</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># Check if directory exists</span>
+require_directory<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">dir</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>!<span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$dir</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span>die<span class="w"> </span><span class="nv">$E_FILE_NOT_FOUND</span><span class="w"> </span><span class="s2">&quot;Required directory not found: </span><span class="nv">$dir</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># Validate number of arguments</span>
+validate_args<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">expected</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">actual</span><span class="o">=</span><span class="nv">$2</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$actual</span><span class="w"> </span>-lt<span class="w"> </span><span class="nv">$expected</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span>die<span class="w"> </span><span class="nv">$E_INVALID_ARGS</span><span class="w"> </span><span class="s2">&quot;Expected at least </span><span class="nv">$expected</span><span class="s2"> arguments, got </span><span class="nv">$actual</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># ============================================================================</span>
+<span class="c1"># MAIN SCRIPT</span>
+<span class="c1"># ============================================================================</span>
+
+main<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span>init_logging
+<span class="w">    </span>setup_traps
+
+<span class="w">    </span>log_info<span class="w"> </span><span class="s2">&quot;Script started&quot;</span>
+
+<span class="w">    </span><span class="c1"># Validate requirements</span>
+<span class="w">    </span>require_command<span class="w"> </span><span class="s2">&quot;grep&quot;</span>
+<span class="w">    </span>require_command<span class="w"> </span><span class="s2">&quot;sed&quot;</span>
+
+<span class="w">    </span><span class="c1"># Example operations</span>
+<span class="w">    </span>log_info<span class="w"> </span><span class="s2">&quot;Performing operations...&quot;</span>
+
+<span class="w">    </span><span class="c1"># This will succeed</span>
+<span class="w">    </span>log_success<span class="w"> </span><span class="s2">&quot;Operation completed successfully&quot;</span>
+
+<span class="w">    </span><span class="c1"># Uncomment to test error handling:</span>
+<span class="w">    </span><span class="c1"># require_file &quot;/nonexistent/file&quot;</span>
+<span class="w">    </span><span class="c1"># false</span>
+
+<span class="w">    </span>log_info<span class="w"> </span><span class="s2">&quot;Script completed successfully&quot;</span>
+<span class="o">}</span>
+
+<span class="c1"># Run main if not sourced</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$0</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span>main<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$@</span><span class="s2">&quot;</span>
+<span class="k">fi</span>
+</code></pre></div>
+
+<h2 id="4">4. 방어적 코딩 패턴<a class="header-link" href="#4" title="Permanent link">&para;</a></h2>
+<p>방어적 코딩은 에러가 발생하기 전에 예방합니다.</p>
+<h3 id="_7">입력 검증<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Validate string is not empty</span>
+validate_not_empty<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">var</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">name</span><span class="o">=</span><span class="nv">$2</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-z<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$var</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: </span><span class="nv">$name</span><span class="s2"> cannot be empty&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># Validate number</span>
+validate_number<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">var</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">name</span><span class="o">=</span><span class="nv">$2</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span>!<span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$var</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">=</span>~<span class="w"> </span>^<span class="o">[</span><span class="m">0</span>-9<span class="o">]</span>+$<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: </span><span class="nv">$name</span><span class="s2"> must be a positive integer&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># Validate range</span>
+validate_range<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">var</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">min</span><span class="o">=</span><span class="nv">$2</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">max</span><span class="o">=</span><span class="nv">$3</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">name</span><span class="o">=</span><span class="nv">$4</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$var</span><span class="s2">&quot;</span><span class="w"> </span>-lt<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$min</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$var</span><span class="s2">&quot;</span><span class="w"> </span>-gt<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$max</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: </span><span class="nv">$name</span><span class="s2"> must be between </span><span class="nv">$min</span><span class="s2"> and </span><span class="nv">$max</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># Validate email</span>
+validate_email<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">email</span><span class="o">=</span><span class="nv">$1</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span>!<span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$email</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">=</span>~<span class="w"> </span>^<span class="o">[</span>a-zA-Z0-9._%+-<span class="o">]</span>+@<span class="o">[</span>a-zA-Z0-9.-<span class="o">]</span>+<span class="se">\.</span><span class="o">[</span>a-zA-Z<span class="o">]{</span><span class="m">2</span>,<span class="o">}</span>$<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: Invalid email address&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># Validate IP address</span>
+validate_ip<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">ip</span><span class="o">=</span><span class="nv">$1</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span>!<span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ip</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">=</span>~<span class="w"> </span>^<span class="o">([</span><span class="m">0</span>-9<span class="o">]{</span><span class="m">1</span>,3<span class="o">}</span><span class="se">\.</span><span class="o">){</span><span class="m">3</span><span class="o">}[</span><span class="m">0</span>-9<span class="o">]{</span><span class="m">1</span>,3<span class="o">}</span>$<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: Invalid IP address&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="c1"># Check each octet is 0-255</span>
+<span class="w">    </span><span class="nv">IFS</span><span class="o">=</span><span class="s1">&#39;.&#39;</span><span class="w"> </span><span class="nb">read</span><span class="w"> </span>-ra<span class="w"> </span>octets<span class="w"> </span><span class="o">&lt;&lt;&lt;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ip</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span>octet<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">octets</span><span class="p">[@]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$octet</span><span class="s2">&quot;</span><span class="w"> </span>-gt<span class="w"> </span><span class="m">255</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">            </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: Invalid IP address (octet &gt; 255)&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">        </span><span class="k">fi</span>
+<span class="w">    </span><span class="k">done</span>
+<span class="o">}</span>
+
+<span class="c1"># Usage</span>
+<span class="nv">username</span><span class="o">=</span><span class="s2">&quot;john_doe&quot;</span>
+validate_not_empty<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$username</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;username&quot;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+
+<span class="nv">age</span><span class="o">=</span><span class="m">25</span>
+validate_number<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$age</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;age&quot;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+validate_range<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$age</span><span class="s2">&quot;</span><span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="m">150</span><span class="w"> </span><span class="s2">&quot;age&quot;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+
+<span class="nv">email</span><span class="o">=</span><span class="s2">&quot;user@example.com&quot;</span>
+validate_email<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$email</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+
+<span class="nv">ip</span><span class="o">=</span><span class="s2">&quot;192.168.1.1&quot;</span>
+validate_ip<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ip</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;All validations passed&quot;</span>
+</code></pre></div>
+
+<h3 id="_8">명령어 존재 여부 확인<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Method 1: Using command -v</span>
+check_command_v<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">cmd</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nb">command</span><span class="w"> </span>-v<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$cmd</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">&amp;</span>&gt;/dev/null<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$cmd</span><span class="s2"> is available&quot;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="w">    </span><span class="k">else</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$cmd</span><span class="s2"> is not available&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># Method 2: Using type</span>
+check_command_type<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">cmd</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nb">type</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$cmd</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">&amp;</span>&gt;/dev/null<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$cmd</span><span class="s2"> is available&quot;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="w">    </span><span class="k">else</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$cmd</span><span class="s2"> is not available&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># Method 3: Using which (less portable)</span>
+check_command_which<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">cmd</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span>which<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$cmd</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">&amp;</span>&gt;/dev/null<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$cmd</span><span class="s2"> is available&quot;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="w">    </span><span class="k">else</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$cmd</span><span class="s2"> is not available&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># Require command with helpful message</span>
+require_command<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">cmd</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">install_hint</span><span class="o">=</span><span class="si">${</span><span class="nv">2</span><span class="k">:-</span><span class="s2">&quot;&quot;</span><span class="si">}</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span>!<span class="w"> </span><span class="nb">command</span><span class="w"> </span>-v<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$cmd</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">&amp;</span>&gt;/dev/null<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: Required command &#39;</span><span class="nv">$cmd</span><span class="s2">&#39; not found&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$install_hint</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">            </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Install with: </span><span class="nv">$install_hint</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">fi</span>
+<span class="w">        </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># Require one of multiple commands</span>
+require_one_of<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">found</span><span class="o">=</span><span class="m">0</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span>cmd<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$@</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nb">command</span><span class="w"> </span>-v<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$cmd</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">&amp;</span>&gt;/dev/null<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">            </span><span class="nv">found</span><span class="o">=</span><span class="m">1</span>
+<span class="w">            </span><span class="k">break</span>
+<span class="w">        </span><span class="k">fi</span>
+<span class="w">    </span><span class="k">done</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$found</span><span class="w"> </span>-eq<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: None of the required commands found: </span><span class="nv">$*</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># Usage</span>
+check_command_v<span class="w"> </span><span class="s2">&quot;bash&quot;</span>
+check_command_v<span class="w"> </span><span class="s2">&quot;nonexistent_command&quot;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;As expected&quot;</span>
+
+require_command<span class="w"> </span><span class="s2">&quot;grep&quot;</span>
+require_command<span class="w"> </span><span class="s2">&quot;curl&quot;</span><span class="w"> </span><span class="s2">&quot;apt-get install curl / brew install curl&quot;</span>
+
+require_one_of<span class="w"> </span><span class="s2">&quot;python3&quot;</span><span class="w"> </span><span class="s2">&quot;python&quot;</span>
+require_one_of<span class="w"> </span><span class="s2">&quot;vim&quot;</span><span class="w"> </span><span class="s2">&quot;nvim&quot;</span><span class="w"> </span><span class="s2">&quot;nano&quot;</span>
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;All required commands are available&quot;</span>
+</code></pre></div>
+
+<h3 id="_9">안전한 임시 파일<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Create temp file</span>
+create_temp_file<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span>tmpfile
+<span class="w">    </span><span class="nv">tmpfile</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="k">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">{</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Failed to create temp file&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="o">}</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$tmpfile</span><span class="s2">&quot;</span>
+<span class="o">}</span>
+
+<span class="c1"># Create temp directory</span>
+create_temp_dir<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span>tmpdir
+<span class="w">    </span><span class="nv">tmpdir</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="w"> </span>-d<span class="k">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">{</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Failed to create temp directory&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="o">}</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$tmpdir</span><span class="s2">&quot;</span>
+<span class="o">}</span>
+
+<span class="c1"># Create temp file with custom template</span>
+create_temp_file_template<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">prefix</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span>tmpfile
+<span class="w">    </span><span class="nv">tmpfile</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="w"> </span><span class="s2">&quot;/tmp/</span><span class="si">${</span><span class="nv">prefix</span><span class="si">}</span><span class="s2">.XXXXXX&quot;</span><span class="k">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">{</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Failed to create temp file&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="o">}</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$tmpfile</span><span class="s2">&quot;</span>
+<span class="o">}</span>
+
+<span class="c1"># Safe temp file with cleanup</span>
+safe_temp_file<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span>tmpfile
+<span class="w">    </span><span class="nv">tmpfile</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="k">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+
+<span class="w">    </span><span class="c1"># Register cleanup</span>
+<span class="w">    </span><span class="nb">trap</span><span class="w"> </span><span class="s2">&quot;rm -f &#39;</span><span class="nv">$tmpfile</span><span class="s2">&#39;&quot;</span><span class="w"> </span>EXIT
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$tmpfile</span><span class="s2">&quot;</span>
+<span class="o">}</span>
+
+<span class="c1"># Usage</span>
+<span class="nv">TMPFILE</span><span class="o">=</span><span class="k">$(</span>create_temp_file<span class="k">)</span>
+<span class="nb">trap</span><span class="w"> </span><span class="s2">&quot;rm -f &#39;</span><span class="nv">$TMPFILE</span><span class="s2">&#39;&quot;</span><span class="w"> </span>EXIT
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;data&quot;</span><span class="w"> </span>&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TMPFILE</span><span class="s2">&quot;</span>
+cat<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TMPFILE</span><span class="s2">&quot;</span>
+
+<span class="nv">TMPDIR</span><span class="o">=</span><span class="k">$(</span>create_temp_dir<span class="k">)</span>
+<span class="nb">trap</span><span class="w"> </span><span class="s2">&quot;rm -rf &#39;</span><span class="nv">$TMPDIR</span><span class="s2">&#39;&quot;</span><span class="w"> </span>EXIT
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Created temp dir: </span><span class="nv">$TMPDIR</span><span class="s2">&quot;</span>
+touch<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TMPDIR</span><span class="s2">/file1.txt&quot;</span>
+touch<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TMPDIR</span><span class="s2">/file2.txt&quot;</span>
+ls<span class="w"> </span>-la<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$TMPDIR</span><span class="s2">&quot;</span>
+
+<span class="c1"># Custom template</span>
+<span class="nv">LOGFILE</span><span class="o">=</span><span class="k">$(</span>create_temp_file_template<span class="w"> </span><span class="s2">&quot;myapp_log&quot;</span><span class="k">)</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Log file: </span><span class="nv">$LOGFILE</span><span class="s2">&quot;</span>
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Cleanup will happen automatically on exit&quot;</span>
+</code></pre></div>
+
+<h3 id="_10">락 파일<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Simple lock file</span>
+acquire_lock_simple<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">lockfile</span><span class="o">=</span><span class="nv">$1</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$lockfile</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Lock file exists, another instance may be running&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="nv">$$</span><span class="w"> </span>&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$lockfile</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="nb">trap</span><span class="w"> </span><span class="s2">&quot;rm -f &#39;</span><span class="nv">$lockfile</span><span class="s2">&#39;&quot;</span><span class="w"> </span>EXIT
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="o">}</span>
+
+<span class="c1"># Atomic lock with mkdir</span>
+acquire_lock_atomic<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">lockfile</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">max_attempts</span><span class="o">=</span><span class="si">${</span><span class="nv">2</span><span class="k">:-</span><span class="nv">10</span><span class="si">}</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">attempt</span><span class="o">=</span><span class="m">0</span>
+
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$attempt</span><span class="w"> </span>-lt<span class="w"> </span><span class="nv">$max_attempts</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span>mkdir<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$lockfile</span><span class="s2">&quot;</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">            </span><span class="nb">trap</span><span class="w"> </span><span class="s2">&quot;rmdir &#39;</span><span class="nv">$lockfile</span><span class="s2">&#39;&quot;</span><span class="w"> </span>EXIT
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="w">        </span><span class="k">fi</span>
+
+<span class="w">        </span><span class="o">((</span>attempt++<span class="o">))</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Lock attempt </span><span class="nv">$attempt</span><span class="s2">/</span><span class="nv">$max_attempts</span><span class="s2"> failed, retrying...&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span>sleep<span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">done</span>
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Failed to acquire lock after </span><span class="nv">$max_attempts</span><span class="s2"> attempts&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="o">}</span>
+
+<span class="c1"># Lock with PID check</span>
+acquire_lock_with_pid_check<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">lockfile</span><span class="o">=</span><span class="nv">$1</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$lockfile</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">local</span><span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="k">$(</span>cat<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$lockfile</span><span class="s2">&quot;</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="k">)</span>
+
+<span class="w">        </span><span class="c1"># Check if process is still running</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$pid</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">kill</span><span class="w"> </span>-0<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$pid</span><span class="s2">&quot;</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">            </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Another instance is running (PID: </span><span class="nv">$pid</span><span class="s2">)&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">        </span><span class="k">else</span>
+<span class="w">            </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Removing stale lock file&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">            </span>rm<span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$lockfile</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="k">fi</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="nv">$$</span><span class="w"> </span>&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$lockfile</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="nb">trap</span><span class="w"> </span><span class="s2">&quot;rm -f &#39;</span><span class="nv">$lockfile</span><span class="s2">&#39;&quot;</span><span class="w"> </span>EXIT
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="o">}</span>
+
+<span class="c1"># Lock with flock (Linux)</span>
+acquire_lock_flock<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">lockfile</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">fd</span><span class="o">=</span><span class="nv">$2</span><span class="w">  </span><span class="c1"># File descriptor to use</span>
+
+<span class="w">    </span><span class="c1"># Open file descriptor</span>
+<span class="w">    </span><span class="nb">eval</span><span class="w"> </span><span class="s2">&quot;exec </span><span class="nv">$fd</span><span class="s2">&gt;\&quot;</span><span class="nv">$lockfile</span><span class="s2">\&quot;&quot;</span>
+
+<span class="w">    </span><span class="c1"># Try to acquire exclusive lock</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span>flock<span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$fd</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">trap</span><span class="w"> </span><span class="s2">&quot;flock -u &#39;</span><span class="nv">$fd</span><span class="s2">&#39;; exec </span><span class="nv">$fd</span><span class="s2">&gt;&amp;-; rm -f &#39;</span><span class="nv">$lockfile</span><span class="s2">&#39;&quot;</span><span class="w"> </span>EXIT
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="w">    </span><span class="k">else</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Failed to acquire lock&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="nb">exec</span><span class="w"> </span><span class="o">{</span>fd<span class="o">}</span>&gt;<span class="p">&amp;</span>-
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># Usage</span>
+<span class="nv">LOCKFILE</span><span class="o">=</span><span class="s2">&quot;/tmp/myscript.lock&quot;</span>
+
+<span class="k">if</span><span class="w"> </span>acquire_lock_with_pid_check<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOCKFILE</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Lock acquired, doing work...&quot;</span>
+<span class="w">    </span>sleep<span class="w"> </span><span class="m">5</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Work complete&quot;</span>
+<span class="k">else</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Could not acquire lock, exiting&quot;</span>
+<span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+<span class="k">fi</span>
+
+<span class="c1"># Alternative: using flock</span>
+<span class="c1"># LOCKFILE=&quot;/tmp/myscript.flock&quot;</span>
+<span class="c1"># if acquire_lock_flock &quot;$LOCKFILE&quot; 200; then</span>
+<span class="c1">#     echo &quot;Flock acquired&quot;</span>
+<span class="c1">#     sleep 5</span>
+<span class="c1">#     echo &quot;Work complete&quot;</span>
+<span class="c1"># fi</span>
+</code></pre></div>
+
+<h3 id="_11">안전한 파일 작업<a class="header-link" href="#_11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Safe file copy with verification</span>
+safe_copy<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">src</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">dst</span><span class="o">=</span><span class="nv">$2</span>
+
+<span class="w">    </span><span class="c1"># Check source exists</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>!<span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$src</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: Source file does not exist: </span><span class="nv">$src</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="c1"># Check destination doesn&#39;t exist or confirm overwrite</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$dst</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Warning: Destination exists: </span><span class="nv">$dst</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="nb">read</span><span class="w"> </span>-p<span class="w"> </span><span class="s2">&quot;Overwrite? (y/n): &quot;</span><span class="w"> </span>-n<span class="w"> </span><span class="m">1</span><span class="w"> </span>-r
+<span class="w">        </span><span class="nb">echo</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span>!<span class="w"> </span><span class="nv">$REPLY</span><span class="w"> </span><span class="o">=</span>~<span class="w"> </span>^<span class="o">[</span>Yy<span class="o">]</span>$<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">            </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Copy cancelled&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">        </span><span class="k">fi</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="c1"># Copy to temp file first</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">tmpfile</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">dst</span><span class="si">}</span><span class="s2">.tmp.</span><span class="nv">$$</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span>!<span class="w"> </span>cp<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$src</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$tmpfile</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: Failed to copy file&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="c1"># Verify copy</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span>!<span class="w"> </span>cmp<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$src</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$tmpfile</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: Verification failed&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span>rm<span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$tmpfile</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="c1"># Move to final destination</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span>!<span class="w"> </span>mv<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$tmpfile</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$dst</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: Failed to move temp file to destination&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span>rm<span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$tmpfile</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Successfully copied </span><span class="nv">$src</span><span class="s2"> to </span><span class="nv">$dst</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="o">}</span>
+
+<span class="c1"># Safe file write with backup</span>
+safe_write<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">file</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">content</span><span class="o">=</span><span class="nv">$2</span>
+
+<span class="w">    </span><span class="c1"># Backup existing file</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$file</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">local</span><span class="w"> </span><span class="nv">backup</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">file</span><span class="si">}</span><span class="s2">.backup.</span><span class="k">$(</span>date<span class="w"> </span>+%Y%m%d_%H%M%S<span class="k">)</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span>!<span class="w"> </span>cp<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$file</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$backup</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">            </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: Failed to create backup&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">        </span><span class="k">fi</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Created backup: </span><span class="nv">$backup</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="c1"># Write to temp file</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">tmpfile</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">file</span><span class="si">}</span><span class="s2">.tmp.</span><span class="nv">$$</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span>!<span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$content</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$tmpfile</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: Failed to write to temp file&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="c1"># Atomic move</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span>!<span class="w"> </span>mv<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$tmpfile</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$file</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: Failed to move temp file&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span>rm<span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$tmpfile</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Successfully wrote to </span><span class="nv">$file</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="o">}</span>
+
+<span class="c1"># Safe directory creation</span>
+safe_mkdir<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">dir</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">mode</span><span class="o">=</span><span class="si">${</span><span class="nv">2</span><span class="k">:-</span><span class="nv">755</span><span class="si">}</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$dir</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>!<span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$dir</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">            </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: Path exists but is not a directory: </span><span class="nv">$dir</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">        </span><span class="k">fi</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Directory already exists: </span><span class="nv">$dir</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span>!<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$mode</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$dir</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error: Failed to create directory: </span><span class="nv">$dir</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Created directory: </span><span class="nv">$dir</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="o">}</span>
+
+<span class="c1"># Usage</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;test content&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/tmp/source.txt
+safe_copy<span class="w"> </span>/tmp/source.txt<span class="w"> </span>/tmp/dest.txt
+safe_write<span class="w"> </span>/tmp/output.txt<span class="w"> </span><span class="s2">&quot;Hello, World!&quot;</span>
+safe_mkdir<span class="w"> </span>/tmp/test_dir<span class="w"> </span><span class="m">755</span>
+</code></pre></div>
+
+<h2 id="5-shellcheck">5. ShellCheck 정적 분석<a class="header-link" href="#5-shellcheck" title="Permanent link">&para;</a></h2>
+<p>ShellCheck은 셸 스크립트에서 버그를 찾아내는 정적 분석 도구입니다.</p>
+<h3 id="shellcheck">일반적인 ShellCheck 경고<a class="header-link" href="#shellcheck" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># SC2086: Double quote to prevent word splitting</span>
+<span class="nv">file</span><span class="o">=</span><span class="s2">&quot;my file.txt&quot;</span>
+cat<span class="w"> </span><span class="nv">$file</span><span class="w">        </span><span class="c1"># BAD: will try to cat &quot;my&quot; and &quot;file.txt&quot;</span>
+cat<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$file</span><span class="s2">&quot;</span><span class="w">      </span><span class="c1"># GOOD: treats as single argument</span>
+
+<span class="c1"># SC2046: Quote command substitution to prevent word splitting</span>
+<span class="k">for</span><span class="w"> </span>file<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="k">$(</span>ls<span class="w"> </span>*.txt<span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w">  </span><span class="c1"># BAD</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$file</span><span class="s2">&quot;</span>
+<span class="k">done</span>
+
+<span class="k">for</span><span class="w"> </span>file<span class="w"> </span><span class="k">in</span><span class="w"> </span>*.txt<span class="p">;</span><span class="w"> </span><span class="k">do</span><span class="w">        </span><span class="c1"># GOOD</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$file</span><span class="s2">&quot;</span>
+<span class="k">done</span>
+
+<span class="c1"># SC2006: Use $(...) instead of `...`</span>
+<span class="nv">result</span><span class="o">=</span><span class="sb">`</span><span class="nb">command</span><span class="sb">`</span><span class="w">             </span><span class="c1"># BAD (deprecated)</span>
+<span class="nv">result</span><span class="o">=</span><span class="k">$(</span><span class="nb">command</span><span class="k">)</span><span class="w">            </span><span class="c1"># GOOD</span>
+
+<span class="c1"># SC2155: Separate declaration and assignment to avoid masking return value</span>
+<span class="nb">declare</span><span class="w"> </span><span class="nv">output</span><span class="o">=</span><span class="k">$(</span><span class="nb">command</span><span class="k">)</span><span class="w">    </span><span class="c1"># BAD: masks command&#39;s exit code</span>
+<span class="nb">declare</span><span class="w"> </span>output<span class="w">               </span><span class="c1"># GOOD</span>
+<span class="nv">output</span><span class="o">=</span><span class="k">$(</span><span class="nb">command</span><span class="k">)</span>
+
+<span class="c1"># SC2164: Use || exit after cd in case it fails</span>
+<span class="nb">cd</span><span class="w"> </span>/some/directory<span class="w">           </span><span class="c1"># BAD: script continues if cd fails</span>
+<span class="nb">cd</span><span class="w"> </span>/some/directory<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w">   </span><span class="c1"># GOOD</span>
+
+<span class="c1"># SC2166: Prefer -a/-o over &amp;&amp;/|| in [ ] expressions</span>
+<span class="o">[</span><span class="w"> </span>-f<span class="w"> </span>file<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>-r<span class="w"> </span>file<span class="w"> </span><span class="o">]</span><span class="w">       </span><span class="c1"># BAD: doesn&#39;t work</span>
+<span class="o">[</span><span class="w"> </span>-f<span class="w"> </span>file<span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-r<span class="w"> </span>file<span class="w"> </span><span class="o">]</span><span class="w">   </span><span class="c1"># GOOD</span>
+<span class="o">[</span><span class="w"> </span>-f<span class="w"> </span>file<span class="w"> </span>-a<span class="w"> </span>-r<span class="w"> </span>file<span class="w"> </span><span class="o">]</span><span class="w">       </span><span class="c1"># GOOD (but [ ] is deprecated, use [[ ]])</span>
+
+<span class="c1"># SC2006: Use [[ ]] instead of [ ] for better error handling</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$var</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;value&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span><span class="w">  </span><span class="c1"># BAD: fails if var is empty</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;match&quot;</span>
+<span class="k">fi</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="nv">$var</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;value&quot;</span><span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span><span class="w">  </span><span class="c1"># GOOD: handles empty var</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;match&quot;</span>
+<span class="k">fi</span>
+
+<span class="c1"># SC2143: Use grep -q instead of comparing output</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="k">$(</span>grep<span class="w"> </span>pattern<span class="w"> </span>file<span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l<span class="k">)</span><span class="w"> </span>-gt<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span><span class="w">  </span><span class="c1"># BAD</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;found&quot;</span>
+<span class="k">fi</span>
+<span class="k">if</span><span class="w"> </span>grep<span class="w"> </span>-q<span class="w"> </span>pattern<span class="w"> </span>file<span class="p">;</span><span class="w"> </span><span class="k">then</span><span class="w">  </span><span class="c1"># GOOD</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;found&quot;</span>
+<span class="k">fi</span>
+
+<span class="c1"># SC2069: Redirecting stdout to stderr correctly</span>
+<span class="nb">command</span><span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span>&gt;/dev/null<span class="w">      </span><span class="c1"># BAD: wrong order</span>
+<span class="nb">command</span><span class="w"> </span>&gt;/dev/null<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w">      </span><span class="c1"># GOOD</span>
+
+<span class="c1"># SC2181: Check exit code directly instead of $?</span>
+<span class="nb">command</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$?</span><span class="w"> </span>-eq<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span><span class="w">        </span><span class="c1"># BAD (acceptable but not ideal)</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;success&quot;</span>
+<span class="k">fi</span>
+<span class="k">if</span><span class="w"> </span>command<span class="p">;</span><span class="w"> </span><span class="k">then</span><span class="w">             </span><span class="c1"># GOOD</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;success&quot;</span>
+<span class="k">fi</span>
+</code></pre></div>
+
+<h3 id="shellcheck_1">ShellCheck 통합<a class="header-link" href="#shellcheck_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Install ShellCheck</span>
+<span class="c1"># Ubuntu/Debian: apt-get install shellcheck</span>
+<span class="c1"># macOS: brew install shellcheck</span>
+<span class="c1"># Or download from: https://www.shellcheck.net/</span>
+
+<span class="c1"># Check a script</span>
+shellcheck<span class="w"> </span>script.sh
+
+<span class="c1"># Check with specific severity</span>
+shellcheck<span class="w"> </span>--severity<span class="o">=</span>warning<span class="w"> </span>script.sh
+
+<span class="c1"># Output in different formats</span>
+shellcheck<span class="w"> </span>--format<span class="o">=</span>gcc<span class="w"> </span>script.sh<span class="w">    </span><span class="c1"># GCC-style</span>
+shellcheck<span class="w"> </span>--format<span class="o">=</span>json<span class="w"> </span>script.sh<span class="w">   </span><span class="c1"># JSON format</span>
+shellcheck<span class="w"> </span>--format<span class="o">=</span>tty<span class="w"> </span>script.sh<span class="w">    </span><span class="c1"># Colored terminal output</span>
+
+<span class="c1"># Exclude specific warnings</span>
+shellcheck<span class="w"> </span>--exclude<span class="o">=</span>SC2086,SC2046<span class="w"> </span>script.sh
+
+<span class="c1"># Check all scripts in directory</span>
+find<span class="w"> </span>.<span class="w"> </span>-name<span class="w"> </span><span class="s1">&#39;*.sh&#39;</span><span class="w"> </span>-exec<span class="w"> </span>shellcheck<span class="w"> </span><span class="o">{}</span><span class="w"> </span><span class="se">\;</span>
+</code></pre></div>
+
+<h3 id="shellcheck_2">ShellCheck 설정<a class="header-link" href="#shellcheck_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># .shellcheckrc file (place in project root or ~/.shellcheckrc)</span>
+<span class="c1"># Disable specific checks globally</span>
+<span class="nv">disable</span><span class="o">=</span>SC2086,SC2046
+
+<span class="c1"># Set shell dialect</span>
+<span class="nv">shell</span><span class="o">=</span>bash
+
+<span class="c1"># Enable optional checks</span>
+<span class="nv">enable</span><span class="o">=</span>quote-safe-variables
+
+<span class="c1"># Example .shellcheckrc:</span>
+cat<span class="w"> </span>&gt;<span class="w"> </span>.shellcheckrc<span class="w"> </span><span class="s">&lt;&lt; &#39;EOF&#39;</span>
+<span class="s"># Disable word splitting warnings</span>
+<span class="s">disable=SC2086</span>
+
+<span class="s"># Enable all optional checks</span>
+<span class="s">enable=all</span>
+
+<span class="s"># Source paths</span>
+<span class="s">source-path=SCRIPTDIR</span>
+<span class="s">EOF</span>
+</code></pre></div>
+
+<h3 id="_12">코드 내 경고 억제<a class="header-link" href="#_12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Suppress for next line</span>
+<span class="c1"># shellcheck disable=SC2086</span>
+<span class="nb">echo</span><span class="w"> </span><span class="nv">$unquoted_var</span>
+
+<span class="c1"># Suppress for entire file</span>
+<span class="c1"># shellcheck disable=SC2086,SC2046</span>
+
+<span class="c1"># Suppress with explanation</span>
+<span class="c1"># shellcheck disable=SC2086  # Intentional word splitting here</span>
+<span class="k">for</span><span class="w"> </span>word<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="nv">$sentence</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$word</span><span class="s2">&quot;</span>
+<span class="k">done</span>
+
+<span class="c1"># Suppress for a block</span>
+<span class="c1"># shellcheck disable=SC2086</span>
+<span class="o">{</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="nv">$var1</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="nv">$var2</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="nv">$var3</span>
+<span class="o">}</span>
+<span class="c1"># shellcheck enable=SC2086</span>
+</code></pre></div>
+
+<h2 id="6">6. 디버깅 기법<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<p>효과적인 디버깅 기법은 문제를 신속하게 식별하고 수정하는 데 도움이 됩니다.</p>
+<h3 id="set-x-xtrace">set -x (xtrace)<a class="header-link" href="#set-x-xtrace" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Enable xtrace (print commands before execution)</span>
+<span class="nb">set</span><span class="w"> </span>-x
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;This will be traced&quot;</span>
+<span class="nv">var</span><span class="o">=</span><span class="s2">&quot;hello&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$var</span><span class="s2">&quot;</span>
+
+<span class="c1"># Disable xtrace</span>
+<span class="nb">set</span><span class="w"> </span>+x
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;This won&#39;t be traced&quot;</span>
+</code></pre></div>
+
+<h3 id="ps4">향상된 추적을 위한 커스텀 PS4<a class="header-link" href="#ps4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Default PS4 is &#39;+ &#39;</span>
+<span class="c1"># Customize it for more information</span>
+
+<span class="c1"># Show line number</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">PS4</span><span class="o">=</span><span class="s1">&#39;+(${LINENO}): &#39;</span>
+<span class="nb">set</span><span class="w"> </span>-x
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Line number shown&quot;</span>
+<span class="nv">var</span><span class="o">=</span><span class="s2">&quot;test&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$var</span><span class="s2">&quot;</span>
+<span class="nb">set</span><span class="w"> </span>+x
+
+<span class="c1"># Show line number and function name</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">PS4</span><span class="o">=</span><span class="s1">&#39;+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }&#39;</span>
+<span class="nb">set</span><span class="w"> </span>-x
+
+my_function<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Inside function&quot;</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">x</span><span class="o">=</span><span class="m">10</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$x</span><span class="s2">&quot;</span>
+<span class="o">}</span>
+
+my_function
+<span class="nb">set</span><span class="w"> </span>+x
+
+<span class="c1"># Show timestamp, line, and function</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">PS4</span><span class="o">=</span><span class="s1">&#39;[$(date +%T)] ${BASH_SOURCE}:${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }&#39;</span>
+<span class="nb">set</span><span class="w"> </span>-x
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Timestamped trace&quot;</span>
+<span class="nb">set</span><span class="w"> </span>+x
+</code></pre></div>
+
+<h3 id="_13">선택적 디버깅<a class="header-link" href="#_13" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Debug flag</span>
+<span class="nv">DEBUG</span><span class="o">=</span><span class="si">${</span><span class="nv">DEBUG</span><span class="k">:-</span><span class="nv">0</span><span class="si">}</span>
+
+debug<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DEBUG</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;1&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;DEBUG: </span><span class="nv">$*</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+debug_start<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DEBUG</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;1&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">set</span><span class="w"> </span>-x
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+debug_end<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DEBUG</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;1&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">set</span><span class="w"> </span>+x
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># Usage</span>
+debug<span class="w"> </span><span class="s2">&quot;Script starting&quot;</span>
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Normal execution&quot;</span>
+
+debug_start
+<span class="c1"># This section will be traced if DEBUG=1</span>
+<span class="nv">var</span><span class="o">=</span><span class="s2">&quot;test&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$var</span><span class="s2">&quot;</span>
+<span class="nv">result</span><span class="o">=</span><span class="k">$((</span><span class="nv">var</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="m">10</span><span class="k">))</span>
+debug_end
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;More normal execution&quot;</span>
+
+<span class="c1"># Run with: DEBUG=1 ./script.sh</span>
+</code></pre></div>
+
+<h3 id="set-v-verbose">set -v (verbose)<a class="header-link" href="#set-v-verbose" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Verbose mode: print shell input lines</span>
+<span class="nb">set</span><span class="w"> </span>-v
+
+<span class="c1"># This prints the line itself before executing</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Hello&quot;</span>
+<span class="nv">var</span><span class="o">=</span><span class="s2">&quot;world&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$var</span><span class="s2">&quot;</span>
+
+<span class="nb">set</span><span class="w"> </span>+v
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Verbose mode off&quot;</span>
+</code></pre></div>
+
+<h3 id="bash-bashdb">Bash 디버거 (bashdb)<a class="header-link" href="#bash-bashdb" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Install bashdb</span>
+<span class="c1"># Ubuntu/Debian: apt-get install bashdb</span>
+<span class="c1"># Or download from: http://bashdb.sourceforge.net/</span>
+
+<span class="c1"># Run script with debugger</span>
+<span class="c1"># bashdb script.sh</span>
+
+<span class="c1"># Debugger commands:</span>
+<span class="c1"># n     - next line</span>
+<span class="c1"># s     - step into function</span>
+<span class="c1"># c     - continue until breakpoint</span>
+<span class="c1"># l     - list source code</span>
+<span class="c1"># p var - print variable value</span>
+<span class="c1"># b N   - set breakpoint at line N</span>
+<span class="c1"># q     - quit debugger</span>
+
+<span class="c1"># Example script to debug</span>
+<span class="k">function</span><span class="w"> </span>calculate<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">a</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">b</span><span class="o">=</span><span class="nv">$2</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">result</span><span class="o">=</span><span class="k">$((</span><span class="nv">a</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nv">b</span><span class="k">))</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$result</span><span class="s2">&quot;</span>
+<span class="o">}</span>
+
+<span class="nv">x</span><span class="o">=</span><span class="m">10</span>
+<span class="nv">y</span><span class="o">=</span><span class="m">20</span>
+<span class="nv">sum</span><span class="o">=</span><span class="k">$(</span>calculate<span class="w"> </span><span class="nv">$x</span><span class="w"> </span><span class="nv">$y</span><span class="k">)</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Sum: </span><span class="nv">$sum</span><span class="s2">&quot;</span>
+
+<span class="c1"># Run with: bashdb this_script.sh</span>
+<span class="c1"># Then use &#39;n&#39; to step through, &#39;p x&#39; to print variables, etc.</span>
+</code></pre></div>
+
+<h3 id="_14">디버그 로깅<a class="header-link" href="#_14" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Debug levels</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">DEBUG_NONE</span><span class="o">=</span><span class="m">0</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">DEBUG_ERROR</span><span class="o">=</span><span class="m">1</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">DEBUG_WARN</span><span class="o">=</span><span class="m">2</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">DEBUG_INFO</span><span class="o">=</span><span class="m">3</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">DEBUG_TRACE</span><span class="o">=</span><span class="m">4</span>
+
+<span class="nv">DEBUG_LEVEL</span><span class="o">=</span><span class="si">${</span><span class="nv">DEBUG_LEVEL</span><span class="k">:-</span><span class="nv">$DEBUG_INFO</span><span class="si">}</span>
+
+debug_log<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">level</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">shift</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">message</span><span class="o">=</span><span class="nv">$*</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$level</span><span class="s2">&quot;</span><span class="w"> </span>-le<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$DEBUG_LEVEL</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">local</span><span class="w"> </span>level_name
+<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="nv">$level</span><span class="w"> </span><span class="k">in</span>
+<span class="w">            </span><span class="nv">$DEBUG_ERROR</span><span class="o">)</span><span class="w"> </span><span class="nv">level_name</span><span class="o">=</span><span class="s2">&quot;ERROR&quot;</span><span class="w"> </span><span class="p">;;</span>
+<span class="w">            </span><span class="nv">$DEBUG_WARN</span><span class="o">)</span><span class="w">  </span><span class="nv">level_name</span><span class="o">=</span><span class="s2">&quot;WARN&quot;</span><span class="w">  </span><span class="p">;;</span>
+<span class="w">            </span><span class="nv">$DEBUG_INFO</span><span class="o">)</span><span class="w">  </span><span class="nv">level_name</span><span class="o">=</span><span class="s2">&quot;INFO&quot;</span><span class="w">  </span><span class="p">;;</span>
+<span class="w">            </span><span class="nv">$DEBUG_TRACE</span><span class="o">)</span><span class="w"> </span><span class="nv">level_name</span><span class="o">=</span><span class="s2">&quot;TRACE&quot;</span><span class="w"> </span><span class="p">;;</span>
+<span class="w">        </span><span class="k">esac</span>
+
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;[</span><span class="k">$(</span>date<span class="w"> </span><span class="s1">&#39;+%Y-%m-%d %H:%M:%S&#39;</span><span class="k">)</span><span class="s2">] [</span><span class="nv">$level_name</span><span class="s2">] </span><span class="nv">$message</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+error<span class="o">()</span><span class="w"> </span><span class="o">{</span><span class="w"> </span>debug_log<span class="w"> </span><span class="nv">$DEBUG_ERROR</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="o">}</span>
+warn<span class="o">()</span><span class="w">  </span><span class="o">{</span><span class="w"> </span>debug_log<span class="w"> </span><span class="nv">$DEBUG_WARN</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="o">}</span>
+info<span class="o">()</span><span class="w">  </span><span class="o">{</span><span class="w"> </span>debug_log<span class="w"> </span><span class="nv">$DEBUG_INFO</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="o">}</span>
+trace<span class="o">()</span><span class="w"> </span><span class="o">{</span><span class="w"> </span>debug_log<span class="w"> </span><span class="nv">$DEBUG_TRACE</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="o">}</span>
+
+<span class="c1"># Usage</span>
+error<span class="w"> </span><span class="s2">&quot;This is an error&quot;</span>
+warn<span class="w"> </span><span class="s2">&quot;This is a warning&quot;</span>
+info<span class="w"> </span><span class="s2">&quot;This is info&quot;</span>
+trace<span class="w"> </span><span class="s2">&quot;This is trace&quot;</span>
+
+<span class="c1"># Run with different levels:</span>
+<span class="c1"># DEBUG_LEVEL=1 ./script.sh  # Only errors</span>
+<span class="c1"># DEBUG_LEVEL=2 ./script.sh  # Errors and warnings</span>
+<span class="c1"># DEBUG_LEVEL=4 ./script.sh  # Everything</span>
+</code></pre></div>
+
+<h2 id="7">7. 로깅 프레임워크<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<p>프로덕션 스크립트를 위한 포괄적인 로깅 프레임워크입니다.</p>
+<h3 id="_15">간단한 로깅<a class="header-link" href="#_15" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Log to file</span>
+<span class="nv">LOG_FILE</span><span class="o">=</span><span class="s2">&quot;/var/log/myscript.log&quot;</span>
+
+log<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;[</span><span class="k">$(</span>date<span class="w"> </span><span class="s1">&#39;+%Y-%m-%d %H:%M:%S&#39;</span><span class="k">)</span><span class="s2">] </span><span class="nv">$*</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span>
+<span class="o">}</span>
+
+log<span class="w"> </span><span class="s2">&quot;Script started&quot;</span>
+log<span class="w"> </span><span class="s2">&quot;Processing data...&quot;</span>
+log<span class="w"> </span><span class="s2">&quot;Script completed&quot;</span>
+</code></pre></div>
+
+<h3 id="_16">다단계 로깅<a class="header-link" href="#_16" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Log levels</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">LOG_LEVEL_DEBUG</span><span class="o">=</span><span class="m">0</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">LOG_LEVEL_INFO</span><span class="o">=</span><span class="m">1</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">LOG_LEVEL_WARN</span><span class="o">=</span><span class="m">2</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">LOG_LEVEL_ERROR</span><span class="o">=</span><span class="m">3</span>
+<span class="nb">readonly</span><span class="w"> </span><span class="nv">LOG_LEVEL_FATAL</span><span class="o">=</span><span class="m">4</span>
+
+<span class="c1"># Current log level</span>
+<span class="nv">LOG_LEVEL</span><span class="o">=</span><span class="si">${</span><span class="nv">LOG_LEVEL</span><span class="k">:-</span><span class="nv">$LOG_LEVEL_INFO</span><span class="si">}</span>
+
+<span class="c1"># Log file</span>
+<span class="nv">LOG_FILE</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">LOG_FILE</span><span class="k">:-</span><span class="p">/var/log/myscript.log</span><span class="si">}</span><span class="s2">&quot;</span>
+
+<span class="c1"># Log function</span>
+log_message<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">level</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">level_num</span><span class="o">=</span><span class="nv">$2</span>
+<span class="w">    </span><span class="nb">shift</span><span class="w"> </span><span class="m">2</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">message</span><span class="o">=</span><span class="nv">$*</span>
+
+<span class="w">    </span><span class="c1"># Only log if level is high enough</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$level_num</span><span class="s2">&quot;</span><span class="w"> </span>-ge<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_LEVEL</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">local</span><span class="w"> </span><span class="nv">timestamp</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span><span class="s1">&#39;+%Y-%m-%d %H:%M:%S&#39;</span><span class="k">)</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;[</span><span class="nv">$timestamp</span><span class="s2">] [</span><span class="nv">$level</span><span class="s2">] </span><span class="nv">$message</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># Convenience functions</span>
+debug<span class="o">()</span><span class="w"> </span><span class="o">{</span><span class="w"> </span>log_message<span class="w"> </span><span class="s2">&quot;DEBUG&quot;</span><span class="w"> </span><span class="nv">$LOG_LEVEL_DEBUG</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="o">}</span>
+info<span class="o">()</span><span class="w">  </span><span class="o">{</span><span class="w"> </span>log_message<span class="w"> </span><span class="s2">&quot;INFO&quot;</span><span class="w">  </span><span class="nv">$LOG_LEVEL_INFO</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="o">}</span>
+warn<span class="o">()</span><span class="w">  </span><span class="o">{</span><span class="w"> </span>log_message<span class="w"> </span><span class="s2">&quot;WARN&quot;</span><span class="w">  </span><span class="nv">$LOG_LEVEL_WARN</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="o">}</span>
+error<span class="o">()</span><span class="w"> </span><span class="o">{</span><span class="w"> </span>log_message<span class="w"> </span><span class="s2">&quot;ERROR&quot;</span><span class="w"> </span><span class="nv">$LOG_LEVEL_ERROR</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="o">}</span>
+fatal<span class="o">()</span><span class="w"> </span><span class="o">{</span><span class="w"> </span>log_message<span class="w"> </span><span class="s2">&quot;FATAL&quot;</span><span class="w"> </span><span class="nv">$LOG_LEVEL_FATAL</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$*</span><span class="s2">&quot;</span><span class="p">;</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span><span class="w"> </span><span class="o">}</span>
+
+<span class="c1"># Usage</span>
+debug<span class="w"> </span><span class="s2">&quot;Debug message&quot;</span>
+info<span class="w"> </span><span class="s2">&quot;Info message&quot;</span>
+warn<span class="w"> </span><span class="s2">&quot;Warning message&quot;</span>
+error<span class="w"> </span><span class="s2">&quot;Error message&quot;</span>
+<span class="c1"># fatal &quot;Fatal error&quot;  # Uncomment to test</span>
+</code></pre></div>
+
+<h3 id="_17">파일 및 콘솔 로깅<a class="header-link" href="#_17" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="nv">LOG_FILE</span><span class="o">=</span><span class="s2">&quot;/var/log/myscript.log&quot;</span>
+
+<span class="c1"># Setup logging</span>
+setup_logging<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="c1"># Create log file if it doesn&#39;t exist</span>
+<span class="w">    </span>touch<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">{</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Cannot create log file: </span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">        </span><span class="nv">LOG_FILE</span><span class="o">=</span><span class="s2">&quot;/tmp/myscript.log&quot;</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Using temporary log file: </span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<span class="w">    </span><span class="o">}</span>
+
+<span class="w">    </span><span class="c1"># Redirect stdout and stderr to log file AND console</span>
+<span class="w">    </span><span class="nb">exec</span><span class="w"> </span>&gt;<span class="w"> </span>&gt;<span class="o">(</span>tee<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span><span class="o">)</span>
+<span class="w">    </span><span class="nb">exec</span><span class="w"> </span><span class="m">2</span>&gt;<span class="w"> </span>&gt;<span class="o">(</span>tee<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span><span class="o">)</span>
+<span class="o">}</span>
+
+setup_logging
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;This goes to both console and log file&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Error message&quot;</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+</code></pre></div>
+
+<h3 id="_18">로그 회전<a class="header-link" href="#_18" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="nv">LOG_FILE</span><span class="o">=</span><span class="s2">&quot;/var/log/myscript.log&quot;</span>
+<span class="nv">MAX_LOG_SIZE</span><span class="o">=</span><span class="k">$((</span><span class="m">10</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="m">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="m">1024</span><span class="k">))</span><span class="w">  </span><span class="c1"># 10 MB</span>
+<span class="nv">MAX_LOG_FILES</span><span class="o">=</span><span class="m">5</span>
+
+rotate_logs<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">log_file</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">max_size</span><span class="o">=</span><span class="nv">$2</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">max_files</span><span class="o">=</span><span class="nv">$3</span>
+
+<span class="w">    </span><span class="c1"># Check if rotation needed</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>!<span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$log_file</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">size</span><span class="o">=</span><span class="k">$(</span>stat<span class="w"> </span>-f%z<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$log_file</span><span class="s2">&quot;</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span>stat<span class="w"> </span>-c%s<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$log_file</span><span class="s2">&quot;</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="k">)</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$size</span><span class="s2">&quot;</span><span class="w"> </span>-lt<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$max_size</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="c1"># Rotate old logs</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">i</span><span class="o">=</span><span class="nv">$max_files</span>
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$i</span><span class="w"> </span>-gt<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">        </span><span class="nb">local</span><span class="w"> </span><span class="nv">prev</span><span class="o">=</span><span class="k">$((</span><span class="nv">i</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="m">1</span><span class="k">))</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">log_file</span><span class="si">}</span><span class="s2">.</span><span class="si">${</span><span class="nv">prev</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">            </span>mv<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">log_file</span><span class="si">}</span><span class="s2">.</span><span class="si">${</span><span class="nv">prev</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">log_file</span><span class="si">}</span><span class="s2">.</span><span class="si">${</span><span class="nv">i</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="k">fi</span>
+<span class="w">        </span><span class="o">((</span>i--<span class="o">))</span>
+<span class="w">    </span><span class="k">done</span>
+
+<span class="w">    </span><span class="c1"># Move current log</span>
+<span class="w">    </span>mv<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$log_file</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">log_file</span><span class="si">}</span><span class="s2">.1&quot;</span>
+<span class="w">    </span>touch<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$log_file</span><span class="s2">&quot;</span>
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Log rotated at </span><span class="k">$(</span>date<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$log_file</span><span class="s2">&quot;</span>
+<span class="o">}</span>
+
+<span class="c1"># Check and rotate logs before starting</span>
+rotate_logs<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$MAX_LOG_SIZE</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$MAX_LOG_FILES</span><span class="s2">&quot;</span>
+
+<span class="c1"># Now log normally</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Log entry at </span><span class="k">$(</span>date<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<h3 id="_19">구조화된 로깅<a class="header-link" href="#_19" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="c1"># Structured logging with key=value pairs</span>
+structured_log<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">level</span><span class="o">=</span><span class="nv">$1</span>
+<span class="w">    </span><span class="nb">shift</span>
+
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">timestamp</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>-u<span class="w"> </span><span class="s1">&#39;+%Y-%m-%dT%H:%M:%S.%3NZ&#39;</span><span class="k">)</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="nv">$$</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">script</span><span class="o">=</span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$0</span><span class="s2">&quot;</span><span class="k">)</span>
+
+<span class="w">    </span><span class="c1"># Start with standard fields</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">log_entry</span><span class="o">=</span><span class="s2">&quot;timestamp=</span><span class="nv">$timestamp</span><span class="s2"> level=</span><span class="nv">$level</span><span class="s2"> pid=</span><span class="nv">$pid</span><span class="s2"> script=</span><span class="nv">$script</span><span class="s2">&quot;</span>
+
+<span class="w">    </span><span class="c1"># Add custom fields</span>
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$#</span><span class="w"> </span>-gt<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">        </span><span class="nv">log_entry</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$log_entry</span><span class="s2"> </span><span class="nv">$1</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="nb">shift</span>
+<span class="w">    </span><span class="k">done</span>
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$log_entry</span><span class="s2">&quot;</span>
+<span class="o">}</span>
+
+<span class="c1"># Usage</span>
+structured_log<span class="w"> </span>INFO<span class="w"> </span><span class="s2">&quot;event=startup&quot;</span><span class="w"> </span><span class="s2">&quot;version=1.0.0&quot;</span>
+structured_log<span class="w"> </span>INFO<span class="w"> </span><span class="s2">&quot;event=processing&quot;</span><span class="w"> </span><span class="s2">&quot;user=john&quot;</span><span class="w"> </span><span class="s2">&quot;action=login&quot;</span><span class="w"> </span><span class="s2">&quot;status=success&quot;</span>
+structured_log<span class="w"> </span>ERROR<span class="w"> </span><span class="s2">&quot;event=error&quot;</span><span class="w"> </span><span class="s2">&quot;error=connection_failed&quot;</span><span class="w"> </span><span class="s2">&quot;host=db.example.com&quot;</span>
+
+<span class="c1"># Output:</span>
+<span class="c1"># timestamp=2024-01-15T10:30:45.123Z level=INFO pid=12345 script=myscript.sh event=startup version=1.0.0</span>
+<span class="c1"># timestamp=2024-01-15T10:30:46.234Z level=INFO pid=12345 script=myscript.sh event=processing user=john action=login status=success</span>
+<span class="c1"># timestamp=2024-01-15T10:30:47.345Z level=ERROR pid=12345 script=myscript.sh event=error error=connection_failed host=db.example.com</span>
+
+<span class="c1"># This format is easily parseable by log analysis tools</span>
+</code></pre></div>
+
+<h2 id="8">8. 연습 문제<a class="header-link" href="#8" title="Permanent link">&para;</a></h2>
+<h3 id="1">문제 1: 견고한 파일 프로세서<a class="header-link" href="#1" title="Permanent link">&para;</a></h3>
+<p>포괄적인 에러 처리를 갖춘 여러 파일을 처리하는 스크립트를 작성하세요. 스크립트는 다음을 수행해야 합니다:
+- 디렉토리 경로를 인수로 받음
+- 디렉토리가 존재하고 읽기 가능한지 검증
+- 디렉토리 내 각 <code>.txt</code> 파일 처리
+- <code>set -euo pipefail</code> 사용
+- trap을 사용한 적절한 에러 처리 구현
+- 모든 작업(성공 및 실패)을 로그 파일에 기록
+- 종료 시(정상 또는 에러) 임시 파일 정리
+- Ctrl+C를 정리와 함께 우아하게 처리</p>
+<h3 id="2">문제 2: 입력 검증 라이브러리<a class="header-link" href="#2" title="Permanent link">&para;</a></h3>
+<p>다음을 검증하는 함수를 가진 재사용 가능한 입력 검증 라이브러리를 생성하세요:
+- 이메일 주소(RFC 호환 정규식)
+- 전화번호(미국 형식: (123) 456-7890)
+- URL(http/https)
+- 신용카드 번호(Luhn 알고리즘)
+- 날짜(YYYY-MM-DD 형식, 유효한 날짜)
+- 각 함수는 유효하면 0, 무효하면 1 반환
+- 무엇이 잘못되었는지 설명하는 에러 메시지 포함
+- 각 검증 함수에 대한 테스트 작성</p>
+<h3 id="3_1">문제 3: 에러 복구를 갖춘 데이터베이스 백업<a class="header-link" href="#3_1" title="Permanent link">&para;</a></h3>
+<p>다음을 수행하는 백업 스크립트를 작성하세요:
+- PostgreSQL 데이터베이스에 연결
+- pg_dump로 백업 생성
+- 백업 압축
+- S3에 업로드(또는 원격 서버에 복사)
+- 백업 무결성 검증
+- 각 단계를 처리하기 위해 try-catch 패턴 사용
+- 지수 백오프로 실패한 작업을 최대 3회 재시도
+- 성공 또는 실패 시 알림(이메일 또는 로그) 전송
+- 임시 파일의 적절한 정리 구현
+- 구조화된 로깅 사용</p>
+<h3 id="4-shellcheck-ci">문제 4: ShellCheck CI 통합<a class="header-link" href="#4-shellcheck-ci" title="Permanent link">&para;</a></h3>
+<p>다음을 수행하는 CI 스크립트를 생성하세요:
+- 리포지토리에서 모든 <code>.sh</code> 파일 찾기
+- 각 파일에 shellcheck 실행
+- 결과 수집 및 포맷
+- 에러(경고 아님)가 발견되면 CI 실패
+- 요약 리포트 생성
+- 선택적으로 HTML 리포트 생성
+- 특정 파일/디렉토리 제외 허용
+- 커스텀 shellcheck 설정 지원</p>
+<h3 id="5">문제 5: 디버그 모드 프레임워크<a class="header-link" href="#5" title="Permanent link">&para;</a></h3>
+<p>다음을 수행하는 포괄적인 디버그 모드 프레임워크를 구현하세요:
+- DEBUG 환경 변수를 레벨과 함께 받음: 0(없음), 1(에러), 2(경고), 3(정보), 4(디버그), 5(추적)
+- 각 레벨에 다른 색상 사용
+- 추적 출력에 타임스탬프, 라인 번호, 함수 이름 포함
+- 콘솔 및 파일 모두에 로그
+- 로그 회전 구현
+- debug(), info(), warn(), error(), fatal() 함수 제공
+- key=value 쌍으로 구조화된 로깅 지원
+- 코드의 특정 섹션에 대해 활성화/비활성화 가능
+- 성능 타이밍(작업 지속 시간) 포함</p>
+<hr />
+<p><strong>이전</strong>: <a href="./09_Process_Management.md">09_Process_Management.md</a> | <strong>다음</strong>: <a href="./11_Argument_Parsing.md">11_Argument_Parsing.md</a></p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Shell_Script/09_Process_Management.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">레슨 09: 프로세스 관리 및 작업 제어(Process Management and Job Control)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Shell_Script/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Shell_Script/11_Argument_Parsing.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">Lesson 11: 인수 파싱 및 CLI 인터페이스</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

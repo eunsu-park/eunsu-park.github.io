@@ -1,0 +1,925 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>17. 윈도우 함수와 분석 쿼리 (Window Functions & Analytics) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/PostgreSQL/">PostgreSQL</a>
+    <span class="separator">/</span>
+    <span class="current">17. 윈도우 함수와 분석 쿼리 (Window Functions & Analytics)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>17. 윈도우 함수와 분석 쿼리 (Window Functions & Analytics)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/PostgreSQL/16_Replication_HA.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">16. 복제와 고가용성 (Replication & High Availability)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/PostgreSQL/18_Table_Partitioning.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">18. 테이블 파티셔닝 (Table Partitioning)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#_2">목차</a></li>
+<li><a href="#1">1. 윈도우 함수 기초</a><ul>
+<li><a href="#11">1.1 윈도우 함수란?</a></li>
+<li><a href="#12">1.2 기본 문법</a></li>
+<li><a href="#13">1.3 샘플 데이터</a></li>
+</ul>
+</li>
+<li><a href="#2">2. 순위 함수</a><ul>
+<li><a href="#21-row_number-rank-dense_rank">2.1 ROW_NUMBER, RANK, DENSE_RANK 비교</a></li>
+<li><a href="#22-partition-by">2.2 PARTITION BY와 함께 순위</a></li>
+<li><a href="#23-ntile-">2.3 NTILE - 분위수 할당</a></li>
+<li><a href="#24-top-n">2.4 Top-N 쿼리</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 분석 함수</a><ul>
+<li><a href="#31-lag-lead">3.1 LAG와 LEAD</a></li>
+<li><a href="#32">3.2 증감률 계산</a></li>
+<li><a href="#33-first_value-last_value-nth_value">3.3 FIRST_VALUE, LAST_VALUE, NTH_VALUE</a></li>
+</ul>
+</li>
+<li><a href="#4">4. 집계 윈도우 함수</a><ul>
+<li><a href="#41-sum-avg-count">4.1 SUM, AVG, COUNT</a></li>
+<li><a href="#42-running-total">4.2 누적 합계 (Running Total)</a></li>
+<li><a href="#43-moving-average">4.3 이동 평균 (Moving Average)</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 프레임 상세</a><ul>
+<li><a href="#51">5.1 프레임 구문</a></li>
+<li><a href="#52-rows-vs-range">5.2 ROWS vs RANGE</a></li>
+<li><a href="#53-groups-postgresql-11">5.3 GROUPS (PostgreSQL 11+)</a></li>
+<li><a href="#54-exclude-postgresql-11">5.4 EXCLUDE 절 (PostgreSQL 11+)</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 실전 활용 패턴</a><ul>
+<li><a href="#61">6.1 날짜별 누적 매출과 목표 달성률</a></li>
+<li><a href="#62">6.2 이상치 탐지</a></li>
+<li><a href="#63">6.3 연속 기록 분석</a></li>
+<li><a href="#64">6.4 피벗 없는 행/열 비교</a></li>
+<li><a href="#65-sessionization">6.5 세션화 (Sessionization)</a></li>
+<li><a href="#66-gap-filling">6.6 간격 채우기 (Gap Filling)</a></li>
+<li><a href="#67">6.7 퍼센타일 계산</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 연습 문제</a><ul>
+<li><a href="#1_1">연습 1: 영업 성과 분석</a></li>
+<li><a href="#2_1">연습 2: 이동 합계</a></li>
+<li><a href="#3_1">연습 3: 매출 목표 달성일 찾기</a></li>
+</ul>
+</li>
+<li><a href="#_3">다음 단계</a></li>
+<li><a href="#_4">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="17-window-functions-analytics">17. 윈도우 함수와 분석 쿼리 (Window Functions &amp; Analytics)<a class="header-link" href="#17-window-functions-analytics" title="Permanent link">&para;</a></h1>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>윈도우 함수의 개념과 일반 집계 함수와의 차이 이해</li>
+<li>OVER 절과 파티션, 프레임 개념 마스터</li>
+<li>순위 함수 (ROW_NUMBER, RANK, DENSE_RANK) 활용</li>
+<li>분석 함수 (LEAD, LAG, FIRST_VALUE) 활용</li>
+<li>실무 분석 쿼리 작성 능력 향상</li>
+</ul>
+<h2 id="_2">목차<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-윈도우-함수-기초">윈도우 함수 기초</a></li>
+<li><a href="#2-순위-함수">순위 함수</a></li>
+<li><a href="#3-분석-함수">분석 함수</a></li>
+<li><a href="#4-집계-윈도우-함수">집계 윈도우 함수</a></li>
+<li><a href="#5-프레임-상세">프레임 상세</a></li>
+<li><a href="#6-실전-활용-패턴">실전 활용 패턴</a></li>
+<li><a href="#7-연습-문제">연습 문제</a></li>
+</ol>
+<hr />
+<h2 id="1">1. 윈도우 함수 기초<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="11">1.1 윈도우 함수란?<a class="header-link" href="#11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                 일반 집계 vs 윈도우 함수                          │
+│                                                                 │
+│   일반 집계 (GROUP BY)         윈도우 함수 (OVER)               │
+│   ┌───────────────┐            ┌───────────────┐               │
+│   │ A | B | SUM   │            │ A | B | val | SUM             │
+│   ├───────────────┤            ├───────────────────┤           │
+│   │ X |   | 150   │            │ X | 1 | 50  | 150 │           │
+│   │ Y |   | 120   │            │ X | 2 | 100 | 150 │           │
+│   └───────────────┘            │ Y | 3 | 70  | 120 │           │
+│   (행이 그룹으로 축소)         │ Y | 4 | 50  | 120 │           │
+│                                └───────────────────┘           │
+│                                (모든 행 유지 + 집계값)           │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="12">1.2 기본 문법<a class="header-link" href="#12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 윈도우 함수 기본 구조</span>
+<span class="err">함수명</span><span class="p">()</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="p">[</span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="err">컬럼</span><span class="p">]</span><span class="w">    </span><span class="c1">-- 그룹 나누기 (선택)</span>
+<span class="w">    </span><span class="p">[</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="err">컬럼</span><span class="p">]</span><span class="w">        </span><span class="c1">-- 정렬 (선택)</span>
+<span class="w">    </span><span class="p">[</span><span class="err">프레임</span><span class="w"> </span><span class="err">절</span><span class="p">]</span><span class="w">            </span><span class="c1">-- 범위 지정 (선택)</span>
+<span class="p">)</span>
+
+<span class="c1">-- 예시</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">department</span><span class="p">,</span>
+<span class="w">    </span><span class="n">employee_name</span><span class="p">,</span>
+<span class="w">    </span><span class="n">salary</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">salary</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">department</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">dept_total</span><span class="p">,</span>
+<span class="w">    </span><span class="k">AVG</span><span class="p">(</span><span class="n">salary</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">department</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">dept_avg</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">employees</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="13">1.3 샘플 데이터<a class="header-link" href="#13" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 테스트 테이블 생성</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">sales</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">salesperson</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">50</span><span class="p">),</span>
+<span class="w">    </span><span class="n">region</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">20</span><span class="p">),</span>
+<span class="w">    </span><span class="n">sale_date</span><span class="w"> </span><span class="nb">DATE</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="w"> </span><span class="nb">NUMERIC</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+<span class="p">);</span>
+
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">sales</span><span class="w"> </span><span class="p">(</span><span class="n">salesperson</span><span class="p">,</span><span class="w"> </span><span class="n">region</span><span class="p">,</span><span class="w"> </span><span class="n">sale_date</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span>
+<span class="w">    </span><span class="p">(</span><span class="s1">&#39;Alice&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;East&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-01-15&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">1000</span><span class="p">),</span>
+<span class="w">    </span><span class="p">(</span><span class="s1">&#39;Alice&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;East&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-01-20&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">1500</span><span class="p">),</span>
+<span class="w">    </span><span class="p">(</span><span class="s1">&#39;Alice&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;East&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-02-10&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">2000</span><span class="p">),</span>
+<span class="w">    </span><span class="p">(</span><span class="s1">&#39;Bob&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;East&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-01-18&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">800</span><span class="p">),</span>
+<span class="w">    </span><span class="p">(</span><span class="s1">&#39;Bob&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;East&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-02-15&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">1200</span><span class="p">),</span>
+<span class="w">    </span><span class="p">(</span><span class="s1">&#39;Charlie&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;West&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-01-10&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">900</span><span class="p">),</span>
+<span class="w">    </span><span class="p">(</span><span class="s1">&#39;Charlie&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;West&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-01-25&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">1100</span><span class="p">),</span>
+<span class="w">    </span><span class="p">(</span><span class="s1">&#39;Charlie&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;West&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-02-20&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">1300</span><span class="p">),</span>
+<span class="w">    </span><span class="p">(</span><span class="s1">&#39;Diana&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;West&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-01-30&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">700</span><span class="p">),</span>
+<span class="w">    </span><span class="p">(</span><span class="s1">&#39;Diana&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;West&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-02-05&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">1600</span><span class="p">);</span>
+</code></pre></div>
+
+<hr />
+<h2 id="2">2. 순위 함수<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="21-row_number-rank-dense_rank">2.1 ROW_NUMBER, RANK, DENSE_RANK 비교<a class="header-link" href="#21-row_number-rank-dense_rank" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 순위 함수 비교</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">salesperson</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ROW_NUMBER</span><span class="p">()</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">DESC</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">row_num</span><span class="p">,</span>
+<span class="w">    </span><span class="n">RANK</span><span class="p">()</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">DESC</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rank</span><span class="p">,</span>
+<span class="w">    </span><span class="n">DENSE_RANK</span><span class="p">()</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">DESC</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">dense_rank</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>결과 예시 (동점 처리 차이):
+┌────────────┬────────┬─────────┬──────┬────────────┐
+│ salesperson│ amount │ row_num │ rank │ dense_rank │
+├────────────┼────────┼─────────┼──────┼────────────┤
+│ Alice      │ 2000   │ 1       │ 1    │ 1          │
+│ Diana      │ 1600   │ 2       │ 2    │ 2          │
+│ Alice      │ 1500   │ 3       │ 3    │ 3          │
+│ Charlie    │ 1300   │ 4       │ 4    │ 4          │
+│ Bob        │ 1200   │ 5       │ 5    │ 5          │
+│ Charlie    │ 1100   │ 6       │ 6    │ 6          │
+│ Alice      │ 1000   │ 7       │ 7    │ 7          │  -- 동점 없음
+│ Charlie    │  900   │ 8       │ 8    │ 8          │
+│ Bob        │  800   │ 9       │ 9    │ 9          │
+│ Diana      │  700   │ 10      │ 10   │ 10         │
+└────────────┴────────┴─────────┴──────┴────────────┘
+
+동점이 있는 경우:
+│ A          │ 1000   │ 1       │ 1    │ 1          │
+│ B          │ 1000   │ 2       │ 1    │ 1          │  -- 동점!
+│ C          │  900   │ 3       │ 3    │ 2          │
+                      (연속)    (건너뜀) (연속)
+</code></pre></div>
+
+<h3 id="22-partition-by">2.2 PARTITION BY와 함께 순위<a class="header-link" href="#22-partition-by" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 지역별 판매 순위</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">region</span><span class="p">,</span>
+<span class="w">    </span><span class="n">salesperson</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">    </span><span class="n">RANK</span><span class="p">()</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">region</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">DESC</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">region_rank</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="err">결과</span><span class="o">:</span>
+<span class="err">┌────────┬────────────┬────────┬─────────────┐</span>
+<span class="err">│</span><span class="w"> </span><span class="n">region</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">salesperson</span><span class="err">│</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">region_rank</span><span class="w"> </span><span class="err">│</span>
+<span class="err">├────────┼────────────┼────────┼─────────────┤</span>
+<span class="err">│</span><span class="w"> </span><span class="n">East</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">Alice</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="mh">2000</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="mh">1</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">East</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">Alice</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="mh">1500</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="mh">2</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">East</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">Bob</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="mh">1200</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="mh">3</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">East</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">Alice</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="mh">1000</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="mh">4</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">East</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">Bob</span><span class="w">        </span><span class="err">│</span><span class="w">  </span><span class="mh">800</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="mh">5</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">West</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">Diana</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="mh">1600</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="mh">1</span><span class="w">           </span><span class="err">│</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="err">파티션</span><span class="w"> </span><span class="err">리셋</span>
+<span class="err">│</span><span class="w"> </span><span class="n">West</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">Charlie</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="mh">1300</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="mh">2</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">West</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">Charlie</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="mh">1100</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="mh">3</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">West</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">Charlie</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="mh">900</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="mh">4</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="n">West</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">Diana</span><span class="w">      </span><span class="err">│</span><span class="w">  </span><span class="mh">700</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="mh">5</span><span class="w">           </span><span class="err">│</span>
+<span class="err">└────────┴────────────┴────────┴─────────────┘</span>
+</code></pre></div>
+
+<h3 id="23-ntile-">2.3 NTILE - 분위수 할당<a class="header-link" href="#23-ntile-" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 4분위로 나누기</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">salesperson</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">    </span><span class="n">NTILE</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">DESC</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">quartile</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+
+<span class="c1">-- 사용 예: 상위 25% 고객 식별</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span>
+<span class="k">FROM</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">SELECT</span>
+<span class="w">        </span><span class="n">customer_id</span><span class="p">,</span>
+<span class="w">        </span><span class="n">total_purchase</span><span class="p">,</span>
+<span class="w">        </span><span class="n">NTILE</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">total_purchase</span><span class="w"> </span><span class="k">DESC</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">quartile</span>
+<span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">customer_summary</span>
+<span class="p">)</span><span class="w"> </span><span class="n">sub</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">quartile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 상위 25%</span>
+</code></pre></div>
+
+<h3 id="24-top-n">2.4 Top-N 쿼리<a class="header-link" href="#24-top-n" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 각 지역별 상위 2개 판매 추출</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span>
+<span class="k">FROM</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">SELECT</span>
+<span class="w">        </span><span class="n">region</span><span class="p">,</span>
+<span class="w">        </span><span class="n">salesperson</span><span class="p">,</span>
+<span class="w">        </span><span class="n">sale_date</span><span class="p">,</span>
+<span class="w">        </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">        </span><span class="n">ROW_NUMBER</span><span class="p">()</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">            </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">region</span>
+<span class="w">            </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">DESC</span>
+<span class="w">        </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rn</span>
+<span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="p">)</span><span class="w"> </span><span class="n">ranked</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">rn</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3">3. 분석 함수<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="31-lag-lead">3.1 LAG와 LEAD<a class="header-link" href="#31-lag-lead" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- LAG: 이전 행 값 참조</span>
+<span class="c1">-- LEAD: 다음 행 값 참조</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">salesperson</span><span class="p">,</span>
+<span class="w">    </span><span class="n">sale_date</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">    </span><span class="n">LAG</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">prev_amount</span><span class="p">,</span>
+<span class="w">    </span><span class="n">LEAD</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">next_amount</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span><span class="p">,</span><span class="w"> </span><span class="n">sale_date</span><span class="p">;</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>결과:
+┌────────────┬────────────┬────────┬─────────────┬─────────────┐
+│ salesperson│ sale_date  │ amount │ prev_amount │ next_amount │
+├────────────┼────────────┼────────┼─────────────┼─────────────┤
+│ Alice      │ 2024-01-15 │ 1000   │ NULL        │ 1500        │
+│ Alice      │ 2024-01-20 │ 1500   │ 1000        │ 2000        │
+│ Alice      │ 2024-02-10 │ 2000   │ 1500        │ NULL        │
+│ Bob        │ 2024-01-18 │  800   │ NULL        │ 1200        │
+│ Bob        │ 2024-02-15 │ 1200   │  800        │ NULL        │
+└────────────┴────────────┴────────┴─────────────┴─────────────┘
+</code></pre></div>
+
+<h3 id="32">3.2 증감률 계산<a class="header-link" href="#32" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 전월 대비 증감률</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">salesperson</span><span class="p">,</span>
+<span class="w">    </span><span class="n">sale_date</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">    </span><span class="n">LAG</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">prev_amount</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ROUND</span><span class="p">(</span>
+<span class="w">        </span><span class="p">(</span><span class="n">amount</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">LAG</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">            </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span><span class="w"> </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="w">        </span><span class="p">))</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="p">.</span><span class="mi">0</span><span class="w"> </span><span class="o">/</span>
+<span class="w">        </span><span class="k">NULLIF</span><span class="p">(</span><span class="n">LAG</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">            </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span><span class="w"> </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="w">        </span><span class="p">),</span><span class="w"> </span><span class="mi">0</span><span class="p">),</span>
+<span class="w">        </span><span class="mi">2</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">growth_pct</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span><span class="p">,</span><span class="w"> </span><span class="n">sale_date</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="33-first_value-last_value-nth_value">3.3 FIRST_VALUE, LAST_VALUE, NTH_VALUE<a class="header-link" href="#33-first_value-last_value-nth_value" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 파티션 내 첫 번째/마지막 값</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">salesperson</span><span class="p">,</span>
+<span class="w">    </span><span class="n">sale_date</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">    </span><span class="n">FIRST_VALUE</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="w">        </span><span class="k">ROWS</span><span class="w"> </span><span class="k">BETWEEN</span><span class="w"> </span><span class="n">UNBOUNDED</span><span class="w"> </span><span class="n">PRECEDING</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">UNBOUNDED</span><span class="w"> </span><span class="n">FOLLOWING</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">first_sale</span><span class="p">,</span>
+<span class="w">    </span><span class="n">LAST_VALUE</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="w">        </span><span class="k">ROWS</span><span class="w"> </span><span class="k">BETWEEN</span><span class="w"> </span><span class="n">UNBOUNDED</span><span class="w"> </span><span class="n">PRECEDING</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">UNBOUNDED</span><span class="w"> </span><span class="n">FOLLOWING</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">last_sale</span><span class="p">,</span>
+<span class="w">    </span><span class="n">NTH_VALUE</span><span class="p">(</span><span class="n">amount</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="w">        </span><span class="k">ROWS</span><span class="w"> </span><span class="k">BETWEEN</span><span class="w"> </span><span class="n">UNBOUNDED</span><span class="w"> </span><span class="n">PRECEDING</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">UNBOUNDED</span><span class="w"> </span><span class="n">FOLLOWING</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">second_sale</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4">4. 집계 윈도우 함수<a class="header-link" href="#4" title="Permanent link">&para;</a></h2>
+<h3 id="41-sum-avg-count">4.1 SUM, AVG, COUNT<a class="header-link" href="#41-sum-avg-count" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 윈도우 집계 함수</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">salesperson</span><span class="p">,</span>
+<span class="w">    </span><span class="n">sale_date</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">    </span><span class="c1">-- 영업사원별 총계</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">person_total</span><span class="p">,</span>
+<span class="w">    </span><span class="c1">-- 영업사원별 평균</span>
+<span class="w">    </span><span class="k">AVG</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">person_avg</span><span class="p">,</span>
+<span class="w">    </span><span class="c1">-- 전체 대비 비율</span>
+<span class="w">    </span><span class="n">ROUND</span><span class="p">(</span><span class="n">amount</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="p">.</span><span class="mi">0</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(),</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">pct_of_total</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span><span class="p">,</span><span class="w"> </span><span class="n">sale_date</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="42-running-total">4.2 누적 합계 (Running Total)<a class="header-link" href="#42-running-total" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 누적 합계</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">sale_date</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="w">        </span><span class="k">ROWS</span><span class="w"> </span><span class="k">BETWEEN</span><span class="w"> </span><span class="n">UNBOUNDED</span><span class="w"> </span><span class="n">PRECEDING</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="k">CURRENT</span><span class="w"> </span><span class="k">ROW</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">running_total</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span><span class="p">;</span>
+
+<span class="c1">-- 영업사원별 누적 합계</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">salesperson</span><span class="p">,</span>
+<span class="w">    </span><span class="n">sale_date</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">cumulative_sales</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span><span class="p">,</span><span class="w"> </span><span class="n">sale_date</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="43-moving-average">4.3 이동 평균 (Moving Average)<a class="header-link" href="#43-moving-average" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 최근 3건의 이동 평균</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">sale_date</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">    </span><span class="k">AVG</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="w">        </span><span class="k">ROWS</span><span class="w"> </span><span class="k">BETWEEN</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="n">PRECEDING</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="k">CURRENT</span><span class="w"> </span><span class="k">ROW</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">moving_avg_3</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span><span class="p">;</span>
+
+<span class="c1">-- 전후 1건 포함 이동 평균 (중심 이동 평균)</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">sale_date</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">    </span><span class="k">AVG</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="w">        </span><span class="k">ROWS</span><span class="w"> </span><span class="k">BETWEEN</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">PRECEDING</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">FOLLOWING</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">centered_avg</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 프레임 상세<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="51">5.1 프레임 구문<a class="header-link" href="#51" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">ROWS</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="kt">RANGE</span><span class="w"> </span><span class="err">|</span><span class="w"> </span><span class="k">GROUPS</span><span class="w"> </span><span class="k">BETWEEN</span><span class="w"> </span><span class="n">시작점</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">끝점</span>
+
+<span class="n">시작점</span><span class="o">/</span><span class="n">끝점</span><span class="err">:</span>
+<span class="err">-</span><span class="w"> </span><span class="k">UNBOUNDED</span><span class="w"> </span><span class="k">PRECEDING</span><span class="w">  </span><span class="c1">-- 파티션 처음</span>
+<span class="err">-</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="k">PRECEDING</span><span class="w">          </span><span class="c1">-- n개 이전</span>
+<span class="err">-</span><span class="w"> </span><span class="k">CURRENT</span><span class="w"> </span><span class="k">ROW</span><span class="w">          </span><span class="c1">-- 현재 행</span>
+<span class="err">-</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="k">FOLLOWING</span><span class="w">          </span><span class="c1">-- n개 이후</span>
+<span class="err">-</span><span class="w"> </span><span class="k">UNBOUNDED</span><span class="w"> </span><span class="k">FOLLOWING</span><span class="w">  </span><span class="c1">-- 파티션 끝</span>
+</code></pre></div>
+
+<h3 id="52-rows-vs-range">5.2 ROWS vs RANGE<a class="header-link" href="#52-rows-vs-range" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 동점 데이터로 차이 확인</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">test_frame</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">val</span><span class="w"> </span><span class="nb">INT</span>
+<span class="p">);</span>
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">test_frame</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">300</span><span class="p">);</span>
+
+<span class="c1">-- ROWS: 물리적 행 단위</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="k">ROWS</span><span class="w"> </span><span class="n">UNBOUNDED</span><span class="w"> </span><span class="n">PRECEDING</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rows_sum</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">test_frame</span><span class="p">;</span>
+
+<span class="c1">-- RANGE: 논리적 값 단위 (동일 값은 같은 그룹)</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">val</span><span class="w"> </span><span class="n">RANGE</span><span class="w"> </span><span class="n">UNBOUNDED</span><span class="w"> </span><span class="n">PRECEDING</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">range_sum</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">test_frame</span><span class="p">;</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>결과 비교:
+ROWS:                          RANGE:
+┌────┬─────┬──────────┐       ┌────┬─────┬───────────┐
+│ id │ val │ rows_sum │       │ id │ val │ range_sum │
+├────┼─────┼──────────┤       ├────┼─────┼───────────┤
+│ 1  │ 100 │ 100      │       │ 1  │ 100 │ 200       │ ← 100이 2개
+│ 2  │ 100 │ 200      │       │ 2  │ 100 │ 200       │ ← 동일
+│ 3  │ 200 │ 400      │       │ 3  │ 200 │ 600       │ ← 200이 2개
+│ 4  │ 200 │ 600      │       │ 4  │ 200 │ 600       │ ← 동일
+│ 5  │ 300 │ 900      │       │ 5  │ 300 │ 900       │
+└────┴─────┴──────────┘       └────┴─────┴───────────┘
+</code></pre></div>
+
+<h3 id="53-groups-postgresql-11">5.3 GROUPS (PostgreSQL 11+)<a class="header-link" href="#53-groups-postgresql-11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- GROUPS: 동일 ORDER BY 값을 하나의 그룹으로</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">val</span>
+<span class="w">        </span><span class="n">GROUPS</span><span class="w"> </span><span class="k">BETWEEN</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">PRECEDING</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="k">CURRENT</span><span class="w"> </span><span class="k">ROW</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">groups_sum</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">test_frame</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="54-exclude-postgresql-11">5.4 EXCLUDE 절 (PostgreSQL 11+)<a class="header-link" href="#54-exclude-postgresql-11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 프레임에서 특정 행 제외</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">val</span>
+<span class="w">        </span><span class="k">ROWS</span><span class="w"> </span><span class="k">BETWEEN</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">PRECEDING</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">FOLLOWING</span>
+<span class="w">        </span><span class="n">EXCLUDE</span><span class="w"> </span><span class="k">CURRENT</span><span class="w"> </span><span class="k">ROW</span><span class="w">  </span><span class="c1">-- 현재 행 제외</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">sum_excluding_current</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">test_frame</span><span class="p">;</span>
+
+<span class="c1">-- EXCLUDE 옵션:</span>
+<span class="c1">-- EXCLUDE NO OTHERS (기본값)</span>
+<span class="c1">-- EXCLUDE CURRENT ROW</span>
+<span class="c1">-- EXCLUDE GROUP (현재 행과 동일 값)</span>
+<span class="c1">-- EXCLUDE TIES (동일 값 중 현재 행 제외)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 실전 활용 패턴<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="61">6.1 날짜별 누적 매출과 목표 달성률<a class="header-link" href="#61" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span>
+<span class="w">    </span><span class="n">sale_date</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">cumulative_sales</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ROUND</span><span class="p">(</span>
+<span class="w">        </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="p">.</span><span class="mi">0</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">10000</span><span class="p">,</span>
+<span class="w">        </span><span class="mi">2</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">target_pct</span><span class="w">  </span><span class="c1">-- 목표: 10,000</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="62">6.2 이상치 탐지<a class="header-link" href="#62" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 평균 ± 2 표준편차 이상인 데이터</span>
+<span class="k">WITH</span><span class="w"> </span><span class="n">stats</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">SELECT</span>
+<span class="w">        </span><span class="n">salesperson</span><span class="p">,</span>
+<span class="w">        </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">        </span><span class="k">AVG</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">avg_amount</span><span class="p">,</span>
+<span class="w">        </span><span class="n">STDDEV</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">stddev_amount</span>
+<span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="p">)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">stats</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">avg_amount</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">stddev_amount</span>
+<span class="w">   </span><span class="k">OR</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">avg_amount</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">stddev_amount</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="63">6.3 연속 기록 분석<a class="header-link" href="#63" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 연속 판매 일수 계산</span>
+<span class="k">WITH</span><span class="w"> </span><span class="n">daily_sales</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">SELECT</span>
+<span class="w">        </span><span class="n">salesperson</span><span class="p">,</span>
+<span class="w">        </span><span class="n">sale_date</span><span class="p">,</span>
+<span class="w">        </span><span class="n">sale_date</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="p">(</span><span class="n">ROW_NUMBER</span><span class="p">()</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">            </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span>
+<span class="w">            </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="w">        </span><span class="p">))::</span><span class="nb">int</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">grp</span>
+<span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="p">)</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">salesperson</span><span class="p">,</span>
+<span class="w">    </span><span class="k">MIN</span><span class="p">(</span><span class="n">sale_date</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">streak_start</span><span class="p">,</span>
+<span class="w">    </span><span class="k">MAX</span><span class="p">(</span><span class="n">sale_date</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">streak_end</span><span class="p">,</span>
+<span class="w">    </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">streak_length</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">daily_sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span><span class="p">,</span><span class="w"> </span><span class="n">grp</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span><span class="p">,</span><span class="w"> </span><span class="n">streak_start</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="64">6.4 피벗 없는 행/열 비교<a class="header-link" href="#64" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 현재 vs 전월 vs 전년 동월</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">salesperson</span><span class="p">,</span>
+<span class="w">    </span><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="s1">&#39;month&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">sale_date</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">month</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">monthly_total</span><span class="p">,</span>
+<span class="w">    </span><span class="n">LAG</span><span class="p">(</span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">))</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="s1">&#39;month&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">sale_date</span><span class="p">)</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">prev_month</span><span class="p">,</span>
+<span class="w">    </span><span class="n">LAG</span><span class="p">(</span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">),</span><span class="w"> </span><span class="mi">12</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="s1">&#39;month&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">sale_date</span><span class="p">)</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">same_month_last_year</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span><span class="p">,</span><span class="w"> </span><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="s1">&#39;month&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">sale_date</span><span class="p">)</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span><span class="p">,</span><span class="w"> </span><span class="k">month</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="65-sessionization">6.5 세션화 (Sessionization)<a class="header-link" href="#65-sessionization" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 30분 이상 간격이면 새 세션</span>
+<span class="k">WITH</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">SELECT</span>
+<span class="w">        </span><span class="n">user_id</span><span class="p">,</span>
+<span class="w">        </span><span class="n">event_time</span><span class="p">,</span>
+<span class="w">        </span><span class="n">LAG</span><span class="p">(</span><span class="n">event_time</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">            </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">event_time</span>
+<span class="w">        </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">prev_event_time</span>
+<span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">user_events</span>
+<span class="p">),</span>
+<span class="n">session_flags</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">SELECT</span>
+<span class="w">        </span><span class="n">user_id</span><span class="p">,</span>
+<span class="w">        </span><span class="n">event_time</span><span class="p">,</span>
+<span class="w">        </span><span class="k">CASE</span>
+<span class="w">            </span><span class="k">WHEN</span><span class="w"> </span><span class="n">prev_event_time</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">            </span><span class="k">WHEN</span><span class="w"> </span><span class="n">event_time</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">prev_event_time</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="nb">INTERVAL</span><span class="w"> </span><span class="s1">&#39;30 minutes&#39;</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">            </span><span class="k">ELSE</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">        </span><span class="k">END</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">is_new_session</span>
+<span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">events</span>
+<span class="p">)</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">user_id</span><span class="p">,</span>
+<span class="w">    </span><span class="n">event_time</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">is_new_session</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">user_id</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">event_time</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">session_id</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">session_flags</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="66-gap-filling">6.6 간격 채우기 (Gap Filling)<a class="header-link" href="#66-gap-filling" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 날짜 시퀀스 생성 후 LEFT JOIN</span>
+<span class="k">WITH</span><span class="w"> </span><span class="n">date_series</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">SELECT</span><span class="w"> </span><span class="n">generate_series</span><span class="p">(</span>
+<span class="w">        </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">::</span><span class="nb">date</span><span class="p">,</span>
+<span class="w">        </span><span class="s1">&#39;2024-01-31&#39;</span><span class="p">::</span><span class="nb">date</span><span class="p">,</span>
+<span class="w">        </span><span class="s1">&#39;1 day&#39;</span><span class="p">::</span><span class="nb">interval</span>
+<span class="w">    </span><span class="p">)::</span><span class="nb">date</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="nb">date</span>
+<span class="p">),</span>
+<span class="n">daily_totals</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">SELECT</span><span class="w"> </span><span class="n">sale_date</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span>
+<span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="w">    </span><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="p">)</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">ds</span><span class="p">.</span><span class="nb">date</span><span class="p">,</span>
+<span class="w">    </span><span class="k">COALESCE</span><span class="p">(</span><span class="n">dt</span><span class="p">.</span><span class="n">total</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">daily_total</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="k">COALESCE</span><span class="p">(</span><span class="n">dt</span><span class="p">.</span><span class="n">total</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">))</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">ds</span><span class="p">.</span><span class="nb">date</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">running_total</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">date_series</span><span class="w"> </span><span class="n">ds</span>
+<span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">daily_totals</span><span class="w"> </span><span class="n">dt</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">ds</span><span class="p">.</span><span class="nb">date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dt</span><span class="p">.</span><span class="n">sale_date</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">ds</span><span class="p">.</span><span class="nb">date</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="67">6.7 퍼센타일 계산<a class="header-link" href="#67" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 백분위 계산</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">salesperson</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">    </span><span class="n">PERCENT_RANK</span><span class="p">()</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">pct_rank</span><span class="p">,</span>
+<span class="w">    </span><span class="n">CUME_DIST</span><span class="p">()</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">cume_dist</span><span class="p">,</span>
+<span class="w">    </span><span class="n">PERCENTILE_CONT</span><span class="p">(</span><span class="mi">0</span><span class="p">.</span><span class="mi">5</span><span class="p">)</span><span class="w"> </span><span class="n">WITHIN</span><span class="w"> </span><span class="k">GROUP</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">median</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+
+<span class="c1">-- 그룹별 중앙값</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">DISTINCT</span>
+<span class="w">    </span><span class="n">region</span><span class="p">,</span>
+<span class="w">    </span><span class="n">PERCENTILE_CONT</span><span class="p">(</span><span class="mi">0</span><span class="p">.</span><span class="mi">5</span><span class="p">)</span><span class="w"> </span><span class="n">WITHIN</span><span class="w"> </span><span class="k">GROUP</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">amount</span><span class="p">)</span>
+<span class="w">        </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">region</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">median_by_region</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 연습 문제<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="1_1">연습 1: 영업 성과 분석<a class="header-link" href="#1_1" title="Permanent link">&para;</a></h3>
+<p>각 영업사원의 판매 금액을 분석하여 다음을 계산하세요:
+- 영업사원별 순위
+- 전체 대비 비율
+- 이전 판매 대비 증감</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 예시 답안</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">salesperson</span><span class="p">,</span>
+<span class="w">    </span><span class="n">sale_date</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">    </span><span class="n">RANK</span><span class="p">()</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">DESC</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">overall_rank</span><span class="p">,</span>
+<span class="w">    </span><span class="n">RANK</span><span class="p">()</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">DESC</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">personal_rank</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ROUND</span><span class="p">(</span><span class="n">amount</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="p">.</span><span class="mi">0</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(),</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">pct_of_total</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">LAG</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span><span class="w"> </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">change_from_prev</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">salesperson</span><span class="p">,</span><span class="w"> </span><span class="n">sale_date</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="2_1">연습 2: 이동 합계<a class="header-link" href="#2_1" title="Permanent link">&para;</a></h3>
+<p>최근 7일간의 이동 합계를 계산하세요.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 예시 답안</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">sale_date</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="w">        </span><span class="n">RANGE</span><span class="w"> </span><span class="k">BETWEEN</span><span class="w"> </span><span class="nb">INTERVAL</span><span class="w"> </span><span class="s1">&#39;6 days&#39;</span><span class="w"> </span><span class="n">PRECEDING</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="k">CURRENT</span><span class="w"> </span><span class="k">ROW</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rolling_7day_sum</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="3_1">연습 3: 매출 목표 달성일 찾기<a class="header-link" href="#3_1" title="Permanent link">&para;</a></h3>
+<p>누적 매출이 5000을 처음 달성한 날짜를 찾으세요.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 예시 답안</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">sale_date</span><span class="p">,</span><span class="w"> </span><span class="n">cumulative</span>
+<span class="k">FROM</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">SELECT</span>
+<span class="w">        </span><span class="n">sale_date</span><span class="p">,</span>
+<span class="w">        </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">cumulative</span><span class="p">,</span>
+<span class="w">        </span><span class="n">LAG</span><span class="p">(</span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span><span class="p">))</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">prev_cumulative</span>
+<span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="p">)</span><span class="w"> </span><span class="n">sub</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">cumulative</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">5000</span>
+<span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="p">(</span><span class="n">prev_cumulative</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="n">prev_cumulative</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">5000</span><span class="p">)</span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_3">다음 단계<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./18_Table_Partitioning.md">18. 테이블 파티셔닝</a></li>
+<li><a href="./14_JSON_JSONB.md">14. JSON/JSONB 기능</a></li>
+</ul>
+<h2 id="_4">참고 자료<a class="header-link" href="#_4" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://www.postgresql.org/docs/current/functions-window.html">PostgreSQL Window Functions</a></li>
+<li><a href="https://www.postgresql.org/docs/current/tutorial-window.html">Window Function Tutorial</a></li>
+<li><a href="https://mode.com/sql-tutorial/sql-window-functions/">SQL Window Functions</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/PostgreSQL/16_Replication_HA.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">16. 복제와 고가용성 (Replication & High Availability)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/PostgreSQL/18_Table_Partitioning.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">18. 테이블 파티셔닝 (Table Partitioning)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

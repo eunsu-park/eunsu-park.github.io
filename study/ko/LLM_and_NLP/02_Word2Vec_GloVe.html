@@ -1,0 +1,710 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>02. Word2Vec과 GloVe - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/LLM_and_NLP/">LLM and NLP</a>
+    <span class="separator">/</span>
+    <span class="current">02. Word2Vec과 GloVe</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>02. Word2Vec과 GloVe</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/LLM_and_NLP/01_NLP_Basics.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">01. NLP 기초</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/LLM_and_NLP/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/LLM_and_NLP/03_Transformer_Review.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">03. Transformer 복습</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#1">1. 단어 임베딩 개요</a><ul>
+<li><a href="#one-hot-vs">One-Hot vs 분산 표현</a></li>
+<li><a href="#_2">분산 가설</a></li>
+</ul>
+</li>
+<li><a href="#2-word2vec">2. Word2Vec</a><ul>
+<li><a href="#skip-gram">Skip-gram</a></li>
+<li><a href="#cbow-continuous-bag-of-words">CBOW (Continuous Bag of Words)</a></li>
+<li><a href="#word2vec">Word2Vec 구조</a></li>
+<li><a href="#negative-sampling">Negative Sampling</a></li>
+</ul>
+</li>
+<li><a href="#3-glove">3. GloVe</a><ul>
+<li><a href="#_3">개념</a></li>
+<li><a href="#glove">GloVe 손실 함수</a></li>
+<li><a href="#glove_1">GloVe 구현</a></li>
+</ul>
+</li>
+<li><a href="#4">4. 사전학습 임베딩 사용</a><ul>
+<li><a href="#gensim-word2vec">Gensim Word2Vec</a></li>
+<li><a href="#glove_2">사전학습 GloVe</a></li>
+<li><a href="#pytorch">PyTorch 임베딩 레이어에 적용</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 임베딩 연산</a><ul>
+<li><a href="#_4">유사도 계산</a></li>
+<li><a href="#_5">단어 연산</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 시각화</a><ul>
+<li><a href="#t-sne">t-SNE 시각화</a></li>
+</ul>
+</li>
+<li><a href="#7-word2vec-vs-glove">7. Word2Vec vs GloVe 비교</a></li>
+<li><a href="#_6">정리</a><ul>
+<li><a href="#_7">핵심 개념</a></li>
+<li><a href="#_8">핵심 코드</a></li>
+</ul>
+</li>
+<li><a href="#_9">다음 단계</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="02-word2vec-glove">02. Word2Vec과 GloVe<a class="header-link" href="#02-word2vec-glove" title="Permanent link">&para;</a></h1>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>분산 표현의 개념</li>
+<li>Word2Vec (Skip-gram, CBOW)</li>
+<li>GloVe 임베딩</li>
+<li>사전학습 임베딩 활용</li>
+</ul>
+<hr />
+<h2 id="1">1. 단어 임베딩 개요<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="one-hot-vs">One-Hot vs 분산 표현<a class="header-link" href="#one-hot-vs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>One-Hot (희소 표현):
+    &quot;king&quot;  → [1, 0, 0, 0, ...]  (V차원)
+    &quot;queen&quot; → [0, 1, 0, 0, ...]
+
+문제: 의미적 유사성 표현 불가
+      cosine_similarity(king, queen) = 0
+
+분산 표현 (Dense):
+    &quot;king&quot;  → [0.2, -0.5, 0.8, ...]  (d차원, d &lt;&lt; V)
+    &quot;queen&quot; → [0.3, -0.4, 0.7, ...]
+
+장점: 의미적 유사성 반영
+      cosine_similarity(king, queen) ≈ 0.9
+</code></pre></div>
+
+<h3 id="_2">분산 가설<a class="header-link" href="#_2" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p>"같은 맥락에서 등장하는 단어는 비슷한 의미를 갖는다"
+(You shall know a word by the company it keeps)</p>
+</blockquote>
+<div class="highlight"><pre><span></span><code>&quot;The cat sat on the ___&quot;  → mat, floor, couch
+&quot;The dog lay on the ___&quot;  → mat, floor, couch
+
+cat ≈ dog (유사한 맥락)
+</code></pre></div>
+
+<hr />
+<h2 id="2-word2vec">2. Word2Vec<a class="header-link" href="#2-word2vec" title="Permanent link">&para;</a></h2>
+<h3 id="skip-gram">Skip-gram<a class="header-link" href="#skip-gram" title="Permanent link">&para;</a></h3>
+<p>주변 단어를 예측하여 중심 단어 표현 학습</p>
+<div class="highlight"><pre><span></span><code><span class="err">입력</span><span class="o">:</span><span class="w"> </span><span class="n">center</span><span class="w"> </span><span class="n">word</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="err">예측</span><span class="o">:</span><span class="w"> </span><span class="n">context</span><span class="w"> </span><span class="n">words</span>
+
+<span class="err">문장</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;The quick brown fox jumps&quot;</span>
+<span class="err">중심</span><span class="w"> </span><span class="err">단어</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;brown&quot;</span><span class="w"> </span><span class="o">(</span><span class="n">window</span><span class="o">=</span><span class="mi">2</span><span class="o">)</span>
+<span class="err">예측</span><span class="w"> </span><span class="err">대상</span><span class="o">:</span><span class="w"> </span><span class="o">[</span><span class="s2">&quot;quick&quot;</span><span class="o">,</span><span class="w"> </span><span class="s2">&quot;fox&quot;</span><span class="o">]</span><span class="w"> </span><span class="err">또는</span><span class="w"> </span><span class="o">[</span><span class="s2">&quot;The&quot;</span><span class="o">,</span><span class="w"> </span><span class="s2">&quot;quick&quot;</span><span class="o">,</span><span class="w"> </span><span class="s2">&quot;fox&quot;</span><span class="o">,</span><span class="w"> </span><span class="s2">&quot;jumps&quot;</span><span class="o">]</span>
+
+<span class="err">모델</span><span class="o">:</span>
+<span class="w">    </span><span class="s2">&quot;brown&quot;</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="err">임베딩</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Softmax</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">P</span><span class="o">(</span><span class="n">context</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">center</span><span class="o">)</span>
+</code></pre></div>
+
+<h3 id="cbow-continuous-bag-of-words">CBOW (Continuous Bag of Words)<a class="header-link" href="#cbow-continuous-bag-of-words" title="Permanent link">&para;</a></h3>
+<p>주변 단어로 중심 단어 예측</p>
+<div class="highlight"><pre><span></span><code><span class="err">입력</span><span class="o">:</span><span class="w"> </span><span class="n">context</span><span class="w"> </span><span class="n">words</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="err">예측</span><span class="o">:</span><span class="w"> </span><span class="n">center</span><span class="w"> </span><span class="n">word</span>
+
+<span class="err">문장</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;The quick brown fox jumps&quot;</span>
+<span class="err">주변</span><span class="w"> </span><span class="err">단어</span><span class="o">:</span><span class="w"> </span><span class="o">[</span><span class="s2">&quot;quick&quot;</span><span class="o">,</span><span class="w"> </span><span class="s2">&quot;fox&quot;</span><span class="o">]</span>
+<span class="err">예측</span><span class="w"> </span><span class="err">대상</span><span class="o">:</span><span class="w"> </span><span class="s2">&quot;brown&quot;</span>
+
+<span class="err">모델</span><span class="o">:</span>
+<span class="w">    </span><span class="o">[</span><span class="s2">&quot;quick&quot;</span><span class="o">,</span><span class="w"> </span><span class="s2">&quot;fox&quot;</span><span class="o">]</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="err">평균</span><span class="w"> </span><span class="err">임베딩</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Softmax</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">P</span><span class="o">(</span><span class="n">center</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">context</span><span class="o">)</span>
+</code></pre></div>
+
+<h3 id="word2vec">Word2Vec 구조<a class="header-link" href="#word2vec" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">SkipGram</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="c1"># 입력 임베딩 (중심 단어)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">center_embeddings</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">)</span>
+        <span class="c1"># 출력 임베딩 (주변 단어)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context_embeddings</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="c1"># center: (batch,)</span>
+        <span class="c1"># context: (batch,)</span>
+        <span class="n">center_emb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">center_embeddings</span><span class="p">(</span><span class="n">center</span><span class="p">)</span>   <span class="c1"># (batch, embed)</span>
+        <span class="n">context_emb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">context_embeddings</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>  <span class="c1"># (batch, embed)</span>
+
+        <span class="c1"># 내적으로 유사도 계산</span>
+        <span class="n">score</span> <span class="o">=</span> <span class="p">(</span><span class="n">center_emb</span> <span class="o">*</span> <span class="n">context_emb</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (batch,)</span>
+        <span class="k">return</span> <span class="n">score</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">CBOW</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context_embeddings</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">center_embeddings</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">center</span><span class="p">):</span>
+        <span class="c1"># context: (batch, window*2)</span>
+        <span class="c1"># center: (batch,)</span>
+        <span class="n">context_emb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">context_embeddings</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>  <span class="c1"># (batch, window*2, embed)</span>
+        <span class="n">context_mean</span> <span class="o">=</span> <span class="n">context_emb</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (batch, embed)</span>
+
+        <span class="n">center_emb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">center_embeddings</span><span class="p">(</span><span class="n">center</span><span class="p">)</span>  <span class="c1"># (batch, embed)</span>
+
+        <span class="n">score</span> <span class="o">=</span> <span class="p">(</span><span class="n">context_mean</span> <span class="o">*</span> <span class="n">center_emb</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">score</span>
+</code></pre></div>
+
+<h3 id="negative-sampling">Negative Sampling<a class="header-link" href="#negative-sampling" title="Permanent link">&para;</a></h3>
+<p>전체 어휘에 대한 Softmax는 계산 비용이 큼</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">SkipGramNegSampling</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">center_embeddings</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context_embeddings</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">neg_context</span><span class="p">):</span>
+        <span class="c1"># center: (batch,)</span>
+        <span class="c1"># context: (batch,) - 실제 주변 단어</span>
+        <span class="c1"># neg_context: (batch, k) - 랜덤 샘플링된 단어</span>
+
+        <span class="n">center_emb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">center_embeddings</span><span class="p">(</span><span class="n">center</span><span class="p">)</span>  <span class="c1"># (batch, embed)</span>
+
+        <span class="c1"># Positive: 실제 주변 단어와의 유사도</span>
+        <span class="n">pos_emb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">context_embeddings</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+        <span class="n">pos_score</span> <span class="o">=</span> <span class="p">(</span><span class="n">center_emb</span> <span class="o">*</span> <span class="n">pos_emb</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (batch,)</span>
+
+        <span class="c1"># Negative: 랜덤 단어와의 유사도</span>
+        <span class="n">neg_emb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">context_embeddings</span><span class="p">(</span><span class="n">neg_context</span><span class="p">)</span>  <span class="c1"># (batch, k, embed)</span>
+        <span class="n">neg_score</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">bmm</span><span class="p">(</span><span class="n">neg_emb</span><span class="p">,</span> <span class="n">center_emb</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>  <span class="c1"># (batch, k)</span>
+
+        <span class="k">return</span> <span class="n">pos_score</span><span class="p">,</span> <span class="n">neg_score</span>
+
+<span class="c1"># 손실 함수</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">negative_sampling_loss</span><span class="p">(</span><span class="n">pos_score</span><span class="p">,</span> <span class="n">neg_score</span><span class="p">):</span>
+    <span class="n">pos_loss</span> <span class="o">=</span> <span class="o">-</span><span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">pos_score</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-10</span><span class="p">)</span>
+    <span class="n">neg_loss</span> <span class="o">=</span> <span class="o">-</span><span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="o">-</span><span class="n">neg_score</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-10</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">pos_loss</span> <span class="o">+</span> <span class="n">neg_loss</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-glove">3. GloVe<a class="header-link" href="#3-glove" title="Permanent link">&para;</a></h2>
+<h3 id="_3">개념<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<p>전역 동시 출현 통계 활용</p>
+<div class="highlight"><pre><span></span><code>동시 출현 행렬 X:
+    X[i,j] = 단어 i와 j가 함께 등장한 횟수
+
+목표:
+    w_i · w_j + b_i + b_j ≈ log(X[i,j])
+</code></pre></div>
+
+<h3 id="glove">GloVe 손실 함수<a class="header-link" href="#glove" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">glove_loss</span><span class="p">(</span><span class="n">w_i</span><span class="p">,</span> <span class="n">w_j</span><span class="p">,</span> <span class="n">b_i</span><span class="p">,</span> <span class="n">b_j</span><span class="p">,</span> <span class="n">X_ij</span><span class="p">,</span> <span class="n">x_max</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.75</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    w_i, w_j: 단어 임베딩</span>
+<span class="sd">    b_i, b_j: 편향</span>
+<span class="sd">    X_ij: 동시 출현 횟수</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># 가중치 함수 (빈도가 너무 높은 단어 완화)</span>
+    <span class="n">weight</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">X_ij</span> <span class="o">/</span> <span class="n">x_max</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span> <span class="o">**</span> <span class="n">alpha</span>
+
+    <span class="c1"># 예측과 실제의 차이</span>
+    <span class="n">prediction</span> <span class="o">=</span> <span class="p">(</span><span class="n">w_i</span> <span class="o">*</span> <span class="n">w_j</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">b_i</span> <span class="o">+</span> <span class="n">b_j</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">X_ij</span> <span class="o">+</span> <span class="mf">1e-10</span><span class="p">)</span>
+
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">weight</span> <span class="o">*</span> <span class="p">(</span><span class="n">prediction</span> <span class="o">-</span> <span class="n">target</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="k">return</span> <span class="n">loss</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="glove_1">GloVe 구현<a class="header-link" href="#glove_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">GloVe</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="c1"># 두 임베딩 행렬</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w_embeddings</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">c_embeddings</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w_bias</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">c_bias</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">cooccur</span><span class="p">):</span>
+        <span class="n">w_i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w_embeddings</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="n">w_j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_embeddings</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+        <span class="n">b_i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w_bias</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+        <span class="n">b_j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_bias</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">glove_loss</span><span class="p">(</span><span class="n">w_i</span><span class="p">,</span> <span class="n">w_j</span><span class="p">,</span> <span class="n">b_i</span><span class="p">,</span> <span class="n">b_j</span><span class="p">,</span> <span class="n">cooccur</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_embedding</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">word_idx</span><span class="p">):</span>
+        <span class="c1"># 최종 임베딩: 두 임베딩의 평균</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">w_embeddings</span><span class="o">.</span><span class="n">weight</span><span class="p">[</span><span class="n">word_idx</span><span class="p">]</span> <span class="o">+</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">c_embeddings</span><span class="o">.</span><span class="n">weight</span><span class="p">[</span><span class="n">word_idx</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4">4. 사전학습 임베딩 사용<a class="header-link" href="#4" title="Permanent link">&para;</a></h2>
+<h3 id="gensim-word2vec">Gensim Word2Vec<a class="header-link" href="#gensim-word2vec" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">gensim.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Word2Vec</span>
+
+<span class="c1"># 학습</span>
+<span class="n">sentences</span> <span class="o">=</span> <span class="p">[[</span><span class="s2">&quot;I&quot;</span><span class="p">,</span> <span class="s2">&quot;love&quot;</span><span class="p">,</span> <span class="s2">&quot;NLP&quot;</span><span class="p">],</span> <span class="p">[</span><span class="s2">&quot;NLP&quot;</span><span class="p">,</span> <span class="s2">&quot;is&quot;</span><span class="p">,</span> <span class="s2">&quot;fun&quot;</span><span class="p">]]</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Word2Vec</span><span class="p">(</span><span class="n">sentences</span><span class="p">,</span> <span class="n">vector_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">min_count</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># 유사 단어</span>
+<span class="n">similar</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">wv</span><span class="o">.</span><span class="n">most_similar</span><span class="p">(</span><span class="s2">&quot;NLP&quot;</span><span class="p">,</span> <span class="n">topn</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="c1"># 벡터 가져오기</span>
+<span class="n">vector</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">wv</span><span class="p">[</span><span class="s2">&quot;NLP&quot;</span><span class="p">]</span>
+
+<span class="c1"># 저장/로드</span>
+<span class="n">model</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;word2vec.model&quot;</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Word2Vec</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;word2vec.model&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="glove_2">사전학습 GloVe<a class="header-link" href="#glove_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">load_glove</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">embed_dim</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;GloVe 텍스트 파일 로드&quot;&quot;&quot;</span>
+    <span class="n">embeddings</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="n">word</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;float32&#39;</span><span class="p">)</span>
+            <span class="n">embeddings</span><span class="p">[</span><span class="n">word</span><span class="p">]</span> <span class="o">=</span> <span class="n">vector</span>
+    <span class="k">return</span> <span class="n">embeddings</span>
+
+<span class="c1"># 사용</span>
+<span class="n">glove</span> <span class="o">=</span> <span class="n">load_glove</span><span class="p">(</span><span class="s1">&#39;glove.6B.100d.txt&#39;</span><span class="p">)</span>
+<span class="n">vector</span> <span class="o">=</span> <span class="n">glove</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;king&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">100</span><span class="p">))</span>
+</code></pre></div>
+
+<h3 id="pytorch">PyTorch 임베딩 레이어에 적용<a class="header-link" href="#pytorch" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">create_embedding_layer</span><span class="p">(</span><span class="n">vocab</span><span class="p">,</span> <span class="n">glove</span><span class="p">,</span> <span class="n">embed_dim</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">freeze</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;사전학습 임베딩으로 Embedding 레이어 초기화&quot;&quot;&quot;</span>
+    <span class="n">vocab_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">vocab</span><span class="p">)</span>
+    <span class="n">embedding_matrix</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">)</span>
+
+    <span class="n">found</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">word</span><span class="p">,</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">vocab</span><span class="o">.</span><span class="n">word2idx</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">glove</span><span class="p">:</span>
+            <span class="n">embedding_matrix</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">glove</span><span class="p">[</span><span class="n">word</span><span class="p">])</span>
+            <span class="n">found</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># 랜덤 초기화</span>
+            <span class="n">embedding_matrix</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">embed_dim</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.1</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;사전학습 임베딩 적용: </span><span class="si">{</span><span class="n">found</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">vocab_size</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">embedding</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
+        <span class="n">embedding_matrix</span><span class="p">,</span>
+        <span class="n">freeze</span><span class="o">=</span><span class="n">freeze</span><span class="p">,</span>  <span class="c1"># True면 학습하지 않음</span>
+        <span class="n">padding_idx</span><span class="o">=</span><span class="n">vocab</span><span class="o">.</span><span class="n">word2idx</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;&lt;pad&gt;&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">embedding</span>
+
+<span class="c1"># 모델에 적용</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">TextClassifier</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vocab</span><span class="p">,</span> <span class="n">glove</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embedding</span> <span class="o">=</span> <span class="n">create_embedding_layer</span><span class="p">(</span><span class="n">vocab</span><span class="p">,</span> <span class="n">glove</span><span class="p">,</span> <span class="n">freeze</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fc</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">embedded</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embedding</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># (batch, seq, 100)</span>
+        <span class="n">pooled</span> <span class="o">=</span> <span class="n">embedded</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># 평균 풀링</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fc</span><span class="p">(</span><span class="n">pooled</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 임베딩 연산<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="_4">유사도 계산<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn.functional</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">F</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">cosine_similarity</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">v2</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">F</span><span class="o">.</span><span class="n">cosine_similarity</span><span class="p">(</span><span class="n">v1</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">v2</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+
+<span class="c1"># 가장 유사한 단어 찾기</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">most_similar</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="n">embeddings</span><span class="p">,</span> <span class="n">vocab</span><span class="p">,</span> <span class="n">topk</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+    <span class="n">word_vec</span> <span class="o">=</span> <span class="n">embeddings</span><span class="p">[</span><span class="n">vocab</span><span class="p">[</span><span class="n">word</span><span class="p">]]</span>
+    <span class="n">similarities</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">cosine_similarity</span><span class="p">(</span><span class="n">word_vec</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">embeddings</span><span class="p">)</span>
+    <span class="n">values</span><span class="p">,</span> <span class="n">indices</span> <span class="o">=</span> <span class="n">similarities</span><span class="o">.</span><span class="n">topk</span><span class="p">(</span><span class="n">topk</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">val</span><span class="p">,</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">indices</span><span class="p">[</span><span class="mi">1</span><span class="p">:]):</span>  <span class="c1"># 자기 자신 제외</span>
+        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">vocab</span><span class="o">.</span><span class="n">idx2word</span><span class="p">[</span><span class="n">idx</span><span class="o">.</span><span class="n">item</span><span class="p">()],</span> <span class="n">val</span><span class="o">.</span><span class="n">item</span><span class="p">()))</span>
+    <span class="k">return</span> <span class="n">results</span>
+</code></pre></div>
+
+<h3 id="_5">단어 연산<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">word_analogy</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">embeddings</span><span class="p">,</span> <span class="n">vocab</span><span class="p">,</span> <span class="n">topk</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    a : b = c : ?</span>
+<span class="sd">    예: king : queen = man : woman</span>
+
+<span class="sd">    vector(?) = vector(b) - vector(a) + vector(c)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">vec_a</span> <span class="o">=</span> <span class="n">embeddings</span><span class="p">[</span><span class="n">vocab</span><span class="p">[</span><span class="n">a</span><span class="p">]]</span>
+    <span class="n">vec_b</span> <span class="o">=</span> <span class="n">embeddings</span><span class="p">[</span><span class="n">vocab</span><span class="p">[</span><span class="n">b</span><span class="p">]]</span>
+    <span class="n">vec_c</span> <span class="o">=</span> <span class="n">embeddings</span><span class="p">[</span><span class="n">vocab</span><span class="p">[</span><span class="n">c</span><span class="p">]]</span>
+
+    <span class="c1"># 유추 벡터</span>
+    <span class="n">target_vec</span> <span class="o">=</span> <span class="n">vec_b</span> <span class="o">-</span> <span class="n">vec_a</span> <span class="o">+</span> <span class="n">vec_c</span>
+
+    <span class="c1"># 가장 유사한 단어 찾기</span>
+    <span class="n">similarities</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">cosine_similarity</span><span class="p">(</span><span class="n">target_vec</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">embeddings</span><span class="p">)</span>
+    <span class="n">values</span><span class="p">,</span> <span class="n">indices</span> <span class="o">=</span> <span class="n">similarities</span><span class="o">.</span><span class="n">topk</span><span class="p">(</span><span class="n">topk</span> <span class="o">+</span> <span class="mi">3</span><span class="p">)</span>
+
+    <span class="c1"># a, b, c 제외</span>
+    <span class="n">exclude</span> <span class="o">=</span> <span class="p">{</span><span class="n">vocab</span><span class="p">[</span><span class="n">a</span><span class="p">],</span> <span class="n">vocab</span><span class="p">[</span><span class="n">b</span><span class="p">],</span> <span class="n">vocab</span><span class="p">[</span><span class="n">c</span><span class="p">]}</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">val</span><span class="p">,</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">indices</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">idx</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">exclude</span><span class="p">:</span>
+            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">vocab</span><span class="o">.</span><span class="n">idx2word</span><span class="p">[</span><span class="n">idx</span><span class="o">.</span><span class="n">item</span><span class="p">()],</span> <span class="n">val</span><span class="o">.</span><span class="n">item</span><span class="p">()))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="o">==</span> <span class="n">topk</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="k">return</span> <span class="n">results</span>
+
+<span class="c1"># 예시</span>
+<span class="c1"># word_analogy(&quot;king&quot;, &quot;queen&quot;, &quot;man&quot;, embeddings, vocab)</span>
+<span class="c1"># → [(&quot;woman&quot;, 0.85), ...]</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 시각화<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="t-sne">t-SNE 시각화<a class="header-link" href="#t-sne" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.manifold</span><span class="w"> </span><span class="kn">import</span> <span class="n">TSNE</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">visualize_embeddings</span><span class="p">(</span><span class="n">embeddings</span><span class="p">,</span> <span class="n">words</span><span class="p">,</span> <span class="n">vocab</span><span class="p">):</span>
+    <span class="c1"># 선택한 단어의 임베딩</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="p">[</span><span class="n">vocab</span><span class="p">[</span><span class="n">w</span><span class="p">]</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">words</span><span class="p">]</span>
+    <span class="n">vectors</span> <span class="o">=</span> <span class="n">embeddings</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+    <span class="c1"># t-SNE</span>
+    <span class="n">tsne</span> <span class="o">=</span> <span class="n">TSNE</span><span class="p">(</span><span class="n">n_components</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">perplexity</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">words</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+    <span class="n">reduced</span> <span class="o">=</span> <span class="n">tsne</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">vectors</span><span class="p">)</span>
+
+    <span class="c1"># 시각화</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">reduced</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">reduced</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">word</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">words</span><span class="p">):</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="p">(</span><span class="n">reduced</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">reduced</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Word Embeddings (t-SNE)&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s1">&#39;embeddings_tsne.png&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<span class="c1"># 사용</span>
+<span class="n">words</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;king&#39;</span><span class="p">,</span> <span class="s1">&#39;queen&#39;</span><span class="p">,</span> <span class="s1">&#39;man&#39;</span><span class="p">,</span> <span class="s1">&#39;woman&#39;</span><span class="p">,</span> <span class="s1">&#39;dog&#39;</span><span class="p">,</span> <span class="s1">&#39;cat&#39;</span><span class="p">,</span> <span class="s1">&#39;apple&#39;</span><span class="p">,</span> <span class="s1">&#39;orange&#39;</span><span class="p">]</span>
+<span class="n">visualize_embeddings</span><span class="p">(</span><span class="n">embeddings</span><span class="p">,</span> <span class="n">words</span><span class="p">,</span> <span class="n">vocab</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7-word2vec-vs-glove">7. Word2Vec vs GloVe 비교<a class="header-link" href="#7-word2vec-vs-glove" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>Word2Vec</th>
+<th>GloVe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>방식</td>
+<td>예측 기반</td>
+<td>통계 기반</td>
+</tr>
+<tr>
+<td>학습</td>
+<td>윈도우 내 단어</td>
+<td>전역 동시 출현</td>
+</tr>
+<tr>
+<td>메모리</td>
+<td>적음</td>
+<td>동시 출현 행렬 필요</td>
+</tr>
+<tr>
+<td>학습 속도</td>
+<td>Negative Sampling으로 빠름</td>
+<td>행렬 전처리 후 빠름</td>
+</tr>
+<tr>
+<td>성능</td>
+<td>유사</td>
+<td>유사</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_6">정리<a class="header-link" href="#_6" title="Permanent link">&para;</a></h2>
+<h3 id="_7">핵심 개념<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>분산 표현</strong>: 단어를 밀집 벡터로 표현</li>
+<li><strong>Skip-gram</strong>: 중심 → 주변 예측</li>
+<li><strong>CBOW</strong>: 주변 → 중심 예측</li>
+<li><strong>GloVe</strong>: 동시 출현 통계 활용</li>
+<li><strong>단어 연산</strong>: king - queen + man ≈ woman</li>
+</ol>
+<h3 id="_8">핵심 코드<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Gensim Word2Vec</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">gensim.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Word2Vec</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Word2Vec</span><span class="p">(</span><span class="n">sentences</span><span class="p">,</span> <span class="n">vector_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="c1"># 사전학습 임베딩 적용</span>
+<span class="n">embedding</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="n">pretrained_matrix</span><span class="p">,</span> <span class="n">freeze</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="c1"># 유사도</span>
+<span class="n">similarity</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">cosine_similarity</span><span class="p">(</span><span class="n">vec1</span><span class="p">,</span> <span class="n">vec2</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_9">다음 단계<a class="header-link" href="#_9" title="Permanent link">&para;</a></h2>
+<p><a href="./03_Transformer_Review.md">03_Transformer_Review.md</a>에서 Transformer 아키텍처를 NLP 관점에서 복습합니다.</p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/LLM_and_NLP/01_NLP_Basics.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">01. NLP 기초</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/LLM_and_NLP/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/LLM_and_NLP/03_Transformer_Review.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">03. Transformer 복습</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

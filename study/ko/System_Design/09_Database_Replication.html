@@ -1,0 +1,1594 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>데이터베이스 복제 (Database Replication) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/System_Design/">System Design</a>
+    <span class="separator">/</span>
+    <span class="current">데이터베이스 복제 (Database Replication)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>데이터베이스 복제 (Database Replication)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/System_Design/08_Database_Scaling.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">데이터베이스 확장</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/System_Design/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/System_Design/10_Data_Consistency_Patterns.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">데이터 일관성 패턴 (Data Consistency Patterns)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">난이도: ⭐⭐⭐ (중급)</a></li>
+<li><a href="#_2">개요</a></li>
+<li><a href="#_3">목차</a></li>
+<li><a href="#1">1. 복제의 개념과 목적</a><ul>
+<li><a href="#_4">복제가 필요한 이유</a></li>
+<li><a href="#_5">복제 아키텍처 유형</a></li>
+</ul>
+</li>
+<li><a href="#2">2. 단일 리더 복제</a><ul>
+<li><a href="#_6">동작 원리</a></li>
+<li><a href="#_7">복제 방식</a></li>
+<li><a href="#postgresql">PostgreSQL 스트리밍 복제 예시</a></li>
+<li><a href="#mysql">MySQL 복제 설정 예시</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 다중 리더 복제</a><ul>
+<li><a href="#_8">아키텍처</a></li>
+<li><a href="#_9">쓰기 충돌 문제</a></li>
+<li><a href="#_10">충돌 해결 전략</a></li>
+<li><a href="#_11">복제 토폴로지</a></li>
+</ul>
+</li>
+<li><a href="#4">4. 리더 없는 복제</a><ul>
+<li><a href="#dynamo">Dynamo 스타일 복제</a></li>
+<li><a href="#anti-entropy">읽기 복구와 Anti-Entropy</a></li>
+<li><a href="#sloppy-quorum-hinted-handoff">Sloppy Quorum과 Hinted Handoff</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 동기/비동기 복제</a><ul>
+<li><a href="#synchronous-replication">동기 복제 (Synchronous Replication)</a></li>
+<li><a href="#asynchronous-replication">비동기 복제 (Asynchronous Replication)</a></li>
+<li><a href="#semi-synchronous">반동기 복제 (Semi-Synchronous)</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 복제 지연과 일관성 문제</a><ul>
+<li><a href="#replication-lag">복제 지연 (Replication Lag)</a></li>
+<li><a href="#_12">일관성 보장 수준</a></li>
+<li><a href="#_13">복제 지연 모니터링</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 장애 복구와 리더 선출</a><ul>
+<li><a href="#follower">Follower 장애 복구</a></li>
+<li><a href="#leader-failover">Leader 장애와 Failover</a></li>
+<li><a href="#failover">Failover의 문제점</a></li>
+<li><a href="#_14">리더 선출 알고리즘</a></li>
+</ul>
+</li>
+<li><a href="#8-quorum">8. Quorum과 일관성 수준</a><ul>
+<li><a href="#quorum">Quorum 개념</a></li>
+<li><a href="#quorum_1">Quorum 설정별 특성</a></li>
+<li><a href="#cassandra">Cassandra 일관성 수준</a></li>
+<li><a href="#vs">일관성 vs 가용성 트레이드오프</a></li>
+</ul>
+</li>
+<li><a href="#9">9. 연습 문제</a><ul>
+<li><a href="#1_1">연습 문제 1: 복제 전략 선택</a></li>
+<li><a href="#2-quorum">연습 문제 2: Quorum 계산</a></li>
+<li><a href="#3-failover">연습 문제 3: Failover 시나리오</a></li>
+<li><a href="#4_1">연습 문제 4: 충돌 해결 설계</a></li>
+<li><a href="#5_1">연습 문제 5: 면접 문제</a></li>
+</ul>
+</li>
+<li><a href="#10">10. 다음 단계</a></li>
+<li><a href="#11">11. 참고 자료</a><ul>
+<li><a href="#_15">필수 문서</a></li>
+<li><a href="#_16">데이터베이스별 문서</a></li>
+<li><a href="#_17">논문</a></li>
+</ul>
+</li>
+<li><a href="#_18">요약</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="database-replication">데이터베이스 복제 (Database Replication)<a class="header-link" href="#database-replication" title="Permanent link">&para;</a></h1>
+<h2 id="_1">난이도: ⭐⭐⭐ (중급)<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<h2 id="_2">개요<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<p>데이터베이스 복제(Replication)는 동일한 데이터를 여러 노드에 복사하여 가용성, 내결함성, 읽기 성능을 향상시키는 기술입니다. 이 문서에서는 다양한 복제 전략과 일관성 보장 메커니즘, 장애 복구 방법을 학습합니다.</p>
+<hr />
+<h2 id="_3">목차<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-복제의-개념과-목적">복제의 개념과 목적</a></li>
+<li><a href="#2-단일-리더-복제">단일 리더 복제</a></li>
+<li><a href="#3-다중-리더-복제">다중 리더 복제</a></li>
+<li><a href="#4-리더-없는-복제">리더 없는 복제</a></li>
+<li><a href="#5-동기비동기-복제">동기/비동기 복제</a></li>
+<li><a href="#6-복제-지연과-일관성-문제">복제 지연과 일관성 문제</a></li>
+<li><a href="#7-장애-복구와-리더-선출">장애 복구와 리더 선출</a></li>
+<li><a href="#8-quorum과-일관성-수준">Quorum과 일관성 수준</a></li>
+<li><a href="#9-연습-문제">연습 문제</a></li>
+<li><a href="#10-다음-단계">다음 단계</a></li>
+<li><a href="#11-참고-자료">참고 자료</a></li>
+</ol>
+<hr />
+<h2 id="1">1. 복제의 개념과 목적<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="_4">복제가 필요한 이유<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                    </span><span class="n">복제의</span><span class="w"> </span><span class="n">주요</span><span class="w"> </span><span class="n">목적</span><span class="w">                               </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">1.</span><span class="w"> </span><span class="n">고가용성</span><span class="w"> </span><span class="p">(</span><span class="n">High</span><span class="w"> </span><span class="n">Availability</span><span class="p">)</span><span class="w">                                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">┌─────────┐</span><span class="w">         </span><span class="err">┌─────────┐</span><span class="w">                            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="k">Primary</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">──</span><span class="n">X</span><span class="err">──</span><span class="o">&gt;</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">Replica</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="k">Primary</span><span class="w"> </span><span class="n">장애</span><span class="w"> </span><span class="n">시</span><span class="w">         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">  </span><span class="p">(</span><span class="n">Down</span><span class="p">)</span><span class="w"> </span><span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w"> </span><span class="p">(</span><span class="n">Active</span><span class="p">)</span><span class="err">│</span><span class="w">    </span><span class="n">Replica가</span><span class="w"> </span><span class="n">서비스</span><span class="w"> </span><span class="n">유지</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">└─────────┘</span><span class="w">         </span><span class="err">└─────────┘</span><span class="w">                            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">2.</span><span class="w"> </span><span class="n">읽기</span><span class="w"> </span><span class="n">확장성</span><span class="w"> </span><span class="p">(</span><span class="k">Read</span><span class="w"> </span><span class="n">Scalability</span><span class="p">)</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">┌─────────┐</span><span class="w">                                                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="k">Primary</span><span class="w"> </span><span class="err">│────┬────</span><span class="o">&gt;</span><span class="w"> </span><span class="n">Replica</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="err">←───</span><span class="w"> </span><span class="k">Read</span><span class="w">                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="p">(</span><span class="k">Write</span><span class="p">)</span><span class="w"> </span><span class="err">│</span><span class="w">    </span><span class="err">├────</span><span class="o">&gt;</span><span class="w"> </span><span class="n">Replica</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="err">←───</span><span class="w"> </span><span class="k">Read</span><span class="w">                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">└─────────┘</span><span class="w">    </span><span class="err">└────</span><span class="o">&gt;</span><span class="w"> </span><span class="n">Replica</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="err">←───</span><span class="w"> </span><span class="k">Read</span><span class="w">                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">3.</span><span class="w"> </span><span class="n">지리적</span><span class="w"> </span><span class="n">분산</span><span class="w"> </span><span class="p">(</span><span class="n">Geographical</span><span class="w"> </span><span class="n">Distribution</span><span class="p">)</span><span class="w">                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="n">Seoul</span><span class="w"> </span><span class="err">──────────────</span><span class="o">&gt;</span><span class="w"> </span><span class="n">Tokyo</span><span class="w"> </span><span class="err">──────────────</span><span class="o">&gt;</span><span class="w"> </span><span class="n">US</span><span class="o">-</span><span class="n">West</span><span class="w">        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="o">[</span><span class="n">Primary</span><span class="o">]</span><span class="w">            </span><span class="o">[</span><span class="n">Replica</span><span class="o">]</span><span class="w">             </span><span class="o">[</span><span class="n">Replica</span><span class="o">]</span><span class="w">       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="nl">지연</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="n">ms</span><span class="w">            </span><span class="nl">지연</span><span class="p">:</span><span class="w"> </span><span class="o">~</span><span class="mi">30</span><span class="n">ms</span><span class="w">           </span><span class="nl">지연</span><span class="p">:</span><span class="w"> </span><span class="o">~</span><span class="mi">100</span><span class="n">ms</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">4.</span><span class="w"> </span><span class="n">데이터</span><span class="w"> </span><span class="n">보호</span><span class="w"> </span><span class="p">(</span><span class="k">Data</span><span class="w"> </span><span class="n">Protection</span><span class="p">)</span><span class="w">                               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="o">-</span><span class="w"> </span><span class="n">하드웨어</span><span class="w"> </span><span class="n">장애</span><span class="w"> </span><span class="n">대비</span><span class="w">                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="o">-</span><span class="w"> </span><span class="n">데이터</span><span class="w"> </span><span class="n">센터</span><span class="w"> </span><span class="n">장애</span><span class="w"> </span><span class="n">대비</span><span class="w">                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="o">-</span><span class="w"> </span><span class="n">재해</span><span class="w"> </span><span class="n">복구</span><span class="w"> </span><span class="p">(</span><span class="n">Disaster</span><span class="w"> </span><span class="n">Recovery</span><span class="p">)</span><span class="w">                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="_5">복제 아키텍처 유형<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                   복제 아키텍처 비교                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. 단일 리더 (Single-Leader)                                   │
+│     ┌────────┐                                                 │
+│     │ Leader │ ──Write──&gt;                                      │
+│     └───┬────┘                                                 │
+│         │ Replicate                                            │
+│     ┌───┴───────────┐                                          │
+│     ▼       ▼       ▼                                          │
+│  Follower Follower Follower                                    │
+│                                                                 │
+│  2. 다중 리더 (Multi-Leader)                                    │
+│     ┌────────┐     ┌────────┐     ┌────────┐                   │
+│     │Leader 1│&lt;───&gt;│Leader 2│&lt;───&gt;│Leader 3│                   │
+│     └───┬────┘     └───┬────┘     └───┬────┘                   │
+│         │              │              │                        │
+│      Follower       Follower       Follower                    │
+│                                                                 │
+│  3. 리더 없음 (Leaderless)                                      │
+│       ┌──────┐   ┌──────┐   ┌──────┐                           │
+│       │Node 1│   │Node 2│   │Node 3│                           │
+│       └──────┘   └──────┘   └──────┘                           │
+│           ▲          ▲          ▲                              │
+│           └──────────┴──────────┘                              │
+│              모든 노드가 동등                                    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="2">2. 단일 리더 복제<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="_6">동작 원리<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                  단일 리더 복제 (Single-Leader)                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Client                                                         │
+│    │                                                            │
+│    │ Write Request                                              │
+│    ▼                                                            │
+│  ┌─────────────────────────────────────────┐                    │
+│  │              Leader (Primary)            │                    │
+│  │  ┌─────────────────────────────────┐    │                    │
+│  │  │         Transaction Log          │    │                    │
+│  │  │  [1] INSERT INTO users...        │    │                    │
+│  │  │  [2] UPDATE orders...            │    │                    │
+│  │  │  [3] DELETE from cart...         │    │                    │
+│  │  └─────────────────────────────────┘    │                    │
+│  └─────────────────┬───────────────────────┘                    │
+│                    │                                            │
+│          ┌─────────┼─────────┐                                  │
+│          │  Replication Log  │                                  │
+│          ▼         ▼         ▼                                  │
+│  ┌───────────┐ ┌───────────┐ ┌───────────┐                      │
+│  │ Follower1 │ │ Follower2 │ │ Follower3 │                      │
+│  │ (Replica) │ │ (Replica) │ │ (Replica) │                      │
+│  └─────┬─────┘ └─────┬─────┘ └─────┬─────┘                      │
+│        │             │             │                            │
+│        └─────────────┴─────────────┘                            │
+│                      │                                          │
+│                Read Requests                                    │
+│                      ▲                                          │
+│                   Clients                                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_7">복제 방식<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    복제 방식 비교                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. Statement-Based Replication                                 │
+│     ┌─────────────────────────────────────────┐                │
+│     │  Leader: INSERT INTO users VALUES (...)  │                │
+│     │            │                             │                │
+│     │            ▼                             │                │
+│     │  Follower: INSERT INTO users VALUES (...) │ ← SQL 재실행  │
+│     └─────────────────────────────────────────┘                │
+│     문제점: NOW(), RAND() 등 비결정적 함수                      │
+│                                                                 │
+│  2. Write-Ahead Log (WAL) Shipping                              │
+│     ┌─────────────────────────────────────────┐                │
+│     │  Leader WAL:                             │                │
+│     │  [Page 5, Offset 120, Data: 0x45AB...]   │                │
+│     │            │                             │                │
+│     │            ▼                             │                │
+│     │  Follower: 바이트 단위 동일하게 적용       │ ← 저수준 복제  │
+│     └─────────────────────────────────────────┘                │
+│     문제점: 버전 호환성 (업그레이드 시 다운타임)                  │
+│                                                                 │
+│  3. Row-Based (Logical) Replication                             │
+│     ┌─────────────────────────────────────────┐                │
+│     │  Change Log:                             │                │
+│     │  {table: &quot;users&quot;,                        │                │
+│     │   op: &quot;INSERT&quot;,                          │                │
+│     │   new_row: {id:1, name:&quot;Kim&quot;}}           │ ← 논리적 변경  │
+│     │            │                             │                │
+│     │            ▼                             │                │
+│     │  Follower: 행 데이터 적용                 │                │
+│     └─────────────────────────────────────────┘                │
+│     장점: 버전 호환, 유연한 복제 가능                            │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="postgresql">PostgreSQL 스트리밍 복제 예시<a class="header-link" href="#postgresql" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Primary 설정 (postgresql.conf)</span>
+<span class="n">wal_level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">replica</span>
+<span class="n">max_wal_senders</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span>
+<span class="n">wal_keep_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="n">GB</span>
+
+<span class="c1">-- Primary: 복제 슬롯 생성</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">pg_create_physical_replication_slot</span><span class="p">(</span><span class="s1">&#39;replica1_slot&#39;</span><span class="p">);</span>
+
+<span class="c1">-- Standby 설정 (postgresql.conf)</span>
+<span class="n">primary_conninfo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;host=primary-host port=5432 user=replicator&#39;</span>
+<span class="n">primary_slot_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;replica1_slot&#39;</span>
+
+<span class="c1">-- 복제 상태 확인</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">client_addr</span><span class="p">,</span>
+<span class="w">    </span><span class="k">state</span><span class="p">,</span>
+<span class="w">    </span><span class="n">sent_lsn</span><span class="p">,</span>
+<span class="w">    </span><span class="n">write_lsn</span><span class="p">,</span>
+<span class="w">    </span><span class="n">flush_lsn</span><span class="p">,</span>
+<span class="w">    </span><span class="n">replay_lsn</span><span class="p">,</span>
+<span class="w">    </span><span class="n">pg_wal_lsn_diff</span><span class="p">(</span><span class="n">sent_lsn</span><span class="p">,</span><span class="w"> </span><span class="n">replay_lsn</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">replication_lag</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_replication</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="mysql">MySQL 복제 설정 예시<a class="header-link" href="#mysql" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Master 설정 (my.cnf)</span>
+<span class="c1">-- server-id=1</span>
+<span class="c1">-- log_bin=mysql-bin</span>
+<span class="c1">-- binlog_format=ROW</span>
+
+<span class="c1">-- Master: 복제 사용자 생성</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">USER</span><span class="w"> </span><span class="s1">&#39;repl&#39;</span><span class="o">@</span><span class="s1">&#39;%&#39;</span><span class="w"> </span><span class="n">IDENTIFIED</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="s1">&#39;password&#39;</span><span class="p">;</span>
+<span class="k">GRANT</span><span class="w"> </span><span class="n">REPLICATION</span><span class="w"> </span><span class="n">SLAVE</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="o">*</span><span class="p">.</span><span class="o">*</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="s1">&#39;repl&#39;</span><span class="o">@</span><span class="s1">&#39;%&#39;</span><span class="p">;</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">MASTER</span><span class="w"> </span><span class="n">STATUS</span><span class="p">;</span>
+
+<span class="c1">-- Slave 설정</span>
+<span class="n">CHANGE</span><span class="w"> </span><span class="n">MASTER</span><span class="w"> </span><span class="k">TO</span>
+<span class="w">    </span><span class="n">MASTER_HOST</span><span class="o">=</span><span class="s1">&#39;master-host&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">MASTER_USER</span><span class="o">=</span><span class="s1">&#39;repl&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">MASTER_PASSWORD</span><span class="o">=</span><span class="s1">&#39;password&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">MASTER_LOG_FILE</span><span class="o">=</span><span class="s1">&#39;mysql-bin.000001&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">MASTER_LOG_POS</span><span class="o">=</span><span class="mi">154</span><span class="p">;</span>
+
+<span class="k">START</span><span class="w"> </span><span class="n">SLAVE</span><span class="p">;</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">SLAVE</span><span class="w"> </span><span class="n">STATUS</span><span class="err">\</span><span class="k">G</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3">3. 다중 리더 복제<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="_8">아키텍처<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">               </span><span class="n">다중</span><span class="w"> </span><span class="n">리더</span><span class="w"> </span><span class="n">복제</span><span class="w"> </span><span class="p">(</span><span class="n">Multi</span><span class="o">-</span><span class="n">Leader</span><span class="p">)</span><span class="w">                      </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="n">Data</span><span class="w"> </span><span class="n">Center</span><span class="w"> </span><span class="n">A</span><span class="w">              </span><span class="n">Data</span><span class="w"> </span><span class="n">Center</span><span class="w"> </span><span class="n">B</span><span class="w">                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────┐</span><span class="w">        </span><span class="err">┌─────────────────┐</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="n">Leader</span><span class="w"> </span><span class="n">A</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="o">&lt;</span><span class="err">────</span><span class="o">&gt;</span><span class="w"> </span><span class="err">│</span><span class="w">    </span><span class="n">Leader</span><span class="w"> </span><span class="n">B</span><span class="w">     </span><span class="err">│</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">┌───────────┐</span><span class="w">  </span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w">  </span><span class="err">┌───────────┐</span><span class="w">  </span><span class="err">│</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">users</span><span class="o">:</span><span class="w"> </span><span class="mi">1</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">동기화</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">users</span><span class="o">:</span><span class="w"> </span><span class="mi">1</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">orders</span><span class="o">:</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="o">&lt;</span><span class="err">────</span><span class="o">&gt;</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">orders</span><span class="o">:</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">└───────────┘</span><span class="w">  </span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w">  </span><span class="err">└───────────┘</span><span class="w">  </span><span class="err">│</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="err">┌───┴───┐</span><span class="w">     </span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w">   </span><span class="err">┌───┴───┐</span><span class="w">     </span><span class="err">│</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="err">▼</span><span class="w">       </span><span class="err">▼</span><span class="w">     </span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w">   </span><span class="err">▼</span><span class="w">       </span><span class="err">▼</span><span class="w">     </span><span class="err">│</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">Follower</span><span class="w"> </span><span class="n">Follower</span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="n">Follower</span><span class="w"> </span><span class="n">Follower</span><span class="err">│</span><span class="w">                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└─────────────────┘</span><span class="w">        </span><span class="err">└─────────────────┘</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">▲</span><span class="w">                          </span><span class="err">▲</span><span class="w">                            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w">                          </span><span class="err">│</span><span class="w">                            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="p">[</span><span class="n">Clients</span><span class="w"> </span><span class="n">A</span><span class="p">]</span><span class="w">                </span><span class="p">[</span><span class="n">Clients</span><span class="w"> </span><span class="n">B</span><span class="p">]</span><span class="w">                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="n">지연</span><span class="o">:</span><span class="w"> </span><span class="o">~</span><span class="mi">1</span><span class="n">ms</span><span class="w">                  </span><span class="n">지연</span><span class="o">:</span><span class="w"> </span><span class="o">~</span><span class="mi">1</span><span class="n">ms</span><span class="w">                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">장점</span><span class="o">:</span><span class="w">                                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">각</span><span class="w"> </span><span class="n">데이터센터에서</span><span class="w"> </span><span class="n">낮은</span><span class="w"> </span><span class="n">쓰기</span><span class="w"> </span><span class="n">지연</span><span class="w">                               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">데이터센터</span><span class="w"> </span><span class="n">장애</span><span class="w"> </span><span class="n">시</span><span class="w"> </span><span class="n">다른</span><span class="w"> </span><span class="n">곳에서</span><span class="w"> </span><span class="n">계속</span><span class="w"> </span><span class="n">쓰기</span><span class="w"> </span><span class="n">가능</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">단점</span><span class="o">:</span><span class="w">                                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">충돌</span><span class="w"> </span><span class="n">해결</span><span class="w"> </span><span class="n">필요</span><span class="w">                                                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">복잡성</span><span class="w"> </span><span class="n">증가</span><span class="w">                                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="_9">쓰기 충돌 문제<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    쓰기 충돌 시나리오                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  시간 ────────────────────────────────────────────────&gt;         │
+│                                                                 │
+│  Leader A:                                                      │
+│    T1: UPDATE users SET name=&#39;Kim&#39; WHERE id=1                   │
+│         │                                                       │
+│         ▼ (복제)                                                │
+│                                                                 │
+│  Leader B:                                                      │
+│    T1: UPDATE users SET name=&#39;Lee&#39; WHERE id=1                   │
+│         │                                                       │
+│         ▼ (복제)                                                │
+│                                                                 │
+│  결과:                                                          │
+│  ┌─────────────┐         ┌─────────────┐                       │
+│  │  Leader A   │         │  Leader B   │                       │
+│  │ name=&#39;Lee&#39;? │   ≠     │ name=&#39;Kim&#39;? │   충돌!               │
+│  └─────────────┘         └─────────────┘                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_10">충돌 해결 전략<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    충돌 해결 전략                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. Last Write Wins (LWW)                                       │
+│     ┌─────────────────────────────────────────────┐            │
+│     │  Write A: {value: &quot;Kim&quot;, timestamp: 100}    │            │
+│     │  Write B: {value: &quot;Lee&quot;, timestamp: 105}    │            │
+│     │                                             │            │
+│     │  Result: &quot;Lee&quot; (timestamp 105 &gt; 100)        │            │
+│     └─────────────────────────────────────────────┘            │
+│     문제점: 데이터 손실 가능                                     │
+│                                                                 │
+│  2. Version Vector (벡터 클록)                                  │
+│     ┌─────────────────────────────────────────────┐            │
+│     │  Node A: {value: &quot;Kim&quot;, version: [A:1, B:0]} │            │
+│     │  Node B: {value: &quot;Lee&quot;, version: [A:0, B:1]} │            │
+│     │                                             │            │
+│     │  동시 쓰기 감지 → 병합 필요                   │            │
+│     └─────────────────────────────────────────────┘            │
+│                                                                 │
+│  3. CRDT (Conflict-free Replicated Data Type)                   │
+│     ┌─────────────────────────────────────────────┐            │
+│     │  G-Counter: 각 노드별 카운터 유지            │            │
+│     │  Node A: +3                                 │            │
+│     │  Node B: +2                                 │            │
+│     │  Total: 3 + 2 = 5 (자동 병합)               │            │
+│     └─────────────────────────────────────────────┘            │
+│                                                                 │
+│  4. Custom Resolution Logic                                     │
+│     ┌─────────────────────────────────────────────┐            │
+│     │  예: 장바구니 충돌                           │            │
+│     │  Cart A: [Item1, Item2]                     │            │
+│     │  Cart B: [Item1, Item3]                     │            │
+│     │  Merge: [Item1, Item2, Item3] (Union)       │            │
+│     └─────────────────────────────────────────────┘            │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_11">복제 토폴로지<a class="header-link" href="#_11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    복제 토폴로지 유형                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. 원형 (Circular)                                             │
+│       ┌───┐                                                    │
+│       │ A │ ──────────┐                                        │
+│       └─┬─┘           │                                        │
+│         │           ┌─▼─┐                                      │
+│         │           │ B │                                      │
+│         │           └─┬─┘                                      │
+│       ┌─▼─┐           │                                        │
+│       │ D │ &lt;─────────┘                                        │
+│       └─┬─┘           │                                        │
+│         └──&gt; ┌───┐ &lt;──┘                                        │
+│              │ C │                                              │
+│              └───┘                                              │
+│     장애 시 전체 복제 중단 위험                                  │
+│                                                                 │
+│  2. 별형 (Star)                                                 │
+│           ┌───┐                                                │
+│           │ B │                                                │
+│           └─┬─┘                                                │
+│       ┌───┐ │ ┌───┐                                            │
+│       │ A │─┼─│ C │                                            │
+│       └───┘ │ └───┘                                            │
+│           ┌─▼─┐                                                │
+│           │Hub│  ← 중앙 노드 장애 시 취약                       │
+│           └───┘                                                │
+│                                                                 │
+│  3. 전체 연결 (All-to-All)                                      │
+│       ┌───┐     ┌───┐                                          │
+│       │ A │ ←──→│ B │                                          │
+│       └─┬─┘     └─┬─┘                                          │
+│         │    ╲ ╱  │                                            │
+│         │     ╳   │                                            │
+│         │    ╱ ╲  │                                            │
+│       ┌─▼─┐     ┌─▼─┐                                          │
+│       │ D │ ←──→│ C │                                          │
+│       └───┘     └───┘                                          │
+│     높은 내결함성, 복잡한 관리                                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="4">4. 리더 없는 복제<a class="header-link" href="#4" title="Permanent link">&para;</a></h2>
+<h3 id="dynamo">Dynamo 스타일 복제<a class="header-link" href="#dynamo" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│              리더 없는 복제 (Leaderless Replication)             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  특징:                                                          │
+│  - 모든 노드가 읽기/쓰기 가능                                    │
+│  - 클라이언트가 여러 노드에 동시 요청                            │
+│  - Amazon Dynamo, Cassandra, Riak 등에서 사용                   │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                        Client                            │   │
+│  │                          │                               │   │
+│  │           Write: key=X, value=V                          │   │
+│  │           ┌──────────────┼──────────────┐                │   │
+│  │           ▼              ▼              ▼                │   │
+│  │       ┌──────┐      ┌──────┐      ┌──────┐              │   │
+│  │       │Node 1│      │Node 2│      │Node 3│              │   │
+│  │       │ X=V  │      │ X=V  │      │(Down)│              │   │
+│  │       │ ✓    │      │ ✓    │      │  ✗   │              │   │
+│  │       └──────┘      └──────┘      └──────┘              │   │
+│  │                                                          │   │
+│  │   N=3 (총 복제본), W=2 (쓰기 성공 필요 수)                │   │
+│  │   2개 노드 성공 → 쓰기 성공!                              │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="anti-entropy">읽기 복구와 Anti-Entropy<a class="header-link" href="#anti-entropy" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    데이터 복구 메커니즘                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. Read Repair (읽기 시 복구)                                   │
+│                                                                 │
+│     Client                                                      │
+│        │ Read key=X                                             │
+│        ├────────────────────────────────────┐                   │
+│        ▼              ▼                     ▼                   │
+│    ┌──────┐      ┌──────┐              ┌──────┐                │
+│    │Node 1│      │Node 2│              │Node 3│                │
+│    │X=V2  │      │X=V2  │              │X=V1  │ ← 오래된 버전   │
+│    │ver:2 │      │ver:2 │              │ver:1 │                │
+│    └──────┘      └──────┘              └──────┘                │
+│        │              │                     │                   │
+│        └──────────────┴─────────────────────┘                   │
+│                       │                                         │
+│                       ▼                                         │
+│              Client: 버전 비교                                  │
+│              최신 버전 V2 반환                                   │
+│              Node 3에 V2 업데이트 요청 ←── Read Repair          │
+│                                                                 │
+│  2. Anti-Entropy Process (백그라운드 동기화)                     │
+│                                                                 │
+│    ┌──────────────────────────────────────────────────────┐    │
+│    │           Background Anti-Entropy Process            │    │
+│    │                                                      │    │
+│    │  Node 1          Node 2          Node 3              │    │
+│    │  ┌────┐         ┌────┐          ┌────┐              │    │
+│    │  │ A  │         │ A  │          │ A  │              │    │
+│    │  │ B  │  &lt;────&gt; │ B  │  &lt;────&gt;  │ B  │              │    │
+│    │  │ C  │ Merkle  │ C  │  Merkle  │ C* │ ← 불일치     │    │
+│    │  │ D  │  Tree   │ D  │   Tree   │ D  │              │    │
+│    │  └────┘ Compare └────┘  Compare └────┘              │    │
+│    │                                                      │    │
+│    │  Merkle Tree로 효율적인 차이 감지 및 동기화           │    │
+│    └──────────────────────────────────────────────────────┘    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="sloppy-quorum-hinted-handoff">Sloppy Quorum과 Hinted Handoff<a class="header-link" href="#sloppy-quorum-hinted-handoff" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│              Sloppy Quorum &amp; Hinted Handoff                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Strict Quorum: 지정된 노드에서만 읽기/쓰기                      │
+│                                                                 │
+│  Sloppy Quorum: 일부 노드 장애 시 다른 노드가 대신               │
+│                                                                 │
+│  정상 상황:                                                     │
+│  ┌──────┐   ┌──────┐   ┌──────┐                                │
+│  │Node 1│   │Node 2│   │Node 3│   ← key X의 home nodes         │
+│  └──────┘   └──────┘   └──────┘                                │
+│                                                                 │
+│  Node 3 장애 시:                                                │
+│  ┌──────┐   ┌──────┐   ┌──────┐   ┌──────┐                     │
+│  │Node 1│   │Node 2│   │(Down)│   │Node 4│                     │
+│  │ X=V  │   │ X=V  │   │      │   │ X=V* │ ← Hint 저장         │
+│  └──────┘   └──────┘   └──────┘   └──────┘                     │
+│                                                                 │
+│  *Hinted Handoff:                                               │
+│  ┌──────────────────────────────────────────┐                  │
+│  │  Node 4 저장 데이터:                      │                  │
+│  │  {                                        │                  │
+│  │    key: &quot;X&quot;,                              │                  │
+│  │    value: &quot;V&quot;,                            │                  │
+│  │    hint: &quot;Node 3&quot;  ← 원래 저장될 노드     │                  │
+│  │  }                                        │                  │
+│  │                                           │                  │
+│  │  Node 3 복구 시 → 데이터 전송 후 삭제     │                  │
+│  └──────────────────────────────────────────┘                  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 동기/비동기 복제<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="synchronous-replication">동기 복제 (Synchronous Replication)<a class="header-link" href="#synchronous-replication" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    동기 복제 (Synchronous)                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Client          Leader           Follower 1      Follower 2    │
+│    │               │                  │               │         │
+│    │  Write X=V    │                  │               │         │
+│    │──────────────&gt;│                  │               │         │
+│    │               │  Replicate       │               │         │
+│    │               │─────────────────&gt;│               │         │
+│    │               │─────────────────────────────────&gt;│         │
+│    │               │                  │               │         │
+│    │               │   ACK            │               │         │
+│    │               │&lt;─────────────────│               │         │
+│    │               │&lt;─────────────────────────────────│         │
+│    │               │                  │               │         │
+│    │   ACK         │  (모든 복제 완료 후)             │         │
+│    │&lt;──────────────│                  │               │         │
+│    │               │                  │               │         │
+│                                                                 │
+│  장점:                                                          │
+│  - 강한 일관성 보장                                              │
+│  - 데이터 손실 없음                                              │
+│                                                                 │
+│  단점:                                                          │
+│  - 느린 쓰기 지연 (모든 복제본 대기)                             │
+│  - 복제본 장애 시 쓰기 불가                                      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="asynchronous-replication">비동기 복제 (Asynchronous Replication)<a class="header-link" href="#asynchronous-replication" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                   비동기 복제 (Asynchronous)                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Client          Leader           Follower 1      Follower 2    │
+│    │               │                  │               │         │
+│    │  Write X=V    │                  │               │         │
+│    │──────────────&gt;│                  │               │         │
+│    │               │                  │               │         │
+│    │   ACK         │  (즉시 응답)     │               │         │
+│    │&lt;──────────────│                  │               │         │
+│    │               │                  │               │         │
+│    │               │  Replicate (백그라운드)          │         │
+│    │               │─────────────────&gt;│               │         │
+│    │               │─────────────────────────────────&gt;│         │
+│    │               │                  │               │         │
+│                                                                 │
+│  장점:                                                          │
+│  - 빠른 쓰기 응답                                                │
+│  - 복제본 장애가 쓰기에 영향 없음                                 │
+│                                                                 │
+│  단점:                                                          │
+│  - 리더 장애 시 데이터 손실 가능                                  │
+│  - 읽기 일관성 문제 (stale read)                                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="semi-synchronous">반동기 복제 (Semi-Synchronous)<a class="header-link" href="#semi-synchronous" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                  </span><span class="nt">반동기</span><span class="w"> </span><span class="nt">복제</span><span class="w"> </span><span class="o">(</span><span class="nt">Semi-Synchronous</span><span class="o">)</span><span class="w">                  </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nt">최소</span><span class="w"> </span><span class="nt">1개의</span><span class="w"> </span><span class="nt">복제본에는</span><span class="w"> </span><span class="nt">동기로</span><span class="o">,</span><span class="w"> </span><span class="nt">나머지는</span><span class="w"> </span><span class="nt">비동기로</span><span class="w"> </span><span class="nt">복제</span><span class="w">             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nt">Client</span><span class="w">          </span><span class="nt">Leader</span><span class="w">        </span><span class="nt">Sync</span><span class="w"> </span><span class="nt">Follower</span><span class="w">   </span><span class="nt">Async</span><span class="w"> </span><span class="nt">Followers</span><span class="w">  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">                </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="nt">Write</span><span class="w"> </span><span class="nt">X</span><span class="o">=</span><span class="nt">V</span><span class="w">    </span><span class="err">│</span><span class="w">                </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">│──────────────</span><span class="o">&gt;</span><span class="err">│</span><span class="w">                </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">  </span><span class="nt">Replicate</span><span class="w">     </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">               </span><span class="err">│───────────────</span><span class="o">&gt;</span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">  </span><span class="nt">ACK</span><span class="w">           </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="o">&lt;</span><span class="err">───────────────│</span><span class="w">               </span><span class="err">│</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">   </span><span class="nt">ACK</span><span class="w">         </span><span class="err">│</span><span class="w">                </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="o">&lt;</span><span class="err">──────────────│</span><span class="w">                </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">  </span><span class="nt">Replicate</span><span class="w"> </span><span class="o">(</span><span class="nt">async</span><span class="o">)</span><span class="w">             </span><span class="err">│</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">               </span><span class="err">│───────────────────────────────</span><span class="o">&gt;</span><span class="err">│</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">                </span><span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nt">MySQL</span><span class="w"> </span><span class="nt">Semi-Sync</span><span class="w"> </span><span class="nt">설정</span><span class="o">:</span><span class="w">                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">--</span><span class="w"> </span><span class="nt">Master</span><span class="w">                                                 </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">SET</span><span class="w"> </span><span class="nt">GLOBAL</span><span class="w"> </span><span class="nt">rpl_semi_sync_master_enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nt">1</span><span class="o">;</span><span class="w">              </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">SET</span><span class="w"> </span><span class="nt">GLOBAL</span><span class="w"> </span><span class="nt">rpl_semi_sync_master_timeout</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nt">10000</span><span class="o">;</span><span class="w"> </span><span class="nt">--</span><span class="w"> </span><span class="nt">10s</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">--</span><span class="w"> </span><span class="nt">Slave</span><span class="w">                                                  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">SET</span><span class="w"> </span><span class="nt">GLOBAL</span><span class="w"> </span><span class="nt">rpl_semi_sync_slave_enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nt">1</span><span class="o">;</span><span class="w">               </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 복제 지연과 일관성 문제<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="replication-lag">복제 지연 (Replication Lag)<a class="header-link" href="#replication-lag" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    복제 지연 시나리오                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  시간 ────────────────────────────────────────────────&gt;         │
+│                                                                 │
+│  T0      T1       T2       T3       T4       T5                 │
+│  │       │        │        │        │        │                  │
+│  Leader: Write    │        │        │        │                  │
+│          X=1      │        │        │        │                  │
+│           │       │        │        │        │                  │
+│           │       ▼        │        │        │                  │
+│  Follower:        X=1      │        │        │                  │
+│                   (지연)   │        │        │                  │
+│                            │        │        │                  │
+│  Client A:        Read from Leader  │        │                  │
+│                   X=1 ✓    │        │        │                  │
+│                            │        │        │                  │
+│  Client B:                 Read from Follower│                  │
+│                            X=??? ← T2 시점에서                  │
+│                                     Follower가 아직 복제 안됨   │
+│                                     → Stale Read!              │
+│                                                                 │
+│  복제 지연 = T1(Leader Write) ~ T2(Follower Apply) 시간         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_12">일관성 보장 수준<a class="header-link" href="#_12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    일관성 보장 수준                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. Read-Your-Writes (자신의 쓰기 읽기)                          │
+│     ┌─────────────────────────────────────────────────────┐    │
+│     │  User A: Write profile photo                        │    │
+│     │          │                                          │    │
+│     │          ▼                                          │    │
+│     │  User A: Read profile → 새 사진 보여야 함            │    │
+│     │                                                     │    │
+│     │  해결책:                                             │    │
+│     │  - 자신의 변경은 항상 Leader에서 읽기                │    │
+│     │  - 또는 타임스탬프 기반 읽기 위치 지정               │    │
+│     └─────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  2. Monotonic Reads (단조 읽기)                                  │
+│     ┌─────────────────────────────────────────────────────┐    │
+│     │  T1: Read from Follower A → X=2                     │    │
+│     │  T2: Read from Follower B → X=1  ← 문제!            │    │
+│     │                                                     │    │
+│     │  시간이 뒤로 가는 것처럼 보임                        │    │
+│     │                                                     │    │
+│     │  해결책:                                             │    │
+│     │  - 사용자별로 같은 복제본에서 읽기                   │    │
+│     │  - 버전 기반 읽기                                   │    │
+│     └─────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  3. Consistent Prefix Reads (인과 관계 유지)                     │
+│     ┌─────────────────────────────────────────────────────┐    │
+│     │  채팅:                                              │    │
+│     │  A: &quot;서울 날씨 어때?&quot;  (T1)                         │    │
+│     │  B: &quot;맑아!&quot;           (T2)                         │    │
+│     │                                                     │    │
+│     │  복제 지연 시:                                       │    │
+│     │  C가 보는 화면:                                      │    │
+│     │  B: &quot;맑아!&quot;           ← T2 먼저 도착                │    │
+│     │  A: &quot;서울 날씨 어때?&quot;  ← T1 나중에 도착             │    │
+│     │                                                     │    │
+│     │  해결책:                                             │    │
+│     │  - 같은 파티션에 인과 관계 데이터 저장               │    │
+│     │  - 인과 관계 추적                                   │    │
+│     └─────────────────────────────────────────────────────┘    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_13">복제 지연 모니터링<a class="header-link" href="#_13" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- PostgreSQL 복제 지연 확인</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">client_addr</span><span class="p">,</span>
+<span class="w">    </span><span class="k">state</span><span class="p">,</span>
+<span class="w">    </span><span class="n">pg_wal_lsn_diff</span><span class="p">(</span><span class="n">pg_current_wal_lsn</span><span class="p">(),</span><span class="w"> </span><span class="n">replay_lsn</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">lag_bytes</span><span class="p">,</span>
+<span class="w">    </span><span class="k">EXTRACT</span><span class="p">(</span><span class="n">EPOCH</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="n">now</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">pg_last_xact_replay_timestamp</span><span class="p">()))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">lag_seconds</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_replication</span><span class="p">;</span>
+
+<span class="c1">-- MySQL 복제 지연 확인</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">SLAVE</span><span class="w"> </span><span class="n">STATUS</span><span class="err">\</span><span class="k">G</span>
+<span class="c1">-- Seconds_Behind_Master 값 확인</span>
+
+<span class="c1">-- 지연 기반 라우팅 로직 (애플리케이션)</span>
+<span class="cm">/*</span>
+<span class="cm">def get_connection(query_type, max_lag_seconds=5):</span>
+<span class="cm">    if query_type == &#39;write&#39;:</span>
+<span class="cm">        return master_connection</span>
+
+<span class="cm">    for replica in replicas:</span>
+<span class="cm">        if replica.lag_seconds &lt; max_lag_seconds:</span>
+<span class="cm">            return replica.connection</span>
+
+<span class="cm">    # 모든 복제본 지연이 큰 경우 마스터에서 읽기</span>
+<span class="cm">    return master_connection</span>
+<span class="cm">*/</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 장애 복구와 리더 선출<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="follower">Follower 장애 복구<a class="header-link" href="#follower" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    Follower 장애 복구                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. Catch-up Recovery                                           │
+│                                                                 │
+│     정상 상태:                                                   │
+│     Leader:    [1] [2] [3] [4] [5] [6]                          │
+│     Follower:  [1] [2] [3]                                      │
+│                         ▲                                       │
+│                         └── 마지막 적용 위치 기억                │
+│                                                                 │
+│     Follower 복구 후:                                           │
+│     Leader:    [1] [2] [3] [4] [5] [6] [7] [8]                  │
+│     Follower:  [1] [2] [3] → [4] [5] [6] [7] [8]               │
+│                             ↑                                   │
+│                             따라잡기 (catch-up)                 │
+│                                                                 │
+│  2. 복구 과정                                                    │
+│     ┌────────────────────────────────────────────────────┐     │
+│     │  1. Follower 재시작                                 │     │
+│     │  2. 마지막 적용 LSN/binlog 위치 확인                │     │
+│     │  3. Leader에게 해당 위치 이후 로그 요청             │     │
+│     │  4. 로그 적용하며 따라잡기                          │     │
+│     │  5. 실시간 복제 재개                                │     │
+│     └────────────────────────────────────────────────────┘     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="leader-failover">Leader 장애와 Failover<a class="header-link" href="#leader-failover" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    Leader 장애 복구 (Failover)                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Failover 과정:                                                 │
+│                                                                 │
+│  단계 1: 장애 감지                                               │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │   ┌────────┐        Heartbeat 실패                       │   │
+│  │   │ Leader │ ────X──── (3회 연속)                        │   │
+│  │   │ (Down) │                                             │   │
+│  │   └────────┘        Timeout: 30초                        │   │
+│  │                                                          │   │
+│  │   Follower들: &quot;Leader 응답 없음!&quot; → Failover 시작        │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  단계 2: 새 Leader 선출                                          │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │   Follower A: LSN = 1000                                 │   │
+│  │   Follower B: LSN = 1050  ← 가장 최신 → 새 Leader       │   │
+│  │   Follower C: LSN = 980                                  │   │
+│  │                                                          │   │
+│  │   선출 기준:                                              │   │
+│  │   1. 가장 최신 데이터를 가진 노드                        │   │
+│  │   2. 노드 우선순위                                       │   │
+│  │   3. 합의 알고리즘 (Raft, Paxos)                         │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  단계 3: 클라이언트 재연결                                       │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │   Clients ───── (이전) Leader: 10.0.0.1                  │   │
+│  │           ╲                                              │   │
+│  │            ╲─── (새) Leader: 10.0.0.2                   │   │
+│  │                                                          │   │
+│  │   방법:                                                   │   │
+│  │   - DNS 업데이트                                         │   │
+│  │   - Virtual IP (VIP) 이동                                │   │
+│  │   - Proxy/Load Balancer 설정 변경                        │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="failover">Failover의 문제점<a class="header-link" href="#failover" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    Failover 시 문제점                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. 데이터 손실 (비동기 복제 시)                                  │
+│     ┌────────────────────────────────────────────────────┐     │
+│     │  Old Leader: [1][2][3][4][5]                       │     │
+│     │                          ↑ 복제 안됨               │     │
+│     │  New Leader:  [1][2][3][4]                         │     │
+│     │                                                    │     │
+│     │  Write [5]가 손실됨!                               │     │
+│     │                                                    │     │
+│     │  Old Leader 복구 시: [5]는 어떻게?                 │     │
+│     │  → 일반적으로 버림 (충돌 방지)                     │     │
+│     └────────────────────────────────────────────────────┘     │
+│                                                                 │
+│  2. Split Brain (두 Leader 문제)                                 │
+│     ┌────────────────────────────────────────────────────┐     │
+│     │        네트워크 분리                                │     │
+│     │                                                    │     │
+│     │  ┌────────┐       ╳        ┌────────┐             │     │
+│     │  │Old     │                │New     │             │     │
+│     │  │Leader  │  네트워크 단절  │Leader  │             │     │
+│     │  └────────┘                └────────┘             │     │
+│     │       ▲                          ▲                │     │
+│     │  Clients A                  Clients B             │     │
+│     │  (쓰기 계속)                (쓰기 계속)            │     │
+│     │                                                    │     │
+│     │  → 데이터 불일치 발생!                             │     │
+│     │                                                    │     │
+│     │  해결책:                                           │     │
+│     │  - Fencing (STONITH: Shoot The Other Node In Head)│     │
+│     │  - Old Leader 강제 종료                            │     │
+│     └────────────────────────────────────────────────────┘     │
+│                                                                 │
+│  3. Timeout 설정 딜레마                                          │
+│     ┌────────────────────────────────────────────────────┐     │
+│     │  Timeout 너무 짧음:                                 │     │
+│     │  - 네트워크 지연/부하 시 불필요한 Failover          │     │
+│     │  - 시스템 불안정                                    │     │
+│     │                                                    │     │
+│     │  Timeout 너무 김:                                   │     │
+│     │  - 실제 장애 시 복구 지연                           │     │
+│     │  - 서비스 중단 시간 증가                            │     │
+│     └────────────────────────────────────────────────────┘     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_14">리더 선출 알고리즘<a class="header-link" href="#_14" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    Raft 리더 선출                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  상태: Follower, Candidate, Leader                              │
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │                                                           │  │
+│  │    ┌──────────┐     Election      ┌───────────┐          │  │
+│  │    │          │     Timeout       │           │          │  │
+│  │    │ Follower │ ─────────────────&gt;│ Candidate │          │  │
+│  │    │          │                   │           │          │  │
+│  │    └──────────┘                   └─────┬─────┘          │  │
+│  │         ▲                               │                │  │
+│  │         │ Discovers                     │ Receives       │  │
+│  │         │ current                       │ majority       │  │
+│  │         │ leader                        │ votes          │  │
+│  │         │                               ▼                │  │
+│  │         │                         ┌──────────┐           │  │
+│  │         └─────────────────────────│  Leader  │           │  │
+│  │                                   │          │           │  │
+│  │                                   └──────────┘           │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+│  선출 과정:                                                      │
+│  1. Follower가 heartbeat 못받으면 Candidate로 전환               │
+│  2. Term(임기) 번호 증가                                         │
+│  3. 자신에게 투표 + 다른 노드에게 RequestVote 요청               │
+│  4. 과반수 득표 시 Leader 선출                                   │
+│  5. Leader는 주기적으로 heartbeat 전송                           │
+│                                                                 │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │  예시: 5노드 클러스터                                      │  │
+│  │                                                           │  │
+│  │  Node A (Candidate, Term 5)                               │  │
+│  │    │                                                      │  │
+│  │    ├── RequestVote ──&gt; Node B: Vote YES                   │  │
+│  │    ├── RequestVote ──&gt; Node C: Vote YES                   │  │
+│  │    ├── RequestVote ──&gt; Node D: Vote NO (이미 투표)        │  │
+│  │    └── RequestVote ──&gt; Node E: Vote YES                   │  │
+│  │                                                           │  │
+│  │  3/5 = 과반수 → Node A가 Leader!                          │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="8-quorum">8. Quorum과 일관성 수준<a class="header-link" href="#8-quorum" title="Permanent link">&para;</a></h2>
+<h3 id="quorum">Quorum 개념<a class="header-link" href="#quorum" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    Quorum (정족수) 개념                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  N = 복제본 수 (Total Replicas)                                  │
+│  W = 쓰기 성공에 필요한 응답 수 (Write Quorum)                    │
+│  R = 읽기 성공에 필요한 응답 수 (Read Quorum)                     │
+│                                                                 │
+│  강한 일관성 보장 조건: R + W &gt; N                                │
+│                                                                 │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │                                                        │    │
+│  │   N=3, W=2, R=2 인 경우:                               │    │
+│  │                                                        │    │
+│  │   쓰기 시:                                             │    │
+│  │   [Node1: X=V]  [Node2: X=V]  [Node3: ?]              │    │
+│  │        ✓             ✓           (아직)                │    │
+│  │                                                        │    │
+│  │   읽기 시:                                             │    │
+│  │   [Node1: X=V]  [Node2: ?]  [Node3: X=V]              │    │
+│  │        ✓          (skip)         ✓                    │    │
+│  │                                                        │    │
+│  │   R(2) + W(2) = 4 &gt; N(3)                              │    │
+│  │   → 최소 1개 노드는 최신 쓰기를 가짐!                  │    │
+│  │                                                        │    │
+│  └────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│                 ┌─────────────────┐                            │
+│    Write Set    │                 │    Read Set                │
+│    (W=2)        │   ┌─────────┐   │    (R=2)                   │
+│  ┌─────────┐    │   │ Node 1  │   │    ┌─────────┐            │
+│  │ Node 1  │────┼───│ (겹침)  │───┼────│ Node 1  │            │
+│  │ Node 2  │    │   └─────────┘   │    │ Node 3  │            │
+│  └─────────┘    │   (최소 1개)    │    └─────────┘            │
+│                 └─────────────────┘                            │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="quorum_1">Quorum 설정별 특성<a class="header-link" href="#quorum_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    Quorum 설정 전략                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  N = 3 복제본 기준                                               │
+│                                                                 │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  설정 1: W=1, R=3 (쓰기 우선)                              │ │
+│  │  ┌─────────────────────────────────────────────────────┐  │ │
+│  │  │  쓰기: 1개 노드만 성공하면 됨 → 빠른 쓰기            │  │ │
+│  │  │  읽기: 3개 모두 읽어야 함 → 느린 읽기                │  │ │
+│  │  │                                                     │  │ │
+│  │  │  사용 예: 로그 수집, IoT 데이터                      │  │ │
+│  │  └─────────────────────────────────────────────────────┘  │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  설정 2: W=3, R=1 (읽기 우선)                              │ │
+│  │  ┌─────────────────────────────────────────────────────┐  │ │
+│  │  │  쓰기: 3개 모두 성공해야 함 → 느린 쓰기              │  │ │
+│  │  │  읽기: 1개만 읽으면 됨 → 빠른 읽기                   │  │ │
+│  │  │                                                     │  │ │
+│  │  │  사용 예: 카탈로그, 참조 데이터                      │  │ │
+│  │  └─────────────────────────────────────────────────────┘  │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  설정 3: W=2, R=2 (균형)                                   │ │
+│  │  ┌─────────────────────────────────────────────────────┐  │ │
+│  │  │  쓰기: 2개 노드 성공 필요                            │  │ │
+│  │  │  읽기: 2개 노드에서 읽기                             │  │ │
+│  │  │                                                     │  │ │
+│  │  │  일반적인 균형 잡힌 설정                             │  │ │
+│  │  │  1개 노드 장애 허용                                  │  │ │
+│  │  └─────────────────────────────────────────────────────┘  │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│  내결함성: min(N-W, N-R) 개 노드 장애 허용                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="cassandra">Cassandra 일관성 수준<a class="header-link" href="#cassandra" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                </span><span class="nt">Cassandra</span><span class="w"> </span><span class="nt">Consistency</span><span class="w"> </span><span class="nt">Levels</span><span class="w">                     </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nt">쓰기</span><span class="w"> </span><span class="nt">일관성</span><span class="w"> </span><span class="nt">수준</span><span class="o">:</span><span class="w">                                               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">ANY</span><span class="w">         </span><span class="o">:</span><span class="w"> </span><span class="nt">1개</span><span class="w"> </span><span class="nt">노드</span><span class="w"> </span><span class="o">(</span><span class="nt">힌트</span><span class="w"> </span><span class="nt">포함</span><span class="o">)</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nt">최저</span><span class="w"> </span><span class="nt">일관성</span><span class="w">          </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">ONE</span><span class="w">         </span><span class="o">:</span><span class="w"> </span><span class="nt">1개</span><span class="w"> </span><span class="nt">복제본</span><span class="w">                                  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">TWO</span><span class="w">         </span><span class="o">:</span><span class="w"> </span><span class="nt">2개</span><span class="w"> </span><span class="nt">복제본</span><span class="w">                                  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">THREE</span><span class="w">       </span><span class="o">:</span><span class="w"> </span><span class="nt">3개</span><span class="w"> </span><span class="nt">복제본</span><span class="w">                                  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">QUORUM</span><span class="w">      </span><span class="o">:</span><span class="w"> </span><span class="o">(</span><span class="nt">RF</span><span class="o">/</span><span class="nt">2</span><span class="o">)+</span><span class="nt">1</span><span class="w"> </span><span class="nt">복제본</span><span class="w">                             </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">LOCAL_QUORUM</span><span class="o">:</span><span class="w"> </span><span class="nt">로컬</span><span class="w"> </span><span class="nt">DC의</span><span class="w"> </span><span class="o">(</span><span class="nt">RF</span><span class="o">/</span><span class="nt">2</span><span class="o">)+</span><span class="nt">1</span><span class="w">                          </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">EACH_QUORUM</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="nt">각</span><span class="w"> </span><span class="nt">DC의</span><span class="w"> </span><span class="o">(</span><span class="nt">RF</span><span class="o">/</span><span class="nt">2</span><span class="o">)+</span><span class="nt">1</span><span class="w">                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">ALL</span><span class="w">         </span><span class="o">:</span><span class="w"> </span><span class="nt">모든</span><span class="w"> </span><span class="nt">복제본</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nt">최고</span><span class="w"> </span><span class="nt">일관성</span><span class="w">                   </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nt">예시</span><span class="o">:</span><span class="w"> </span><span class="nt">RF</span><span class="o">=</span><span class="nt">3</span><span class="w"> </span><span class="nt">클러스터</span><span class="w">                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">QUORUM</span><span class="w"> </span><span class="nt">계산</span><span class="o">:</span><span class="w"> </span><span class="o">(</span><span class="nt">3</span><span class="o">/</span><span class="nt">2</span><span class="o">)+</span><span class="nt">1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nt">2</span><span class="w">                                  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">쓰기</span><span class="w"> </span><span class="nt">CL</span><span class="o">=</span><span class="nt">QUORUM</span><span class="o">:</span><span class="w">   </span><span class="nt">2개</span><span class="w"> </span><span class="nt">노드</span><span class="w"> </span><span class="nt">ACK</span><span class="w"> </span><span class="nt">필요</span><span class="w">                       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">읽기</span><span class="w"> </span><span class="nt">CL</span><span class="o">=</span><span class="nt">QUORUM</span><span class="o">:</span><span class="w">   </span><span class="nt">2개</span><span class="w"> </span><span class="nt">노드에서</span><span class="w"> </span><span class="nt">읽기</span><span class="w">                       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">R</span><span class="o">(</span><span class="nt">2</span><span class="o">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nt">W</span><span class="o">(</span><span class="nt">2</span><span class="o">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nt">4</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="nt">N</span><span class="o">(</span><span class="nt">3</span><span class="o">)</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nt">강한</span><span class="w"> </span><span class="nt">일관성</span><span class="o">!</span><span class="w">                     </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nt">코드</span><span class="w"> </span><span class="nt">예시</span><span class="o">:</span><span class="w">                                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">--</span><span class="w"> </span><span class="nt">CQL</span><span class="w">                                                    </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">CONSISTENCY</span><span class="w"> </span><span class="nt">QUORUM</span><span class="o">;</span><span class="w">                                       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">INSERT</span><span class="w"> </span><span class="nt">INTO</span><span class="w"> </span><span class="nt">users</span><span class="w"> </span><span class="o">(</span><span class="nt">id</span><span class="o">,</span><span class="w"> </span><span class="nt">name</span><span class="o">)</span><span class="w"> </span><span class="nt">VALUES</span><span class="w"> </span><span class="o">(</span><span class="nt">1</span><span class="o">,</span><span class="w"> </span><span class="s1">&#39;Kim&#39;</span><span class="o">);</span><span class="w">           </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">--</span><span class="w"> </span><span class="nt">또는</span><span class="w"> </span><span class="nt">쿼리별</span><span class="w"> </span><span class="nt">설정</span><span class="w">                                       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nt">FROM</span><span class="w"> </span><span class="nt">users</span><span class="w"> </span><span class="nt">WHERE</span><span class="w"> </span><span class="nt">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nt">1</span><span class="w">                          </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">USING</span><span class="w"> </span><span class="nt">CONSISTENCY</span><span class="w"> </span><span class="nt">LOCAL_QUORUM</span><span class="o">;</span><span class="w">                           </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="vs">일관성 vs 가용성 트레이드오프<a class="header-link" href="#vs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│              일관성 vs 가용성 트레이드오프                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│                  일관성 (Consistency)                           │
+│                        ▲                                        │
+│                        │                                        │
+│        ALL ●──────────┤                                        │
+│                       │                                        │
+│     QUORUM ●─────────┤     균형점                              │
+│                      │     (권장)                              │
+│        TWO ●────────┤                                          │
+│                     │                                          │
+│        ONE ●───────┤                                           │
+│                    │                                           │
+│        ANY ●──────┼─────────────────────────────────&gt;          │
+│                              가용성 (Availability)             │
+│                                                                 │
+│  상황별 권장 설정:                                               │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  금융 거래:     W=ALL, R=ALL     (일관성 최우선)            │ │
+│  │  소셜 피드:     W=ONE, R=ONE     (가용성 최우선)            │ │
+│  │  전자상거래:    W=QUORUM, R=QUORUM (균형)                   │ │
+│  │  분석 데이터:   W=ONE, R=ONE     (최종 일관성 허용)         │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="9">9. 연습 문제<a class="header-link" href="#9" title="Permanent link">&para;</a></h2>
+<h3 id="1_1">연습 문제 1: 복제 전략 선택<a class="header-link" href="#1_1" title="Permanent link">&para;</a></h3>
+<p>다음 시나리오에서 적절한 복제 전략을 선택하고 이유를 설명하세요.</p>
+<div class="highlight"><pre><span></span><code><span class="err">시나리오</span><span class="o">:</span>
+<span class="mi">1</span><span class="o">.</span><span class="w"> </span><span class="err">전</span><span class="w"> </span><span class="err">세계</span><span class="w"> </span><span class="err">사용자가</span><span class="w"> </span><span class="err">접속하는</span><span class="w"> </span><span class="err">소셜</span><span class="w"> </span><span class="err">미디어</span><span class="w"> </span><span class="err">서비스</span>
+<span class="mi">2</span><span class="o">.</span><span class="w"> </span><span class="err">금융</span><span class="w"> </span><span class="err">거래를</span><span class="w"> </span><span class="err">처리하는</span><span class="w"> </span><span class="err">은행</span><span class="w"> </span><span class="err">시스템</span>
+<span class="mi">3</span><span class="o">.</span><span class="w"> </span><span class="err">실시간</span><span class="w"> </span><span class="err">채팅</span><span class="w"> </span><span class="err">애플리케이션</span>
+<span class="mi">4</span><span class="o">.</span><span class="w"> </span><span class="err">로그</span><span class="w"> </span><span class="err">수집</span><span class="w"> </span><span class="err">및</span><span class="w"> </span><span class="err">분석</span><span class="w"> </span><span class="err">시스템</span>
+
+<span class="err">선택지</span><span class="o">:</span>
+<span class="n">A</span><span class="o">.</span><span class="w"> </span><span class="err">단일</span><span class="w"> </span><span class="err">리더</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="err">동기</span><span class="w"> </span><span class="err">복제</span>
+<span class="n">B</span><span class="o">.</span><span class="w"> </span><span class="err">단일</span><span class="w"> </span><span class="err">리더</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="err">비동기</span><span class="w"> </span><span class="err">복제</span>
+<span class="n">C</span><span class="o">.</span><span class="w"> </span><span class="err">다중</span><span class="w"> </span><span class="err">리더</span><span class="w"> </span><span class="err">복제</span>
+<span class="n">D</span><span class="o">.</span><span class="w"> </span><span class="err">리더</span><span class="w"> </span><span class="err">없는</span><span class="w"> </span><span class="err">복제</span>
+</code></pre></div>
+
+<p><strong>예시 답안:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="mf">1.</span><span class="w"> </span><span class="n">소셜</span><span class="w"> </span><span class="n">미디어</span><span class="p">:</span><span class="w"> </span><span class="n">C</span><span class="w"> </span><span class="p">(</span><span class="n">다중</span><span class="w"> </span><span class="n">리더</span><span class="p">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">지리적으로</span><span class="w"> </span><span class="n">분산된</span><span class="w"> </span><span class="n">사용자</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">각</span><span class="w"> </span><span class="n">지역에서</span><span class="w"> </span><span class="n">낮은</span><span class="w"> </span><span class="n">지연</span><span class="w"> </span><span class="n">필요</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">약간의</span><span class="w"> </span><span class="n">일관성</span><span class="w"> </span><span class="n">지연</span><span class="w"> </span><span class="n">허용</span><span class="w"> </span><span class="n">가능</span>
+
+<span class="mf">2.</span><span class="w"> </span><span class="n">은행</span><span class="w"> </span><span class="n">시스템</span><span class="p">:</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="p">(</span><span class="n">단일</span><span class="w"> </span><span class="n">리더</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">동기</span><span class="p">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">강한</span><span class="w"> </span><span class="n">일관성</span><span class="w"> </span><span class="n">필수</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">데이터</span><span class="w"> </span><span class="n">손실</span><span class="w"> </span><span class="n">불가</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">쓰기</span><span class="w"> </span><span class="n">지연</span><span class="w"> </span><span class="n">감수</span><span class="w"> </span><span class="n">가능</span>
+
+<span class="mf">3.</span><span class="w"> </span><span class="n">실시간</span><span class="w"> </span><span class="n">채팅</span><span class="p">:</span><span class="w"> </span><span class="n">B</span><span class="w"> </span><span class="p">(</span><span class="n">단일</span><span class="w"> </span><span class="n">리더</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">비동기</span><span class="p">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">빠른</span><span class="w"> </span><span class="n">응답</span><span class="w"> </span><span class="n">필요</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">메시지</span><span class="w"> </span><span class="n">순서</span><span class="w"> </span><span class="n">중요</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">약간의</span><span class="w"> </span><span class="n">데이터</span><span class="w"> </span><span class="n">손실</span><span class="w"> </span><span class="n">허용</span><span class="w"> </span><span class="n">가능</span>
+
+<span class="mf">4.</span><span class="w"> </span><span class="n">로그</span><span class="w"> </span><span class="n">수집</span><span class="p">:</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="p">(</span><span class="n">리더</span><span class="w"> </span><span class="n">없는</span><span class="p">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">높은</span><span class="w"> </span><span class="n">쓰기</span><span class="w"> </span><span class="n">처리량</span><span class="w"> </span><span class="n">필요</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">최종</span><span class="w"> </span><span class="n">일관성으로</span><span class="w"> </span><span class="n">충분</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">고가용성</span><span class="w"> </span><span class="n">중요</span>
+</code></pre></div>
+
+<h3 id="2-quorum">연습 문제 2: Quorum 계산<a class="header-link" href="#2-quorum" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">문제</span><span class="o">:</span>
+<span class="n">N</span><span class="o">=</span><span class="mi">5</span><span class="w"> </span><span class="err">복제본</span><span class="w"> </span><span class="err">클러스터에서</span><span class="o">:</span>
+
+<span class="mi">1</span><span class="o">.</span><span class="w"> </span><span class="err">강한</span><span class="w"> </span><span class="err">일관성을</span><span class="w"> </span><span class="err">보장하면서</span><span class="w"> </span><span class="err">최대</span><span class="w"> </span><span class="err">가용성을</span><span class="w"> </span><span class="err">위한</span><span class="w"> </span><span class="n">W</span><span class="o">,</span><span class="w"> </span><span class="n">R</span><span class="w"> </span><span class="err">값은</span><span class="o">?</span>
+<span class="mi">2</span><span class="o">.</span><span class="w"> </span><span class="n">W</span><span class="o">=</span><span class="mi">3</span><span class="o">,</span><span class="w"> </span><span class="n">R</span><span class="o">=</span><span class="mi">2</span><span class="w"> </span><span class="err">설정에서</span><span class="w"> </span><span class="err">몇</span><span class="w"> </span><span class="err">개</span><span class="w"> </span><span class="err">노드</span><span class="w"> </span><span class="err">장애까지</span><span class="w"> </span><span class="err">허용</span><span class="o">?</span>
+<span class="mi">3</span><span class="o">.</span><span class="w"> </span><span class="err">쓰기</span><span class="w"> </span><span class="err">가용성을</span><span class="w"> </span><span class="err">최대화하면서</span><span class="w"> </span><span class="err">강한</span><span class="w"> </span><span class="err">일관성을</span><span class="w"> </span><span class="err">유지하려면</span><span class="o">?</span>
+</code></pre></div>
+
+<p><strong>예시 답안:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="mf">1.</span><span class="w"> </span><span class="n">W</span><span class="o">=</span><span class="mf">3</span><span class="p">,</span><span class="w"> </span><span class="n">R</span><span class="o">=</span><span class="mf">3</span><span class="w"> </span><span class="p">(</span><span class="n">또는</span><span class="w"> </span><span class="n">W</span><span class="o">=</span><span class="mf">2</span><span class="p">,</span><span class="w"> </span><span class="n">R</span><span class="o">=</span><span class="mf">4</span><span class="w"> </span><span class="n">등</span><span class="p">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">R</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">W</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="p">(</span><span class="mf">3</span><span class="o">+</span><span class="mf">3</span><span class="o">=</span><span class="mf">6</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">5</span><span class="p">)</span><span class="w"> </span><span class="err">✓</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">쓰기</span><span class="p">:</span><span class="w"> </span><span class="mf">2</span><span class="n">개</span><span class="w"> </span><span class="n">노드</span><span class="w"> </span><span class="n">장애</span><span class="w"> </span><span class="n">허용</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">읽기</span><span class="p">:</span><span class="w"> </span><span class="mf">2</span><span class="n">개</span><span class="w"> </span><span class="n">노드</span><span class="w"> </span><span class="n">장애</span><span class="w"> </span><span class="n">허용</span>
+
+<span class="mf">2.</span><span class="w"> </span><span class="n">W</span><span class="o">=</span><span class="mf">3</span><span class="p">,</span><span class="w"> </span><span class="n">R</span><span class="o">=</span><span class="mf">2</span><span class="w"> </span><span class="n">분석</span><span class="p">:</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">R</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">W</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">5</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="p">(</span><span class="n">강한</span><span class="w"> </span><span class="n">일관성</span><span class="w"> </span><span class="n">아님</span><span class="err">!</span><span class="p">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">정확히</span><span class="w"> </span><span class="n">말하면</span><span class="w"> </span><span class="n">R</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">W</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="n">이어야</span><span class="w"> </span><span class="n">강한</span><span class="w"> </span><span class="n">일관성</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">쓰기</span><span class="w"> </span><span class="n">가용성</span><span class="p">:</span><span class="w"> </span><span class="mf">5</span><span class="o">-</span><span class="mf">3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">2</span><span class="n">개</span><span class="w"> </span><span class="n">노드</span><span class="w"> </span><span class="n">장애</span><span class="w"> </span><span class="n">허용</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">읽기</span><span class="w"> </span><span class="n">가용성</span><span class="p">:</span><span class="w"> </span><span class="mf">5</span><span class="o">-</span><span class="mf">2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">3</span><span class="n">개</span><span class="w"> </span><span class="n">노드</span><span class="w"> </span><span class="n">장애</span><span class="w"> </span><span class="n">허용</span>
+
+<span class="mf">3.</span><span class="w"> </span><span class="n">쓰기</span><span class="w"> </span><span class="n">가용성</span><span class="w"> </span><span class="n">최대화</span><span class="p">:</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">W</span><span class="o">=</span><span class="mf">1</span><span class="p">,</span><span class="w"> </span><span class="n">R</span><span class="o">=</span><span class="mf">5</span><span class="w"> </span><span class="p">(</span><span class="n">쓰기</span><span class="p">:</span><span class="w"> </span><span class="mf">4</span><span class="n">개</span><span class="w"> </span><span class="n">장애</span><span class="w"> </span><span class="n">허용</span><span class="p">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">단</span><span class="p">,</span><span class="w"> </span><span class="n">읽기는</span><span class="w"> </span><span class="n">모든</span><span class="w"> </span><span class="n">노드</span><span class="w"> </span><span class="n">필요</span><span class="w"> </span><span class="p">(</span><span class="n">가용성</span><span class="w"> </span><span class="n">낮음</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="3-failover">연습 문제 3: Failover 시나리오<a class="header-link" href="#3-failover" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">문제</span><span class="o">:</span>
+<span class="err">비동기</span><span class="w"> </span><span class="err">복제를</span><span class="w"> </span><span class="err">사용하는</span><span class="w"> </span><span class="n">MySQL</span><span class="w"> </span><span class="err">마스터</span><span class="o">-</span><span class="err">슬레이브</span><span class="w"> </span><span class="err">구성에서</span>
+<span class="err">마스터</span><span class="w"> </span><span class="err">장애</span><span class="w"> </span><span class="err">발생</span><span class="w"> </span><span class="err">시</span><span class="o">:</span>
+
+<span class="mi">1</span><span class="o">.</span><span class="w"> </span><span class="err">슬레이브</span><span class="w"> </span><span class="n">A</span><span class="o">:</span><span class="w"> </span><span class="n">binlog</span><span class="w"> </span><span class="n">position</span><span class="w"> </span><span class="mi">1000</span>
+<span class="mi">2</span><span class="o">.</span><span class="w"> </span><span class="err">슬레이브</span><span class="w"> </span><span class="n">B</span><span class="o">:</span><span class="w"> </span><span class="n">binlog</span><span class="w"> </span><span class="n">position</span><span class="w"> </span><span class="mi">950</span>
+<span class="mi">3</span><span class="o">.</span><span class="w"> </span><span class="err">마스터</span><span class="w"> </span><span class="err">마지막</span><span class="w"> </span><span class="n">binlog</span><span class="w"> </span><span class="n">position</span><span class="o">:</span><span class="w"> </span><span class="mi">1020</span>
+
+<span class="err">다음</span><span class="w"> </span><span class="err">질문에</span><span class="w"> </span><span class="err">답하세요</span><span class="o">:</span>
+<span class="mi">1</span><span class="o">.</span><span class="w"> </span><span class="err">어떤</span><span class="w"> </span><span class="err">슬레이브를</span><span class="w"> </span><span class="err">새</span><span class="w"> </span><span class="err">마스터로</span><span class="w"> </span><span class="err">승격해야</span><span class="w"> </span><span class="err">하나요</span><span class="o">?</span>
+<span class="mi">2</span><span class="o">.</span><span class="w"> </span><span class="err">최대</span><span class="w"> </span><span class="err">몇</span><span class="w"> </span><span class="err">개의</span><span class="w"> </span><span class="err">트랜잭션이</span><span class="w"> </span><span class="err">손실될</span><span class="w"> </span><span class="err">수</span><span class="w"> </span><span class="err">있나요</span><span class="o">?</span>
+<span class="mi">3</span><span class="o">.</span><span class="w"> </span><span class="err">이전</span><span class="w"> </span><span class="err">마스터가</span><span class="w"> </span><span class="err">복구되면</span><span class="w"> </span><span class="err">어떻게</span><span class="w"> </span><span class="err">처리해야</span><span class="w"> </span><span class="err">하나요</span><span class="o">?</span>
+</code></pre></div>
+
+<p><strong>예시 답안:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="mf">1.</span><span class="w"> </span><span class="n">슬레이브</span><span class="w"> </span><span class="n">A를</span><span class="w"> </span><span class="n">새</span><span class="w"> </span><span class="n">마스터로</span><span class="w"> </span><span class="n">승격</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="nb">Pos</span><span class="n">ition</span><span class="w"> </span><span class="mf">1000</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">950</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">가장</span><span class="w"> </span><span class="n">최신</span><span class="w"> </span><span class="n">데이터</span><span class="w"> </span><span class="n">보유</span>
+
+<span class="mf">2.</span><span class="w"> </span><span class="n">최대</span><span class="w"> </span><span class="n">손실</span><span class="w"> </span><span class="n">트랜잭션</span><span class="p">:</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="mf">1020</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mf">1000</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">20</span><span class="n">개</span><span class="w"> </span><span class="n">트랜잭션</span><span class="w"> </span><span class="n">손실</span><span class="w"> </span><span class="n">가능</span>
+
+<span class="mf">3.</span><span class="w"> </span><span class="n">이전</span><span class="w"> </span><span class="n">마스터</span><span class="w"> </span><span class="n">복구</span><span class="w"> </span><span class="n">시</span><span class="p">:</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">슬레이브로</span><span class="w"> </span><span class="n">재구성</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="nb">Pos</span><span class="n">ition</span><span class="w"> </span><span class="mf">1000</span><span class="w"> </span><span class="err">~</span><span class="w"> </span><span class="mf">1020</span><span class="w"> </span><span class="n">데이터는</span><span class="w"> </span><span class="n">버림</span><span class="w"> </span><span class="p">(</span><span class="n">conflict</span><span class="w"> </span><span class="n">방지</span><span class="p">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">새</span><span class="w"> </span><span class="n">마스터로부터</span><span class="w"> </span><span class="n">복제</span><span class="w"> </span><span class="n">시작</span>
+</code></pre></div>
+
+<h3 id="4_1">연습 문제 4: 충돌 해결 설계<a class="header-link" href="#4_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">문제</span><span class="o">:</span>
+<span class="err">다중</span><span class="w"> </span><span class="err">리더</span><span class="w"> </span><span class="err">구성의</span><span class="w"> </span><span class="err">전자상거래</span><span class="w"> </span><span class="err">시스템에서</span>
+<span class="err">동일한</span><span class="w"> </span><span class="err">상품의</span><span class="w"> </span><span class="err">재고를</span><span class="w"> </span><span class="err">동시에</span><span class="w"> </span><span class="err">업데이트할</span><span class="w"> </span><span class="err">때</span><span class="o">:</span>
+
+<span class="n">Leader</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="o">(</span><span class="err">서울</span><span class="o">):</span><span class="w"> </span><span class="n">inventory</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">95</span>
+<span class="n">Leader</span><span class="w"> </span><span class="n">B</span><span class="w"> </span><span class="o">(</span><span class="err">도쿄</span><span class="o">):</span><span class="w"> </span><span class="n">inventory</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">97</span>
+
+<span class="err">이</span><span class="w"> </span><span class="err">충돌을</span><span class="w"> </span><span class="err">어떻게</span><span class="w"> </span><span class="err">해결할</span><span class="w"> </span><span class="err">수</span><span class="w"> </span><span class="err">있을까요</span><span class="o">?</span>
+<span class="err">여러</span><span class="w"> </span><span class="err">가지</span><span class="w"> </span><span class="err">방법을</span><span class="w"> </span><span class="err">제안하고</span><span class="w"> </span><span class="err">장단점을</span><span class="w"> </span><span class="err">설명하세요</span><span class="o">.</span>
+</code></pre></div>
+
+<p><strong>예시 답안:</strong></p>
+<div class="highlight"><pre><span></span><code>방법 1: LWW (Last Write Wins)
+- 타임스탬프가 더 늦은 쓰기 적용
+- 장점: 구현 단순
+- 단점: 데이터 손실 (5개 또는 3개 판매 누락)
+
+방법 2: CRDT (Counter)
+- 각 리더별 판매량 기록: A: -5, B: -3
+- 최종 재고 = 100 - 5 - 3 = 92
+- 장점: 데이터 손실 없음
+- 단점: 재고가 음수가 될 수 있음
+
+방법 3: 분산 잠금 (권장하지 않음)
+- 쓰기 전 분산 락 획득
+- 단점: 지연 증가, 복잡성
+
+방법 4: 단일 리더로 라우팅
+- 재고 관련 쓰기는 특정 리더로만
+- 장점: 충돌 원천 방지
+- 단점: 해당 리더 과부하 가능
+
+권장: CRDT + 재고 임계치 알림
+- 음수 재고 발생 시 알림/조정
+</code></pre></div>
+
+<h3 id="5_1">연습 문제 5: 면접 문제<a class="header-link" href="#5_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>면접관: &quot;Read-Your-Writes 일관성을 구현하려면 어떻게 해야 하나요?&quot;
+
+요구사항:
+- 사용자가 데이터를 쓴 후 자신의 쓰기를 항상 읽을 수 있어야 함
+- 비동기 복제 환경
+- 여러 복제본이 있는 상황
+
+설계 방안을 제시하세요.
+</code></pre></div>
+
+<p><strong>예시 답안:</strong></p>
+<div class="highlight"><pre><span></span><code>방법 1: 리더에서 읽기
+<span class="k">-</span> 사용자가 최근 쓰기한 데이터는 리더에서 읽기
+<span class="k">-</span> 구현: 쓰기 후 일정 시간(예: 1분) 동안 리더 사용
+
+방법 2: 타임스탬프 기반
+<span class="k">-</span> 클라이언트가 마지막 쓰기 타임스탬프 기억
+<span class="k">-</span> 읽기 요청 시 해당 타임스탬프 전달
+<span class="k">-</span> 복제본이 해당 시점까지 적용될 때까지 대기
+
+방법 3: 복제 위치 기반
+<span class="k">-</span> 쓰기 후 LSN(Log Sequence Number) 반환
+<span class="k">-</span> 읽기 요청 시 해당 LSN 이상 적용된 복제본에서 읽기
+
+구현 예시 (방법 2):
+```python
+class Client:
+    def __init__(self):
+        self.last_write_timestamp = 0
+
+    def write(self, data):
+        result = leader.write(data)
+        self.last_write_timestamp = result.timestamp
+
+    def read(self, key):
+        return db.read(
+            key,
+            min_timestamp=self.last_write_timestamp
+        )
+</code></pre></div>
+
+<hr />
+<h2 id="10">10. 다음 단계<a class="header-link" href="#10" title="Permanent link">&para;</a></h2>
+<p>이 문서에서 학습한 내용을 바탕으로 다음 주제를 학습하세요:</p>
+<ol>
+<li><strong>분산 트랜잭션</strong> - 2PC, Saga 패턴</li>
+<li><strong>합의 알고리즘</strong> - Paxos, Raft, ZAB</li>
+<li><strong>CDC (Change Data Capture)</strong> - Debezium</li>
+<li><strong>이벤트 소싱과 CQRS</strong> - 복제의 대안적 접근</li>
+</ol>
+<div class="highlight"><pre><span></span><code>학습 순서:
+[현재] 데이터베이스 복제
+    │
+    ├──&gt; 분산 트랜잭션 (2PC, Saga)
+    │
+    ├──&gt; 합의 알고리즘 (Raft, Paxos)
+    │
+    └──&gt; CDC &amp; Event Sourcing
+</code></pre></div>
+
+<hr />
+<h2 id="11">11. 참고 자료<a class="header-link" href="#11" title="Permanent link">&para;</a></h2>
+<h3 id="_15">필수 문서<a class="header-link" href="#_15" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Designing Data-Intensive Applications</strong> - Martin Kleppmann</li>
+<li>Chapter 5: Replication</li>
+<li>
+<p>Chapter 9: Consistency and Consensus</p>
+</li>
+<li>
+<p><strong>Database Internals</strong> - Alex Petrov</p>
+</li>
+<li>Part II: Distributed Systems</li>
+</ol>
+<h3 id="_16">데이터베이스별 문서<a class="header-link" href="#_16" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>PostgreSQL Streaming Replication</strong></li>
+<li>
+<p>https://www.postgresql.org/docs/current/warm-standby.html</p>
+</li>
+<li>
+<p><strong>MySQL Replication</strong></p>
+</li>
+<li>
+<p>https://dev.mysql.com/doc/refman/8.0/en/replication.html</p>
+</li>
+<li>
+<p><strong>Cassandra Documentation</strong></p>
+</li>
+<li>https://cassandra.apache.org/doc/latest/cassandra/architecture/dynamo.html</li>
+</ol>
+<h3 id="_17">논문<a class="header-link" href="#_17" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Dynamo: Amazon's Highly Available Key-value Store</strong> (2007)</li>
+<li><strong>In Search of an Understandable Consensus Algorithm (Raft)</strong> (2014)</li>
+<li><strong>Chain Replication for Supporting High Throughput and Availability</strong> (2004)</li>
+</ol>
+<hr />
+<h2 id="_18">요약<a class="header-link" href="#_18" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    핵심 개념 요약                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  복제 유형:                                                      │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  단일 리더: 쓰기는 리더만, 읽기는 팔로워도 가능          │   │
+│  │  다중 리더: 여러 노드에서 쓰기, 충돌 해결 필요           │   │
+│  │  리더 없음: 모든 노드 동등, Quorum으로 일관성 보장       │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  동기/비동기:                                                    │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  동기: 강한 일관성, 느린 쓰기, 장애 시 쓰기 불가         │   │
+│  │  비동기: 빠른 쓰기, 데이터 손실 가능성                   │   │
+│  │  반동기: 최소 1개 동기 + 나머지 비동기 (균형)            │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  Quorum:                                                        │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  R + W &gt; N 일 때 강한 일관성 보장                        │   │
+│  │  내결함성 = min(N-W, N-R)                                │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  면접 핵심:                                                      │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  1. 복제 유형별 트레이드오프 설명                        │   │
+│  │  2. 장애 복구(Failover) 과정과 문제점                    │   │
+│  │  3. Quorum 계산과 일관성 수준                            │   │
+│  │  4. Split Brain 방지 전략                                │   │
+│  │  5. Read-Your-Writes 구현 방법                           │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/System_Design/08_Database_Scaling.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">데이터베이스 확장</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/System_Design/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/System_Design/10_Data_Consistency_Patterns.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">데이터 일관성 패턴 (Data Consistency Patterns)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

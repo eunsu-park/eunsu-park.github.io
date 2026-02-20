@@ -1,0 +1,970 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>15. 컨테이너 내부 구조 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Linux/">Linux</a>
+    <span class="separator">/</span>
+    <span class="current">15. 컨테이너 내부 구조</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>15. 컨테이너 내부 구조</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Linux/14_Performance_Tuning.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">14. Linux 성능 튜닝</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Linux/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Linux/16_Storage_Management.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">16. 저장소 관리</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#_2">목차</a></li>
+<li><a href="#1">1. 컨테이너 기초</a><ul>
+<li><a href="#11-vs">1.1 컨테이너 vs 가상머신</a></li>
+<li><a href="#12">1.2 컨테이너 핵심 기술</a></li>
+</ul>
+</li>
+<li><a href="#2-linux-namespaces">2. Linux Namespaces</a><ul>
+<li><a href="#21-namespace">2.1 Namespace 종류</a></li>
+<li><a href="#22-unshare-namespace">2.2 unshare로 namespace 생성</a></li>
+<li><a href="#23-nsenter-namespace">2.3 nsenter로 namespace 진입</a></li>
+<li><a href="#24-namespace-c">2.4 Namespace C 예제</a></li>
+</ul>
+</li>
+<li><a href="#3-control-groups-cgroups">3. Control Groups (cgroups)</a><ul>
+<li><a href="#31-cgroups-v2">3.1 cgroups v2 구조</a></li>
+<li><a href="#32-cgroups">3.2 cgroups 기본 명령</a></li>
+<li><a href="#33-cpu">3.3 CPU 제한</a></li>
+<li><a href="#34">3.4 메모리 제한</a></li>
+<li><a href="#35-io">3.5 I/O 제한</a></li>
+<li><a href="#36-systemd-cgroups">3.6 systemd와 cgroups</a></li>
+</ul>
+</li>
+<li><a href="#4-union-filesystem">4. Union Filesystem</a><ul>
+<li><a href="#41-overlayfs">4.1 OverlayFS 개념</a></li>
+<li><a href="#42-overlayfs">4.2 OverlayFS 사용</a></li>
+<li><a href="#43-docker">4.3 Docker 이미지 레이어</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 컨테이너 런타임</a><ul>
+<li><a href="#51">5.1 런타임 계층</a></li>
+<li><a href="#52">5.2 수동으로 컨테이너 만들기</a></li>
+<li><a href="#53-runc">5.3 runc 사용</a></li>
+<li><a href="#54-rootless">5.4 Rootless 컨테이너</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 보안</a><ul>
+<li><a href="#61-capabilities">6.1 Capabilities</a></li>
+<li><a href="#62-seccomp">6.2 Seccomp</a></li>
+<li><a href="#63-apparmorselinux">6.3 AppArmor/SELinux</a></li>
+<li><a href="#64">6.4 읽기 전용 루트</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 연습 문제</a><ul>
+<li><a href="#1-namespace">연습 1: namespace 실습</a></li>
+<li><a href="#2-cgroups">연습 2: cgroups 리소스 제한</a></li>
+<li><a href="#3">연습 3: 수동 컨테이너 생성</a></li>
+<li><a href="#4">연습 4: 보안 강화 컨테이너</a></li>
+</ul>
+</li>
+<li><a href="#_3">다음 단계</a></li>
+<li><a href="#_4">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="15">15. 컨테이너 내부 구조<a class="header-link" href="#15" title="Permanent link">&para;</a></h1>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Linux 컨테이너 격리 기술 이해</li>
+<li>namespaces로 리소스 격리</li>
+<li>cgroups로 리소스 제한</li>
+<li>컨테이너 런타임 동작 원리</li>
+</ul>
+<h2 id="_2">목차<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-컨테이너-기초">컨테이너 기초</a></li>
+<li><a href="#2-linux-namespaces">Linux Namespaces</a></li>
+<li><a href="#3-control-groups-cgroups">Control Groups (cgroups)</a></li>
+<li><a href="#4-union-filesystem">Union Filesystem</a></li>
+<li><a href="#5-컨테이너-런타임">컨테이너 런타임</a></li>
+<li><a href="#6-보안">보안</a></li>
+<li><a href="#7-연습-문제">연습 문제</a></li>
+</ol>
+<hr />
+<h2 id="1">1. 컨테이너 기초<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="11-vs">1.1 컨테이너 vs 가상머신<a class="header-link" href="#11-vs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│               가상머신 vs 컨테이너                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  가상머신 (Virtual Machine)                                 │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐                       │
+│  │  App A  │ │  App B  │ │  App C  │                       │
+│  ├─────────┤ ├─────────┤ ├─────────┤                       │
+│  │ Guest OS│ │ Guest OS│ │ Guest OS│                       │
+│  └─────────┴─────────┴─────────┘                           │
+│  ┌─────────────────────────────────────┐                   │
+│  │           Hypervisor                │                   │
+│  └─────────────────────────────────────┘                   │
+│  ┌─────────────────────────────────────┐                   │
+│  │            Host OS                  │                   │
+│  └─────────────────────────────────────┘                   │
+│                                                             │
+│  컨테이너 (Container)                                       │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐                       │
+│  │  App A  │ │  App B  │ │  App C  │                       │
+│  ├─────────┤ ├─────────┤ ├─────────┤                       │
+│  │ Bins/   │ │ Bins/   │ │ Bins/   │                       │
+│  │ Libs    │ │ Libs    │ │ Libs    │                       │
+│  └─────────┴─────────┴─────────┘                           │
+│  ┌─────────────────────────────────────┐                   │
+│  │        Container Runtime            │                   │
+│  └─────────────────────────────────────┘                   │
+│  ┌─────────────────────────────────────┐                   │
+│  │          Host OS (커널 공유)         │                   │
+│  └─────────────────────────────────────┘                   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="12">1.2 컨테이너 핵심 기술<a class="header-link" href="#12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                  컨테이너 핵심 기술                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  1. Namespaces - 격리 (Isolation)                          │
+│     • PID namespace    - 프로세스 ID 격리                  │
+│     • Network namespace - 네트워크 스택 격리               │
+│     • Mount namespace  - 파일시스템 격리                   │
+│     • UTS namespace    - 호스트명 격리                     │
+│     • IPC namespace    - 프로세스 간 통신 격리             │
+│     • User namespace   - 사용자/그룹 ID 격리               │
+│     • Cgroup namespace - cgroup 루트 격리                  │
+│                                                             │
+│  2. Cgroups - 리소스 제한 (Resource Limiting)              │
+│     • CPU, 메모리, I/O, 네트워크 대역폭 제한               │
+│     • 프로세스 그룹 관리                                    │
+│                                                             │
+│  3. Union Filesystem - 레이어 이미지                       │
+│     • OverlayFS, AUFS                                      │
+│     • Copy-on-Write                                        │
+│                                                             │
+│  4. Capabilities - 권한 분리                               │
+│     • root 권한 세분화                                      │
+│                                                             │
+│  5. Seccomp - 시스템 콜 필터링                             │
+│     • 허용된 syscall만 실행                                 │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="2-linux-namespaces">2. Linux Namespaces<a class="header-link" href="#2-linux-namespaces" title="Permanent link">&para;</a></h2>
+<h3 id="21-namespace">2.1 Namespace 종류<a class="header-link" href="#21-namespace" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 현재 프로세스의 namespace 확인</span>
+ls<span class="w"> </span>-la<span class="w"> </span>/proc/<span class="nv">$$</span>/ns/
+<span class="c1"># cgroup -&gt; &#39;cgroup:[4026531835]&#39;</span>
+<span class="c1"># ipc -&gt; &#39;ipc:[4026531839]&#39;</span>
+<span class="c1"># mnt -&gt; &#39;mnt:[4026531840]&#39;</span>
+<span class="c1"># net -&gt; &#39;net:[4026531992]&#39;</span>
+<span class="c1"># pid -&gt; &#39;pid:[4026531836]&#39;</span>
+<span class="c1"># user -&gt; &#39;user:[4026531837]&#39;</span>
+<span class="c1"># uts -&gt; &#39;uts:[4026531838]&#39;</span>
+
+<span class="c1"># 시스템의 모든 namespace</span>
+lsns
+
+<span class="c1"># 특정 프로세스의 namespace</span>
+lsns<span class="w"> </span>-p<span class="w"> </span>&lt;PID&gt;
+</code></pre></div>
+
+<h3 id="22-unshare-namespace">2.2 unshare로 namespace 생성<a class="header-link" href="#22-unshare-namespace" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># UTS namespace (호스트명 격리)</span>
+unshare<span class="w"> </span>--uts<span class="w"> </span>/bin/bash
+hostname<span class="w"> </span>container-test
+hostname<span class="w">  </span><span class="c1"># container-test</span>
+<span class="nb">exit</span>
+hostname<span class="w">  </span><span class="c1"># 원래 호스트명</span>
+
+<span class="c1"># PID namespace (프로세스 격리)</span>
+unshare<span class="w"> </span>--pid<span class="w"> </span>--fork<span class="w"> </span>--mount-proc<span class="w"> </span>/bin/bash
+ps<span class="w"> </span>aux<span class="w">  </span><span class="c1"># 격리된 프로세스만 보임</span>
+<span class="nb">echo</span><span class="w"> </span><span class="nv">$$</span><span class="w">  </span><span class="c1"># PID 1</span>
+<span class="nb">exit</span>
+
+<span class="c1"># Mount namespace (파일시스템 격리)</span>
+unshare<span class="w"> </span>--mount<span class="w"> </span>/bin/bash
+mount<span class="w"> </span>--bind<span class="w"> </span>/tmp<span class="w"> </span>/mnt
+ls<span class="w"> </span>/mnt<span class="w">  </span><span class="c1"># 호스트의 /mnt에는 영향 없음</span>
+<span class="nb">exit</span>
+
+<span class="c1"># Network namespace (네트워크 격리)</span>
+unshare<span class="w"> </span>--net<span class="w"> </span>/bin/bash
+ip<span class="w"> </span>a<span class="w">  </span><span class="c1"># lo만 존재</span>
+<span class="nb">exit</span>
+
+<span class="c1"># User namespace (사용자 격리)</span>
+unshare<span class="w"> </span>--user<span class="w"> </span>--map-root-user<span class="w"> </span>/bin/bash
+id<span class="w">  </span><span class="c1"># uid=0(root) gid=0(root)</span>
+<span class="c1"># 실제로는 일반 사용자</span>
+<span class="nb">exit</span>
+
+<span class="c1"># 모두 조합 (컨테이너와 유사)</span>
+unshare<span class="w"> </span>--mount<span class="w"> </span>--uts<span class="w"> </span>--ipc<span class="w"> </span>--net<span class="w"> </span>--pid<span class="w"> </span>--fork<span class="w"> </span>--user<span class="w"> </span>--map-root-user<span class="w"> </span>/bin/bash
+</code></pre></div>
+
+<h3 id="23-nsenter-namespace">2.3 nsenter로 namespace 진입<a class="header-link" href="#23-nsenter-namespace" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 다른 프로세스의 namespace로 진입</span>
+nsenter<span class="w"> </span>-t<span class="w"> </span>&lt;PID&gt;<span class="w"> </span>--all<span class="w"> </span>/bin/bash
+
+<span class="c1"># 특정 namespace만</span>
+nsenter<span class="w"> </span>-t<span class="w"> </span>&lt;PID&gt;<span class="w"> </span>--net<span class="w"> </span>/bin/bash
+nsenter<span class="w"> </span>-t<span class="w"> </span>&lt;PID&gt;<span class="w"> </span>--pid<span class="w"> </span>--mount<span class="w"> </span>/bin/bash
+
+<span class="c1"># Docker 컨테이너의 namespace 진입</span>
+docker<span class="w"> </span>inspect<span class="w"> </span>--format<span class="w"> </span><span class="s1">&#39;{{.State.Pid}}&#39;</span><span class="w"> </span>&lt;container_id&gt;
+nsenter<span class="w"> </span>-t<span class="w"> </span>&lt;PID&gt;<span class="w"> </span>--all<span class="w"> </span>/bin/bash
+</code></pre></div>
+
+<h3 id="24-namespace-c">2.4 Namespace C 예제<a class="header-link" href="#24-namespace-c" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// simple_container.c</span>
+<span class="cp">#define _GNU_SOURCE</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;sched.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;sys/wait.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;unistd.h&gt;</span>
+
+<span class="cp">#define STACK_SIZE (1024 * 1024)</span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="n">child_stack</span><span class="p">[</span><span class="n">STACK_SIZE</span><span class="p">];</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">child_fn</span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">arg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 호스트명 변경</span>
+<span class="w">    </span><span class="n">sethostname</span><span class="p">(</span><span class="s">&quot;container&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 새 root 파일시스템으로 chroot (준비된 경우)</span>
+<span class="w">    </span><span class="c1">// chroot(&quot;/path/to/rootfs&quot;);</span>
+<span class="w">    </span><span class="c1">// chdir(&quot;/&quot;);</span>
+
+<span class="w">    </span><span class="c1">// 쉘 실행</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">argv</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="s">&quot;/bin/bash&quot;</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">};</span>
+<span class="w">    </span><span class="n">execv</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">argv</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 새 namespace와 함께 자식 프로세스 생성</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">flags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CLONE_NEWUTS</span><span class="w"> </span><span class="o">|</span><span class="w">     </span><span class="c1">// UTS namespace</span>
+<span class="w">                </span><span class="n">CLONE_NEWPID</span><span class="w"> </span><span class="o">|</span><span class="w">     </span><span class="c1">// PID namespace</span>
+<span class="w">                </span><span class="n">CLONE_NEWNS</span><span class="w"> </span><span class="o">|</span><span class="w">      </span><span class="c1">// Mount namespace</span>
+<span class="w">                </span><span class="n">CLONE_NEWNET</span><span class="w"> </span><span class="o">|</span><span class="w">     </span><span class="c1">// Network namespace</span>
+<span class="w">                </span><span class="n">SIGCHLD</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">pid_t</span><span class="w"> </span><span class="n">pid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">clone</span><span class="p">(</span><span class="n">child_fn</span><span class="p">,</span><span class="w"> </span><span class="n">child_stack</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">STACK_SIZE</span><span class="p">,</span><span class="w"> </span><span class="n">flags</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">pid</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">-1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">perror</span><span class="p">(</span><span class="s">&quot;clone&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">waitpid</span><span class="p">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># 컴파일 및 실행</span>
+gcc<span class="w"> </span>-o<span class="w"> </span>simple_container<span class="w"> </span>simple_container.c
+sudo<span class="w"> </span>./simple_container
+</code></pre></div>
+
+<hr />
+<h2 id="3-control-groups-cgroups">3. Control Groups (cgroups)<a class="header-link" href="#3-control-groups-cgroups" title="Permanent link">&para;</a></h2>
+<h3 id="31-cgroups-v2">3.1 cgroups v2 구조<a class="header-link" href="#31-cgroups-v2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    cgroups v2 계층 구조                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  /sys/fs/cgroup/ (cgroup2 루트)                            │
+│  ├── cgroup.controllers      # 사용 가능한 컨트롤러        │
+│  ├── cgroup.subtree_control  # 자식에게 위임할 컨트롤러    │
+│  ├── cgroup.procs            # 이 cgroup의 프로세스        │
+│  │                                                          │
+│  ├── system.slice/           # systemd 시스템 서비스       │
+│  │   ├── cgroup.procs                                      │
+│  │   ├── cpu.max                                           │
+│  │   └── memory.max                                        │
+│  │                                                          │
+│  ├── user.slice/             # 사용자 세션                 │
+│  │   └── user-1000.slice/                                  │
+│  │                                                          │
+│  └── mygroup/                # 사용자 정의 그룹            │
+│      ├── cgroup.procs                                      │
+│      ├── cpu.max             # CPU 제한                    │
+│      ├── cpu.stat            # CPU 통계                    │
+│      ├── memory.max          # 메모리 제한                 │
+│      ├── memory.current      # 현재 메모리 사용량          │
+│      └── io.max              # I/O 제한                    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="32-cgroups">3.2 cgroups 기본 명령<a class="header-link" href="#32-cgroups" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># cgroups v2 확인</span>
+mount<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>cgroup2
+cat<span class="w"> </span>/sys/fs/cgroup/cgroup.controllers
+<span class="c1"># cpuset cpu io memory hugetlb pids rdma misc</span>
+
+<span class="c1"># 새 cgroup 생성</span>
+mkdir<span class="w"> </span>/sys/fs/cgroup/mygroup
+
+<span class="c1"># 컨트롤러 활성화</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;+cpu +memory +io&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/cgroup.subtree_control
+
+<span class="c1"># 프로세스 추가</span>
+<span class="nb">echo</span><span class="w"> </span><span class="nv">$$</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/cgroup.procs
+
+<span class="c1"># 프로세스 확인</span>
+cat<span class="w"> </span>/sys/fs/cgroup/mygroup/cgroup.procs
+
+<span class="c1"># cgroup 삭제 (프로세스 없어야 함)</span>
+rmdir<span class="w"> </span>/sys/fs/cgroup/mygroup
+</code></pre></div>
+
+<h3 id="33-cpu">3.3 CPU 제한<a class="header-link" href="#33-cpu" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># CPU 제한 (quota / period)</span>
+<span class="c1"># cpu.max: &quot;quota period&quot; (마이크로초)</span>
+<span class="c1"># 50% CPU 제한</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;50000 100000&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/cpu.max
+
+<span class="c1"># 특정 CPU만 사용</span>
+<span class="c1"># cpuset.cpus: 사용할 CPU</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;0-1&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/cpuset.cpus
+
+<span class="c1"># CPU 가중치 (1-10000, 기본 100)</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;50&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/cpu.weight
+
+<span class="c1"># 통계 확인</span>
+cat<span class="w"> </span>/sys/fs/cgroup/mygroup/cpu.stat
+<span class="c1"># usage_usec 12345</span>
+<span class="c1"># user_usec 10000</span>
+<span class="c1"># system_usec 2345</span>
+</code></pre></div>
+
+<h3 id="34">3.4 메모리 제한<a class="header-link" href="#34" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 메모리 제한</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;512M&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/memory.max
+<span class="c1"># 또는 바이트로</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;536870912&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/memory.max
+
+<span class="c1"># 메모리 + swap 제한</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;1G&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/memory.swap.max
+
+<span class="c1"># OOM 설정</span>
+<span class="c1"># memory.oom.group: 1이면 그룹 전체 kill</span>
+<span class="nb">echo</span><span class="w"> </span><span class="m">1</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/memory.oom.group
+
+<span class="c1"># 현재 사용량</span>
+cat<span class="w"> </span>/sys/fs/cgroup/mygroup/memory.current
+cat<span class="w"> </span>/sys/fs/cgroup/mygroup/memory.stat
+</code></pre></div>
+
+<h3 id="35-io">3.5 I/O 제한<a class="header-link" href="#35-io" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 장치 확인</span>
+lsblk
+<span class="c1"># 예: sda -&gt; 8:0</span>
+
+<span class="c1"># I/O 대역폭 제한 (바이트/초)</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;8:0 rbps=10485760 wbps=10485760&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/io.max
+<span class="c1"># 10MB/s 읽기/쓰기 제한</span>
+
+<span class="c1"># IOPS 제한</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;8:0 riops=1000 wiops=1000&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/io.max
+
+<span class="c1"># I/O 가중치</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;8:0 100&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/io.weight
+
+<span class="c1"># 통계</span>
+cat<span class="w"> </span>/sys/fs/cgroup/mygroup/io.stat
+</code></pre></div>
+
+<h3 id="36-systemd-cgroups">3.6 systemd와 cgroups<a class="header-link" href="#36-systemd-cgroups" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># systemd-cgls - cgroup 트리 보기</span>
+systemd-cgls
+
+<span class="c1"># 특정 슬라이스</span>
+systemd-cgls<span class="w"> </span>/system.slice
+
+<span class="c1"># systemd-cgtop - 실시간 모니터링</span>
+systemd-cgtop
+
+<span class="c1"># 서비스 리소스 제한 (유닛 파일)</span>
+<span class="c1"># [Service]</span>
+<span class="c1"># CPUQuota=50%</span>
+<span class="c1"># MemoryMax=512M</span>
+<span class="c1"># IOWriteBandwidthMax=/dev/sda 10M</span>
+
+<span class="c1"># 런타임에 제한 변경</span>
+systemctl<span class="w"> </span>set-property<span class="w"> </span>nginx.service<span class="w"> </span><span class="nv">CPUQuota</span><span class="o">=</span><span class="m">50</span>%
+systemctl<span class="w"> </span>set-property<span class="w"> </span>nginx.service<span class="w"> </span><span class="nv">MemoryMax</span><span class="o">=</span>512M
+</code></pre></div>
+
+<hr />
+<h2 id="4-union-filesystem">4. Union Filesystem<a class="header-link" href="#4-union-filesystem" title="Permanent link">&para;</a></h2>
+<h3 id="41-overlayfs">4.1 OverlayFS 개념<a class="header-link" href="#41-overlayfs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                    </span><span class="n">OverlayFS</span><span class="w"> </span><span class="n">구조</span><span class="w">                            </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Merged</span><span class="w"> </span><span class="p">(</span><span class="n">통합</span><span class="w"> </span><span class="n">뷰</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">컨테이너가</span><span class="w"> </span><span class="n">보는</span><span class="w"> </span><span class="n">파일시스템</span><span class="w">              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">/</span><span class="n">merged</span><span class="w">                                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">                                                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">├──</span><span class="w"> </span><span class="o">[</span><span class="n">Upper에서</span><span class="o">]</span><span class="w">     </span><span class="err">│</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">├──</span><span class="w"> </span><span class="o">[</span><span class="n">Lower에서</span><span class="o">]</span><span class="w">     </span><span class="err">│</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">└──</span><span class="w"> </span><span class="o">[</span><span class="n">Lower에서</span><span class="o">]</span><span class="w">     </span><span class="err">│</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────┐</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="nf">Upper</span><span class="w"> </span><span class="n">Layer</span><span class="w">      </span><span class="err">│</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="n">쓰기</span><span class="w"> </span><span class="n">가능</span><span class="w"> </span><span class="p">(</span><span class="n">컨테이너</span><span class="w"> </span><span class="n">변경</span><span class="p">)</span><span class="w">      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="o">/</span><span class="nf">upper</span><span class="w">           </span><span class="err">│</span><span class="w">                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└─────────────────────┘</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">           </span><span class="err">↑</span><span class="w">                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────┐</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="nf">Lower</span><span class="w"> </span><span class="n">Layer</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="n">읽기</span><span class="w"> </span><span class="n">전용</span><span class="w"> </span><span class="p">(</span><span class="n">이미지</span><span class="w"> </span><span class="n">레이어</span><span class="p">)</span><span class="w">      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="o">/</span><span class="n">lower1</span><span class="w">           </span><span class="err">│</span><span class="w">                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="o">/</span><span class="n">lower2</span><span class="w">           </span><span class="err">│</span><span class="w">                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="o">/</span><span class="n">lower3</span><span class="w">           </span><span class="err">│</span><span class="w">                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└─────────────────────┘</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="k">Work</span><span class="w"> </span><span class="n">Directory</span><span class="w">                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">/</span><span class="k">work</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">OverlayFS</span><span class="w"> </span><span class="n">내부</span><span class="w"> </span><span class="n">작업용</span><span class="w">                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="42-overlayfs">4.2 OverlayFS 사용<a class="header-link" href="#42-overlayfs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># OverlayFS 마운트</span>
+mkdir<span class="w"> </span>-p<span class="w"> </span>/lower<span class="w"> </span>/upper<span class="w"> </span>/work<span class="w"> </span>/merged
+
+<span class="c1"># lower에 기본 파일 생성</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;from lower&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/lower/file1.txt
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;will be overwritten&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/lower/file2.txt
+
+<span class="c1"># upper에 파일 생성</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;from upper&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/upper/file2.txt
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;only in upper&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/upper/file3.txt
+
+<span class="c1"># OverlayFS 마운트</span>
+mount<span class="w"> </span>-t<span class="w"> </span>overlay<span class="w"> </span>overlay<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-o<span class="w"> </span><span class="nv">lowerdir</span><span class="o">=</span>/lower,upperdir<span class="o">=</span>/upper,workdir<span class="o">=</span>/work<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>/merged
+
+<span class="c1"># 결과 확인</span>
+ls<span class="w"> </span>/merged/
+<span class="c1"># file1.txt  file2.txt  file3.txt</span>
+
+cat<span class="w"> </span>/merged/file1.txt<span class="w">  </span><span class="c1"># from lower</span>
+cat<span class="w"> </span>/merged/file2.txt<span class="w">  </span><span class="c1"># from upper (덮어씀)</span>
+cat<span class="w"> </span>/merged/file3.txt<span class="w">  </span><span class="c1"># only in upper</span>
+
+<span class="c1"># 새 파일 쓰기</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;new file&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/merged/file4.txt
+ls<span class="w"> </span>/upper/<span class="w">  </span><span class="c1"># file4.txt가 upper에 생성됨</span>
+
+<span class="c1"># 파일 삭제 (whiteout)</span>
+rm<span class="w"> </span>/merged/file1.txt
+ls<span class="w"> </span>-la<span class="w"> </span>/upper/
+<span class="c1"># c--------- ... file1.txt  (whiteout 파일)</span>
+
+<span class="c1"># 언마운트</span>
+umount<span class="w"> </span>/merged
+</code></pre></div>
+
+<h3 id="43-docker">4.3 Docker 이미지 레이어<a class="header-link" href="#43-docker" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Docker 이미지 레이어 확인</span>
+docker<span class="w"> </span>image<span class="w"> </span>inspect<span class="w"> </span>ubuntu:22.04<span class="w"> </span>--format<span class="w"> </span><span class="s1">&#39;{{.RootFS.Layers}}&#39;</span>
+
+<span class="c1"># 레이어 저장 위치</span>
+ls<span class="w"> </span>/var/lib/docker/overlay2/
+
+<span class="c1"># 특정 컨테이너의 마운트 정보</span>
+docker<span class="w"> </span>inspect<span class="w"> </span>&lt;container_id&gt;<span class="w"> </span>--format<span class="w"> </span><span class="s1">&#39;{{.GraphDriver.Data}}&#39;</span>
+<span class="c1"># LowerDir, UpperDir, MergedDir, WorkDir 확인</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 컨테이너 런타임<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="51">5.1 런타임 계층<a class="header-link" href="#51" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    컨테이너 런타임 계층                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  High-Level Runtime (컨테이너 엔진)                        │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  Docker Engine / Podman / containerd                │   │
+│  │  • 이미지 관리 (pull, push, build)                  │   │
+│  │  • 네트워킹                                          │   │
+│  │  • 볼륨 관리                                         │   │
+│  │  • API 제공                                          │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                          │                                  │
+│                          ▼                                  │
+│  Low-Level Runtime (OCI Runtime)                           │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  runc / crun / kata-containers                      │   │
+│  │  • 실제 컨테이너 생성                                │   │
+│  │  • namespace, cgroups 설정                          │   │
+│  │  • OCI 스펙 준수                                    │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                          │                                  │
+│                          ▼                                  │
+│  Linux Kernel                                               │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  namespaces, cgroups, seccomp, capabilities        │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="52">5.2 수동으로 컨테이너 만들기<a class="header-link" href="#52" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="c1"># manual_container.sh</span>
+
+<span class="c1"># 1. rootfs 준비</span>
+mkdir<span class="w"> </span>-p<span class="w"> </span>/tmp/mycontainer/<span class="o">{</span>rootfs,upper,work,merged<span class="o">}</span>
+
+<span class="c1"># 기본 rootfs 다운로드 (Alpine)</span>
+curl<span class="w"> </span>-o<span class="w"> </span>/tmp/alpine.tar.gz<span class="w"> </span>https://dl-cdn.alpinelinux.org/alpine/v3.18/releases/x86_64/alpine-minirootfs-3.18.0-x86_64.tar.gz
+tar<span class="w"> </span>-xzf<span class="w"> </span>/tmp/alpine.tar.gz<span class="w"> </span>-C<span class="w"> </span>/tmp/mycontainer/rootfs
+
+<span class="c1"># 2. OverlayFS 마운트</span>
+mount<span class="w"> </span>-t<span class="w"> </span>overlay<span class="w"> </span>overlay<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-o<span class="w"> </span><span class="nv">lowerdir</span><span class="o">=</span>/tmp/mycontainer/rootfs,upperdir<span class="o">=</span>/tmp/mycontainer/upper,workdir<span class="o">=</span>/tmp/mycontainer/work<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>/tmp/mycontainer/merged
+
+<span class="c1"># 3. 필수 마운트</span>
+mount<span class="w"> </span>-t<span class="w"> </span>proc<span class="w"> </span>proc<span class="w"> </span>/tmp/mycontainer/merged/proc
+mount<span class="w"> </span>-t<span class="w"> </span>sysfs<span class="w"> </span>sysfs<span class="w"> </span>/tmp/mycontainer/merged/sys
+mount<span class="w"> </span>-o<span class="w"> </span><span class="nb">bind</span><span class="w"> </span>/dev<span class="w"> </span>/tmp/mycontainer/merged/dev
+
+<span class="c1"># 4. 새 namespace로 chroot</span>
+unshare<span class="w"> </span>--mount<span class="w"> </span>--uts<span class="w"> </span>--ipc<span class="w"> </span>--net<span class="w"> </span>--pid<span class="w"> </span>--fork<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>chroot<span class="w"> </span>/tmp/mycontainer/merged<span class="w"> </span>/bin/sh<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;</span>
+<span class="s1">    hostname mycontainer</span>
+<span class="s1">    mount -t proc proc /proc</span>
+<span class="s1">    exec /bin/sh</span>
+<span class="s1">  &#39;</span>
+
+<span class="c1"># 정리</span>
+umount<span class="w"> </span>/tmp/mycontainer/merged/<span class="o">{</span>proc,sys,dev<span class="o">}</span>
+umount<span class="w"> </span>/tmp/mycontainer/merged
+</code></pre></div>
+
+<h3 id="53-runc">5.3 runc 사용<a class="header-link" href="#53-runc" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># runc 설치</span>
+apt<span class="w"> </span>install<span class="w"> </span>runc
+
+<span class="c1"># OCI 번들 구조</span>
+mkdir<span class="w"> </span>-p<span class="w"> </span>bundle/rootfs
+<span class="nb">cd</span><span class="w"> </span>bundle
+
+<span class="c1"># rootfs 준비 (Docker에서 추출)</span>
+docker<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="k">$(</span>docker<span class="w"> </span>create<span class="w"> </span>alpine<span class="k">)</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tar<span class="w"> </span>-C<span class="w"> </span>rootfs<span class="w"> </span>-xf<span class="w"> </span>-
+
+<span class="c1"># config.json 생성</span>
+runc<span class="w"> </span>spec
+
+<span class="c1"># config.json 수정 (terminal: true로 변경)</span>
+
+<span class="c1"># 컨테이너 실행</span>
+runc<span class="w"> </span>run<span class="w"> </span>mycontainer
+
+<span class="c1"># 다른 터미널에서</span>
+runc<span class="w"> </span>list
+runc<span class="w"> </span>state<span class="w"> </span>mycontainer
+runc<span class="w"> </span><span class="nb">kill</span><span class="w"> </span>mycontainer
+runc<span class="w"> </span>delete<span class="w"> </span>mycontainer
+</code></pre></div>
+
+<h3 id="54-rootless">5.4 Rootless 컨테이너<a class="header-link" href="#54-rootless" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Podman rootless</span>
+podman<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-it<span class="w"> </span>alpine<span class="w"> </span>sh
+
+<span class="c1"># 사용자 namespace 매핑 확인</span>
+cat<span class="w"> </span>/proc/self/uid_map
+cat<span class="w"> </span>/proc/self/gid_map
+
+<span class="c1"># subuid/subgid 설정</span>
+<span class="c1"># /etc/subuid</span>
+<span class="c1"># username:100000:65536</span>
+<span class="c1"># /etc/subgid</span>
+<span class="c1"># username:100000:65536</span>
+
+<span class="c1"># Rootless Docker</span>
+dockerd-rootless-setuptool.sh<span class="w"> </span>install
+<span class="nb">export</span><span class="w"> </span><span class="nv">PATH</span><span class="o">=</span>/home/<span class="nv">$USER</span>/bin:<span class="nv">$PATH</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">DOCKER_HOST</span><span class="o">=</span>unix://<span class="nv">$XDG_RUNTIME_DIR</span>/docker.sock
+docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>hello-world
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 보안<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="61-capabilities">6.1 Capabilities<a class="header-link" href="#61-capabilities" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 프로세스 capabilities 확인</span>
+cat<span class="w"> </span>/proc/<span class="nv">$$</span>/status<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>Cap
+getpcaps<span class="w"> </span><span class="nv">$$</span>
+
+<span class="c1"># Capabilities 목록</span>
+capsh<span class="w"> </span>--print
+
+<span class="c1"># 특정 capability만 부여</span>
+docker<span class="w"> </span>run<span class="w"> </span>--cap-drop<span class="w"> </span>ALL<span class="w"> </span>--cap-add<span class="w"> </span>NET_BIND_SERVICE<span class="w"> </span>nginx
+
+<span class="c1"># 주요 capabilities:</span>
+<span class="c1"># CAP_NET_ADMIN - 네트워크 설정</span>
+<span class="c1"># CAP_NET_BIND_SERVICE - 1024 미만 포트 바인딩</span>
+<span class="c1"># CAP_SYS_ADMIN - 시스템 관리 (위험)</span>
+<span class="c1"># CAP_SYS_PTRACE - 프로세스 추적</span>
+<span class="c1"># CAP_MKNOD - 특수 파일 생성</span>
+</code></pre></div>
+
+<h3 id="62-seccomp">6.2 Seccomp<a class="header-link" href="#62-seccomp" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 기본 seccomp 프로파일 확인</span>
+docker<span class="w"> </span>info<span class="w"> </span>--format<span class="w"> </span><span class="s1">&#39;{{.SecurityOptions}}&#39;</span>
+
+<span class="c1"># 커스텀 seccomp 프로파일</span>
+cat<span class="w"> </span>&gt;<span class="w"> </span>seccomp.json<span class="w"> </span><span class="s">&lt;&lt; &#39;EOF&#39;</span>
+<span class="s">{</span>
+<span class="s">  &quot;defaultAction&quot;: &quot;SCMP_ACT_ERRNO&quot;,</span>
+<span class="s">  &quot;architectures&quot;: [&quot;SCMP_ARCH_X86_64&quot;],</span>
+<span class="s">  &quot;syscalls&quot;: [</span>
+<span class="s">    {</span>
+<span class="s">      &quot;names&quot;: [&quot;read&quot;, &quot;write&quot;, &quot;exit&quot;, &quot;exit_group&quot;],</span>
+<span class="s">      &quot;action&quot;: &quot;SCMP_ACT_ALLOW&quot;</span>
+<span class="s">    }</span>
+<span class="s">  ]</span>
+<span class="s">}</span>
+<span class="s">EOF</span>
+
+<span class="c1"># 프로파일 적용</span>
+docker<span class="w"> </span>run<span class="w"> </span>--security-opt<span class="w"> </span><span class="nv">seccomp</span><span class="o">=</span>seccomp.json<span class="w"> </span>alpine<span class="w"> </span>sh
+
+<span class="c1"># seccomp 없이 실행 (비권장)</span>
+docker<span class="w"> </span>run<span class="w"> </span>--security-opt<span class="w"> </span><span class="nv">seccomp</span><span class="o">=</span>unconfined<span class="w"> </span>alpine<span class="w"> </span>sh
+</code></pre></div>
+
+<h3 id="63-apparmorselinux">6.3 AppArmor/SELinux<a class="header-link" href="#63-apparmorselinux" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># AppArmor 상태</span>
+aa-status
+
+<span class="c1"># Docker AppArmor 프로파일</span>
+cat<span class="w"> </span>/etc/apparmor.d/docker
+
+<span class="c1"># 커스텀 프로파일 적용</span>
+docker<span class="w"> </span>run<span class="w"> </span>--security-opt<span class="w"> </span><span class="nv">apparmor</span><span class="o">=</span>my-profile<span class="w"> </span>alpine
+
+<span class="c1"># SELinux (RHEL/CentOS)</span>
+getenforce
+<span class="c1"># docker run --security-opt label=type:my_container_t alpine</span>
+</code></pre></div>
+
+<h3 id="64">6.4 읽기 전용 루트<a class="header-link" href="#64" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 읽기 전용 루트 파일시스템</span>
+docker<span class="w"> </span>run<span class="w"> </span>--read-only<span class="w"> </span>alpine<span class="w"> </span>sh
+
+<span class="c1"># 임시 디렉토리 허용</span>
+docker<span class="w"> </span>run<span class="w"> </span>--read-only<span class="w"> </span>--tmpfs<span class="w"> </span>/tmp<span class="w"> </span>alpine<span class="w"> </span>sh
+
+<span class="c1"># 볼륨으로 쓰기 허용</span>
+docker<span class="w"> </span>run<span class="w"> </span>--read-only<span class="w"> </span>-v<span class="w"> </span>/data<span class="w"> </span>alpine<span class="w"> </span>sh
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 연습 문제<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="1-namespace">연습 1: namespace 실습<a class="header-link" href="#1-namespace" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 요구사항:</span>
+<span class="c1"># 1. 모든 namespace 유형을 사용하여 격리된 환경 생성</span>
+<span class="c1"># 2. 호스트와 격리 확인 (hostname, PID, network)</span>
+<span class="c1"># 3. nsenter로 namespace 진입</span>
+
+<span class="c1"># 명령어 작성:</span>
+</code></pre></div>
+
+<h3 id="2-cgroups">연습 2: cgroups 리소스 제한<a class="header-link" href="#2-cgroups" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 요구사항:</span>
+<span class="c1"># 1. CPU 25% 제한</span>
+<span class="c1"># 2. 메모리 256MB 제한</span>
+<span class="c1"># 3. I/O 1MB/s 제한</span>
+<span class="c1"># 4. stress 도구로 테스트</span>
+
+<span class="c1"># 설정 및 명령어 작성:</span>
+</code></pre></div>
+
+<h3 id="3">연습 3: 수동 컨테이너 생성<a class="header-link" href="#3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 요구사항:</span>
+<span class="c1"># 1. rootfs 준비 (Alpine)</span>
+<span class="c1"># 2. OverlayFS 설정</span>
+<span class="c1"># 3. namespace 격리</span>
+<span class="c1"># 4. cgroups 제한</span>
+<span class="c1"># 5. 쉘 실행</span>
+
+<span class="c1"># 스크립트 작성:</span>
+</code></pre></div>
+
+<h3 id="4">연습 4: 보안 강화 컨테이너<a class="header-link" href="#4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 요구사항:</span>
+<span class="c1"># 1. 최소 capabilities만 부여</span>
+<span class="c1"># 2. seccomp 프로파일 적용</span>
+<span class="c1"># 3. 읽기 전용 루트</span>
+<span class="c1"># 4. non-root 사용자</span>
+
+<span class="c1"># docker run 명령어 작성:</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_3">다음 단계<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="16_저장소_관리.md">16_저장소_관리</a> - LVM, RAID</li>
+<li><a href="https://docs.docker.com/">Docker 문서</a></li>
+<li><a href="https://github.com/opencontainers/runtime-spec">OCI Runtime Spec</a></li>
+</ul>
+<h2 id="_4">참고 자료<a class="header-link" href="#_4" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://man7.org/linux/man-pages/man7/namespaces.7.html">Linux Namespaces</a></li>
+<li><a href="https://docs.kernel.org/admin-guide/cgroup-v2.html">cgroups v2</a></li>
+<li><a href="https://docs.kernel.org/filesystems/overlayfs.html">OverlayFS</a></li>
+<li><a href="https://github.com/opencontainers/runc">runc</a></li>
+<li><a href="https://docs.docker.com/engine/security/">Container Security</a></li>
+</ul>
+<hr />
+<p><a href="14_성능_튜닝.md">← 이전: 성능 튜닝</a> | <a href="16_저장소_관리.md">다음: 저장소 관리 →</a> | <a href="00_Overview.md">목차</a></p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Linux/14_Performance_Tuning.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">14. Linux 성능 튜닝</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Linux/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Linux/16_Storage_Management.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">16. 저장소 관리</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

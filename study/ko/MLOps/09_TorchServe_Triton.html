@@ -1,0 +1,1112 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TorchServe & Triton Inference Server - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/MLOps/">MLOps</a>
+    <span class="separator">/</span>
+    <span class="current">TorchServe & Triton Inference Server</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>TorchServe & Triton Inference Server</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/MLOps/08_Model_Serving_Basics.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">모델 서빙 기초</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/MLOps/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/MLOps/10_Drift_Detection_Monitoring.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">드리프트 감지 & 모니터링</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#1-torchserve">1. TorchServe 개요</a><ul>
+<li><a href="#11-torchserve">1.1 TorchServe 아키텍처</a></li>
+<li><a href="#12">1.2 설치</a></li>
+</ul>
+</li>
+<li><a href="#2">2. 핸들러 작성</a><ul>
+<li><a href="#21">2.1 기본 핸들러</a></li>
+<li><a href="#22">2.2 이미지 분류 핸들러</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 모델 아카이브 및 배포</a><ul>
+<li><a href="#31">3.1 모델 아카이브 생성</a></li>
+<li><a href="#32-torchserve">3.2 TorchServe 시작</a></li>
+<li><a href="#33">3.3 설정 파일</a></li>
+<li><a href="#34-api">3.4 API 호출</a></li>
+</ul>
+</li>
+<li><a href="#4-triton-inference-server">4. Triton Inference Server</a><ul>
+<li><a href="#41-triton">4.1 Triton 개요</a></li>
+<li><a href="#42">4.2 모델 저장소 구조</a></li>
+<li><a href="#43">4.3 모델 설정</a></li>
+<li><a href="#44-triton">4.4 Triton 실행</a></li>
+<li><a href="#45-python">4.5 Python 클라이언트</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 모델 최적화</a><ul>
+<li><a href="#51-onnx">5.1 ONNX 변환</a></li>
+<li><a href="#52-tensorrt">5.2 TensorRT 최적화</a></li>
+<li><a href="#53">5.3 양자화</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 멀티모델 서빙</a><ul>
+<li><a href="#61-triton">6.1 Triton 앙상블</a></li>
+<li><a href="#62-ab">6.2 A/B 테스트</a></li>
+</ul>
+</li>
+<li><a href="#_1">연습 문제</a><ul>
+<li><a href="#1-torchserve_1">문제 1: TorchServe 배포</a></li>
+<li><a href="#2-onnx">문제 2: ONNX 변환</a></li>
+<li><a href="#3_1">문제 3: 성능 최적화</a></li>
+</ul>
+</li>
+<li><a href="#_2">요약</a></li>
+<li><a href="#_3">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="torchserve-triton-inference-server">TorchServe &amp; Triton Inference Server<a class="header-link" href="#torchserve-triton-inference-server" title="Permanent link">&para;</a></h1>
+<h2 id="1-torchserve">1. TorchServe 개요<a class="header-link" href="#1-torchserve" title="Permanent link">&para;</a></h2>
+<p>TorchServe는 PyTorch 모델을 프로덕션 환경에서 서빙하기 위한 공식 도구입니다.</p>
+<h3 id="11-torchserve">1.1 TorchServe 아키텍처<a class="header-link" href="#11-torchserve" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────────┐
+│                      TorchServe 아키텍처                             │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│   ┌─────────────┐                                                   │
+│   │   Client    │                                                   │
+│   └──────┬──────┘                                                   │
+│          │                                                          │
+│          ▼                                                          │
+│   ┌─────────────────────────────────────────────────────────┐      │
+│   │                    Frontend                              │      │
+│   │  ┌──────────────┐  ┌──────────────┐                     │      │
+│   │  │ REST API     │  │ gRPC API     │                     │      │
+│   │  │ :8080        │  │ :7070        │                     │      │
+│   │  └──────────────┘  └──────────────┘                     │      │
+│   └─────────────────────────────────────────────────────────┘      │
+│          │                                                          │
+│          ▼                                                          │
+│   ┌─────────────────────────────────────────────────────────┐      │
+│   │                    Backend                               │      │
+│   │  ┌──────────────────────────────────────────┐           │      │
+│   │  │              Model Store                  │           │      │
+│   │  │  ┌─────────┐ ┌─────────┐ ┌─────────┐    │           │      │
+│   │  │  │ Model A │ │ Model B │ │ Model C │    │           │      │
+│   │  │  └─────────┘ └─────────┘ └─────────┘    │           │      │
+│   │  └──────────────────────────────────────────┘           │      │
+│   │                                                          │      │
+│   │  ┌──────────────┐  ┌──────────────┐                     │      │
+│   │  │ Worker 1     │  │ Worker 2     │  ...                │      │
+│   │  └──────────────┘  └──────────────┘                     │      │
+│   └─────────────────────────────────────────────────────────┘      │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="12">1.2 설치<a class="header-link" href="#12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># TorchServe 설치</span>
+pip<span class="w"> </span>install<span class="w"> </span>torchserve<span class="w"> </span>torch-model-archiver<span class="w"> </span>torch-workflow-archiver
+
+<span class="c1"># 버전 확인</span>
+torchserve<span class="w"> </span>--version
+</code></pre></div>
+
+<hr />
+<h2 id="2">2. 핸들러 작성<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="21">2.1 기본 핸들러<a class="header-link" href="#21" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">custom_handler.py - TorchServe 커스텀 핸들러</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn.functional</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">F</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ts.torch_handler.base_handler</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseHandler</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">CustomHandler</span><span class="p">(</span><span class="n">BaseHandler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;커스텀 TorchServe 핸들러&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">initialized</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;모델 초기화&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manifest</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">manifest</span>
+        <span class="n">properties</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">system_properties</span>
+        <span class="n">model_dir</span> <span class="o">=</span> <span class="n">properties</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model_dir&quot;</span><span class="p">)</span>
+
+        <span class="c1"># 디바이스 설정</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span>
+            <span class="s2">&quot;cuda&quot;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;cpu&quot;</span>
+        <span class="p">)</span>
+
+        <span class="c1"># 모델 로드</span>
+        <span class="n">serialized_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">manifest</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">][</span><span class="s2">&quot;serializedFile&quot;</span><span class="p">]</span>
+        <span class="n">model_pt_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">model_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">serialized_file</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">model_pt_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+
+        <span class="c1"># 추가 설정 로드 (있는 경우)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">class_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_class_names</span><span class="p">(</span><span class="n">model_dir</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">initialized</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Model initialized successfully&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_load_class_names</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_dir</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;클래스 이름 로드&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">model_dir</span><span class="si">}</span><span class="s2">/index_to_name.json&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">preprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;입력 전처리&quot;&quot;&quot;</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="c1"># JSON 입력 처리</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="n">features</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;body&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">features</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;body&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">features</span><span class="p">,</span> <span class="p">(</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">bytearray</span><span class="p">)):</span>
+                <span class="n">features</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">features</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>
+
+            <span class="n">tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">features</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
+
+        <span class="c1"># 배치로 묶기</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">inference</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;추론 수행&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">outputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">probabilities</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">softmax</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">probabilities</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">postprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;출력 후처리&quot;&quot;&quot;</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">prob</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">prob_list</span> <span class="o">=</span> <span class="n">prob</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="n">prediction</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">prob</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+
+            <span class="n">result</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;prediction&quot;</span><span class="p">:</span> <span class="n">prediction</span><span class="p">,</span>
+                <span class="s2">&quot;probabilities&quot;</span><span class="p">:</span> <span class="n">prob_list</span>
+            <span class="p">}</span>
+
+            <span class="c1"># 클래스 이름 추가</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_names</span><span class="p">:</span>
+                <span class="n">result</span><span class="p">[</span><span class="s2">&quot;class_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_names</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">prediction</span><span class="p">))</span>
+
+            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">results</span>
+</code></pre></div>
+
+<h3 id="22">2.2 이미지 분류 핸들러<a class="header-link" href="#22" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">image_classifier_handler.py - 이미지 분류 핸들러</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn.functional</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">F</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torchvision</span><span class="w"> </span><span class="kn">import</span> <span class="n">transforms</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ts.torch_handler.vision_handler</span><span class="w"> </span><span class="kn">import</span> <span class="n">VisionHandler</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">base64</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ImageClassifierHandler</span><span class="p">(</span><span class="n">VisionHandler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;이미지 분류 핸들러&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transform</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">Compose</span><span class="p">([</span>
+            <span class="n">transforms</span><span class="o">.</span><span class="n">Resize</span><span class="p">(</span><span class="mi">256</span><span class="p">),</span>
+            <span class="n">transforms</span><span class="o">.</span><span class="n">CenterCrop</span><span class="p">(</span><span class="mi">224</span><span class="p">),</span>
+            <span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">(),</span>
+            <span class="n">transforms</span><span class="o">.</span><span class="n">Normalize</span><span class="p">(</span>
+                <span class="n">mean</span><span class="o">=</span><span class="p">[</span><span class="mf">0.485</span><span class="p">,</span> <span class="mf">0.456</span><span class="p">,</span> <span class="mf">0.406</span><span class="p">],</span>
+                <span class="n">std</span><span class="o">=</span><span class="p">[</span><span class="mf">0.229</span><span class="p">,</span> <span class="mf">0.224</span><span class="p">,</span> <span class="mf">0.225</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="p">])</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">preprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;이미지 전처리&quot;&quot;&quot;</span>
+        <span class="n">images</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">image_data</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;body&quot;</span><span class="p">)</span>
+
+            <span class="c1"># Base64 디코딩</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">image_data</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">image_data</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">image_data</span><span class="p">)</span>
+
+            <span class="c1"># 이미지 로드</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">image_data</span><span class="p">))</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;RGB&quot;</span><span class="p">)</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+            <span class="n">images</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">images</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">postprocess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;결과 후처리&quot;&quot;&quot;</span>
+        <span class="n">probabilities</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">softmax</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">top_k</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">topk</span><span class="p">(</span><span class="n">probabilities</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">probs</span><span class="p">,</span> <span class="n">indices</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">top_k</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">top_k</span><span class="o">.</span><span class="n">indices</span><span class="p">):</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;predictions&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;class_id&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">idx</span><span class="p">),</span>
+                        <span class="s2">&quot;class_name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">idx</span><span class="p">)),</span> <span class="s2">&quot;unknown&quot;</span><span class="p">),</span>
+                        <span class="s2">&quot;probability&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">prob</span><span class="p">)</span>
+                    <span class="p">}</span>
+                    <span class="k">for</span> <span class="n">prob</span><span class="p">,</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">probs</span><span class="p">,</span> <span class="n">indices</span><span class="p">)</span>
+                <span class="p">]</span>
+            <span class="p">}</span>
+            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">results</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3">3. 모델 아카이브 및 배포<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="31">3.1 모델 아카이브 생성<a class="header-link" href="#31" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 모델을 TorchScript로 저장</span>
+python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
+<span class="s2">import torch</span>
+<span class="s2">model = YourModel()</span>
+<span class="s2">model.load_state_dict(torch.load(&#39;model_weights.pth&#39;))</span>
+<span class="s2">model.eval()</span>
+<span class="s2">scripted = torch.jit.script(model)</span>
+<span class="s2">scripted.save(&#39;model.pt&#39;)</span>
+<span class="s2">&quot;</span>
+
+<span class="c1"># MAR 파일 생성</span>
+torch-model-archiver<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--model-name<span class="w"> </span>my_model<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--version<span class="w"> </span><span class="m">1</span>.0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--serialized-file<span class="w"> </span>model.pt<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--handler<span class="w"> </span>custom_handler.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--extra-files<span class="w"> </span><span class="s2">&quot;index_to_name.json,config.json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--export-path<span class="w"> </span>model_store
+
+<span class="c1"># 생성된 파일: model_store/my_model.mar</span>
+</code></pre></div>
+
+<h3 id="32-torchserve">3.2 TorchServe 시작<a class="header-link" href="#32-torchserve" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 기본 시작</span>
+torchserve<span class="w"> </span>--start<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--model-store<span class="w"> </span>model_store<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--models<span class="w"> </span><span class="nv">my_model</span><span class="o">=</span>my_model.mar
+
+<span class="c1"># 설정 파일과 함께</span>
+torchserve<span class="w"> </span>--start<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--model-store<span class="w"> </span>model_store<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--models<span class="w"> </span><span class="nv">my_model</span><span class="o">=</span>my_model.mar<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--ts-config<span class="w"> </span>config.properties
+
+<span class="c1"># Docker로 실행</span>
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--name<span class="w"> </span>torchserve<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-p<span class="w"> </span><span class="m">8080</span>:8080<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-p<span class="w"> </span><span class="m">8081</span>:8081<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-p<span class="w"> </span><span class="m">8082</span>:8082<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/model_store:/home/model-server/model-store<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>pytorch/torchserve:latest<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>torchserve<span class="w"> </span>--start<span class="w"> </span>--model-store<span class="w"> </span>/home/model-server/model-store
+</code></pre></div>
+
+<h3 id="33">3.3 설정 파일<a class="header-link" href="#33" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># config.properties</span>
+<span class="na">inference_address</span><span class="o">=</span><span class="s">http://0.0.0.0:8080</span>
+<span class="na">management_address</span><span class="o">=</span><span class="s">http://0.0.0.0:8081</span>
+<span class="na">metrics_address</span><span class="o">=</span><span class="s">http://0.0.0.0:8082</span>
+
+<span class="c1"># 워커 설정</span>
+<span class="na">default_workers_per_model</span><span class="o">=</span><span class="s">4</span>
+<span class="na">job_queue_size</span><span class="o">=</span><span class="s">1000</span>
+
+<span class="c1"># 배치 설정</span>
+<span class="na">max_batch_delay</span><span class="o">=</span><span class="s">100</span>
+<span class="na">batch_size</span><span class="o">=</span><span class="s">32</span>
+
+<span class="c1"># GPU 설정</span>
+<span class="na">number_of_gpu</span><span class="o">=</span><span class="s">1</span>
+
+<span class="c1"># 모델 설정</span>
+<span class="na">model_store</span><span class="o">=</span><span class="s">/home/model-server/model-store</span>
+<span class="na">load_models</span><span class="o">=</span><span class="s">my_model.mar</span>
+</code></pre></div>
+
+<h3 id="34-api">3.4 API 호출<a class="header-link" href="#34-api" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">TorchServe API 호출</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+
+<span class="c1"># 예측 요청</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+        <span class="s2">&quot;http://localhost:8080/predictions/my_model&quot;</span><span class="p">,</span>
+        <span class="n">json</span><span class="o">=</span><span class="n">data</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+<span class="c1"># 단일 예측</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">predict</span><span class="p">({</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">]})</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+<span class="c1"># 배치 예측</span>
+<span class="n">batch_data</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">]},</span>
+    <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">,</span> <span class="mf">7.0</span><span class="p">,</span> <span class="mf">8.0</span><span class="p">]}</span>
+<span class="p">]</span>
+<span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">predict</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">batch_data</span><span class="p">]</span>
+
+<span class="c1"># 관리 API</span>
+<span class="c1"># 모델 목록</span>
+<span class="n">models</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;http://localhost:8081/models&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+<span class="c1"># 모델 상세 정보</span>
+<span class="n">model_info</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;http://localhost:8081/models/my_model&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+<span class="c1"># 워커 스케일링</span>
+<span class="n">requests</span><span class="o">.</span><span class="n">put</span><span class="p">(</span>
+    <span class="s2">&quot;http://localhost:8081/models/my_model&quot;</span><span class="p">,</span>
+    <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;min_worker&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;max_worker&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">}</span>
+<span class="p">)</span>
+
+<span class="c1"># 모델 등록</span>
+<span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+    <span class="s2">&quot;http://localhost:8081/models&quot;</span><span class="p">,</span>
+    <span class="n">params</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="s2">&quot;my_model_v2.mar&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;initial_workers&quot;</span><span class="p">:</span> <span class="mi">2</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-triton-inference-server">4. Triton Inference Server<a class="header-link" href="#4-triton-inference-server" title="Permanent link">&para;</a></h2>
+<h3 id="41-triton">4.1 Triton 개요<a class="header-link" href="#41-triton" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────────┐
+│                   Triton Inference Server                           │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│   지원 프레임워크:                                                   │
+│   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐              │
+│   │ PyTorch  │ │TensorFlow│ │   ONNX   │ │ TensorRT │              │
+│   └──────────┘ └──────────┘ └──────────┘ └──────────┘              │
+│   ┌──────────┐ ┌──────────┐ ┌──────────┐                           │
+│   │  Python  │ │   DALI   │ │   vLLM   │                           │
+│   └──────────┘ └──────────┘ └──────────┘                           │
+│                                                                     │
+│   주요 기능:                                                        │
+│   - 동적 배칭 (Dynamic Batching)                                    │
+│   - 모델 앙상블                                                     │
+│   - 멀티 모델 서빙                                                  │
+│   - GPU 스케줄링                                                    │
+│   - 모델 버전 관리                                                  │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="42">4.2 모델 저장소 구조<a class="header-link" href="#42" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>model_repository/
+├── model_a/
+│   ├── config.pbtxt
+│   ├── 1/
+│   │   └── model.onnx
+│   └── 2/
+│       └── model.onnx
+├── model_b/
+│   ├── config.pbtxt
+│   └── 1/
+│       └── model.pt
+└── ensemble_model/
+    └── config.pbtxt
+</code></pre></div>
+
+<h3 id="43">4.3 모델 설정<a class="header-link" href="#43" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">#</span><span class="w"> </span><span class="n">config.pbtxt</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">ONNX</span><span class="w"> </span><span class="err">모델</span>
+<span class="n">name</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;churn_predictor&quot;</span>
+<span class="n">platform</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;onnxruntime_onnx&quot;</span>
+<span class="n">max_batch_size</span><span class="o">:</span><span class="w"> </span><span class="mi">32</span>
+
+<span class="n">input</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">name</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;input&quot;</span>
+<span class="w">    </span><span class="n">data_type</span><span class="o">:</span><span class="w"> </span><span class="n">TYPE_FP32</span>
+<span class="w">    </span><span class="n">dims</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">]</span>
+
+<span class="n">output</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">name</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;output&quot;</span>
+<span class="w">    </span><span class="n">data_type</span><span class="o">:</span><span class="w"> </span><span class="n">TYPE_FP32</span>
+<span class="w">    </span><span class="n">dims</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">]</span>
+
+<span class="n">instance_group</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">count</span><span class="o">:</span><span class="w"> </span><span class="mi">2</span>
+<span class="w">    </span><span class="n">kind</span><span class="o">:</span><span class="w"> </span><span class="n">KIND_GPU</span>
+<span class="w">    </span><span class="n">gpus</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">]</span>
+
+<span class="n">dynamic_batching</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">preferred_batch_size</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span><span class="w"> </span><span class="mi">32</span><span class="p">]</span>
+<span class="w">  </span><span class="n">max_queue_delay_microseconds</span><span class="o">:</span><span class="w"> </span><span class="mi">100</span>
+<span class="p">}</span>
+
+<span class="err">#</span><span class="w"> </span><span class="err">버전</span><span class="w"> </span><span class="err">정책</span>
+<span class="n">version_policy</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">latest</span><span class="o">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">num_versions</span><span class="o">:</span><span class="w"> </span><span class="mi">2</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="err">#</span><span class="w"> </span><span class="n">config.pbtxt</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">PyTorch</span><span class="w"> </span><span class="err">모델</span>
+<span class="n">name</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;image_classifier&quot;</span>
+<span class="n">platform</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;pytorch_libtorch&quot;</span>
+<span class="n">max_batch_size</span><span class="o">:</span><span class="w"> </span><span class="mi">64</span>
+
+<span class="n">input</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">name</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;input__0&quot;</span>
+<span class="w">    </span><span class="n">data_type</span><span class="o">:</span><span class="w"> </span><span class="n">TYPE_FP32</span>
+<span class="w">    </span><span class="n">dims</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">224</span><span class="p">,</span><span class="w"> </span><span class="mi">224</span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">]</span>
+
+<span class="n">output</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">name</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;output__0&quot;</span>
+<span class="w">    </span><span class="n">data_type</span><span class="o">:</span><span class="w"> </span><span class="n">TYPE_FP32</span>
+<span class="w">    </span><span class="n">dims</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1000</span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">]</span>
+
+<span class="n">instance_group</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">count</span><span class="o">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">    </span><span class="n">kind</span><span class="o">:</span><span class="w"> </span><span class="n">KIND_GPU</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">]</span>
+</code></pre></div>
+
+<h3 id="44-triton">4.4 Triton 실행<a class="header-link" href="#44-triton" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Docker로 실행</span>
+docker<span class="w"> </span>run<span class="w"> </span>--gpus<span class="w"> </span>all<span class="w"> </span>-d<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--name<span class="w"> </span>triton<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-p<span class="w"> </span><span class="m">8000</span>:8000<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-p<span class="w"> </span><span class="m">8001</span>:8001<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-p<span class="w"> </span><span class="m">8002</span>:8002<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-v<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/model_repository:/models<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>nvcr.io/nvidia/tritonserver:23.10-py3<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>tritonserver<span class="w"> </span>--model-repository<span class="o">=</span>/models
+
+<span class="c1"># 헬스 체크</span>
+curl<span class="w"> </span>-v<span class="w"> </span>localhost:8000/v2/health/ready
+
+<span class="c1"># 모델 메타데이터</span>
+curl<span class="w"> </span>localhost:8000/v2/models/churn_predictor
+</code></pre></div>
+
+<h3 id="45-python">4.5 Python 클라이언트<a class="header-link" href="#45-python" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Triton Python 클라이언트</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tritonclient.http</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">httpclient</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tritonclient.grpc</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">grpcclient</span>
+
+<span class="c1"># HTTP 클라이언트</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">triton_http_inference</span><span class="p">(</span><span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">input_data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;HTTP를 통한 추론&quot;&quot;&quot;</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">httpclient</span><span class="o">.</span><span class="n">InferenceServerClient</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">&quot;localhost:8000&quot;</span><span class="p">)</span>
+
+    <span class="c1"># 입력 설정</span>
+    <span class="n">inputs</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">httpclient</span><span class="o">.</span><span class="n">InferInput</span><span class="p">(</span><span class="s2">&quot;input&quot;</span><span class="p">,</span> <span class="n">input_data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="s2">&quot;FP32&quot;</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_data_from_numpy</span><span class="p">(</span><span class="n">input_data</span><span class="p">)</span>
+
+    <span class="c1"># 출력 설정</span>
+    <span class="n">outputs</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">httpclient</span><span class="o">.</span><span class="n">InferRequestedOutput</span><span class="p">(</span><span class="s2">&quot;output&quot;</span><span class="p">)</span>
+    <span class="p">]</span>
+
+    <span class="c1"># 추론</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">infer</span><span class="p">(</span>
+        <span class="n">model_name</span><span class="o">=</span><span class="n">model_name</span><span class="p">,</span>
+        <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span>
+        <span class="n">outputs</span><span class="o">=</span><span class="n">outputs</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">as_numpy</span><span class="p">(</span><span class="s2">&quot;output&quot;</span><span class="p">)</span>
+
+<span class="c1"># gRPC 클라이언트 (더 빠름)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">triton_grpc_inference</span><span class="p">(</span><span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">input_data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;gRPC를 통한 추론&quot;&quot;&quot;</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">grpcclient</span><span class="o">.</span><span class="n">InferenceServerClient</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">&quot;localhost:8001&quot;</span><span class="p">)</span>
+
+    <span class="n">inputs</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">grpcclient</span><span class="o">.</span><span class="n">InferInput</span><span class="p">(</span><span class="s2">&quot;input&quot;</span><span class="p">,</span> <span class="n">input_data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="s2">&quot;FP32&quot;</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_data_from_numpy</span><span class="p">(</span><span class="n">input_data</span><span class="p">)</span>
+
+    <span class="n">outputs</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">grpcclient</span><span class="o">.</span><span class="n">InferRequestedOutput</span><span class="p">(</span><span class="s2">&quot;output&quot;</span><span class="p">)</span>
+    <span class="p">]</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">infer</span><span class="p">(</span>
+        <span class="n">model_name</span><span class="o">=</span><span class="n">model_name</span><span class="p">,</span>
+        <span class="n">inputs</span><span class="o">=</span><span class="n">inputs</span><span class="p">,</span>
+        <span class="n">outputs</span><span class="o">=</span><span class="n">outputs</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">as_numpy</span><span class="p">(</span><span class="s2">&quot;output&quot;</span><span class="p">)</span>
+
+<span class="c1"># 사용 예시</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">triton_http_inference</span><span class="p">(</span><span class="s2">&quot;churn_predictor&quot;</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Predictions: </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 모델 최적화<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="51-onnx">5.1 ONNX 변환<a class="header-link" href="#51-onnx" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">PyTorch 모델을 ONNX로 변환</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.onnx</span>
+
+<span class="c1"># 모델 로드</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">YourModel</span><span class="p">()</span>
+<span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;model.pth&quot;</span><span class="p">))</span>
+<span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+
+<span class="c1"># 더미 입력</span>
+<span class="n">dummy_input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+
+<span class="c1"># ONNX로 내보내기</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">onnx</span><span class="o">.</span><span class="n">export</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">,</span>
+    <span class="n">dummy_input</span><span class="p">,</span>
+    <span class="s2">&quot;model.onnx&quot;</span><span class="p">,</span>
+    <span class="n">export_params</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">opset_version</span><span class="o">=</span><span class="mi">13</span><span class="p">,</span>
+    <span class="n">do_constant_folding</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">input_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;input&quot;</span><span class="p">],</span>
+    <span class="n">output_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;output&quot;</span><span class="p">],</span>
+    <span class="n">dynamic_axes</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;input&quot;</span><span class="p">:</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s2">&quot;batch_size&quot;</span><span class="p">},</span>
+        <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="s2">&quot;batch_size&quot;</span><span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+
+<span class="c1"># ONNX 모델 검증</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">onnx</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">onnxruntime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ort</span>
+
+<span class="n">onnx_model</span> <span class="o">=</span> <span class="n">onnx</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;model.onnx&quot;</span><span class="p">)</span>
+<span class="n">onnx</span><span class="o">.</span><span class="n">checker</span><span class="o">.</span><span class="n">check_model</span><span class="p">(</span><span class="n">onnx_model</span><span class="p">)</span>
+
+<span class="c1"># 추론 테스트</span>
+<span class="n">session</span> <span class="o">=</span> <span class="n">ort</span><span class="o">.</span><span class="n">InferenceSession</span><span class="p">(</span><span class="s2">&quot;model.onnx&quot;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+    <span class="kc">None</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;input&quot;</span><span class="p">:</span> <span class="n">dummy_input</span><span class="o">.</span><span class="n">numpy</span><span class="p">()}</span>
+<span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ONNX output: </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="52-tensorrt">5.2 TensorRT 최적화<a class="header-link" href="#52-tensorrt" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">TensorRT 최적화</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">tensorrt</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">trt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pycuda.driver</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cuda</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pycuda.autoinit</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">build_engine</span><span class="p">(</span><span class="n">onnx_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">engine_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;ONNX에서 TensorRT 엔진 빌드&quot;&quot;&quot;</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">trt</span><span class="o">.</span><span class="n">Logger</span><span class="p">(</span><span class="n">trt</span><span class="o">.</span><span class="n">Logger</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+    <span class="n">builder</span> <span class="o">=</span> <span class="n">trt</span><span class="o">.</span><span class="n">Builder</span><span class="p">(</span><span class="n">logger</span><span class="p">)</span>
+    <span class="n">network</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">create_network</span><span class="p">(</span>
+        <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="nb">int</span><span class="p">(</span><span class="n">trt</span><span class="o">.</span><span class="n">NetworkDefinitionCreationFlag</span><span class="o">.</span><span class="n">EXPLICIT_BATCH</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">trt</span><span class="o">.</span><span class="n">OnnxParser</span><span class="p">(</span><span class="n">network</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+
+    <span class="c1"># ONNX 파싱</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">onnx_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()):</span>
+            <span class="k">for</span> <span class="n">error</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">num_errors</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">parser</span><span class="o">.</span><span class="n">get_error</span><span class="p">(</span><span class="n">error</span><span class="p">))</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="c1"># 빌더 설정</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">create_builder_config</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">set_memory_pool_limit</span><span class="p">(</span><span class="n">trt</span><span class="o">.</span><span class="n">MemoryPoolType</span><span class="o">.</span><span class="n">WORKSPACE</span><span class="p">,</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="mi">30</span><span class="p">)</span>  <span class="c1"># 1GB</span>
+
+    <span class="c1"># FP16 최적화 (지원되는 경우)</span>
+    <span class="k">if</span> <span class="n">builder</span><span class="o">.</span><span class="n">platform_has_fast_fp16</span><span class="p">:</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">set_flag</span><span class="p">(</span><span class="n">trt</span><span class="o">.</span><span class="n">BuilderFlag</span><span class="o">.</span><span class="n">FP16</span><span class="p">)</span>
+
+    <span class="c1"># 동적 배치 설정</span>
+    <span class="n">profile</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">create_optimization_profile</span><span class="p">()</span>
+    <span class="n">profile</span><span class="o">.</span><span class="n">set_shape</span><span class="p">(</span><span class="s2">&quot;input&quot;</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>  <span class="c1"># min, opt, max</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_optimization_profile</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+
+    <span class="c1"># 엔진 빌드</span>
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">build_serialized_network</span><span class="p">(</span><span class="n">network</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+
+    <span class="c1"># 저장</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">engine_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">engine</span>
+
+<span class="c1"># 엔진 빌드</span>
+<span class="n">build_engine</span><span class="p">(</span><span class="s2">&quot;model.onnx&quot;</span><span class="p">,</span> <span class="s2">&quot;model.engine&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="53">5.3 양자화<a class="header-link" href="#53" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">모델 양자화</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.quantization</span><span class="w"> </span><span class="kn">import</span> <span class="n">quantize_dynamic</span><span class="p">,</span> <span class="n">quantize_static</span>
+
+<span class="c1"># 동적 양자화 (가장 간단)</span>
+<span class="n">model_int8</span> <span class="o">=</span> <span class="n">quantize_dynamic</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">,</span>
+    <span class="p">{</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">},</span>  <span class="c1"># 양자화할 레이어 타입</span>
+    <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">qint8</span>
+<span class="p">)</span>
+
+<span class="c1"># 정적 양자화 (더 좋은 성능)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">qconfig</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">quantization</span><span class="o">.</span><span class="n">get_default_qconfig</span><span class="p">(</span><span class="s2">&quot;fbgemm&quot;</span><span class="p">)</span>
+<span class="n">model_prepared</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">quantization</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+
+<span class="c1"># 캘리브레이션 (대표 데이터로)</span>
+<span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">calibration_data</span><span class="p">:</span>
+        <span class="n">model_prepared</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+<span class="n">model_quantized</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">quantization</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">model_prepared</span><span class="p">)</span>
+
+<span class="c1"># 크기 비교</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="s2">&quot;model_fp32.pth&quot;</span><span class="p">)</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">model_quantized</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="s2">&quot;model_int8.pth&quot;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;FP32 size: </span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getsize</span><span class="p">(</span><span class="s1">&#39;model_fp32.pth&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1e6</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> MB&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;INT8 size: </span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">getsize</span><span class="p">(</span><span class="s1">&#39;model_int8.pth&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">1e6</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> MB&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 멀티모델 서빙<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="61-triton">6.1 Triton 앙상블<a class="header-link" href="#61-triton" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">#</span><span class="w"> </span><span class="n">ensemble_model</span><span class="o">/</span><span class="n">config.pbtxt</span>
+<span class="n">name</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;ensemble_pipeline&quot;</span>
+<span class="n">platform</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;ensemble&quot;</span>
+<span class="n">max_batch_size</span><span class="o">:</span><span class="w"> </span><span class="mi">32</span>
+
+<span class="n">input</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">name</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;raw_input&quot;</span>
+<span class="w">    </span><span class="n">data_type</span><span class="o">:</span><span class="w"> </span><span class="n">TYPE_FP32</span>
+<span class="w">    </span><span class="n">dims</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">]</span>
+
+<span class="n">output</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="n">name</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;final_output&quot;</span>
+<span class="w">    </span><span class="n">data_type</span><span class="o">:</span><span class="w"> </span><span class="n">TYPE_FP32</span>
+<span class="w">    </span><span class="n">dims</span><span class="o">:</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">]</span>
+
+<span class="n">ensemble_scheduling</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">step</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="n">model_name</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;preprocessor&quot;</span>
+<span class="w">      </span><span class="n">model_version</span><span class="o">:</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span>
+<span class="w">      </span><span class="n">input_map</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">key</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;raw_input&quot;</span>
+<span class="w">        </span><span class="n">value</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;raw_input&quot;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">      </span><span class="n">output_map</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">key</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;processed_output&quot;</span>
+<span class="w">        </span><span class="n">value</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;processed&quot;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="n">model_name</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;classifier&quot;</span>
+<span class="w">      </span><span class="n">model_version</span><span class="o">:</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span>
+<span class="w">      </span><span class="n">input_map</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">key</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;processed&quot;</span>
+<span class="w">        </span><span class="n">value</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;input&quot;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">      </span><span class="n">output_map</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">key</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;output&quot;</span>
+<span class="w">        </span><span class="n">value</span><span class="o">:</span><span class="w"> </span><span class="s">&quot;final_output&quot;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="62-ab">6.2 A/B 테스트<a class="header-link" href="#62-ab" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">TorchServe A/B 테스트 설정</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ABTestRouter</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A/B 테스트 라우터&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_a</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model_b</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">traffic_split</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_a</span> <span class="o">=</span> <span class="n">model_a</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_b</span> <span class="o">=</span> <span class="n">model_b</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">traffic_split</span> <span class="o">=</span> <span class="n">traffic_split</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base_url</span> <span class="o">=</span> <span class="s2">&quot;http://localhost:8080/predictions&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;A/B 분배된 예측&quot;&quot;&quot;</span>
+        <span class="c1"># 트래픽 분배</span>
+        <span class="k">if</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">traffic_split</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_a</span>
+            <span class="n">variant</span> <span class="o">=</span> <span class="s2">&quot;A&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_b</span>
+            <span class="n">variant</span> <span class="o">=</span> <span class="s2">&quot;B&quot;</span>
+
+        <span class="c1"># 예측</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">base_url</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">json</span><span class="o">=</span><span class="n">data</span>
+        <span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;variant&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">variant</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
+
+        <span class="k">return</span> <span class="n">result</span>
+
+<span class="c1"># 사용</span>
+<span class="n">router</span> <span class="o">=</span> <span class="n">ABTestRouter</span><span class="p">(</span><span class="s2">&quot;model_v1&quot;</span><span class="p">,</span> <span class="s2">&quot;model_v2&quot;</span><span class="p">,</span> <span class="n">traffic_split</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">router</span><span class="o">.</span><span class="n">predict</span><span class="p">({</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">]})</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_1">연습 문제<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<h3 id="1-torchserve_1">문제 1: TorchServe 배포<a class="header-link" href="#1-torchserve_1" title="Permanent link">&para;</a></h3>
+<p>PyTorch 이미지 분류 모델을 TorchServe로 배포하세요.</p>
+<h3 id="2-onnx">문제 2: ONNX 변환<a class="header-link" href="#2-onnx" title="Permanent link">&para;</a></h3>
+<p>PyTorch 모델을 ONNX로 변환하고 Triton에서 서빙하세요.</p>
+<h3 id="3_1">문제 3: 성능 최적화<a class="header-link" href="#3_1" title="Permanent link">&para;</a></h3>
+<p>TensorRT로 모델을 최적화하고 추론 속도를 비교하세요.</p>
+<hr />
+<h2 id="_2">요약<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>도구</th>
+<th>장점</th>
+<th>적합한 상황</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TorchServe</td>
+<td>PyTorch 네이티브, 간단</td>
+<td>PyTorch 모델</td>
+</tr>
+<tr>
+<td>Triton</td>
+<td>멀티 프레임워크, 고성능</td>
+<td>복잡한 요구사항</td>
+</tr>
+<tr>
+<td>ONNX Runtime</td>
+<td>범용, 크로스 플랫폼</td>
+<td>경량 배포</td>
+</tr>
+<tr>
+<td>TensorRT</td>
+<td>GPU 최적화</td>
+<td>최고 성능 필요</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_3">참고 자료<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://pytorch.org/serve/">TorchServe Documentation</a></li>
+<li><a href="https://docs.nvidia.com/deeplearning/triton-inference-server/">Triton Inference Server</a></li>
+<li><a href="https://onnxruntime.ai/">ONNX Runtime</a></li>
+<li><a href="https://developer.nvidia.com/tensorrt">TensorRT</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/MLOps/08_Model_Serving_Basics.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">모델 서빙 기초</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/MLOps/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/MLOps/10_Drift_Detection_Monitoring.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">드리프트 감지 & 모니터링</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

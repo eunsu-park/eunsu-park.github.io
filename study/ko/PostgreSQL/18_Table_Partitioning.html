@@ -1,0 +1,868 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>18. 테이블 파티셔닝 (Table Partitioning) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/PostgreSQL/">PostgreSQL</a>
+    <span class="separator">/</span>
+    <span class="current">18. 테이블 파티셔닝 (Table Partitioning)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>18. 테이블 파티셔닝 (Table Partitioning)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/PostgreSQL/17_Window_Functions.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">17. 윈도우 함수와 분석 쿼리 (Window Functions & Analytics)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/PostgreSQL/19_Full_Text_Search.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">19. 전문 검색(Full-Text Search)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#_2">목차</a></li>
+<li><a href="#1">1. 파티셔닝 개요</a><ul>
+<li><a href="#11">1.1 파티셔닝이란?</a></li>
+<li><a href="#12">1.2 파티셔닝의 장점</a></li>
+<li><a href="#13">1.3 파티셔닝 유형</a></li>
+</ul>
+</li>
+<li><a href="#2-range">2. Range 파티셔닝</a><ul>
+<li><a href="#21">2.1 기본 구조</a></li>
+<li><a href="#22">2.2 인덱스 생성</a></li>
+<li><a href="#23-primary-key-unique">2.3 PRIMARY KEY와 UNIQUE 제약</a></li>
+<li><a href="#24">2.4 분기별 파티셔닝 예시</a></li>
+</ul>
+</li>
+<li><a href="#3-list">3. List 파티셔닝</a><ul>
+<li><a href="#31">3.1 지역별 파티셔닝</a></li>
+<li><a href="#32">3.2 상태별 파티셔닝</a></li>
+<li><a href="#33-list">3.3 다중 컬럼 List 파티셔닝</a></li>
+</ul>
+</li>
+<li><a href="#4-hash">4. Hash 파티셔닝</a><ul>
+<li><a href="#41-hash">4.1 기본 Hash 파티셔닝</a></li>
+<li><a href="#42-hash">4.2 Hash 파티션 생성 자동화</a></li>
+<li><a href="#43-hash-vs-rangelist">4.3 Hash vs Range/List 선택 기준</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 파티션 프루닝</a><ul>
+<li><a href="#51">5.1 프루닝 동작 확인</a></li>
+<li><a href="#52">5.2 프루닝 설정</a></li>
+<li><a href="#53">5.3 프루닝이 작동하지 않는 경우</a></li>
+<li><a href="#54">5.4 파티션 제외 힌트</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 파티션 관리</a><ul>
+<li><a href="#61">6.1 파티션 추가</a></li>
+<li><a href="#62">6.2 파티션 분리 및 삭제</a></li>
+<li><a href="#63">6.3 자동 파티션 생성</a></li>
+<li><a href="#64-pg_cron">6.4 pg_cron을 사용한 자동화</a></li>
+<li><a href="#65">6.5 파티션 정보 조회</a></li>
+<li><a href="#66">6.6 기존 테이블 파티션 변환</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 연습 문제</a><ul>
+<li><a href="#1_1">연습 1: 월별 로그 파티셔닝</a></li>
+<li><a href="#2">연습 2: 지역별 주문 파티셔닝</a></li>
+<li><a href="#3">연습 3: 파티션 유지보수 쿼리</a></li>
+</ul>
+</li>
+<li><a href="#_3">다음 단계</a></li>
+<li><a href="#_4">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="18-table-partitioning">18. 테이블 파티셔닝 (Table Partitioning)<a class="header-link" href="#18-table-partitioning" title="Permanent link">&para;</a></h1>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>파티셔닝의 개념과 필요성 이해</li>
+<li>PostgreSQL의 선언적 파티셔닝 활용</li>
+<li>Range, List, Hash 파티셔닝 구현</li>
+<li>파티션 프루닝과 성능 최적화</li>
+<li>파티션 유지보수 자동화</li>
+</ul>
+<h2 id="_2">목차<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-파티셔닝-개요">파티셔닝 개요</a></li>
+<li><a href="#2-range-파티셔닝">Range 파티셔닝</a></li>
+<li><a href="#3-list-파티셔닝">List 파티셔닝</a></li>
+<li><a href="#4-hash-파티셔닝">Hash 파티셔닝</a></li>
+<li><a href="#5-파티션-프루닝">파티션 프루닝</a></li>
+<li><a href="#6-파티션-관리">파티션 관리</a></li>
+<li><a href="#7-연습-문제">연습 문제</a></li>
+</ol>
+<hr />
+<h2 id="1">1. 파티셔닝 개요<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="11">1.1 파티셔닝이란?<a class="header-link" href="#11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    테이블 파티셔닝 개념                          │
+│                                                                 │
+│   일반 테이블                   파티션 테이블                    │
+│   ┌───────────────┐            ┌───────────────┐               │
+│   │   orders      │            │ orders (부모) │               │
+│   │   (1억 행)    │            └───────┬───────┘               │
+│   │               │                    │                       │
+│   │   모든 데이터 │            ┌───────┼───────┐               │
+│   │   하나의 파일 │            │       │       │               │
+│   └───────────────┘        ┌───┴───┐ ┌─┴──┐ ┌──┴──┐           │
+│                            │2024_Q1│ │Q2  │ │ Q3  │ ...       │
+│                            │2500만 │ │    │ │     │           │
+│                            └───────┘ └────┘ └─────┘           │
+│                            (분할 저장)                         │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="12">1.2 파티셔닝의 장점<a class="header-link" href="#12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────┬───────────────────────────────────────────────┐
+│ 장점            │ 설명                                           │
+├─────────────────┼───────────────────────────────────────────────┤
+│ 쿼리 성능       │ 파티션 프루닝으로 스캔 범위 축소               │
+│ 유지보수 용이   │ 파티션 단위로 VACUUM, 백업, 삭제 가능          │
+│ 데이터 아카이빙 │ 오래된 파티션을 별도 테이블스페이스로 이동     │
+│ 대량 삭제       │ DROP PARTITION으로 빠른 삭제 (DELETE 대비)     │
+│ 인덱스 크기     │ 파티션별 작은 인덱스 (메모리 효율)             │
+│ 병렬 처리       │ 파티션 단위 병렬 스캔 가능                     │
+└─────────────────┴───────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="13">1.3 파티셔닝 유형<a class="header-link" href="#13" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    파티셔닝 유형                                 │
+│                                                                 │
+│   Range: 연속 범위 기준                                         │
+│   ├── 날짜별 (월별, 분기별, 연도별)                             │
+│   └── 숫자 범위 (ID 범위, 금액 범위)                            │
+│                                                                 │
+│   List: 이산 값 목록 기준                                       │
+│   ├── 지역 (국가, 도시)                                        │
+│   ├── 상태 (활성, 비활성, 보류)                                 │
+│   └── 카테고리                                                  │
+│                                                                 │
+│   Hash: 해시 값 기준                                            │
+│   └── 균등 분산이 필요한 경우 (특정 기준 없음)                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="2-range">2. Range 파티셔닝<a class="header-link" href="#2-range" title="Permanent link">&para;</a></h2>
+<h3 id="21">2.1 기본 구조<a class="header-link" href="#21" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 부모 테이블 생성 (파티션 키 지정)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">BIGSERIAL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">customer_id</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">order_date</span><span class="w"> </span><span class="nb">DATE</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="w"> </span><span class="nb">NUMERIC</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">    </span><span class="n">status</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span>
+<span class="p">)</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">RANGE</span><span class="w"> </span><span class="p">(</span><span class="n">order_date</span><span class="p">);</span>
+
+<span class="c1">-- 파티션 생성 (월별)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders_2024_01</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">orders</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-02-01&#39;</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders_2024_02</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">orders</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-02-01&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-03-01&#39;</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders_2024_03</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">orders</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-03-01&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-04-01&#39;</span><span class="p">);</span>
+
+<span class="c1">-- 기본 파티션 (범위에 맞지 않는 데이터용)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders_default</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">DEFAULT</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="22">2.2 인덱스 생성<a class="header-link" href="#22" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 부모 테이블에 인덱스 생성 (자동으로 파티션에도 적용)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_orders_customer</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="p">(</span><span class="n">customer_id</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_orders_date</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="p">(</span><span class="n">order_date</span><span class="p">);</span>
+
+<span class="c1">-- 파티션별 개별 인덱스 확인</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">schemaname</span><span class="p">,</span>
+<span class="w">    </span><span class="n">tablename</span><span class="p">,</span>
+<span class="w">    </span><span class="n">indexname</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_indexes</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">tablename</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="s1">&#39;orders%&#39;</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="23-primary-key-unique">2.3 PRIMARY KEY와 UNIQUE 제약<a class="header-link" href="#23-primary-key-unique" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 파티션 테이블의 PK/UNIQUE는 파티션 키를 포함해야 함</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">BIGSERIAL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">order_date</span><span class="w"> </span><span class="nb">DATE</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">customer_id</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="w"> </span><span class="nb">NUMERIC</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">    </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">order_date</span><span class="p">)</span><span class="w">  </span><span class="c1">-- 파티션 키 포함</span>
+<span class="p">)</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">RANGE</span><span class="w"> </span><span class="p">(</span><span class="n">order_date</span><span class="p">);</span>
+
+<span class="c1">-- 복합 UNIQUE 제약</span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="k">CONSTRAINT</span><span class="w"> </span><span class="n">orders_unique</span>
+<span class="w">    </span><span class="k">UNIQUE</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">order_date</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="24">2.4 분기별 파티셔닝 예시<a class="header-link" href="#24" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 분기별 파티션</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">sales</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">BIGSERIAL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">sale_date</span><span class="w"> </span><span class="nb">DATE</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">product_id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="w"> </span><span class="nb">NUMERIC</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">    </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">sale_date</span><span class="p">)</span>
+<span class="p">)</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">RANGE</span><span class="w"> </span><span class="p">(</span><span class="n">sale_date</span><span class="p">);</span>
+
+<span class="c1">-- 2024년 분기별 파티션</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">sales_2024_q1</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">sales</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-04-01&#39;</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">sales_2024_q2</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">sales</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-04-01&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-07-01&#39;</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">sales_2024_q3</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">sales</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-07-01&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-10-01&#39;</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">sales_2024_q4</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">sales</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-10-01&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2025-01-01&#39;</span><span class="p">);</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-list">3. List 파티셔닝<a class="header-link" href="#3-list" title="Permanent link">&para;</a></h2>
+<h3 id="31">3.1 지역별 파티셔닝<a class="header-link" href="#31" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 지역별 파티션</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">customers</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">name</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span>
+<span class="w">    </span><span class="n">email</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">255</span><span class="p">),</span>
+<span class="w">    </span><span class="n">region</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="n">NOW</span><span class="p">(),</span>
+<span class="w">    </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">region</span><span class="p">)</span>
+<span class="p">)</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">LIST</span><span class="w"> </span><span class="p">(</span><span class="n">region</span><span class="p">);</span>
+
+<span class="c1">-- 대륙별 파티션</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">customers_asia</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">customers</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;KR&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;JP&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;CN&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;SG&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;IN&#39;</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">customers_europe</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">customers</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;UK&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;DE&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;FR&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;IT&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;ES&#39;</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">customers_americas</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">customers</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;US&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;CA&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;MX&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;BR&#39;</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">customers_others</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">customers</span><span class="w"> </span><span class="k">DEFAULT</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="32">3.2 상태별 파티셔닝<a class="header-link" href="#32" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 주문 상태별 파티션</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">order_items</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">BIGSERIAL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">order_id</span><span class="w"> </span><span class="nb">BIGINT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">status</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">product_id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">quantity</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span>
+<span class="w">    </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">status</span><span class="p">)</span>
+<span class="p">)</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">LIST</span><span class="w"> </span><span class="p">(</span><span class="n">status</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">order_items_pending</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">order_items</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;pending&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;processing&#39;</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">order_items_completed</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">order_items</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;shipped&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;delivered&#39;</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">order_items_cancelled</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">order_items</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;cancelled&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;refunded&#39;</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="33-list">3.3 다중 컬럼 List 파티셔닝<a class="header-link" href="#33-list" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- PostgreSQL 11+ 다중 컬럼 파티션</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">BIGSERIAL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">event_type</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">event_date</span><span class="w"> </span><span class="nb">DATE</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="k">data</span><span class="w"> </span><span class="n">JSONB</span><span class="p">,</span>
+<span class="w">    </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">event_type</span><span class="p">,</span><span class="w"> </span><span class="n">event_date</span><span class="p">)</span>
+<span class="p">)</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">LIST</span><span class="w"> </span><span class="p">(</span><span class="n">event_type</span><span class="p">);</span>
+
+<span class="c1">-- 이벤트 타입별 파티션 → 내부에서 Range 서브파티션</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">events_click</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">events</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;click&#39;</span><span class="p">)</span>
+<span class="w">    </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">RANGE</span><span class="w"> </span><span class="p">(</span><span class="n">event_date</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">events_click_2024_01</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">events_click</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-02-01&#39;</span><span class="p">);</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-hash">4. Hash 파티셔닝<a class="header-link" href="#4-hash" title="Permanent link">&para;</a></h2>
+<h3 id="41-hash">4.1 기본 Hash 파티셔닝<a class="header-link" href="#41-hash" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 해시 파티셔닝 (균등 분산)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">logs</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">BIGSERIAL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">user_id</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">action</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">50</span><span class="p">),</span>
+<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="n">NOW</span><span class="p">(),</span>
+<span class="w">    </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">user_id</span><span class="p">)</span>
+<span class="p">)</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">HASH</span><span class="w"> </span><span class="p">(</span><span class="n">user_id</span><span class="p">);</span>
+
+<span class="c1">-- 4개 파티션으로 분산</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">logs_p0</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">logs</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="p">(</span><span class="n">MODULUS</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="n">REMAINDER</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">logs_p1</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">logs</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="p">(</span><span class="n">MODULUS</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="n">REMAINDER</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">logs_p2</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">logs</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="p">(</span><span class="n">MODULUS</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="n">REMAINDER</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">logs_p3</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">logs</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="p">(</span><span class="n">MODULUS</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="n">REMAINDER</span><span class="w"> </span><span class="mi">3</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="42-hash">4.2 Hash 파티션 생성 자동화<a class="header-link" href="#42-hash" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 동적 파티션 생성 함수</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">FUNCTION</span><span class="w"> </span><span class="n">create_hash_partitions</span><span class="p">(</span>
+<span class="w">    </span><span class="n">parent_table</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">num_partitions</span><span class="w"> </span><span class="nb">INT</span>
+<span class="p">)</span><span class="w"> </span><span class="k">RETURNS</span><span class="w"> </span><span class="n">VOID</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">$$</span>
+<span class="k">DECLARE</span>
+<span class="w">    </span><span class="n">i</span><span class="w"> </span><span class="nb">INT</span><span class="p">;</span>
+<span class="k">BEGIN</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="mi">0</span><span class="p">..</span><span class="n">num_partitions</span><span class="o">-</span><span class="mi">1</span><span class="w"> </span><span class="n">LOOP</span>
+<span class="w">        </span><span class="k">EXECUTE</span><span class="w"> </span><span class="n">format</span><span class="p">(</span>
+<span class="w">            </span><span class="s1">&#39;CREATE TABLE %I PARTITION OF %I FOR VALUES WITH (MODULUS %s, REMAINDER %s)&#39;</span><span class="p">,</span>
+<span class="w">            </span><span class="n">parent_table</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;_p&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">i</span><span class="p">,</span>
+<span class="w">            </span><span class="n">parent_table</span><span class="p">,</span>
+<span class="w">            </span><span class="n">num_partitions</span><span class="p">,</span>
+<span class="w">            </span><span class="n">i</span>
+<span class="w">        </span><span class="p">);</span>
+<span class="w">    </span><span class="k">END</span><span class="w"> </span><span class="n">LOOP</span><span class="p">;</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="err">$$</span><span class="w"> </span><span class="k">LANGUAGE</span><span class="w"> </span><span class="n">plpgsql</span><span class="p">;</span>
+
+<span class="c1">-- 사용</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">create_hash_partitions</span><span class="p">(</span><span class="s1">&#39;logs&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="43-hash-vs-rangelist">4.3 Hash vs Range/List 선택 기준<a class="header-link" href="#43-hash-vs-rangelist" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    파티셔닝 유형 선택 가이드                      │
+│                                                                 │
+│   Range 선택:                                                   │
+│   - 시간 기반 데이터 (로그, 트랜잭션)                            │
+│   - 범위 쿼리가 빈번한 경우                                      │
+│   - 오래된 데이터 아카이빙/삭제 필요                             │
+│                                                                 │
+│   List 선택:                                                    │
+│   - 명확한 카테고리 구분                                        │
+│   - 지역, 상태, 타입 등 이산 값                                  │
+│   - 특정 카테고리만 자주 조회                                    │
+│                                                                 │
+│   Hash 선택:                                                    │
+│   - 명확한 분류 기준 없음                                        │
+│   - 데이터 균등 분산이 목표                                      │
+│   - 범위 쿼리가 필요 없음                                        │
+│   - 파티션 수가 고정                                             │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 파티션 프루닝<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="51">5.1 프루닝 동작 확인<a class="header-link" href="#51" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 실행 계획으로 프루닝 확인</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span><span class="w"> </span><span class="n">COSTS</span><span class="w"> </span><span class="k">OFF</span><span class="p">)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">order_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;2024-02-15&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 결과 예시:</span>
+<span class="c1">-- Append</span>
+<span class="c1">--   -&gt;  Seq Scan on orders_2024_02  -- 2월 파티션만 스캔</span>
+<span class="c1">--         Filter: (order_date = &#39;2024-02-15&#39;::date)</span>
+</code></pre></div>
+
+<h3 id="52">5.2 프루닝 설정<a class="header-link" href="#52" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 프루닝 활성화 확인</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">enable_partition_pruning</span><span class="p">;</span><span class="w">  </span><span class="c1">-- on (기본값)</span>
+
+<span class="c1">-- 런타임 프루닝 (조인, 서브쿼리에서)</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">enable_partition_pruning</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">on</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="53">5.3 프루닝이 작동하지 않는 경우<a class="header-link" href="#53" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 1. 함수 적용 시 프루닝 실패</span>
+<span class="c1">-- 나쁜 예</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">EXTRACT</span><span class="p">(</span><span class="k">YEAR</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">order_date</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2024</span><span class="p">;</span>
+
+<span class="c1">-- 좋은 예</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">order_date</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">order_date</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="s1">&#39;2025-01-01&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 2. 암시적 형변환</span>
+<span class="c1">-- 나쁜 예 (문자열 비교)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">order_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;2024-02-15&#39;</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 문자열</span>
+
+<span class="c1">-- 좋은 예 (명시적 타입)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">order_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">DATE</span><span class="w"> </span><span class="s1">&#39;2024-02-15&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 3. OR 조건의 부분적 프루닝</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">order_date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;2024-01-15&#39;</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">123</span><span class="p">;</span>
+<span class="c1">-- customer_id 조건이 모든 파티션 스캔 유발</span>
+</code></pre></div>
+
+<h3 id="54">5.4 파티션 제외 힌트<a class="header-link" href="#54" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 특정 파티션만 직접 쿼리</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders_2024_02</span><span class="w">  </span><span class="c1">-- 파티션 직접 참조</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">123</span><span class="p">;</span>
+
+<span class="c1">-- constraint_exclusion 설정</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">constraint_exclusion</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">partition</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 기본값</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 파티션 관리<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="61">6.1 파티션 추가<a class="header-link" href="#61" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 새 파티션 추가</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders_2024_04</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">orders</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-04-01&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-05-01&#39;</span><span class="p">);</span>
+
+<span class="c1">-- 또는 기존 테이블을 파티션으로 연결</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders_2024_05</span><span class="w"> </span><span class="p">(</span><span class="k">LIKE</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">INCLUDING</span><span class="w"> </span><span class="k">ALL</span><span class="p">);</span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">ATTACH</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="n">orders_2024_05</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-05-01&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-06-01&#39;</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="62">6.2 파티션 분리 및 삭제<a class="header-link" href="#62" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 파티션 분리 (데이터 보존, 독립 테이블로)</span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">DETACH</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="n">orders_2024_01</span><span class="p">;</span>
+
+<span class="c1">-- 분리된 테이블은 독립적으로 존재</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders_2024_01</span><span class="p">;</span>
+
+<span class="c1">-- 파티션 삭제 (데이터도 삭제)</span>
+<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders_2024_01</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="63">6.3 자동 파티션 생성<a class="header-link" href="#63" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 월별 파티션 자동 생성 함수</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">FUNCTION</span><span class="w"> </span><span class="n">create_monthly_partition</span><span class="p">(</span>
+<span class="w">    </span><span class="n">parent_table</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">partition_date</span><span class="w"> </span><span class="nb">DATE</span>
+<span class="p">)</span><span class="w"> </span><span class="k">RETURNS</span><span class="w"> </span><span class="n">VOID</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">$$</span>
+<span class="k">DECLARE</span>
+<span class="w">    </span><span class="n">partition_name</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">;</span>
+<span class="w">    </span><span class="n">start_date</span><span class="w"> </span><span class="nb">DATE</span><span class="p">;</span>
+<span class="w">    </span><span class="n">end_date</span><span class="w"> </span><span class="nb">DATE</span><span class="p">;</span>
+<span class="k">BEGIN</span>
+<span class="w">    </span><span class="n">start_date</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="s1">&#39;month&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">partition_date</span><span class="p">);</span>
+<span class="w">    </span><span class="n">end_date</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="n">start_date</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">INTERVAL</span><span class="w"> </span><span class="s1">&#39;1 month&#39;</span><span class="p">;</span>
+<span class="w">    </span><span class="n">partition_name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="n">parent_table</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;_&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">TO_CHAR</span><span class="p">(</span><span class="n">start_date</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;YYYY_MM&#39;</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">-- 이미 존재하면 스킵</span>
+<span class="w">    </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="k">SELECT</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">pg_tables</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">tablename</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">partition_name</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">THEN</span>
+<span class="w">        </span><span class="k">EXECUTE</span><span class="w"> </span><span class="n">format</span><span class="p">(</span>
+<span class="w">            </span><span class="s1">&#39;CREATE TABLE %I PARTITION OF %I FOR VALUES FROM (%L) TO (%L)&#39;</span><span class="p">,</span>
+<span class="w">            </span><span class="n">partition_name</span><span class="p">,</span>
+<span class="w">            </span><span class="n">parent_table</span><span class="p">,</span>
+<span class="w">            </span><span class="n">start_date</span><span class="p">,</span>
+<span class="w">            </span><span class="n">end_date</span>
+<span class="w">        </span><span class="p">);</span>
+<span class="w">        </span><span class="n">RAISE</span><span class="w"> </span><span class="n">NOTICE</span><span class="w"> </span><span class="s1">&#39;Created partition: %&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">partition_name</span><span class="p">;</span>
+<span class="w">    </span><span class="k">END</span><span class="w"> </span><span class="k">IF</span><span class="p">;</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="err">$$</span><span class="w"> </span><span class="k">LANGUAGE</span><span class="w"> </span><span class="n">plpgsql</span><span class="p">;</span>
+
+<span class="c1">-- 향후 3개월 파티션 미리 생성</span>
+<span class="k">DO</span><span class="w"> </span><span class="err">$$</span>
+<span class="k">BEGIN</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="mi">0</span><span class="p">..</span><span class="mi">2</span><span class="w"> </span><span class="n">LOOP</span>
+<span class="w">        </span><span class="n">PERFORM</span><span class="w"> </span><span class="n">create_monthly_partition</span><span class="p">(</span>
+<span class="w">            </span><span class="s1">&#39;orders&#39;</span><span class="p">,</span>
+<span class="w">            </span><span class="k">CURRENT_DATE</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39; months&#39;</span><span class="p">)::</span><span class="nb">interval</span>
+<span class="w">        </span><span class="p">);</span>
+<span class="w">    </span><span class="k">END</span><span class="w"> </span><span class="n">LOOP</span><span class="p">;</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="err">$$</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="64-pg_cron">6.4 pg_cron을 사용한 자동화<a class="header-link" href="#64-pg_cron" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- pg_cron 확장 설치 (별도 설치 필요)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="n">EXTENSION</span><span class="w"> </span><span class="n">pg_cron</span><span class="p">;</span>
+
+<span class="c1">-- 매월 1일 새 파티션 생성</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">cron</span><span class="p">.</span><span class="n">schedule</span><span class="p">(</span>
+<span class="w">    </span><span class="s1">&#39;create-partition&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="s1">&#39;0 0 1 * *&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- 매월 1일 00:00</span>
+<span class="w">    </span><span class="err">$$</span><span class="k">SELECT</span><span class="w"> </span><span class="n">create_monthly_partition</span><span class="p">(</span><span class="s1">&#39;orders&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">CURRENT_DATE</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">INTERVAL</span><span class="w"> </span><span class="s1">&#39;2 months&#39;</span><span class="p">)</span><span class="err">$$</span>
+<span class="p">);</span>
+
+<span class="c1">-- 오래된 파티션 자동 삭제 (12개월 이전)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">cron</span><span class="p">.</span><span class="n">schedule</span><span class="p">(</span>
+<span class="w">    </span><span class="s1">&#39;drop-old-partition&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="s1">&#39;0 1 1 * *&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- 매월 1일 01:00</span>
+<span class="w">    </span><span class="err">$$</span><span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="n">orders_$$</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">TO_CHAR</span><span class="p">(</span><span class="k">CURRENT_DATE</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">INTERVAL</span><span class="w"> </span><span class="s1">&#39;12 months&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;YYYY_MM&#39;</span><span class="p">)</span>
+<span class="p">);</span>
+</code></pre></div>
+
+<h3 id="65">6.5 파티션 정보 조회<a class="header-link" href="#65" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 파티션 목록 및 범위 확인</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">parent</span><span class="p">.</span><span class="n">relname</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">parent</span><span class="p">,</span>
+<span class="w">    </span><span class="n">child</span><span class="p">.</span><span class="n">relname</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">partition</span><span class="p">,</span>
+<span class="w">    </span><span class="n">pg_get_expr</span><span class="p">(</span><span class="n">child</span><span class="p">.</span><span class="n">relpartbound</span><span class="p">,</span><span class="w"> </span><span class="n">child</span><span class="p">.</span><span class="n">oid</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">bounds</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_inherits</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">pg_class</span><span class="w"> </span><span class="n">parent</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">pg_inherits</span><span class="p">.</span><span class="n">inhparent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parent</span><span class="p">.</span><span class="n">oid</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">pg_class</span><span class="w"> </span><span class="n">child</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">pg_inherits</span><span class="p">.</span><span class="n">inhrelid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">child</span><span class="p">.</span><span class="n">oid</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">parent</span><span class="p">.</span><span class="n">relname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;orders&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 파티션별 행 수</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">schemaname</span><span class="p">,</span>
+<span class="w">    </span><span class="n">relname</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">partition_name</span><span class="p">,</span>
+<span class="w">    </span><span class="n">n_live_tup</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">row_count</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_user_tables</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">relname</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="s1">&#39;orders_%&#39;</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">relname</span><span class="p">;</span>
+
+<span class="c1">-- 파티션별 크기</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">child</span><span class="p">.</span><span class="n">relname</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">partition</span><span class="p">,</span>
+<span class="w">    </span><span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">child</span><span class="p">.</span><span class="n">oid</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">size</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_inherits</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">pg_class</span><span class="w"> </span><span class="n">parent</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">pg_inherits</span><span class="p">.</span><span class="n">inhparent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parent</span><span class="p">.</span><span class="n">oid</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">pg_class</span><span class="w"> </span><span class="n">child</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">pg_inherits</span><span class="p">.</span><span class="n">inhrelid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">child</span><span class="p">.</span><span class="n">oid</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">parent</span><span class="p">.</span><span class="n">relname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;orders&#39;</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">child</span><span class="p">.</span><span class="n">relname</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="66">6.6 기존 테이블 파티션 변환<a class="header-link" href="#66" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 1. 새 파티션 테이블 생성</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders_new</span><span class="w"> </span><span class="p">(</span><span class="k">LIKE</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">INCLUDING</span><span class="w"> </span><span class="k">ALL</span><span class="p">)</span>
+<span class="w">    </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">RANGE</span><span class="w"> </span><span class="p">(</span><span class="n">order_date</span><span class="p">);</span>
+
+<span class="c1">-- 2. 파티션 생성</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders_new_2024_01</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">orders_new</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-02-01&#39;</span><span class="p">);</span>
+<span class="c1">-- ... 필요한 파티션 생성</span>
+
+<span class="c1">-- 3. 데이터 마이그레이션</span>
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">orders_new</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="p">;</span>
+
+<span class="c1">-- 4. 테이블 교체 (다운타임 최소화)</span>
+<span class="k">BEGIN</span><span class="p">;</span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">RENAME</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">orders_old</span><span class="p">;</span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders_new</span><span class="w"> </span><span class="k">RENAME</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">orders</span><span class="p">;</span>
+<span class="k">COMMIT</span><span class="p">;</span>
+
+<span class="c1">-- 5. 확인 후 이전 테이블 삭제</span>
+<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders_old</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 연습 문제<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="1_1">연습 1: 월별 로그 파티셔닝<a class="header-link" href="#1_1" title="Permanent link">&para;</a></h3>
+<p>access_logs 테이블을 월별로 파티셔닝하세요.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 예시 답안</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">access_logs</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">BIGSERIAL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">user_id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">action</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">50</span><span class="p">),</span>
+<span class="w">    </span><span class="n">ip_address</span><span class="w"> </span><span class="n">INET</span><span class="p">,</span>
+<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="n">NOW</span><span class="p">(),</span>
+<span class="w">    </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="p">)</span>
+<span class="p">)</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">RANGE</span><span class="w"> </span><span class="p">(</span><span class="n">created_at</span><span class="p">);</span>
+
+<span class="c1">-- 2024년 월별 파티션</span>
+<span class="k">DO</span><span class="w"> </span><span class="err">$$</span>
+<span class="k">DECLARE</span>
+<span class="w">    </span><span class="n">start_date</span><span class="w"> </span><span class="nb">DATE</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">;</span>
+<span class="k">BEGIN</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="mi">0</span><span class="p">..</span><span class="mi">11</span><span class="w"> </span><span class="n">LOOP</span>
+<span class="w">        </span><span class="k">EXECUTE</span><span class="w"> </span><span class="n">format</span><span class="p">(</span>
+<span class="w">            </span><span class="s1">&#39;CREATE TABLE access_logs_%s PARTITION OF access_logs</span>
+<span class="s1">             FOR VALUES FROM (%L) TO (%L)&#39;</span><span class="p">,</span>
+<span class="w">            </span><span class="n">TO_CHAR</span><span class="p">(</span><span class="n">start_date</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39; months&#39;</span><span class="p">)::</span><span class="nb">interval</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;YYYY_MM&#39;</span><span class="p">),</span>
+<span class="w">            </span><span class="n">start_date</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39; months&#39;</span><span class="p">)::</span><span class="nb">interval</span><span class="p">,</span>
+<span class="w">            </span><span class="n">start_date</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">((</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39; months&#39;</span><span class="p">)::</span><span class="nb">interval</span>
+<span class="w">        </span><span class="p">);</span>
+<span class="w">    </span><span class="k">END</span><span class="w"> </span><span class="n">LOOP</span><span class="p">;</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="err">$$</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="2">연습 2: 지역별 주문 파티셔닝<a class="header-link" href="#2" title="Permanent link">&para;</a></h3>
+<p>국가 코드 기반으로 주문을 파티셔닝하세요.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 예시 답안</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">regional_orders</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">BIGSERIAL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">country_code</span><span class="w"> </span><span class="nb">CHAR</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">customer_id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">total</span><span class="w"> </span><span class="nb">NUMERIC</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">    </span><span class="n">order_date</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="n">NOW</span><span class="p">(),</span>
+<span class="w">    </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">country_code</span><span class="p">)</span>
+<span class="p">)</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">LIST</span><span class="w"> </span><span class="p">(</span><span class="n">country_code</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">regional_orders_kr</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">regional_orders</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;KR&#39;</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">regional_orders_us</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">regional_orders</span>
+<span class="w">    </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;US&#39;</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">regional_orders_others</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">regional_orders</span><span class="w"> </span><span class="k">DEFAULT</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="3">연습 3: 파티션 유지보수 쿼리<a class="header-link" href="#3" title="Permanent link">&para;</a></h3>
+<p>90일 이전 데이터가 있는 파티션을 식별하고 처리하는 쿼리를 작성하세요.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 예시 답안: 오래된 파티션 식별</span>
+<span class="k">WITH</span><span class="w"> </span><span class="n">partition_info</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">SELECT</span>
+<span class="w">        </span><span class="n">child</span><span class="p">.</span><span class="n">relname</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">partition_name</span><span class="p">,</span>
+<span class="w">        </span><span class="n">pg_get_expr</span><span class="p">(</span><span class="n">child</span><span class="p">.</span><span class="n">relpartbound</span><span class="p">,</span><span class="w"> </span><span class="n">child</span><span class="p">.</span><span class="n">oid</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">bounds</span><span class="p">,</span>
+<span class="w">        </span><span class="p">(</span><span class="n">regexp_match</span><span class="p">(</span>
+<span class="w">            </span><span class="n">pg_get_expr</span><span class="p">(</span><span class="n">child</span><span class="p">.</span><span class="n">relpartbound</span><span class="p">,</span><span class="w"> </span><span class="n">child</span><span class="p">.</span><span class="n">oid</span><span class="p">),</span>
+<span class="w">            </span><span class="err">$$</span><span class="k">FROM</span><span class="w"> </span><span class="err">\</span><span class="p">(</span><span class="s1">&#39;([^&#39;</span><span class="p">]</span><span class="o">+</span><span class="p">)</span><span class="s1">&#39;\)$$</span>
+<span class="s1">        ))[1]::date AS start_date</span>
+<span class="s1">    FROM pg_inherits</span>
+<span class="s1">    JOIN pg_class parent ON pg_inherits.inhparent = parent.oid</span>
+<span class="s1">    JOIN pg_class child ON pg_inherits.inhrelid = child.oid</span>
+<span class="s1">    WHERE parent.relname = &#39;</span><span class="n">orders</span><span class="s1">&#39;</span>
+<span class="s1">      AND child.relname != &#39;</span><span class="n">orders_default</span><span class="s1">&#39;</span>
+<span class="s1">)</span>
+<span class="s1">SELECT *</span>
+<span class="s1">FROM partition_info</span>
+<span class="s1">WHERE start_date &lt; CURRENT_DATE - INTERVAL &#39;</span><span class="mi">90</span><span class="w"> </span><span class="n">days</span><span class="err">&#39;</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_3">다음 단계<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./15_Query_Optimization.md">15. 쿼리 최적화 심화</a></li>
+<li><a href="./16_Replication_HA.md">16. 복제와 고가용성</a></li>
+</ul>
+<h2 id="_4">참고 자료<a class="header-link" href="#_4" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://www.postgresql.org/docs/current/ddl-partitioning.html">PostgreSQL Table Partitioning</a></li>
+<li><a href="https://www.postgresql.org/docs/current/ddl-partitioning.html#DDL-PARTITION-PRUNING">Partition Pruning</a></li>
+<li><a href="https://github.com/pgpartman/pg_partman">pg_partman Extension</a></li>
+<li><a href="https://www.postgresql.org/docs/current/ddl-partitioning.html#DDL-PARTITIONING-OVERVIEW">Best Practices for Partitioning</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/PostgreSQL/17_Window_Functions.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">17. 윈도우 함수와 분석 쿼리 (Window Functions & Analytics)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/PostgreSQL/19_Full_Text_Search.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">19. 전문 검색(Full-Text Search)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

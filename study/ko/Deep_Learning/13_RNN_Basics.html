@@ -1,0 +1,568 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>08. RNN 기초 (Recurrent Neural Networks) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Deep_Learning/">Deep Learning</a>
+    <span class="separator">/</span>
+    <span class="current">08. RNN 기초 (Recurrent Neural Networks)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>08. RNN 기초 (Recurrent Neural Networks)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Deep_Learning/12_Impl_ResNet.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">05. ResNet</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Deep_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Deep_Learning/14_LSTM_GRU.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">09. LSTM과 GRU</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#1-rnn">1. RNN이란?</a><ul>
+<li><a href="#_2">순차 데이터의 특성</a></li>
+<li><a href="#mlp">MLP의 한계</a></li>
+<li><a href="#rnn">RNN의 해결</a></li>
+</ul>
+</li>
+<li><a href="#2-rnn">2. RNN 구조</a><ul>
+<li><a href="#unrolling">시간 펼침 (Unrolling)</a></li>
+<li><a href="#_3">파라미터 공유</a></li>
+</ul>
+</li>
+<li><a href="#3-pytorch-rnn">3. PyTorch RNN</a><ul>
+<li><a href="#_4">기본 사용법</a></li>
+<li><a href="#rnn_1">양방향 RNN</a></li>
+</ul>
+</li>
+<li><a href="#4-rnn">4. RNN 분류기 구현</a><ul>
+<li><a href="#_5">시퀀스 분류 모델</a></li>
+<li><a href="#many-to-many">Many-to-Many 구조</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 기울기 소실 문제</a><ul>
+<li><a href="#_6">문제</a></li>
+<li><a href="#_7">원인</a></li>
+<li><a href="#_8">해결책</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 시계열 예측 예제</a><ul>
+<li><a href="#_9">사인파 예측</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 텍스트 분류 예제</a><ul>
+<li><a href="#rnn_2">문자 수준 RNN</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 주의사항</a><ul>
+<li><a href="#_10">입력 형태</a></li>
+<li><a href="#_11">가변 길이 시퀀스</a></li>
+</ul>
+</li>
+<li><a href="#9-rnn">9. RNN 변형 비교</a></li>
+<li><a href="#_12">정리</a><ul>
+<li><a href="#_13">핵심 개념</a></li>
+<li><a href="#_14">핵심 코드</a></li>
+</ul>
+</li>
+<li><a href="#_15">다음 단계</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="08-rnn-recurrent-neural-networks">08. RNN 기초 (Recurrent Neural Networks)<a class="header-link" href="#08-rnn-recurrent-neural-networks" title="Permanent link">&para;</a></h1>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>순환 신경망의 개념과 구조</li>
+<li>시퀀스 데이터 처리</li>
+<li>PyTorch nn.RNN 사용법</li>
+<li>기울기 소실 문제 이해</li>
+</ul>
+<hr />
+<h2 id="1-rnn">1. RNN이란?<a class="header-link" href="#1-rnn" title="Permanent link">&para;</a></h2>
+<h3 id="_2">순차 데이터의 특성<a class="header-link" href="#_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>시계열: [1, 2, 3, 4, 5, ...]  - 이전 값이 다음 값에 영향
+텍스트: &quot;나는 학교에 간다&quot;     - 이전 단어가 다음 단어에 영향
+</code></pre></div>
+
+<h3 id="mlp">MLP의 한계<a class="header-link" href="#mlp" title="Permanent link">&para;</a></h3>
+<ul>
+<li>고정된 입력 크기</li>
+<li>순서 정보 무시</li>
+<li>가변 길이 시퀀스 처리 불가</li>
+</ul>
+<h3 id="rnn">RNN의 해결<a class="header-link" href="#rnn" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>h(t) = tanh(W_xh × x(t) + W_hh × h(t-1) + b)
+
+h(t): 현재 은닉 상태
+x(t): 현재 입력
+h(t-1): 이전 은닉 상태
+</code></pre></div>
+
+<hr />
+<h2 id="2-rnn">2. RNN 구조<a class="header-link" href="#2-rnn" title="Permanent link">&para;</a></h2>
+<h3 id="unrolling">시간 펼침 (Unrolling)<a class="header-link" href="#unrolling" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>    x1      x2      x3      x4
+    ↓       ↓       ↓       ↓
+  ┌───┐   ┌───┐   ┌───┐   ┌───┐
+  │ h │──►│ h │──►│ h │──►│ h │──► 출력
+  └───┘   └───┘   └───┘   └───┘
+    h0      h1      h2      h3
+</code></pre></div>
+
+<h3 id="_3">파라미터 공유<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>모든 시간 단계에서 동일한 W_xh, W_hh 사용</li>
+<li>가변 길이 시퀀스 처리 가능</li>
+</ul>
+<hr />
+<h2 id="3-pytorch-rnn">3. PyTorch RNN<a class="header-link" href="#3-pytorch-rnn" title="Permanent link">&para;</a></h2>
+<h3 id="_4">기본 사용법<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+
+<span class="c1"># RNN 생성</span>
+<span class="n">rnn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">RNN</span><span class="p">(</span>
+    <span class="n">input_size</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>    <span class="c1"># 입력 차원</span>
+    <span class="n">hidden_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>   <span class="c1"># 은닉 상태 차원</span>
+    <span class="n">num_layers</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>     <span class="c1"># RNN 층 수</span>
+    <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span>  <span class="c1"># 입력: (batch, seq, feature)</span>
+<span class="p">)</span>
+
+<span class="c1"># 입력 형태: (batch_size, seq_len, input_size)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>  <span class="c1"># 배치 32, 시퀀스 15, 특성 10</span>
+
+<span class="c1"># 순전파</span>
+<span class="c1"># output: 모든 시간의 은닉 상태 (batch, seq, hidden)</span>
+<span class="c1"># h_n: 마지막 은닉 상태 (layers, batch, hidden)</span>
+<span class="n">output</span><span class="p">,</span> <span class="n">h_n</span> <span class="o">=</span> <span class="n">rnn</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;output: </span><span class="si">{</span><span class="n">output</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># (32, 15, 20)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;h_n: </span><span class="si">{</span><span class="n">h_n</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>        <span class="c1"># (2, 32, 20)</span>
+</code></pre></div>
+
+<h3 id="rnn_1">양방향 RNN<a class="header-link" href="#rnn_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">rnn_bi</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">RNN</span><span class="p">(</span>
+    <span class="n">input_size</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">hidden_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+    <span class="n">num_layers</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">bidirectional</span><span class="o">=</span><span class="kc">True</span>  <span class="c1"># 양방향</span>
+<span class="p">)</span>
+
+<span class="n">output</span><span class="p">,</span> <span class="n">h_n</span> <span class="o">=</span> <span class="n">rnn_bi</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;output: </span><span class="si">{</span><span class="n">output</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># (32, 15, 40) - 정방향+역방향</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;h_n: </span><span class="si">{</span><span class="n">h_n</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>        <span class="c1"># (2, 32, 20) - 방향별 마지막 상태</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-rnn">4. RNN 분류기 구현<a class="header-link" href="#4-rnn" title="Permanent link">&para;</a></h2>
+<h3 id="_5">시퀀스 분류 모델<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">RNNClassifier</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_size</span><span class="p">,</span> <span class="n">hidden_size</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">,</span> <span class="n">num_layers</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rnn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">RNN</span><span class="p">(</span>
+            <span class="n">input_size</span><span class="p">,</span> <span class="n">hidden_size</span><span class="p">,</span>
+            <span class="n">num_layers</span><span class="o">=</span><span class="n">num_layers</span><span class="p">,</span>
+            <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fc</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_size</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="c1"># x: (batch, seq, features)</span>
+        <span class="n">output</span><span class="p">,</span> <span class="n">h_n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rnn</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+        <span class="c1"># 마지막 시간의 은닉 상태 사용</span>
+        <span class="c1"># h_n[-1]: 마지막 층의 은닉 상태</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fc</span><span class="p">(</span><span class="n">h_n</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">out</span>
+</code></pre></div>
+
+<h3 id="many-to-many">Many-to-Many 구조<a class="header-link" href="#many-to-many" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">RNNSeq2Seq</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;시퀀스 → 시퀀스&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_size</span><span class="p">,</span> <span class="n">hidden_size</span><span class="p">,</span> <span class="n">output_size</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rnn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">RNN</span><span class="p">(</span><span class="n">input_size</span><span class="p">,</span> <span class="n">hidden_size</span><span class="p">,</span> <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fc</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_size</span><span class="p">,</span> <span class="n">output_size</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">output</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rnn</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="c1"># 모든 시간 단계에 FC 적용</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fc</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>  <span class="c1"># (batch, seq, output_size)</span>
+        <span class="k">return</span> <span class="n">out</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 기울기 소실 문제<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="_6">문제<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>긴 시퀀스에서:
+h100 ← W_hh × W_hh × ... × W_hh × h1
+                    ↑
+            100번 곱셈 → 기울기 폭발 또는 소실
+</code></pre></div>
+
+<h3 id="_7">원인<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<ul>
+<li>|W_hh| &gt; 1: 기울기 폭발</li>
+<li>|W_hh| &lt; 1: 기울기 소실</li>
+</ul>
+<h3 id="_8">해결책<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>LSTM/GRU 사용</strong> (다음 레슨)</li>
+<li><strong>Gradient Clipping</strong></li>
+</ol>
+<div class="highlight"><pre><span></span><code><span class="c1"># 기울기 클리핑</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">clip_grad_norm_</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">max_norm</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 시계열 예측 예제<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="_9">사인파 예측<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="c1"># 데이터 생성</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_sin_data</span><span class="p">(</span><span class="n">seq_len</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">n_samples</span><span class="o">=</span><span class="mi">1000</span><span class="p">):</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_samples</span><span class="p">):</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+        <span class="n">seq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">start</span> <span class="o">+</span> <span class="mi">4</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">seq_len</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">X</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">seq</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">y</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">seq</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">generate_sin_data</span><span class="p">()</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+<span class="c1"># 모델</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SinPredictor</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rnn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">RNN</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fc</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">h_n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rnn</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fc</span><span class="p">(</span><span class="n">h_n</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 텍스트 분류 예제<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="rnn_2">문자 수준 RNN<a class="header-link" href="#rnn_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">CharRNN</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">,</span> <span class="n">embed_size</span><span class="p">,</span> <span class="n">hidden_size</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embedding</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">embed_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rnn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">RNN</span><span class="p">(</span><span class="n">embed_size</span><span class="p">,</span> <span class="n">hidden_size</span><span class="p">,</span> <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fc</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_size</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="c1"># x: (batch, seq) - 문자 인덱스</span>
+        <span class="n">embedded</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embedding</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># (batch, seq, embed)</span>
+        <span class="n">output</span><span class="p">,</span> <span class="n">h_n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rnn</span><span class="p">(</span><span class="n">embedded</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fc</span><span class="p">(</span><span class="n">h_n</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+<span class="c1"># 예시</span>
+<span class="n">vocab_size</span> <span class="o">=</span> <span class="mi">27</span>  <span class="c1"># a-z + 공백</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">CharRNN</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">embed_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">hidden_size</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">num_classes</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="8">8. 주의사항<a class="header-link" href="#8" title="Permanent link">&para;</a></h2>
+<h3 id="_10">입력 형태<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># batch_first=True  → (batch, seq, feature)</span>
+<span class="c1"># batch_first=False → (seq, batch, feature)  # 기본값</span>
+</code></pre></div>
+
+<h3 id="_11">가변 길이 시퀀스<a class="header-link" href="#_11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">torch.nn.utils.rnn</span><span class="w"> </span><span class="kn">import</span> <span class="n">pack_padded_sequence</span><span class="p">,</span> <span class="n">pad_packed_sequence</span>
+
+<span class="c1"># 패딩된 시퀀스와 실제 길이</span>
+<span class="n">padded_seqs</span> <span class="o">=</span> <span class="o">...</span>  <span class="c1"># (batch, max_len, features)</span>
+<span class="n">lengths</span> <span class="o">=</span> <span class="o">...</span>      <span class="c1"># 각 시퀀스의 실제 길이</span>
+
+<span class="c1"># 패킹 (패딩 무시)</span>
+<span class="n">packed</span> <span class="o">=</span> <span class="n">pack_padded_sequence</span><span class="p">(</span><span class="n">padded_seqs</span><span class="p">,</span> <span class="n">lengths</span><span class="p">,</span>
+                               <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">enforce_sorted</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">output</span><span class="p">,</span> <span class="n">h_n</span> <span class="o">=</span> <span class="n">rnn</span><span class="p">(</span><span class="n">packed</span><span class="p">)</span>
+
+<span class="c1"># 언패킹</span>
+<span class="n">output_padded</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">pad_packed_sequence</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="9-rnn">9. RNN 변형 비교<a class="header-link" href="#9-rnn" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>모델</th>
+<th>장점</th>
+<th>단점</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simple RNN</td>
+<td>단순, 빠름</td>
+<td>긴 시퀀스 학습 어려움</td>
+</tr>
+<tr>
+<td>LSTM</td>
+<td>장기 의존성 학습</td>
+<td>복잡, 느림</td>
+</tr>
+<tr>
+<td>GRU</td>
+<td>LSTM과 유사, 더 단순</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_12">정리<a class="header-link" href="#_12" title="Permanent link">&para;</a></h2>
+<h3 id="_13">핵심 개념<a class="header-link" href="#_13" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>순환 구조</strong>: 이전 상태가 다음 계산에 영향</li>
+<li><strong>파라미터 공유</strong>: 시간 독립적 가중치</li>
+<li><strong>기울기 문제</strong>: 긴 시퀀스에서 학습 어려움</li>
+</ol>
+<h3 id="_14">핵심 코드<a class="header-link" href="#_14" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">rnn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">RNN</span><span class="p">(</span><span class="n">input_size</span><span class="p">,</span> <span class="n">hidden_size</span><span class="p">,</span> <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">output</span><span class="p">,</span> <span class="n">h_n</span> <span class="o">=</span> <span class="n">rnn</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># output: 전체, h_n: 마지막</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_15">다음 단계<a class="header-link" href="#_15" title="Permanent link">&para;</a></h2>
+<p><a href="./14_LSTM_GRU.md">14_LSTM_GRU.md</a>에서 LSTM과 GRU를 학습합니다.</p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Deep_Learning/12_Impl_ResNet.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">05. ResNet</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Deep_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Deep_Learning/14_LSTM_GRU.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">09. LSTM과 GRU</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

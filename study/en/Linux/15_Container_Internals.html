@@ -1,0 +1,970 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>15. Container Internals - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/en/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/en/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/en/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" selected>
+                        English
+                    </option>
+                    
+                    <option value="ko" >
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/en/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/en/Linux/">Linux</a>
+    <span class="separator">/</span>
+    <span class="current">15. Container Internals</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>15. Container Internals</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/Linux/14_Performance_Tuning.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">14. Linux Performance Tuning</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/Linux/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/Linux/16_Storage_Management.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">16. Storage Management</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#learning-objectives">Learning Objectives</a></li>
+<li><a href="#table-of-contents">Table of Contents</a></li>
+<li><a href="#1-container-fundamentals">1. Container Fundamentals</a><ul>
+<li><a href="#11-containers-vs-virtual-machines">1.1 Containers vs Virtual Machines</a></li>
+<li><a href="#12-core-container-technologies">1.2 Core Container Technologies</a></li>
+</ul>
+</li>
+<li><a href="#2-linux-namespaces">2. Linux Namespaces</a><ul>
+<li><a href="#21-namespace-types">2.1 Namespace Types</a></li>
+<li><a href="#22-creating-namespaces-with-unshare">2.2 Creating Namespaces with unshare</a></li>
+<li><a href="#23-entering-namespaces-with-nsenter">2.3 Entering Namespaces with nsenter</a></li>
+<li><a href="#24-namespace-c-example">2.4 Namespace C Example</a></li>
+</ul>
+</li>
+<li><a href="#3-control-groups-cgroups">3. Control Groups (cgroups)</a><ul>
+<li><a href="#31-cgroups-v2-structure">3.1 cgroups v2 Structure</a></li>
+<li><a href="#32-basic-cgroups-commands">3.2 Basic cgroups Commands</a></li>
+<li><a href="#33-cpu-limiting">3.3 CPU Limiting</a></li>
+<li><a href="#34-memory-limiting">3.4 Memory Limiting</a></li>
+<li><a href="#35-io-limiting">3.5 I/O Limiting</a></li>
+<li><a href="#36-systemd-and-cgroups">3.6 systemd and cgroups</a></li>
+</ul>
+</li>
+<li><a href="#4-union-filesystem">4. Union Filesystem</a><ul>
+<li><a href="#41-overlayfs-concept">4.1 OverlayFS Concept</a></li>
+<li><a href="#42-using-overlayfs">4.2 Using OverlayFS</a></li>
+<li><a href="#43-docker-image-layers">4.3 Docker Image Layers</a></li>
+</ul>
+</li>
+<li><a href="#5-container-runtime">5. Container Runtime</a><ul>
+<li><a href="#51-runtime-layers">5.1 Runtime Layers</a></li>
+<li><a href="#52-creating-container-manually">5.2 Creating Container Manually</a></li>
+<li><a href="#53-using-runc">5.3 Using runc</a></li>
+<li><a href="#54-rootless-containers">5.4 Rootless Containers</a></li>
+</ul>
+</li>
+<li><a href="#6-security">6. Security</a><ul>
+<li><a href="#61-capabilities">6.1 Capabilities</a></li>
+<li><a href="#62-seccomp">6.2 Seccomp</a></li>
+<li><a href="#63-apparmorselinux">6.3 AppArmor/SELinux</a></li>
+<li><a href="#64-read-only-root">6.4 Read-only Root</a></li>
+</ul>
+</li>
+<li><a href="#7-practice-exercises">7. Practice Exercises</a><ul>
+<li><a href="#exercise-1-namespace-practice">Exercise 1: Namespace Practice</a></li>
+<li><a href="#exercise-2-cgroups-resource-limiting">Exercise 2: cgroups Resource Limiting</a></li>
+<li><a href="#exercise-3-manual-container-creation">Exercise 3: Manual Container Creation</a></li>
+<li><a href="#exercise-4-hardened-container">Exercise 4: Hardened Container</a></li>
+</ul>
+</li>
+<li><a href="#next-steps">Next Steps</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="15-container-internals">15. Container Internals<a class="header-link" href="#15-container-internals" title="Permanent link">&para;</a></h1>
+<h2 id="learning-objectives">Learning Objectives<a class="header-link" href="#learning-objectives" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Understand Linux container isolation technologies</li>
+<li>Resource isolation with namespaces</li>
+<li>Resource limiting with cgroups</li>
+<li>Container runtime operation principles</li>
+</ul>
+<h2 id="table-of-contents">Table of Contents<a class="header-link" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-container-fundamentals">Container Fundamentals</a></li>
+<li><a href="#2-linux-namespaces">Linux Namespaces</a></li>
+<li><a href="#3-control-groups-cgroups">Control Groups (cgroups)</a></li>
+<li><a href="#4-union-filesystem">Union Filesystem</a></li>
+<li><a href="#5-container-runtime">Container Runtime</a></li>
+<li><a href="#6-security">Security</a></li>
+<li><a href="#7-practice-exercises">Practice Exercises</a></li>
+</ol>
+<hr />
+<h2 id="1-container-fundamentals">1. Container Fundamentals<a class="header-link" href="#1-container-fundamentals" title="Permanent link">&para;</a></h2>
+<h3 id="11-containers-vs-virtual-machines">1.1 Containers vs Virtual Machines<a class="header-link" href="#11-containers-vs-virtual-machines" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│               Virtual Machines vs Containers                 │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Virtual Machine                                            │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐                       │
+│  │  App A  │ │  App B  │ │  App C  │                       │
+│  ├─────────┤ ├─────────┤ ├─────────┤                       │
+│  │ Guest OS│ │ Guest OS│ │ Guest OS│                       │
+│  └─────────┴─────────┴─────────┘                           │
+│  ┌─────────────────────────────────────┐                   │
+│  │           Hypervisor                │                   │
+│  └─────────────────────────────────────┘                   │
+│  ┌─────────────────────────────────────┐                   │
+│  │            Host OS                  │                   │
+│  └─────────────────────────────────────┘                   │
+│                                                             │
+│  Container                                                  │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐                       │
+│  │  App A  │ │  App B  │ │  App C  │                       │
+│  ├─────────┤ ├─────────┤ ├─────────┤                       │
+│  │ Bins/   │ │ Bins/   │ │ Bins/   │                       │
+│  │ Libs    │ │ Libs    │ │ Libs    │                       │
+│  └─────────┴─────────┴─────────┘                           │
+│  ┌─────────────────────────────────────┐                   │
+│  │        Container Runtime            │                   │
+│  └─────────────────────────────────────┘                   │
+│  ┌─────────────────────────────────────┐                   │
+│  │      Host OS (Shared Kernel)        │                   │
+│  └─────────────────────────────────────┘                   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="12-core-container-technologies">1.2 Core Container Technologies<a class="header-link" href="#12-core-container-technologies" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                  Core Container Technologies                 │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  1. Namespaces - Isolation                                  │
+│     • PID namespace    - Process ID isolation               │
+│     • Network namespace - Network stack isolation           │
+│     • Mount namespace  - Filesystem isolation               │
+│     • UTS namespace    - Hostname isolation                 │
+│     • IPC namespace    - Inter-process communication        │
+│     • User namespace   - User/Group ID isolation            │
+│     • Cgroup namespace - cgroup root isolation              │
+│                                                             │
+│  2. Cgroups - Resource Limiting                             │
+│     • CPU, memory, I/O, network bandwidth limits            │
+│     • Process group management                              │
+│                                                             │
+│  3. Union Filesystem - Layered images                       │
+│     • OverlayFS, AUFS                                      │
+│     • Copy-on-Write                                        │
+│                                                             │
+│  4. Capabilities - Privilege separation                     │
+│     • Fine-grained root privileges                          │
+│                                                             │
+│  5. Seccomp - System call filtering                         │
+│     • Only allowed syscalls can execute                     │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="2-linux-namespaces">2. Linux Namespaces<a class="header-link" href="#2-linux-namespaces" title="Permanent link">&para;</a></h2>
+<h3 id="21-namespace-types">2.1 Namespace Types<a class="header-link" href="#21-namespace-types" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check current process namespaces</span>
+ls<span class="w"> </span>-la<span class="w"> </span>/proc/<span class="nv">$$</span>/ns/
+<span class="c1"># cgroup -&gt; &#39;cgroup:[4026531835]&#39;</span>
+<span class="c1"># ipc -&gt; &#39;ipc:[4026531839]&#39;</span>
+<span class="c1"># mnt -&gt; &#39;mnt:[4026531840]&#39;</span>
+<span class="c1"># net -&gt; &#39;net:[4026531992]&#39;</span>
+<span class="c1"># pid -&gt; &#39;pid:[4026531836]&#39;</span>
+<span class="c1"># user -&gt; &#39;user:[4026531837]&#39;</span>
+<span class="c1"># uts -&gt; &#39;uts:[4026531838]&#39;</span>
+
+<span class="c1"># All system namespaces</span>
+lsns
+
+<span class="c1"># Namespaces of specific process</span>
+lsns<span class="w"> </span>-p<span class="w"> </span>&lt;PID&gt;
+</code></pre></div>
+
+<h3 id="22-creating-namespaces-with-unshare">2.2 Creating Namespaces with unshare<a class="header-link" href="#22-creating-namespaces-with-unshare" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># UTS namespace (hostname isolation)</span>
+unshare<span class="w"> </span>--uts<span class="w"> </span>/bin/bash
+hostname<span class="w"> </span>container-test
+hostname<span class="w">  </span><span class="c1"># container-test</span>
+<span class="nb">exit</span>
+hostname<span class="w">  </span><span class="c1"># Original hostname</span>
+
+<span class="c1"># PID namespace (process isolation)</span>
+unshare<span class="w"> </span>--pid<span class="w"> </span>--fork<span class="w"> </span>--mount-proc<span class="w"> </span>/bin/bash
+ps<span class="w"> </span>aux<span class="w">  </span><span class="c1"># Only isolated processes visible</span>
+<span class="nb">echo</span><span class="w"> </span><span class="nv">$$</span><span class="w">  </span><span class="c1"># PID 1</span>
+<span class="nb">exit</span>
+
+<span class="c1"># Mount namespace (filesystem isolation)</span>
+unshare<span class="w"> </span>--mount<span class="w"> </span>/bin/bash
+mount<span class="w"> </span>--bind<span class="w"> </span>/tmp<span class="w"> </span>/mnt
+ls<span class="w"> </span>/mnt<span class="w">  </span><span class="c1"># No effect on host&#39;s /mnt</span>
+<span class="nb">exit</span>
+
+<span class="c1"># Network namespace (network isolation)</span>
+unshare<span class="w"> </span>--net<span class="w"> </span>/bin/bash
+ip<span class="w"> </span>a<span class="w">  </span><span class="c1"># Only lo exists</span>
+<span class="nb">exit</span>
+
+<span class="c1"># User namespace (user isolation)</span>
+unshare<span class="w"> </span>--user<span class="w"> </span>--map-root-user<span class="w"> </span>/bin/bash
+id<span class="w">  </span><span class="c1"># uid=0(root) gid=0(root)</span>
+<span class="c1"># Actually running as normal user</span>
+<span class="nb">exit</span>
+
+<span class="c1"># Combined (container-like)</span>
+unshare<span class="w"> </span>--mount<span class="w"> </span>--uts<span class="w"> </span>--ipc<span class="w"> </span>--net<span class="w"> </span>--pid<span class="w"> </span>--fork<span class="w"> </span>--user<span class="w"> </span>--map-root-user<span class="w"> </span>/bin/bash
+</code></pre></div>
+
+<h3 id="23-entering-namespaces-with-nsenter">2.3 Entering Namespaces with nsenter<a class="header-link" href="#23-entering-namespaces-with-nsenter" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Enter another process&#39;s namespace</span>
+nsenter<span class="w"> </span>-t<span class="w"> </span>&lt;PID&gt;<span class="w"> </span>--all<span class="w"> </span>/bin/bash
+
+<span class="c1"># Specific namespaces only</span>
+nsenter<span class="w"> </span>-t<span class="w"> </span>&lt;PID&gt;<span class="w"> </span>--net<span class="w"> </span>/bin/bash
+nsenter<span class="w"> </span>-t<span class="w"> </span>&lt;PID&gt;<span class="w"> </span>--pid<span class="w"> </span>--mount<span class="w"> </span>/bin/bash
+
+<span class="c1"># Enter Docker container namespace</span>
+docker<span class="w"> </span>inspect<span class="w"> </span>--format<span class="w"> </span><span class="s1">&#39;{{.State.Pid}}&#39;</span><span class="w"> </span>&lt;container_id&gt;
+nsenter<span class="w"> </span>-t<span class="w"> </span>&lt;PID&gt;<span class="w"> </span>--all<span class="w"> </span>/bin/bash
+</code></pre></div>
+
+<h3 id="24-namespace-c-example">2.4 Namespace C Example<a class="header-link" href="#24-namespace-c-example" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// simple_container.c</span>
+<span class="cp">#define _GNU_SOURCE</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;sched.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;sys/wait.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;unistd.h&gt;</span>
+
+<span class="cp">#define STACK_SIZE (1024 * 1024)</span>
+
+<span class="k">static</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="n">child_stack</span><span class="p">[</span><span class="n">STACK_SIZE</span><span class="p">];</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">child_fn</span><span class="p">(</span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">arg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Change hostname</span>
+<span class="w">    </span><span class="n">sethostname</span><span class="p">(</span><span class="s">&quot;container&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// chroot to new root filesystem (if prepared)</span>
+<span class="w">    </span><span class="c1">// chroot(&quot;/path/to/rootfs&quot;);</span>
+<span class="w">    </span><span class="c1">// chdir(&quot;/&quot;);</span>
+
+<span class="w">    </span><span class="c1">// Execute shell</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">argv</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="s">&quot;/bin/bash&quot;</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">};</span>
+<span class="w">    </span><span class="n">execv</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">argv</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Create child process with new namespaces</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">flags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CLONE_NEWUTS</span><span class="w"> </span><span class="o">|</span><span class="w">     </span><span class="c1">// UTS namespace</span>
+<span class="w">                </span><span class="n">CLONE_NEWPID</span><span class="w"> </span><span class="o">|</span><span class="w">     </span><span class="c1">// PID namespace</span>
+<span class="w">                </span><span class="n">CLONE_NEWNS</span><span class="w"> </span><span class="o">|</span><span class="w">      </span><span class="c1">// Mount namespace</span>
+<span class="w">                </span><span class="n">CLONE_NEWNET</span><span class="w"> </span><span class="o">|</span><span class="w">     </span><span class="c1">// Network namespace</span>
+<span class="w">                </span><span class="n">SIGCHLD</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kt">pid_t</span><span class="w"> </span><span class="n">pid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">clone</span><span class="p">(</span><span class="n">child_fn</span><span class="p">,</span><span class="w"> </span><span class="n">child_stack</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">STACK_SIZE</span><span class="p">,</span><span class="w"> </span><span class="n">flags</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">pid</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">-1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">perror</span><span class="p">(</span><span class="s">&quot;clone&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="n">waitpid</span><span class="p">(</span><span class="n">pid</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># Compile and run</span>
+gcc<span class="w"> </span>-o<span class="w"> </span>simple_container<span class="w"> </span>simple_container.c
+sudo<span class="w"> </span>./simple_container
+</code></pre></div>
+
+<hr />
+<h2 id="3-control-groups-cgroups">3. Control Groups (cgroups)<a class="header-link" href="#3-control-groups-cgroups" title="Permanent link">&para;</a></h2>
+<h3 id="31-cgroups-v2-structure">3.1 cgroups v2 Structure<a class="header-link" href="#31-cgroups-v2-structure" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    cgroups v2 Hierarchy                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  /sys/fs/cgroup/ (cgroup2 root)                            │
+│  ├── cgroup.controllers      # Available controllers        │
+│  ├── cgroup.subtree_control  # Controllers delegated        │
+│  ├── cgroup.procs            # Processes in this cgroup     │
+│  │                                                          │
+│  ├── system.slice/           # systemd system services      │
+│  │   ├── cgroup.procs                                      │
+│  │   ├── cpu.max                                           │
+│  │   └── memory.max                                        │
+│  │                                                          │
+│  ├── user.slice/             # User sessions                │
+│  │   └── user-1000.slice/                                  │
+│  │                                                          │
+│  └── mygroup/                # Custom group                 │
+│      ├── cgroup.procs                                      │
+│      ├── cpu.max             # CPU limit                    │
+│      ├── cpu.stat            # CPU statistics               │
+│      ├── memory.max          # Memory limit                 │
+│      ├── memory.current      # Current memory usage         │
+│      └── io.max              # I/O limit                    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="32-basic-cgroups-commands">3.2 Basic cgroups Commands<a class="header-link" href="#32-basic-cgroups-commands" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check cgroups v2</span>
+mount<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>cgroup2
+cat<span class="w"> </span>/sys/fs/cgroup/cgroup.controllers
+<span class="c1"># cpuset cpu io memory hugetlb pids rdma misc</span>
+
+<span class="c1"># Create new cgroup</span>
+mkdir<span class="w"> </span>/sys/fs/cgroup/mygroup
+
+<span class="c1"># Enable controllers</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;+cpu +memory +io&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/cgroup.subtree_control
+
+<span class="c1"># Add process</span>
+<span class="nb">echo</span><span class="w"> </span><span class="nv">$$</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/cgroup.procs
+
+<span class="c1"># Check processes</span>
+cat<span class="w"> </span>/sys/fs/cgroup/mygroup/cgroup.procs
+
+<span class="c1"># Delete cgroup (must be empty)</span>
+rmdir<span class="w"> </span>/sys/fs/cgroup/mygroup
+</code></pre></div>
+
+<h3 id="33-cpu-limiting">3.3 CPU Limiting<a class="header-link" href="#33-cpu-limiting" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># CPU limit (quota / period)</span>
+<span class="c1"># cpu.max: &quot;quota period&quot; (microseconds)</span>
+<span class="c1"># 50% CPU limit</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;50000 100000&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/cpu.max
+
+<span class="c1"># Specific CPUs only</span>
+<span class="c1"># cpuset.cpus: CPUs to use</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;0-1&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/cpuset.cpus
+
+<span class="c1"># CPU weight (1-10000, default 100)</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;50&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/cpu.weight
+
+<span class="c1"># Check statistics</span>
+cat<span class="w"> </span>/sys/fs/cgroup/mygroup/cpu.stat
+<span class="c1"># usage_usec 12345</span>
+<span class="c1"># user_usec 10000</span>
+<span class="c1"># system_usec 2345</span>
+</code></pre></div>
+
+<h3 id="34-memory-limiting">3.4 Memory Limiting<a class="header-link" href="#34-memory-limiting" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Memory limit</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;512M&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/memory.max
+<span class="c1"># Or in bytes</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;536870912&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/memory.max
+
+<span class="c1"># Memory + swap limit</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;1G&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/memory.swap.max
+
+<span class="c1"># OOM settings</span>
+<span class="c1"># memory.oom.group: 1 kills entire group</span>
+<span class="nb">echo</span><span class="w"> </span><span class="m">1</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/memory.oom.group
+
+<span class="c1"># Current usage</span>
+cat<span class="w"> </span>/sys/fs/cgroup/mygroup/memory.current
+cat<span class="w"> </span>/sys/fs/cgroup/mygroup/memory.stat
+</code></pre></div>
+
+<h3 id="35-io-limiting">3.5 I/O Limiting<a class="header-link" href="#35-io-limiting" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check devices</span>
+lsblk
+<span class="c1"># Example: sda -&gt; 8:0</span>
+
+<span class="c1"># I/O bandwidth limit (bytes/sec)</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;8:0 rbps=10485760 wbps=10485760&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/io.max
+<span class="c1"># 10MB/s read/write limit</span>
+
+<span class="c1"># IOPS limit</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;8:0 riops=1000 wiops=1000&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/io.max
+
+<span class="c1"># I/O weight</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;8:0 100&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/sys/fs/cgroup/mygroup/io.weight
+
+<span class="c1"># Statistics</span>
+cat<span class="w"> </span>/sys/fs/cgroup/mygroup/io.stat
+</code></pre></div>
+
+<h3 id="36-systemd-and-cgroups">3.6 systemd and cgroups<a class="header-link" href="#36-systemd-and-cgroups" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># systemd-cgls - view cgroup tree</span>
+systemd-cgls
+
+<span class="c1"># Specific slice</span>
+systemd-cgls<span class="w"> </span>/system.slice
+
+<span class="c1"># systemd-cgtop - real-time monitoring</span>
+systemd-cgtop
+
+<span class="c1"># Service resource limits (unit file)</span>
+<span class="c1"># [Service]</span>
+<span class="c1"># CPUQuota=50%</span>
+<span class="c1"># MemoryMax=512M</span>
+<span class="c1"># IOWriteBandwidthMax=/dev/sda 10M</span>
+
+<span class="c1"># Change limits at runtime</span>
+systemctl<span class="w"> </span>set-property<span class="w"> </span>nginx.service<span class="w"> </span><span class="nv">CPUQuota</span><span class="o">=</span><span class="m">50</span>%
+systemctl<span class="w"> </span>set-property<span class="w"> </span>nginx.service<span class="w"> </span><span class="nv">MemoryMax</span><span class="o">=</span>512M
+</code></pre></div>
+
+<hr />
+<h2 id="4-union-filesystem">4. Union Filesystem<a class="header-link" href="#4-union-filesystem" title="Permanent link">&para;</a></h2>
+<h3 id="41-overlayfs-concept">4.1 OverlayFS Concept<a class="header-link" href="#41-overlayfs-concept" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                    </span><span class="n">OverlayFS</span><span class="w"> </span><span class="n">Structure</span><span class="w">                       </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Merged</span><span class="w"> </span><span class="p">(</span><span class="n">Unified</span><span class="w"> </span><span class="n">view</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">Filesystem</span><span class="w"> </span><span class="n">seen</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="n">container</span><span class="w">       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">/</span><span class="n">merged</span><span class="w">                                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">                                                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">├──</span><span class="w"> </span><span class="p">[</span><span class="n">From</span><span class="w"> </span><span class="n">Upper</span><span class="p">]</span><span class="w">    </span><span class="err">│</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">├──</span><span class="w"> </span><span class="p">[</span><span class="n">From</span><span class="w"> </span><span class="n">Lower</span><span class="p">]</span><span class="w">    </span><span class="err">│</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">└──</span><span class="w"> </span><span class="p">[</span><span class="n">From</span><span class="w"> </span><span class="n">Lower</span><span class="p">]</span><span class="w">    </span><span class="err">│</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────┐</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="n">Upper</span><span class="w"> </span><span class="n">Layer</span><span class="w">      </span><span class="err">│</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="n">Writable</span><span class="w"> </span><span class="p">(</span><span class="n">container</span><span class="w"> </span><span class="n">changes</span><span class="p">)</span><span class="w">    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="o">/</span><span class="n">upper</span><span class="w">           </span><span class="err">│</span><span class="w">                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└─────────────────────┘</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">           </span><span class="err">↑</span><span class="w">                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────┐</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="n">Lower</span><span class="w"> </span><span class="n">Layer</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="n">Read</span><span class="o">-</span><span class="n">only</span><span class="w"> </span><span class="p">(</span><span class="n">image</span><span class="w"> </span><span class="n">layers</span><span class="p">)</span><span class="w">        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="o">/</span><span class="n">lower1</span><span class="w">           </span><span class="err">│</span><span class="w">                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="o">/</span><span class="n">lower2</span><span class="w">           </span><span class="err">│</span><span class="w">                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="o">/</span><span class="n">lower3</span><span class="w">           </span><span class="err">│</span><span class="w">                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└─────────────────────┘</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Work</span><span class="w"> </span><span class="n">Directory</span><span class="w">                                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">/</span><span class="n">work</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">Internal</span><span class="w"> </span><span class="n">OverlayFS</span><span class="w"> </span><span class="n">working</span><span class="w"> </span><span class="n">directory</span><span class="w">               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                             </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="42-using-overlayfs">4.2 Using OverlayFS<a class="header-link" href="#42-using-overlayfs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Mount OverlayFS</span>
+mkdir<span class="w"> </span>-p<span class="w"> </span>/lower<span class="w"> </span>/upper<span class="w"> </span>/work<span class="w"> </span>/merged
+
+<span class="c1"># Create files in lower</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;from lower&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/lower/file1.txt
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;will be overwritten&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/lower/file2.txt
+
+<span class="c1"># Create files in upper</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;from upper&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/upper/file2.txt
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;only in upper&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/upper/file3.txt
+
+<span class="c1"># Mount OverlayFS</span>
+mount<span class="w"> </span>-t<span class="w"> </span>overlay<span class="w"> </span>overlay<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-o<span class="w"> </span><span class="nv">lowerdir</span><span class="o">=</span>/lower,upperdir<span class="o">=</span>/upper,workdir<span class="o">=</span>/work<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>/merged
+
+<span class="c1"># Check result</span>
+ls<span class="w"> </span>/merged/
+<span class="c1"># file1.txt  file2.txt  file3.txt</span>
+
+cat<span class="w"> </span>/merged/file1.txt<span class="w">  </span><span class="c1"># from lower</span>
+cat<span class="w"> </span>/merged/file2.txt<span class="w">  </span><span class="c1"># from upper (overwritten)</span>
+cat<span class="w"> </span>/merged/file3.txt<span class="w">  </span><span class="c1"># only in upper</span>
+
+<span class="c1"># Write new file</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;new file&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/merged/file4.txt
+ls<span class="w"> </span>/upper/<span class="w">  </span><span class="c1"># file4.txt created in upper</span>
+
+<span class="c1"># Delete file (whiteout)</span>
+rm<span class="w"> </span>/merged/file1.txt
+ls<span class="w"> </span>-la<span class="w"> </span>/upper/
+<span class="c1"># c--------- ... file1.txt  (whiteout file)</span>
+
+<span class="c1"># Unmount</span>
+umount<span class="w"> </span>/merged
+</code></pre></div>
+
+<h3 id="43-docker-image-layers">4.3 Docker Image Layers<a class="header-link" href="#43-docker-image-layers" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check Docker image layers</span>
+docker<span class="w"> </span>image<span class="w"> </span>inspect<span class="w"> </span>ubuntu:22.04<span class="w"> </span>--format<span class="w"> </span><span class="s1">&#39;{{.RootFS.Layers}}&#39;</span>
+
+<span class="c1"># Layer storage location</span>
+ls<span class="w"> </span>/var/lib/docker/overlay2/
+
+<span class="c1"># Mount information for specific container</span>
+docker<span class="w"> </span>inspect<span class="w"> </span>&lt;container_id&gt;<span class="w"> </span>--format<span class="w"> </span><span class="s1">&#39;{{.GraphDriver.Data}}&#39;</span>
+<span class="c1"># Check LowerDir, UpperDir, MergedDir, WorkDir</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-container-runtime">5. Container Runtime<a class="header-link" href="#5-container-runtime" title="Permanent link">&para;</a></h2>
+<h3 id="51-runtime-layers">5.1 Runtime Layers<a class="header-link" href="#51-runtime-layers" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    Container Runtime Layers                  │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  High-Level Runtime (Container Engine)                     │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  Docker Engine / Podman / containerd                │   │
+│  │  • Image management (pull, push, build)             │   │
+│  │  • Networking                                        │   │
+│  │  • Volume management                                 │   │
+│  │  • API provision                                     │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                          │                                  │
+│                          ▼                                  │
+│  Low-Level Runtime (OCI Runtime)                           │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  runc / crun / kata-containers                      │   │
+│  │  • Actual container creation                         │   │
+│  │  • namespace, cgroups setup                          │   │
+│  │  • OCI spec compliance                               │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                          │                                  │
+│                          ▼                                  │
+│  Linux Kernel                                               │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  namespaces, cgroups, seccomp, capabilities        │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="52-creating-container-manually">5.2 Creating Container Manually<a class="header-link" href="#52-creating-container-manually" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="c1"># manual_container.sh</span>
+
+<span class="c1"># 1. Prepare rootfs</span>
+mkdir<span class="w"> </span>-p<span class="w"> </span>/tmp/mycontainer/<span class="o">{</span>rootfs,upper,work,merged<span class="o">}</span>
+
+<span class="c1"># Download base rootfs (Alpine)</span>
+curl<span class="w"> </span>-o<span class="w"> </span>/tmp/alpine.tar.gz<span class="w"> </span>https://dl-cdn.alpinelinux.org/alpine/v3.18/releases/x86_64/alpine-minirootfs-3.18.0-x86_64.tar.gz
+tar<span class="w"> </span>-xzf<span class="w"> </span>/tmp/alpine.tar.gz<span class="w"> </span>-C<span class="w"> </span>/tmp/mycontainer/rootfs
+
+<span class="c1"># 2. Mount OverlayFS</span>
+mount<span class="w"> </span>-t<span class="w"> </span>overlay<span class="w"> </span>overlay<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-o<span class="w"> </span><span class="nv">lowerdir</span><span class="o">=</span>/tmp/mycontainer/rootfs,upperdir<span class="o">=</span>/tmp/mycontainer/upper,workdir<span class="o">=</span>/tmp/mycontainer/work<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>/tmp/mycontainer/merged
+
+<span class="c1"># 3. Essential mounts</span>
+mount<span class="w"> </span>-t<span class="w"> </span>proc<span class="w"> </span>proc<span class="w"> </span>/tmp/mycontainer/merged/proc
+mount<span class="w"> </span>-t<span class="w"> </span>sysfs<span class="w"> </span>sysfs<span class="w"> </span>/tmp/mycontainer/merged/sys
+mount<span class="w"> </span>-o<span class="w"> </span><span class="nb">bind</span><span class="w"> </span>/dev<span class="w"> </span>/tmp/mycontainer/merged/dev
+
+<span class="c1"># 4. chroot with new namespaces</span>
+unshare<span class="w"> </span>--mount<span class="w"> </span>--uts<span class="w"> </span>--ipc<span class="w"> </span>--net<span class="w"> </span>--pid<span class="w"> </span>--fork<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>chroot<span class="w"> </span>/tmp/mycontainer/merged<span class="w"> </span>/bin/sh<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;</span>
+<span class="s1">    hostname mycontainer</span>
+<span class="s1">    mount -t proc proc /proc</span>
+<span class="s1">    exec /bin/sh</span>
+<span class="s1">  &#39;</span>
+
+<span class="c1"># Cleanup</span>
+umount<span class="w"> </span>/tmp/mycontainer/merged/<span class="o">{</span>proc,sys,dev<span class="o">}</span>
+umount<span class="w"> </span>/tmp/mycontainer/merged
+</code></pre></div>
+
+<h3 id="53-using-runc">5.3 Using runc<a class="header-link" href="#53-using-runc" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Install runc</span>
+apt<span class="w"> </span>install<span class="w"> </span>runc
+
+<span class="c1"># OCI bundle structure</span>
+mkdir<span class="w"> </span>-p<span class="w"> </span>bundle/rootfs
+<span class="nb">cd</span><span class="w"> </span>bundle
+
+<span class="c1"># Prepare rootfs (extract from Docker)</span>
+docker<span class="w"> </span><span class="nb">export</span><span class="w"> </span><span class="k">$(</span>docker<span class="w"> </span>create<span class="w"> </span>alpine<span class="k">)</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tar<span class="w"> </span>-C<span class="w"> </span>rootfs<span class="w"> </span>-xf<span class="w"> </span>-
+
+<span class="c1"># Generate config.json</span>
+runc<span class="w"> </span>spec
+
+<span class="c1"># Edit config.json (change terminal: true)</span>
+
+<span class="c1"># Run container</span>
+runc<span class="w"> </span>run<span class="w"> </span>mycontainer
+
+<span class="c1"># From another terminal</span>
+runc<span class="w"> </span>list
+runc<span class="w"> </span>state<span class="w"> </span>mycontainer
+runc<span class="w"> </span><span class="nb">kill</span><span class="w"> </span>mycontainer
+runc<span class="w"> </span>delete<span class="w"> </span>mycontainer
+</code></pre></div>
+
+<h3 id="54-rootless-containers">5.4 Rootless Containers<a class="header-link" href="#54-rootless-containers" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Podman rootless</span>
+podman<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-it<span class="w"> </span>alpine<span class="w"> </span>sh
+
+<span class="c1"># Check user namespace mapping</span>
+cat<span class="w"> </span>/proc/self/uid_map
+cat<span class="w"> </span>/proc/self/gid_map
+
+<span class="c1"># subuid/subgid configuration</span>
+<span class="c1"># /etc/subuid</span>
+<span class="c1"># username:100000:65536</span>
+<span class="c1"># /etc/subgid</span>
+<span class="c1"># username:100000:65536</span>
+
+<span class="c1"># Rootless Docker</span>
+dockerd-rootless-setuptool.sh<span class="w"> </span>install
+<span class="nb">export</span><span class="w"> </span><span class="nv">PATH</span><span class="o">=</span>/home/<span class="nv">$USER</span>/bin:<span class="nv">$PATH</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">DOCKER_HOST</span><span class="o">=</span>unix://<span class="nv">$XDG_RUNTIME_DIR</span>/docker.sock
+docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>hello-world
+</code></pre></div>
+
+<hr />
+<h2 id="6-security">6. Security<a class="header-link" href="#6-security" title="Permanent link">&para;</a></h2>
+<h3 id="61-capabilities">6.1 Capabilities<a class="header-link" href="#61-capabilities" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check process capabilities</span>
+cat<span class="w"> </span>/proc/<span class="nv">$$</span>/status<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>Cap
+getpcaps<span class="w"> </span><span class="nv">$$</span>
+
+<span class="c1"># Capabilities list</span>
+capsh<span class="w"> </span>--print
+
+<span class="c1"># Grant specific capabilities only</span>
+docker<span class="w"> </span>run<span class="w"> </span>--cap-drop<span class="w"> </span>ALL<span class="w"> </span>--cap-add<span class="w"> </span>NET_BIND_SERVICE<span class="w"> </span>nginx
+
+<span class="c1"># Key capabilities:</span>
+<span class="c1"># CAP_NET_ADMIN - Network configuration</span>
+<span class="c1"># CAP_NET_BIND_SERVICE - Bind to ports &lt; 1024</span>
+<span class="c1"># CAP_SYS_ADMIN - System administration (dangerous)</span>
+<span class="c1"># CAP_SYS_PTRACE - Process tracing</span>
+<span class="c1"># CAP_MKNOD - Create special files</span>
+</code></pre></div>
+
+<h3 id="62-seccomp">6.2 Seccomp<a class="header-link" href="#62-seccomp" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check default seccomp profile</span>
+docker<span class="w"> </span>info<span class="w"> </span>--format<span class="w"> </span><span class="s1">&#39;{{.SecurityOptions}}&#39;</span>
+
+<span class="c1"># Custom seccomp profile</span>
+cat<span class="w"> </span>&gt;<span class="w"> </span>seccomp.json<span class="w"> </span><span class="s">&lt;&lt; &#39;EOF&#39;</span>
+<span class="s">{</span>
+<span class="s">  &quot;defaultAction&quot;: &quot;SCMP_ACT_ERRNO&quot;,</span>
+<span class="s">  &quot;architectures&quot;: [&quot;SCMP_ARCH_X86_64&quot;],</span>
+<span class="s">  &quot;syscalls&quot;: [</span>
+<span class="s">    {</span>
+<span class="s">      &quot;names&quot;: [&quot;read&quot;, &quot;write&quot;, &quot;exit&quot;, &quot;exit_group&quot;],</span>
+<span class="s">      &quot;action&quot;: &quot;SCMP_ACT_ALLOW&quot;</span>
+<span class="s">    }</span>
+<span class="s">  ]</span>
+<span class="s">}</span>
+<span class="s">EOF</span>
+
+<span class="c1"># Apply profile</span>
+docker<span class="w"> </span>run<span class="w"> </span>--security-opt<span class="w"> </span><span class="nv">seccomp</span><span class="o">=</span>seccomp.json<span class="w"> </span>alpine<span class="w"> </span>sh
+
+<span class="c1"># Run without seccomp (not recommended)</span>
+docker<span class="w"> </span>run<span class="w"> </span>--security-opt<span class="w"> </span><span class="nv">seccomp</span><span class="o">=</span>unconfined<span class="w"> </span>alpine<span class="w"> </span>sh
+</code></pre></div>
+
+<h3 id="63-apparmorselinux">6.3 AppArmor/SELinux<a class="header-link" href="#63-apparmorselinux" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># AppArmor status</span>
+aa-status
+
+<span class="c1"># Docker AppArmor profile</span>
+cat<span class="w"> </span>/etc/apparmor.d/docker
+
+<span class="c1"># Apply custom profile</span>
+docker<span class="w"> </span>run<span class="w"> </span>--security-opt<span class="w"> </span><span class="nv">apparmor</span><span class="o">=</span>my-profile<span class="w"> </span>alpine
+
+<span class="c1"># SELinux (RHEL/CentOS)</span>
+getenforce
+<span class="c1"># docker run --security-opt label=type:my_container_t alpine</span>
+</code></pre></div>
+
+<h3 id="64-read-only-root">6.4 Read-only Root<a class="header-link" href="#64-read-only-root" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Read-only root filesystem</span>
+docker<span class="w"> </span>run<span class="w"> </span>--read-only<span class="w"> </span>alpine<span class="w"> </span>sh
+
+<span class="c1"># Allow temporary directory</span>
+docker<span class="w"> </span>run<span class="w"> </span>--read-only<span class="w"> </span>--tmpfs<span class="w"> </span>/tmp<span class="w"> </span>alpine<span class="w"> </span>sh
+
+<span class="c1"># Allow write via volume</span>
+docker<span class="w"> </span>run<span class="w"> </span>--read-only<span class="w"> </span>-v<span class="w"> </span>/data<span class="w"> </span>alpine<span class="w"> </span>sh
+</code></pre></div>
+
+<hr />
+<h2 id="7-practice-exercises">7. Practice Exercises<a class="header-link" href="#7-practice-exercises" title="Permanent link">&para;</a></h2>
+<h3 id="exercise-1-namespace-practice">Exercise 1: Namespace Practice<a class="header-link" href="#exercise-1-namespace-practice" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Requirements:</span>
+<span class="c1"># 1. Create isolated environment using all namespace types</span>
+<span class="c1"># 2. Verify isolation from host (hostname, PID, network)</span>
+<span class="c1"># 3. Enter namespace with nsenter</span>
+
+<span class="c1"># Write commands:</span>
+</code></pre></div>
+
+<h3 id="exercise-2-cgroups-resource-limiting">Exercise 2: cgroups Resource Limiting<a class="header-link" href="#exercise-2-cgroups-resource-limiting" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Requirements:</span>
+<span class="c1"># 1. Limit CPU to 25%</span>
+<span class="c1"># 2. Limit memory to 256MB</span>
+<span class="c1"># 3. Limit I/O to 1MB/s</span>
+<span class="c1"># 4. Test with stress tool</span>
+
+<span class="c1"># Write configuration and commands:</span>
+</code></pre></div>
+
+<h3 id="exercise-3-manual-container-creation">Exercise 3: Manual Container Creation<a class="header-link" href="#exercise-3-manual-container-creation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Requirements:</span>
+<span class="c1"># 1. Prepare rootfs (Alpine)</span>
+<span class="c1"># 2. Configure OverlayFS</span>
+<span class="c1"># 3. Namespace isolation</span>
+<span class="c1"># 4. cgroups limits</span>
+<span class="c1"># 5. Execute shell</span>
+
+<span class="c1"># Write script:</span>
+</code></pre></div>
+
+<h3 id="exercise-4-hardened-container">Exercise 4: Hardened Container<a class="header-link" href="#exercise-4-hardened-container" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Requirements:</span>
+<span class="c1"># 1. Grant minimal capabilities only</span>
+<span class="c1"># 2. Apply seccomp profile</span>
+<span class="c1"># 3. Read-only root</span>
+<span class="c1"># 4. non-root user</span>
+
+<span class="c1"># Write docker run command:</span>
+</code></pre></div>
+
+<hr />
+<h2 id="next-steps">Next Steps<a class="header-link" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="16_Storage_Management.md">16_Storage_Management</a> - LVM, RAID</li>
+<li><a href="https://docs.docker.com/">Docker Documentation</a></li>
+<li><a href="https://github.com/opencontainers/runtime-spec">OCI Runtime Spec</a></li>
+</ul>
+<h2 id="references">References<a class="header-link" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://man7.org/linux/man-pages/man7/namespaces.7.html">Linux Namespaces</a></li>
+<li><a href="https://docs.kernel.org/admin-guide/cgroup-v2.html">cgroups v2</a></li>
+<li><a href="https://docs.kernel.org/filesystems/overlayfs.html">OverlayFS</a></li>
+<li><a href="https://github.com/opencontainers/runc">runc</a></li>
+<li><a href="https://docs.docker.com/engine/security/">Container Security</a></li>
+</ul>
+<hr />
+<p><a href="14_Performance_Tuning.md">← Previous: Performance Tuning</a> | <a href="16_Storage_Management.md">Next: Storage Management →</a> | <a href="00_Overview.md">Table of Contents</a></p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/Linux/14_Performance_Tuning.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">14. Linux Performance Tuning</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/Linux/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/Linux/16_Storage_Management.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">16. Storage Management</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'en';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

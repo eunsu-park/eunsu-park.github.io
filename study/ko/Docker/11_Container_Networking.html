@@ -1,0 +1,1481 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>컨테이너 네트워킹(Container Networking) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Docker/">Docker</a>
+    <span class="separator">/</span>
+    <span class="current">컨테이너 네트워킹(Container Networking)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>컨테이너 네트워킹(Container Networking)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Docker/10_CI_CD_Pipelines.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">10. CI/CD 파이프라인</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Docker/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Docker/12_Security_Best_Practices.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">보안 모범 사례(Security Best Practices)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#_2">목차</a></li>
+<li><a href="#1-docker">1. Docker 네트워크 드라이버</a><ul>
+<li><a href="#_3">네트워크 드라이버 개요</a></li>
+<li><a href="#_4">네트워크 나열</a></li>
+<li><a href="#_5">네트워크 검사</a></li>
+<li><a href="#_6">네트워크 드라이버 사용 사례</a></li>
+</ul>
+</li>
+<li><a href="#2">2. 브리지 네트워크 심화</a><ul>
+<li><a href="#vs">기본 브리지 vs 사용자 정의 브리지</a></li>
+<li><a href="#_7">사용자 정의 브리지 네트워크 생성</a></li>
+<li><a href="#_8">브리지 네트워크에 컨테이너 연결</a></li>
+<li><a href="#_9">런타임에 네트워크 연결/연결 해제</a></li>
+<li><a href="#docker-compose">Docker Compose 브리지 네트워크</a></li>
+</ul>
+</li>
+<li><a href="#3-none">3. 호스트 및 None 네트워크</a><ul>
+<li><a href="#host-network">호스트 네트워크(Host Network)</a></li>
+<li><a href="#_10">성능 비교</a></li>
+<li><a href="#none">None 네트워크</a></li>
+</ul>
+</li>
+<li><a href="#4">4. 오버레이 네트워크</a><ul>
+<li><a href="#_11">오버레이 네트워크 아키텍처</a></li>
+<li><a href="#_12">오버레이 네트워크 생성</a></li>
+<li><a href="#_13">오버레이 네트워크에 서비스 배포</a></li>
+<li><a href="#docker-compose-swarm-stack">Docker Compose와 오버레이 (Swarm Stack)</a></li>
+<li><a href="#_14">오버레이 네트워크 암호화</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 네트워크 구성</a><ul>
+<li><a href="#_15">커스텀 서브넷과 게이트웨이</a></li>
+<li><a href="#mtu">MTU 구성</a></li>
+<li><a href="#ipv6">IPv6 지원</a></li>
+<li><a href="#_16">네트워크 드라이버 옵션</a></li>
+</ul>
+</li>
+<li><a href="#6-dns">6. DNS와 서비스 디스커버리</a><ul>
+<li><a href="#dns">임베디드 DNS 서버</a></li>
+<li><a href="#dns_1">DNS 해석 예제</a></li>
+<li><a href="#dns_2">커스텀 DNS 구성</a></li>
+<li><a href="#docker-compose_1">Docker Compose에서 서비스 디스커버리</a></li>
+<li><a href="#dns_3">DNS 라운드 로빈 (여러 컨테이너)</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 고급 포트 매핑</a><ul>
+<li><a href="#_17">포트 퍼블리싱 모드</a></li>
+<li><a href="#_18">포트 매핑 다이어그램</a></li>
+<li><a href="#docker-compose_2">Docker Compose 포트 매핑</a></li>
+<li><a href="#_19">포트 매핑 검사</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 네트워크 보안</a><ul>
+<li><a href="#_20">네트워크 격리</a></li>
+<li><a href="#internal-networks">내부 네트워크(Internal Networks)</a></li>
+<li><a href="#icc">컨테이너 간 통신(ICC)</a></li>
+<li><a href="#iptables">iptables를 사용한 네트워크 정책</a></li>
+<li><a href="#_21">암호화된 오버레이 네트워크</a></li>
+</ul>
+</li>
+<li><a href="#9">9. 문제 해결</a><ul>
+<li><a href="#_22">네트워크 검사 명령어</a></li>
+<li><a href="#_23">연결성 테스트</a></li>
+<li><a href="#_24">패킷 캡처</a></li>
+<li><a href="#_25">일반적인 네트워크 문제</a><ul>
+<li><a href="#1">문제 1: 컨테이너가 인터넷에 접근할 수 없음</a></li>
+<li><a href="#2_1">문제 2: 컨테이너가 이름으로 통신할 수 없음</a></li>
+<li><a href="#3">문제 3: 포트가 이미 사용 중</a></li>
+<li><a href="#4-dns">문제 4: DNS 해석 느림</a></li>
+</ul>
+</li>
+<li><a href="#_26">네트워크 디버깅 도구</a></li>
+<li><a href="#_27">네트워크 로그 보기</a></li>
+</ul>
+</li>
+<li><a href="#10">10. 연습 문제</a><ul>
+<li><a href="#1_1">연습 1: 다계층 애플리케이션 네트워크</a></li>
+<li><a href="#2-ip">연습 2: 정적 IP를 사용한 커스텀 브리지 네트워크</a></li>
+<li><a href="#3-dns">연습 3: DNS 라운드 로빈 로드 밸런싱</a></li>
+<li><a href="#4_1">연습 4: 네트워크 문제 해결</a></li>
+<li><a href="#5_1">연습 5: 안전한 다중 호스트 네트워크</a></li>
+<li><a href="#6">연습 6: 네트워크 성능 테스트</a></li>
+</ul>
+</li>
+<li><a href="#_28">요약</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="container-networking">컨테이너 네트워킹(Container Networking)<a class="header-link" href="#container-networking" title="Permanent link">&para;</a></h1>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Docker 네트워크 드라이버(Network Drivers)와 사용 사례 이해</li>
+<li>브리지(Bridge), 호스트(Host), 오버레이(Overlay), 맥브이랜(Macvlan) 네트워크 마스터하기</li>
+<li>서브넷(Subnet), 게이트웨이(Gateway), DNS를 사용한 커스텀 네트워크 구성</li>
+<li>서비스 디스커버리(Service Discovery)와 컨테이너 간 통신 구현</li>
+<li>네트워크 연결성 문제 해결</li>
+<li>네트워크 보안 모범 사례 적용</li>
+</ul>
+<h2 id="_2">목차<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-docker-네트워크-드라이버">Docker 네트워크 드라이버</a></li>
+<li><a href="#2-브리지-네트워크-심화">브리지 네트워크 심화</a></li>
+<li><a href="#3-호스트-및-none-네트워크">호스트 및 None 네트워크</a></li>
+<li><a href="#4-오버레이-네트워크">오버레이 네트워크</a></li>
+<li><a href="#5-네트워크-구성">네트워크 구성</a></li>
+<li><a href="#6-dns와-서비스-디스커버리">DNS와 서비스 디스커버리</a></li>
+<li><a href="#7-고급-포트-매핑">고급 포트 매핑</a></li>
+<li><a href="#8-네트워크-보안">네트워크 보안</a></li>
+<li><a href="#9-문제-해결">문제 해결</a></li>
+<li><a href="#10-연습-문제">연습 문제</a></li>
+</ol>
+<p><strong>난이도</strong>: ⭐⭐⭐</p>
+<hr />
+<h2 id="1-docker">1. Docker 네트워크 드라이버<a class="header-link" href="#1-docker" title="Permanent link">&para;</a></h2>
+<p>Docker는 다양한 사용 사례를 위한 여러 네트워크 드라이버를 제공합니다.</p>
+<h3 id="_3">네트워크 드라이버 개요<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    Docker Network Drivers                    │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │  bridge  │  │   host   │  │ overlay  │  │ macvlan  │   │
+│  │          │  │          │  │          │  │          │   │
+│  │ Default  │  │  Native  │  │  Swarm   │  │  Legacy  │   │
+│  │ Isolated │  │  Network │  │Multi-host│  │  Bridge  │   │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
+│                                                              │
+│              ┌──────────┐                                    │
+│              │   none   │                                    │
+│              │          │                                    │
+│              │ Disabled │                                    │
+│              └──────────┘                                    │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_4">네트워크 나열<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># List all networks</span>
+docker<span class="w"> </span>network<span class="w"> </span>ls
+
+<span class="c1"># Output:</span>
+<span class="c1"># NETWORK ID     NAME      DRIVER    SCOPE</span>
+<span class="c1"># 3c7f2a8b4d91   bridge    bridge    local</span>
+<span class="c1"># 9f8e3d2c1a45   host      host      local</span>
+<span class="c1"># 1b5a6c9d3e72   none      null      local</span>
+</code></pre></div>
+
+<h3 id="_5">네트워크 검사<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Detailed network information</span>
+docker<span class="w"> </span>network<span class="w"> </span>inspect<span class="w"> </span>bridge
+
+<span class="c1"># Output (truncated):</span>
+<span class="c1"># [</span>
+<span class="c1">#     {</span>
+<span class="c1">#         &quot;Name&quot;: &quot;bridge&quot;,</span>
+<span class="c1">#         &quot;Driver&quot;: &quot;bridge&quot;,</span>
+<span class="c1">#         &quot;IPAM&quot;: {</span>
+<span class="c1">#             &quot;Config&quot;: [</span>
+<span class="c1">#                 {</span>
+<span class="c1">#                     &quot;Subnet&quot;: &quot;172.17.0.0/16&quot;,</span>
+<span class="c1">#                     &quot;Gateway&quot;: &quot;172.17.0.1&quot;</span>
+<span class="c1">#                 }</span>
+<span class="c1">#             ]</span>
+<span class="c1">#         },</span>
+<span class="c1">#         &quot;Containers&quot;: {...}</span>
+<span class="c1">#     }</span>
+<span class="c1"># ]</span>
+</code></pre></div>
+
+<h3 id="_6">네트워크 드라이버 사용 사례<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>드라이버(Driver)</th>
+<th>사용 사례</th>
+<th>범위(Scope)</th>
+<th>DNS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>bridge</strong></td>
+<td>단일 호스트, 격리된 컨테이너</td>
+<td>Local</td>
+<td>Yes (사용자 정의)</td>
+</tr>
+<tr>
+<td><strong>host</strong></td>
+<td>높은 성능, 격리 없음</td>
+<td>Local</td>
+<td>Host DNS</td>
+</tr>
+<tr>
+<td><strong>overlay</strong></td>
+<td>다중 호스트, Swarm 서비스</td>
+<td>Swarm</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><strong>macvlan</strong></td>
+<td>MAC 주소가 필요한 레거시 앱</td>
+<td>Local</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>none</strong></td>
+<td>완전한 격리, 커스텀 네트워킹</td>
+<td>Local</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2">2. 브리지 네트워크 심화<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<p>브리지 네트워크(Bridge Network)는 컨테이너에 가장 일반적인 네트워크 유형입니다.</p>
+<h3 id="vs">기본 브리지 vs 사용자 정의 브리지<a class="header-link" href="#vs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Default Bridge Network              User-Defined Bridge Network
+┌──────────────────────┐            ┌──────────────────────┐
+│   172.17.0.0/16      │            │   172.20.0.0/16      │
+│                      │            │                      │
+│  ┌────────────┐      │            │  ┌────────────┐      │
+│  │ Container1 │      │            │  │ Container1 │      │
+│  │ 172.17.0.2 │      │            │  │ 172.20.0.2 │      │
+│  │            │      │            │  │ web        │      │
+│  └────────────┘      │            │  └────────────┘      │
+│                      │            │         │            │
+│  ┌────────────┐      │            │         │ DNS        │
+│  │ Container2 │      │            │         ▼            │
+│  │ 172.17.0.3 │      │            │  ┌────────────┐      │
+│  │            │      │            │  │ Container2 │      │
+│  └────────────┘      │            │  │ 172.20.0.3 │      │
+│                      │            │  │ db         │      │
+│  No automatic DNS    │            │  └────────────┘      │
+│  Link by IP only     │            │                      │
+└──────────────────────┘            │  Automatic DNS       │
+                                    │  Link by name        │
+                                    └──────────────────────┘
+</code></pre></div>
+
+<h3 id="_7">사용자 정의 브리지 네트워크 생성<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create custom bridge network</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span>my-app-network
+
+<span class="c1"># Create with custom subnet</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--driver<span class="w"> </span>bridge<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--subnet<span class="w"> </span><span class="m">172</span>.25.0.0/16<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--gateway<span class="w"> </span><span class="m">172</span>.25.0.1<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>my-custom-network
+
+<span class="c1"># Create with IP range reservation</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--subnet<span class="w"> </span><span class="m">172</span>.26.0.0/16<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ip-range<span class="w"> </span><span class="m">172</span>.26.5.0/24<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>my-reserved-network
+</code></pre></div>
+
+<h3 id="_8">브리지 네트워크에 컨테이너 연결<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Run container on custom network</span>
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>web<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--network<span class="w"> </span>my-app-network<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>nginx
+
+<span class="c1"># Run another container on same network</span>
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>db<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--network<span class="w"> </span>my-app-network<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>postgres
+
+<span class="c1"># Test DNS resolution</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>web<span class="w"> </span>ping<span class="w"> </span>db
+<span class="c1"># PING db (172.25.0.3): 56 data bytes</span>
+<span class="c1"># 64 bytes from 172.25.0.3: seq=0 ttl=64 time=0.123 ms</span>
+</code></pre></div>
+
+<h3 id="_9">런타임에 네트워크 연결/연결 해제<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Connect running container to additional network</span>
+docker<span class="w"> </span>network<span class="w"> </span>connect<span class="w"> </span>my-app-network<span class="w"> </span>my-container
+
+<span class="c1"># Disconnect from network</span>
+docker<span class="w"> </span>network<span class="w"> </span>disconnect<span class="w"> </span>my-app-network<span class="w"> </span>my-container
+
+<span class="c1"># Connect with static IP</span>
+docker<span class="w"> </span>network<span class="w"> </span>connect<span class="w"> </span>--ip<span class="w"> </span><span class="m">172</span>.25.0.100<span class="w"> </span>my-app-network<span class="w"> </span>my-container
+</code></pre></div>
+
+<h3 id="docker-compose">Docker Compose 브리지 네트워크<a class="header-link" href="#docker-compose" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># docker-compose.yml</span>
+<span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3.8&#39;</span>
+
+<span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">web</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nginx</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">frontend</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">backend</span>
+
+<span class="w">  </span><span class="nt">app</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">myapp:latest</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">backend</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">ipv4_address</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">172.28.0.100</span>
+
+<span class="w">  </span><span class="nt">db</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">backend</span>
+
+<span class="nt">networks</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">frontend</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bridge</span>
+<span class="w">  </span><span class="nt">backend</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bridge</span>
+<span class="w">    </span><span class="nt">ipam</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">config</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">subnet</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">172.28.0.0/16</span>
+<span class="w">          </span><span class="nt">gateway</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">172.28.0.1</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-none">3. 호스트 및 None 네트워크<a class="header-link" href="#3-none" title="Permanent link">&para;</a></h2>
+<h3 id="host-network">호스트 네트워크(Host Network)<a class="header-link" href="#host-network" title="Permanent link">&para;</a></h3>
+<p>컨테이너가 호스트의 네트워크 스택을 직접 공유합니다.</p>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────┐
+│            Host Network                  │
+│  ┌───────────────────────────────────┐  │
+│  │         Host OS Network           │  │
+│  │                                   │  │
+│  │  ┌──────────┐    ┌──────────┐    │  │
+│  │  │Container1│    │Container2│    │  │
+│  │  │  :80     │    │  :443    │    │  │
+│  │  └──────────┘    └──────────┘    │  │
+│  │                                   │  │
+│  │  No network isolation             │  │
+│  │  Direct host network access       │  │
+│  └───────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+</code></pre></div>
+
+<p><strong>사용 사례</strong>:
+- 높은 네트워크 성능 (NAT 오버헤드 없음)
+- 네트워크 모니터링 도구
+- 호스트 네트워크 기능이 필요한 서비스</p>
+<p><strong>제한 사항</strong>:
+- 네트워크 격리 없음
+- 호스트와의 포트 충돌
+- 동일한 포트에서 여러 컨테이너를 실행할 수 없음</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Run container with host network</span>
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>nginx-host<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--network<span class="w"> </span>host<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>nginx
+
+<span class="c1"># Container listens on host&#39;s port 80 directly</span>
+<span class="c1"># No -p flag needed (ignored if specified)</span>
+
+<span class="c1"># Check listening ports</span>
+netstat<span class="w"> </span>-tlnp<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="m">80</span>
+<span class="c1"># tcp  0  0  0.0.0.0:80  0.0.0.0:*  LISTEN  12345/nginx</span>
+</code></pre></div>
+
+<h3 id="_10">성능 비교<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Bridge network (with NAT)</span>
+docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--network<span class="w"> </span>bridge<span class="w"> </span>alpine<span class="w"> </span>ping<span class="w"> </span>-c<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="m">8</span>.8.8.8
+<span class="c1"># avg RTT: ~0.5ms overhead</span>
+
+<span class="c1"># Host network (no NAT)</span>
+docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--network<span class="w"> </span>host<span class="w"> </span>alpine<span class="w"> </span>ping<span class="w"> </span>-c<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="m">8</span>.8.8.8
+<span class="c1"># avg RTT: native host performance</span>
+</code></pre></div>
+
+<h3 id="none">None 네트워크<a class="header-link" href="#none" title="Permanent link">&para;</a></h3>
+<p>완전한 네트워크 격리.</p>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────┐
+│           None Network                   │
+│                                          │
+│        ┌──────────────┐                  │
+│        │  Container   │                  │
+│        │              │                  │
+│        │  No network  │                  │
+│        │  interface   │                  │
+│        │              │                  │
+│        │  Only: lo    │                  │
+│        └──────────────┘                  │
+│                                          │
+└─────────────────────────────────────────┘
+</code></pre></div>
+
+<p><strong>사용 사례</strong>:
+- 완전한 네트워크 격리
+- 커스텀 네트워크 스택 구현
+- 테스트 시나리오</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Run container with no network</span>
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>isolated<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--network<span class="w"> </span>none<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>alpine<span class="w"> </span>sleep<span class="w"> </span><span class="m">3600</span>
+
+<span class="c1"># Verify no network interfaces (except loopback)</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>isolated<span class="w"> </span>ip<span class="w"> </span>addr
+<span class="c1"># 1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt;</span>
+<span class="c1">#     inet 127.0.0.1/8 scope host lo</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4">4. 오버레이 네트워크<a class="header-link" href="#4" title="Permanent link">&para;</a></h2>
+<p>오버레이 네트워크(Overlay Network)는 Docker Swarm에서 다중 호스트 컨테이너 통신을 가능하게 합니다.</p>
+<h3 id="_11">오버레이 네트워크 아키텍처<a class="header-link" href="#_11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    Overlay Network                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌─────────────────────┐      ┌─────────────────────┐      │
+│  │    Host 1           │      │    Host 2           │      │
+│  │  ┌──────────────┐   │      │  ┌──────────────┐   │      │
+│  │  │ Container A  │   │◄────►│  │ Container B  │   │      │
+│  │  │ 10.0.0.2     │   │VXLAN │  │ 10.0.0.3     │   │      │
+│  │  └──────────────┘   │Tunnel│  └──────────────┘   │      │
+│  │                     │      │                     │      │
+│  │  Physical: 192.168.1.10    │  Physical: 192.168.1.20  │
+│  └─────────────────────┘      └─────────────────────┘      │
+│                                                              │
+│  Overlay subnet: 10.0.0.0/24                                │
+│  Underlay network: 192.168.1.0/24                           │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_12">오버레이 네트워크 생성<a class="header-link" href="#_12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Initialize Swarm (required for overlay networks)</span>
+docker<span class="w"> </span>swarm<span class="w"> </span>init<span class="w"> </span>--advertise-addr<span class="w"> </span><span class="m">192</span>.168.1.10
+
+<span class="c1"># Create overlay network</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--driver<span class="w"> </span>overlay<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--subnet<span class="w"> </span><span class="m">10</span>.0.9.0/24<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>my-overlay
+
+<span class="c1"># Create with encryption</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--driver<span class="w"> </span>overlay<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--opt<span class="w"> </span>encrypted<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--subnet<span class="w"> </span><span class="m">10</span>.0.10.0/24<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>secure-overlay
+
+<span class="c1"># Create attachable overlay (for standalone containers)</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--driver<span class="w"> </span>overlay<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--attachable<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--subnet<span class="w"> </span><span class="m">10</span>.0.11.0/24<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>attachable-overlay
+</code></pre></div>
+
+<h3 id="_13">오버레이 네트워크에 서비스 배포<a class="header-link" href="#_13" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create service on overlay network</span>
+docker<span class="w"> </span>service<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>web<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--network<span class="w"> </span>my-overlay<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--replicas<span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>nginx
+
+<span class="c1"># Create backend service</span>
+docker<span class="w"> </span>service<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>api<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--network<span class="w"> </span>my-overlay<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--replicas<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>myapi:latest
+
+<span class="c1"># Services can communicate by name across hosts</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>&lt;web-container&gt;<span class="w"> </span>curl<span class="w"> </span>http://api:8080
+</code></pre></div>
+
+<h3 id="docker-compose-swarm-stack">Docker Compose와 오버레이 (Swarm Stack)<a class="header-link" href="#docker-compose-swarm-stack" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># docker-compose.yml</span>
+<span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3.8&#39;</span>
+
+<span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">web</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nginx</span>
+<span class="w">    </span><span class="nt">deploy</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">frontend</span>
+
+<span class="w">  </span><span class="nt">api</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">myapi:latest</span>
+<span class="w">    </span><span class="nt">deploy</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">frontend</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">backend</span>
+
+<span class="w">  </span><span class="nt">db</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres</span>
+<span class="w">    </span><span class="nt">deploy</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">      </span><span class="nt">placement</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">constraints</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">node.role == manager</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">backend</span>
+<span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">db-data:/var/lib/postgresql/data</span>
+
+<span class="nt">networks</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">frontend</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">overlay</span>
+<span class="w">  </span><span class="nt">backend</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">overlay</span>
+<span class="w">    </span><span class="nt">driver_opts</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">encrypted</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;true&quot;</span>
+
+<span class="nt">volumes</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">db-data</span><span class="p">:</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># Deploy stack</span>
+docker<span class="w"> </span>stack<span class="w"> </span>deploy<span class="w"> </span>-c<span class="w"> </span>docker-compose.yml<span class="w"> </span>myapp
+
+<span class="c1"># List networks</span>
+docker<span class="w"> </span>network<span class="w"> </span>ls
+<span class="c1"># NETWORK ID     NAME              DRIVER    SCOPE</span>
+<span class="c1"># abc123def456   myapp_frontend    overlay   swarm</span>
+<span class="c1"># def789ghi012   myapp_backend     overlay   swarm</span>
+</code></pre></div>
+
+<h3 id="_14">오버레이 네트워크 암호화<a class="header-link" href="#_14" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create encrypted overlay</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--driver<span class="w"> </span>overlay<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--opt<span class="w"> </span><span class="nv">encrypted</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--subnet<span class="w"> </span><span class="m">10</span>.0.20.0/24<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>encrypted-net
+
+<span class="c1"># IPsec encrypts VXLAN traffic between nodes</span>
+<span class="c1"># Performance impact: ~10-20% overhead</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 네트워크 구성<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="_15">커스텀 서브넷과 게이트웨이<a class="header-link" href="#_15" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create network with custom IPAM</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--driver<span class="w"> </span>bridge<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--subnet<span class="w"> </span><span class="m">172</span>.30.0.0/16<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--gateway<span class="w"> </span><span class="m">172</span>.30.0.1<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ip-range<span class="w"> </span><span class="m">172</span>.30.5.0/24<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--aux-address<span class="w"> </span><span class="s2">&quot;my-router=172.30.1.1&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>custom-net
+</code></pre></div>
+
+<h3 id="mtu">MTU 구성<a class="header-link" href="#mtu" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Set MTU (Maximum Transmission Unit)</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--driver<span class="w"> </span>bridge<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--opt<span class="w"> </span>com.docker.network.driver.mtu<span class="o">=</span><span class="m">1450</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>low-mtu-net
+
+<span class="c1"># Useful for:</span>
+<span class="c1"># - VPN/overlay networks (avoid fragmentation)</span>
+<span class="c1"># - Cloud environments (GCP: 1460, AWS: 9001 for jumbo frames)</span>
+</code></pre></div>
+
+<h3 id="ipv6">IPv6 지원<a class="header-link" href="#ipv6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Enable IPv6 in daemon.json</span>
+<span class="c1"># /etc/docker/daemon.json</span>
+<span class="o">{</span>
+<span class="w">  </span><span class="s2">&quot;ipv6&quot;</span>:<span class="w"> </span>true,
+<span class="w">  </span><span class="s2">&quot;fixed-cidr-v6&quot;</span>:<span class="w"> </span><span class="s2">&quot;2001:db8:1::/64&quot;</span>
+<span class="o">}</span>
+
+<span class="c1"># Restart Docker</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>docker
+
+<span class="c1"># Create network with IPv6</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ipv6<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--subnet<span class="w"> </span><span class="m">172</span>.31.0.0/16<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--subnet<span class="w"> </span><span class="m">2001</span>:db8:2::/64<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>ipv6-net
+</code></pre></div>
+
+<h3 id="_16">네트워크 드라이버 옵션<a class="header-link" href="#_16" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Bridge options</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--driver<span class="w"> </span>bridge<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--opt<span class="w"> </span>com.docker.network.bridge.name<span class="o">=</span>my-bridge<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--opt<span class="w"> </span>com.docker.network.bridge.enable_icc<span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--opt<span class="w"> </span>com.docker.network.bridge.enable_ip_masquerade<span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>my-configured-net
+</code></pre></div>
+
+<p><strong>일반 옵션</strong>:
+- <code>com.docker.network.bridge.name</code>: 커스텀 브리지 인터페이스 이름
+- <code>com.docker.network.bridge.enable_icc</code>: 컨테이너 간 통신(Inter-Container Communication) (기본값: true)
+- <code>com.docker.network.bridge.enable_ip_masquerade</code>: 외부 트래픽을 위한 NAT (기본값: true)
+- <code>com.docker.network.driver.mtu</code>: MTU 크기 (기본값: 1500)</p>
+<hr />
+<h2 id="6-dns">6. DNS와 서비스 디스커버리<a class="header-link" href="#6-dns" title="Permanent link">&para;</a></h2>
+<h3 id="dns">임베디드 DNS 서버<a class="header-link" href="#dns" title="Permanent link">&para;</a></h3>
+<p>Docker는 컨테이너 이름에 대한 자동 DNS 해석을 제공합니다.</p>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────┐
+│         User-Defined Network            │
+│                                         │
+│  ┌──────────┐         ┌──────────┐     │
+│  │   web    │         │   db     │     │
+│  │          │         │          │     │
+│  │          │──DNS───►│          │     │
+│  │          │  query  │          │     │
+│  │          │  &quot;db&quot;   │          │     │
+│  └──────────┘         └──────────┘     │
+│       │                                 │
+│       │ DNS query                       │
+│       ▼                                 │
+│  ┌─────────────────────────┐           │
+│  │  Embedded DNS Server    │           │
+│  │  (127.0.0.11:53)        │           │
+│  │                         │           │
+│  │  web → 172.20.0.2       │           │
+│  │  db  → 172.20.0.3       │           │
+│  └─────────────────────────┘           │
+└─────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="dns_1">DNS 해석 예제<a class="header-link" href="#dns_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create network and containers</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span>my-net
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--name<span class="w"> </span>web<span class="w"> </span>--network<span class="w"> </span>my-net<span class="w"> </span>nginx
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--name<span class="w"> </span>db<span class="w"> </span>--network<span class="w"> </span>my-net<span class="w"> </span>postgres
+
+<span class="c1"># Test DNS resolution</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>web<span class="w"> </span>nslookup<span class="w"> </span>db
+<span class="c1"># Server:    127.0.0.11</span>
+<span class="c1"># Address:   127.0.0.11:53</span>
+<span class="c1">#</span>
+<span class="c1"># Name:      db</span>
+<span class="c1"># Address:   172.20.0.3</span>
+
+<span class="c1"># Ping by container name</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>web<span class="w"> </span>ping<span class="w"> </span>-c<span class="w"> </span><span class="m">2</span><span class="w"> </span>db
+<span class="c1"># PING db (172.20.0.3): 56 data bytes</span>
+<span class="c1"># 64 bytes from 172.20.0.3: seq=0 ttl=64 time=0.123 ms</span>
+</code></pre></div>
+
+<h3 id="dns_2">커스텀 DNS 구성<a class="header-link" href="#dns_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Run container with custom DNS servers</span>
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>custom-dns<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--dns<span class="w"> </span><span class="m">8</span>.8.8.8<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--dns<span class="w"> </span><span class="m">8</span>.8.4.4<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--dns-search<span class="w"> </span>example.com<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>nginx
+
+<span class="c1"># Verify DNS configuration</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>custom-dns<span class="w"> </span>cat<span class="w"> </span>/etc/resolv.conf
+<span class="c1"># nameserver 8.8.8.8</span>
+<span class="c1"># nameserver 8.8.4.4</span>
+<span class="c1"># search example.com</span>
+</code></pre></div>
+
+<h3 id="docker-compose_1">Docker Compose에서 서비스 디스커버리<a class="header-link" href="#docker-compose_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># docker-compose.yml</span>
+<span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3.8&#39;</span>
+
+<span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">web</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nginx</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">app-net</span>
+
+<span class="w">  </span><span class="nt">api</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">myapi:latest</span>
+<span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<span class="w">      </span><span class="c1"># Resolve by service name</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">DATABASE_URL=postgresql://db:5432/mydb</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">app-net</span>
+
+<span class="w">  </span><span class="nt">db</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">app-net</span>
+
+<span class="nt">networks</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">app-net</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bridge</span>
+</code></pre></div>
+
+<h3 id="dns_3">DNS 라운드 로빈 (여러 컨테이너)<a class="header-link" href="#dns_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create multiple containers with same name (using --network-alias)</span>
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--name<span class="w"> </span>api1<span class="w"> </span>--network<span class="w"> </span>my-net<span class="w"> </span>--network-alias<span class="w"> </span>api<span class="w"> </span>myapi:latest
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--name<span class="w"> </span>api2<span class="w"> </span>--network<span class="w"> </span>my-net<span class="w"> </span>--network-alias<span class="w"> </span>api<span class="w"> </span>myapi:latest
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--name<span class="w"> </span>api3<span class="w"> </span>--network<span class="w"> </span>my-net<span class="w"> </span>--network-alias<span class="w"> </span>api<span class="w"> </span>myapi:latest
+
+<span class="c1"># DNS query returns all IPs (round-robin)</span>
+docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--network<span class="w"> </span>my-net<span class="w"> </span>alpine<span class="w"> </span>nslookup<span class="w"> </span>api
+<span class="c1"># Name:      api</span>
+<span class="c1"># Address:   172.20.0.2</span>
+<span class="c1"># Address:   172.20.0.3</span>
+<span class="c1"># Address:   172.20.0.4</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 고급 포트 매핑<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="_17">포트 퍼블리싱 모드<a class="header-link" href="#_17" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Publish to random host port</span>
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>-P<span class="w"> </span>nginx
+<span class="c1"># Maps all EXPOSE ports to random high ports (32768+)</span>
+
+<span class="c1"># Publish to specific host port</span>
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>-p<span class="w"> </span><span class="m">8080</span>:80<span class="w"> </span>nginx
+
+<span class="c1"># Publish to specific interface</span>
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>-p<span class="w"> </span><span class="m">127</span>.0.0.1:8080:80<span class="w"> </span>nginx
+<span class="c1"># Only accessible from localhost</span>
+
+<span class="c1"># Publish UDP port</span>
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>-p<span class="w"> </span><span class="m">53</span>:53/udp<span class="w"> </span>dns-server
+
+<span class="c1"># Publish port range</span>
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>-p<span class="w"> </span><span class="m">5000</span>-5010:5000-5010<span class="w"> </span>multi-port-app
+</code></pre></div>
+
+<h3 id="_18">포트 매핑 다이어그램<a class="header-link" href="#_18" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌──────────────────────────────────────────────────────────┐
+│                    Host (192.168.1.100)                   │
+│                                                           │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │              iptables NAT                        │    │
+│  │                                                  │    │
+│  │  8080 ──► DNAT ──► 172.17.0.2:80               │    │
+│  │  8443 ──► DNAT ──► 172.17.0.2:443              │    │
+│  └─────────────────────────────────────────────────┘    │
+│                          │                               │
+│                          ▼                               │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │         Docker Bridge (docker0)                 │    │
+│  │                                                  │    │
+│  │         ┌──────────────────┐                    │    │
+│  │         │   nginx          │                    │    │
+│  │         │   172.17.0.2     │                    │    │
+│  │         │   :80, :443      │                    │    │
+│  │         └──────────────────┘                    │    │
+│  └─────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────┘
+
+External request: http://192.168.1.100:8080
+    ↓
+NAT translation: 172.17.0.2:80
+    ↓
+Container receives request on port 80
+</code></pre></div>
+
+<h3 id="docker-compose_2">Docker Compose 포트 매핑<a class="header-link" href="#docker-compose_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># docker-compose.yml</span>
+<span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3.8&#39;</span>
+
+<span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">web</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nginx</span>
+<span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
+<span class="w">      </span><span class="c1"># Short syntax</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;8080:80&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;8443:443&quot;</span>
+
+<span class="w">      </span><span class="c1"># Long syntax</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">target</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80</span>
+<span class="w">        </span><span class="nt">published</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8080</span>
+<span class="w">        </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tcp</span>
+<span class="w">        </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">host</span>
+
+<span class="w">      </span><span class="c1"># Localhost only</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;127.0.0.1:9090:9090&quot;</span>
+
+<span class="w">      </span><span class="c1"># Port range</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;5000-5010:5000-5010&quot;</span>
+</code></pre></div>
+
+<h3 id="_19">포트 매핑 검사<a class="header-link" href="#_19" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># List port mappings</span>
+docker<span class="w"> </span>port<span class="w"> </span>nginx
+<span class="c1"># 80/tcp -&gt; 0.0.0.0:8080</span>
+<span class="c1"># 443/tcp -&gt; 0.0.0.0:8443</span>
+
+<span class="c1"># Inspect with docker ps</span>
+docker<span class="w"> </span>ps<span class="w"> </span>--format<span class="w"> </span><span class="s2">&quot;table {{.Names}}\t{{.Ports}}&quot;</span>
+<span class="c1"># NAMES    PORTS</span>
+<span class="c1"># nginx    0.0.0.0:8080-&gt;80/tcp, 0.0.0.0:8443-&gt;443/tcp</span>
+</code></pre></div>
+
+<hr />
+<h2 id="8">8. 네트워크 보안<a class="header-link" href="#8" title="Permanent link">&para;</a></h2>
+<h3 id="_20">네트워크 격리<a class="header-link" href="#_20" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│                  Network Isolation                       │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  ┌──────────────────┐        ┌──────────────────┐      │
+│  │  frontend-net    │        │  backend-net     │      │
+│  │                  │        │                  │      │
+│  │  ┌────────┐      │        │  ┌────────┐     │      │
+│  │  │  web   │      │        │  │  api   │     │      │
+│  │  └────────┘      │        │  └────────┘     │      │
+│  │                  │        │        │         │      │
+│  └──────────────────┘        │        │         │      │
+│                               │  ┌────────┐     │      │
+│                               │  │  db    │     │      │
+│                               │  └────────┘     │      │
+│                               └──────────────────┘      │
+│                                                          │
+│  web CANNOT communicate with db directly                │
+│  api bridges both networks                              │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># docker-compose.yml</span>
+<span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3.8&#39;</span>
+
+<span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">web</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nginx</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">frontend</span>
+
+<span class="w">  </span><span class="nt">api</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">myapi:latest</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">frontend</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">backend</span>
+
+<span class="w">  </span><span class="nt">db</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">backend</span>
+<span class="w">    </span><span class="c1"># db is NOT exposed to frontend network</span>
+
+<span class="nt">networks</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">frontend</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">backend</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">internal</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">  </span><span class="c1"># No external access</span>
+</code></pre></div>
+
+<h3 id="internal-networks">내부 네트워크(Internal Networks)<a class="header-link" href="#internal-networks" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create internal network (no external access)</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--internal<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--subnet<span class="w"> </span><span class="m">172</span>.40.0.0/16<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>internal-net
+
+<span class="c1"># Containers on this network cannot reach internet</span>
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--name<span class="w"> </span>isolated-db<span class="w"> </span>--network<span class="w"> </span>internal-net<span class="w"> </span>postgres
+</code></pre></div>
+
+<h3 id="icc">컨테이너 간 통신(ICC)<a class="header-link" href="#icc" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Disable ICC (containers can&#39;t talk to each other by default)</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--driver<span class="w"> </span>bridge<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--opt<span class="w"> </span>com.docker.network.bridge.enable_icc<span class="o">=</span><span class="nb">false</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>restricted-net
+
+<span class="c1"># Containers must use port publishing to communicate</span>
+</code></pre></div>
+
+<h3 id="iptables">iptables를 사용한 네트워크 정책<a class="header-link" href="#iptables" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># View Docker iptables rules</span>
+sudo<span class="w"> </span>iptables<span class="w"> </span>-t<span class="w"> </span>nat<span class="w"> </span>-L<span class="w"> </span>-n<span class="w"> </span>-v<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>DOCKER
+
+<span class="c1"># Block traffic between specific containers (manual iptables)</span>
+sudo<span class="w"> </span>iptables<span class="w"> </span>-I<span class="w"> </span>DOCKER-USER<span class="w"> </span>-s<span class="w"> </span><span class="m">172</span>.17.0.2<span class="w"> </span>-d<span class="w"> </span><span class="m">172</span>.17.0.3<span class="w"> </span>-j<span class="w"> </span>DROP
+
+<span class="c1"># Allow only specific ports</span>
+sudo<span class="w"> </span>iptables<span class="w"> </span>-I<span class="w"> </span>DOCKER-USER<span class="w"> </span>-p<span class="w"> </span>tcp<span class="w"> </span>--dport<span class="w"> </span><span class="m">5432</span><span class="w"> </span>-s<span class="w"> </span><span class="m">172</span>.17.0.2<span class="w"> </span>-j<span class="w"> </span>ACCEPT
+sudo<span class="w"> </span>iptables<span class="w"> </span>-I<span class="w"> </span>DOCKER-USER<span class="w"> </span>-s<span class="w"> </span><span class="m">172</span>.17.0.2<span class="w"> </span>-j<span class="w"> </span>DROP
+</code></pre></div>
+
+<h3 id="_21">암호화된 오버레이 네트워크<a class="header-link" href="#_21" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># All traffic between nodes is encrypted with IPsec</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--driver<span class="w"> </span>overlay<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--opt<span class="w"> </span><span class="nv">encrypted</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>secure-overlay
+</code></pre></div>
+
+<hr />
+<h2 id="9">9. 문제 해결<a class="header-link" href="#9" title="Permanent link">&para;</a></h2>
+<h3 id="_22">네트워크 검사 명령어<a class="header-link" href="#_22" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Inspect network details</span>
+docker<span class="w"> </span>network<span class="w"> </span>inspect<span class="w"> </span>my-net
+
+<span class="c1"># Show containers on network</span>
+docker<span class="w"> </span>network<span class="w"> </span>inspect<span class="w"> </span>my-net<span class="w"> </span>--format<span class="w"> </span><span class="s1">&#39;{{range .Containers}}{{.Name}} {{end}}&#39;</span>
+
+<span class="c1"># Show network configuration of container</span>
+docker<span class="w"> </span>inspect<span class="w"> </span>my-container<span class="w"> </span>--format<span class="w"> </span><span class="s1">&#39;{{json .NetworkSettings.Networks}}&#39;</span>
+</code></pre></div>
+
+<h3 id="_23">연결성 테스트<a class="header-link" href="#_23" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Ping between containers</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>container1<span class="w"> </span>ping<span class="w"> </span>container2
+
+<span class="c1"># Test DNS resolution</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>container1<span class="w"> </span>nslookup<span class="w"> </span>container2
+
+<span class="c1"># Test port connectivity</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>container1<span class="w"> </span>nc<span class="w"> </span>-zv<span class="w"> </span>container2<span class="w"> </span><span class="m">80</span>
+
+<span class="c1"># Test with curl</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>container1<span class="w"> </span>curl<span class="w"> </span>http://container2:8080
+</code></pre></div>
+
+<h3 id="_24">패킷 캡처<a class="header-link" href="#_24" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Capture traffic on docker0 bridge</span>
+sudo<span class="w"> </span>tcpdump<span class="w"> </span>-i<span class="w"> </span>docker0<span class="w"> </span>-n
+
+<span class="c1"># Capture traffic for specific container</span>
+<span class="c1"># Find container&#39;s veth interface</span>
+docker<span class="w"> </span>inspect<span class="w"> </span>my-container<span class="w"> </span>--format<span class="w"> </span><span class="s1">&#39;{{.NetworkSettings.SandboxKey}}&#39;</span>
+<span class="c1"># /var/run/docker/netns/abc123def456</span>
+
+<span class="c1"># Enter network namespace and capture</span>
+sudo<span class="w"> </span>nsenter<span class="w"> </span>--net<span class="o">=</span>/var/run/docker/netns/abc123def456<span class="w"> </span>tcpdump<span class="w"> </span>-i<span class="w"> </span>eth0<span class="w"> </span>-n
+
+<span class="c1"># Or use docker exec with tcpdump</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>my-container<span class="w"> </span>tcpdump<span class="w"> </span>-i<span class="w"> </span>eth0<span class="w"> </span>-n
+</code></pre></div>
+
+<h3 id="_25">일반적인 네트워크 문제<a class="header-link" href="#_25" title="Permanent link">&para;</a></h3>
+<h4 id="1">문제 1: 컨테이너가 인터넷에 접근할 수 없음<a class="header-link" href="#1" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check DNS configuration</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>my-container<span class="w"> </span>cat<span class="w"> </span>/etc/resolv.conf
+
+<span class="c1"># Test DNS resolution</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>my-container<span class="w"> </span>nslookup<span class="w"> </span>google.com
+
+<span class="c1"># Test connectivity</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>my-container<span class="w"> </span>ping<span class="w"> </span><span class="m">8</span>.8.8.8
+
+<span class="c1"># Solution: Check IP masquerading</span>
+sudo<span class="w"> </span>iptables<span class="w"> </span>-t<span class="w"> </span>nat<span class="w"> </span>-L<span class="w"> </span>-n<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>MASQUERADE
+<span class="c1"># Should see: MASQUERADE  all  --  172.17.0.0/16  0.0.0.0/0</span>
+</code></pre></div>
+
+<h4 id="2_1">문제 2: 컨테이너가 이름으로 통신할 수 없음<a class="header-link" href="#2_1" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># Only works on user-defined networks, NOT default bridge</span>
+<span class="c1"># Solution: Create custom network</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span>my-net
+docker<span class="w"> </span>network<span class="w"> </span>connect<span class="w"> </span>my-net<span class="w"> </span>container1
+docker<span class="w"> </span>network<span class="w"> </span>connect<span class="w"> </span>my-net<span class="w"> </span>container2
+</code></pre></div>
+
+<h4 id="3">문제 3: 포트가 이미 사용 중<a class="header-link" href="#3" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># Find process using port</span>
+sudo<span class="w"> </span>lsof<span class="w"> </span>-i<span class="w"> </span>:8080
+<span class="c1"># or</span>
+sudo<span class="w"> </span>netstat<span class="w"> </span>-tlnp<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="m">8080</span>
+
+<span class="c1"># Solution: Stop conflicting process or use different port</span>
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>-p<span class="w"> </span><span class="m">8081</span>:80<span class="w"> </span>nginx
+</code></pre></div>
+
+<h4 id="4-dns">문제 4: DNS 해석 느림<a class="header-link" href="#4-dns" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check embedded DNS server</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>my-container<span class="w"> </span>cat<span class="w"> </span>/etc/resolv.conf
+<span class="c1"># Should see: nameserver 127.0.0.11</span>
+
+<span class="c1"># Test DNS performance</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>my-container<span class="w"> </span><span class="nb">time</span><span class="w"> </span>nslookup<span class="w"> </span>container2
+
+<span class="c1"># Solution: Add custom DNS servers if needed</span>
+docker<span class="w"> </span>run<span class="w"> </span>--dns<span class="w"> </span><span class="m">8</span>.8.8.8<span class="w"> </span>--dns<span class="w"> </span><span class="m">8</span>.8.4.4<span class="w"> </span>my-image
+</code></pre></div>
+
+<h3 id="_26">네트워크 디버깅 도구<a class="header-link" href="#_26" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Run debugging container with network tools</span>
+docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span>--network<span class="w"> </span>my-net<span class="w"> </span>nicolaka/netshoot
+
+<span class="c1"># Available tools in netshoot:</span>
+<span class="c1"># - ping, traceroute, mtr</span>
+<span class="c1"># - nslookup, dig, host</span>
+<span class="c1"># - curl, wget, httpie</span>
+<span class="c1"># - netcat, socat</span>
+<span class="c1"># - tcpdump, tshark</span>
+<span class="c1"># - iftop, nethogs</span>
+<span class="c1"># - ip, ss, netstat, iptables</span>
+</code></pre></div>
+
+<h3 id="_27">네트워크 로그 보기<a class="header-link" href="#_27" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Enable debug logging in Docker daemon</span>
+<span class="c1"># /etc/docker/daemon.json</span>
+<span class="o">{</span>
+<span class="w">  </span><span class="s2">&quot;debug&quot;</span>:<span class="w"> </span>true,
+<span class="w">  </span><span class="s2">&quot;log-level&quot;</span>:<span class="w"> </span><span class="s2">&quot;debug&quot;</span>
+<span class="o">}</span>
+
+<span class="c1"># Restart Docker</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>docker
+
+<span class="c1"># View logs</span>
+sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>docker<span class="w"> </span>-f
+</code></pre></div>
+
+<hr />
+<h2 id="10">10. 연습 문제<a class="header-link" href="#10" title="Permanent link">&para;</a></h2>
+<h3 id="1_1">연습 1: 다계층 애플리케이션 네트워크<a class="header-link" href="#1_1" title="Permanent link">&para;</a></h3>
+<p>격리된 네트워크로 3계층 애플리케이션을 생성합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># docker-compose.yml</span>
+<span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3.8&#39;</span>
+
+<span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">nginx</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nginx</span>
+<span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;80:80&quot;</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">frontend</span>
+<span class="w">    </span><span class="nt">depends_on</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">app</span>
+
+<span class="w">  </span><span class="nt">app</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">node:18</span>
+<span class="w">    </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">node server.js</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">frontend</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">backend</span>
+<span class="w">    </span><span class="nt">depends_on</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">db</span>
+
+<span class="w">  </span><span class="nt">db</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres</span>
+<span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">POSTGRES_PASSWORD</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">secret</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">backend</span>
+
+<span class="nt">networks</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">frontend</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">backend</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">internal</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</code></pre></div>
+
+<p><strong>작업</strong>:
+1. 스택 배포
+2. nginx가 app에 접근할 수 있는지 확인
+3. app이 db에 접근할 수 있는지 확인
+4. nginx가 db에 직접 접근할 수 없는지 확인
+5. db가 인터넷 접근이 없는지 확인</p>
+<h3 id="2-ip">연습 2: 정적 IP를 사용한 커스텀 브리지 네트워크<a class="header-link" href="#2-ip" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create network with specific subnet</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--driver<span class="w"> </span>bridge<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--subnet<span class="w"> </span><span class="m">172</span>.50.0.0/24<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--gateway<span class="w"> </span><span class="m">172</span>.50.0.1<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ip-range<span class="w"> </span><span class="m">172</span>.50.0.128/25<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>static-net
+
+<span class="c1"># Run containers with static IPs</span>
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>web<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--network<span class="w"> </span>static-net<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ip<span class="w"> </span><span class="m">172</span>.50.0.10<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>nginx
+
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>api<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--network<span class="w"> </span>static-net<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ip<span class="w"> </span><span class="m">172</span>.50.0.20<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>myapi:latest
+
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>db<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--network<span class="w"> </span>static-net<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ip<span class="w"> </span><span class="m">172</span>.50.0.30<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>postgres
+</code></pre></div>
+
+<p><strong>작업</strong>:
+1. 컨테이너가 할당된 IP를 가지는지 확인
+2. 컨테이너 간 연결성 테스트
+3. IP 할당 체계 문서화</p>
+<h3 id="3-dns">연습 3: DNS 라운드 로빈 로드 밸런싱<a class="header-link" href="#3-dns" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create network</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span>lb-net
+
+<span class="c1"># Create multiple backend containers with same alias</span>
+<span class="k">for</span><span class="w"> </span>i<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="m">3</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">  </span>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--name<span class="w"> </span>backend-<span class="nv">$i</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--network<span class="w"> </span>lb-net<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--network-alias<span class="w"> </span>backend<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>hashicorp/http-echo<span class="w"> </span>-text<span class="o">=</span><span class="s2">&quot;Backend </span><span class="nv">$i</span><span class="s2">&quot;</span>
+<span class="k">done</span>
+
+<span class="c1"># Create client container</span>
+docker<span class="w"> </span>run<span class="w"> </span>-it<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--network<span class="w"> </span>lb-net<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>alpine<span class="w"> </span>sh
+
+<span class="c1"># Test DNS round-robin</span>
+<span class="k">for</span><span class="w"> </span>i<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="o">{</span><span class="m">1</span>..6<span class="o">}</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">  </span>wget<span class="w"> </span>-qO-<span class="w"> </span>http://backend:5678
+<span class="k">done</span>
+</code></pre></div>
+
+<p><strong>예상 출력</strong>:</p>
+<div class="highlight"><pre><span></span><code>Backend 1
+Backend 2
+Backend 3
+Backend 1
+Backend 2
+Backend 3
+</code></pre></div>
+
+<h3 id="4_1">연습 4: 네트워크 문제 해결<a class="header-link" href="#4_1" title="Permanent link">&para;</a></h3>
+<p>손상된 네트워크 설정을 식별하고 수정합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># broken-compose.yml</span>
+<span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3.8&#39;</span>
+
+<span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">web</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nginx</span>
+<span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;80:80&quot;</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">frontend</span>
+
+<span class="w">  </span><span class="nt">api</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">myapi:latest</span>
+<span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">DB_HOST=db</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">frontend</span><span class="w">  </span><span class="c1"># BUG: Should be on backend too</span>
+
+<span class="w">  </span><span class="nt">db</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres</span>
+<span class="w">    </span><span class="nt">networks</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">backend</span>
+
+<span class="nt">networks</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">frontend</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">backend</span><span class="p">:</span>
+</code></pre></div>
+
+<p><strong>작업</strong>:
+1. 배포하고 api가 db에 접근할 수 없는 이유 식별
+2. 네트워크 구성 수정
+3. 모든 서비스가 올바르게 통신할 수 있는지 확인
+4. 문제와 해결책 문서화</p>
+<h3 id="5_1">연습 5: 안전한 다중 호스트 네트워크<a class="header-link" href="#5_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># On host1 (manager)</span>
+docker<span class="w"> </span>swarm<span class="w"> </span>init<span class="w"> </span>--advertise-addr<span class="w"> </span><span class="m">192</span>.168.1.10
+
+<span class="c1"># Create encrypted overlay network</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--driver<span class="w"> </span>overlay<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--opt<span class="w"> </span><span class="nv">encrypted</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--attachable<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>secure-overlay
+
+<span class="c1"># Deploy service</span>
+docker<span class="w"> </span>service<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>web<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--network<span class="w"> </span>secure-overlay<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--replicas<span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>nginx
+
+<span class="c1"># On host2 (worker)</span>
+docker<span class="w"> </span>swarm<span class="w"> </span>join<span class="w"> </span>--token<span class="w"> </span>&lt;token&gt;<span class="w"> </span><span class="m">192</span>.168.1.10:2377
+
+<span class="c1"># Verify service spans both hosts</span>
+docker<span class="w"> </span>service<span class="w"> </span>ps<span class="w"> </span>web
+</code></pre></div>
+
+<p><strong>작업</strong>:
+1. 2노드 Swarm 클러스터 설정
+2. 암호화된 오버레이 네트워크 생성
+3. 노드 간 서비스 배포
+4. 트래픽을 캡처하고 암호화 확인
+5. 교차 호스트 컨테이너 통신 테스트</p>
+<h3 id="6">연습 6: 네트워크 성능 테스트<a class="header-link" href="#6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create test network</span>
+docker<span class="w"> </span>network<span class="w"> </span>create<span class="w"> </span>perf-net
+
+<span class="c1"># Run iperf3 server</span>
+docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>iperf-server<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--network<span class="w"> </span>perf-net<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>networkstatic/iperf3<span class="w"> </span>-s
+
+<span class="c1"># Run iperf3 client (bridge network)</span>
+docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--network<span class="w"> </span>perf-net<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>networkstatic/iperf3<span class="w"> </span>-c<span class="w"> </span>iperf-server<span class="w"> </span>-t<span class="w"> </span><span class="m">30</span>
+
+<span class="c1"># Run iperf3 client (host network)</span>
+docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--network<span class="w"> </span>host<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>networkstatic/iperf3<span class="w"> </span>-c<span class="w"> </span>&lt;host-ip&gt;<span class="w"> </span>-t<span class="w"> </span><span class="m">30</span>
+</code></pre></div>
+
+<p><strong>작업</strong>:
+1. 브리지 네트워크에서 대역폭 측정
+2. 호스트 네트워크에서 대역폭 측정
+3. 결과 비교 및 오버헤드 문서화
+4. 다양한 MTU 크기로 테스트</p>
+<hr />
+<h2 id="_28">요약<a class="header-link" href="#_28" title="Permanent link">&para;</a></h2>
+<p>이 레슨에서 배운 내용:</p>
+<ul>
+<li>Docker 네트워크 드라이버: bridge, host, overlay, macvlan, none</li>
+<li>자동 DNS 해석을 지원하는 사용자 정의 브리지 네트워크</li>
+<li>성능을 위한 호스트 네트워크와 격리를 위한 none 네트워크</li>
+<li>Swarm에서 다중 호스트 통신을 위한 오버레이 네트워크</li>
+<li>커스텀 네트워크 구성: 서브넷, 게이트웨이, IP 범위, MTU</li>
+<li>임베디드 DNS 서버를 사용한 DNS 및 서비스 디스커버리</li>
+<li>고급 포트 매핑 및 퍼블리싱 옵션</li>
+<li>네트워크 보안: 격리, 내부 네트워크, 암호화</li>
+<li>네트워크 디버깅을 위한 문제 해결 도구 및 기법</li>
+</ul>
+<p><strong>핵심 요점</strong>:
+- 자동 DNS 해석을 위해 항상 사용자 정의 네트워크 사용
+- 보안을 위해 여러 네트워크로 서비스 격리
+- 다중 호스트 배포를 위해 암호화된 오버레이 네트워크 사용
+- 서비스 디스커버리를 위해 임베디드 DNS 활용
+- 적절한 도구로 모니터링 및 문제 해결</p>
+<p><strong>다음 단계</strong>:
+- 프로덕션 환경을 위한 네트워크 정책 구현
+- 고급 네트워킹을 위한 서비스 메시 솔루션 (Istio, Linkerd) 탐색
+- Kubernetes용 CNI 플러그인 학습
+- 네트워크 성능 최적화 기법 연구</p>
+<hr />
+<p><a href="./10_CI_CD_Pipelines.md">이전: 10_CI_CD_Pipelines</a> | <a href="./12_Security_Best_Practices.md">다음: 12_Security_Best_Practices</a></p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Docker/10_CI_CD_Pipelines.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">10. CI/CD 파이프라인</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Docker/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Docker/12_Security_Best_Practices.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">보안 모범 사례(Security Best Practices)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

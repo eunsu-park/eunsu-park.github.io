@@ -1,0 +1,769 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>백업과 운영 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/PostgreSQL/">PostgreSQL</a>
+    <span class="separator">/</span>
+    <span class="current">백업과 운영</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>백업과 운영</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/PostgreSQL/12_Triggers.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">트리거</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/PostgreSQL/14_JSON_JSONB.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">14. PostgreSQL JSON/JSONB 기능</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#1">1. 백업의 중요성</a></li>
+<li><a href="#2-pg_dump-">2. pg_dump - 논리적 백업</a><ul>
+<li><a href="#_2">기본 백업</a></li>
+<li><a href="#_3">포맷 옵션</a></li>
+<li><a href="#_4">선택적 백업</a></li>
+<li><a href="#docker">Docker에서 백업</a></li>
+</ul>
+</li>
+<li><a href="#3-pg_dumpall-">3. pg_dumpall - 전체 클러스터 백업</a></li>
+<li><a href="#4-pg_restore-">4. pg_restore - 복원</a><ul>
+<li><a href="#sql">SQL 파일 복원</a></li>
+<li><a href="#_5">커스텀/디렉토리 포맷 복원</a></li>
+<li><a href="#_6">복원 옵션</a></li>
+</ul>
+</li>
+<li><a href="#5-pg_basebackup">5. 물리적 백업 (pg_basebackup)</a><ul>
+<li><a href="#wal">WAL 아카이빙 설정</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 자동 백업 스크립트</a><ul>
+<li><a href="#_7">일일 백업 스크립트</a></li>
+<li><a href="#cron">Cron 설정</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 모니터링</a><ul>
+<li><a href="#_8">데이터베이스 크기</a></li>
+<li><a href="#_9">연결 상태</a></li>
+<li><a href="#_10">느린 쿼리</a></li>
+<li><a href="#_11">잠금 상태</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 성능 통계</a><ul>
+<li><a href="#_12">테이블 통계</a></li>
+<li><a href="#_13">인덱스 사용률</a></li>
+<li><a href="#_14">캐시 히트율</a></li>
+</ul>
+</li>
+<li><a href="#9">9. 유지보수</a><ul>
+<li><a href="#vacuum">VACUUM</a></li>
+<li><a href="#analyze">ANALYZE</a></li>
+<li><a href="#reindex">REINDEX</a></li>
+<li><a href="#vacuum_1">자동 VACUUM 설정</a></li>
+</ul>
+</li>
+<li><a href="#10">10. 로그 설정</a></li>
+<li><a href="#11">11. 보안 설정</a><ul>
+<li><a href="#pg_hbaconf">pg_hba.conf</a></li>
+<li><a href="#ssl">SSL 설정</a></li>
+</ul>
+</li>
+<li><a href="#12">12. 실습 예제</a><ul>
+<li><a href="#1_1">실습 1: 백업 및 복원</a></li>
+<li><a href="#2">실습 2: 모니터링 쿼리 저장</a></li>
+<li><a href="#3">실습 3: 유지보수 스크립트</a></li>
+</ul>
+</li>
+<li><a href="#13">13. 체크리스트</a><ul>
+<li><a href="#_15">일일 체크</a></li>
+<li><a href="#_16">주간 체크</a></li>
+<li><a href="#_17">월간 체크</a></li>
+</ul>
+</li>
+<li><a href="#_18">마무리</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="_1">백업과 운영<a class="header-link" href="#_1" title="Permanent link">&para;</a></h1>
+<h2 id="1">1. 백업의 중요성<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<p>데이터베이스 백업은 데이터 손실을 방지하는 가장 중요한 작업입니다.</p>
+<div class="highlight"><pre><span></span><code>┌──────────────────────────────────────────────────────────┐
+│                    백업 전략                              │
+├──────────────────────────────────────────────────────────┤
+│  • 정기 백업: 매일/매주 전체 백업                         │
+│  • 증분 백업: 변경분만 백업 (WAL 아카이빙)               │
+│  • 복제: 실시간 복제 서버 구성                           │
+└──────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="2-pg_dump-">2. pg_dump - 논리적 백업<a class="header-link" href="#2-pg_dump-" title="Permanent link">&para;</a></h2>
+<h3 id="_2">기본 백업<a class="header-link" href="#_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 단일 데이터베이스 백업</span>
+pg_dump<span class="w"> </span>dbname<span class="w"> </span>&gt;<span class="w"> </span>backup.sql
+
+<span class="c1"># 사용자/호스트 지정</span>
+pg_dump<span class="w"> </span>-U<span class="w"> </span>username<span class="w"> </span>-h<span class="w"> </span>localhost<span class="w"> </span>dbname<span class="w"> </span>&gt;<span class="w"> </span>backup.sql
+
+<span class="c1"># 압축 백업</span>
+pg_dump<span class="w"> </span>dbname<span class="w"> </span><span class="p">|</span><span class="w"> </span>gzip<span class="w"> </span>&gt;<span class="w"> </span>backup.sql.gz
+</code></pre></div>
+
+<h3 id="_3">포맷 옵션<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 평문 SQL (-Fp, 기본값)</span>
+pg_dump<span class="w"> </span>-Fp<span class="w"> </span>dbname<span class="w"> </span>&gt;<span class="w"> </span>backup.sql
+
+<span class="c1"># 커스텀 포맷 (-Fc, 압축됨, 선택적 복원 가능)</span>
+pg_dump<span class="w"> </span>-Fc<span class="w"> </span>dbname<span class="w"> </span>&gt;<span class="w"> </span>backup.dump
+
+<span class="c1"># 디렉토리 포맷 (-Fd, 병렬 백업/복원 지원)</span>
+pg_dump<span class="w"> </span>-Fd<span class="w"> </span>dbname<span class="w"> </span>-f<span class="w"> </span>backup_dir
+
+<span class="c1"># tar 포맷 (-Ft)</span>
+pg_dump<span class="w"> </span>-Ft<span class="w"> </span>dbname<span class="w"> </span>&gt;<span class="w"> </span>backup.tar
+</code></pre></div>
+
+<h3 id="_4">선택적 백업<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 특정 테이블만</span>
+pg_dump<span class="w"> </span>-t<span class="w"> </span>users<span class="w"> </span>-t<span class="w"> </span>orders<span class="w"> </span>dbname<span class="w"> </span>&gt;<span class="w"> </span>tables.sql
+
+<span class="c1"># 특정 테이블 제외</span>
+pg_dump<span class="w"> </span>-T<span class="w"> </span>logs<span class="w"> </span>-T<span class="w"> </span>temp_*<span class="w"> </span>dbname<span class="w"> </span>&gt;<span class="w"> </span>backup.sql
+
+<span class="c1"># 스키마만 (데이터 제외)</span>
+pg_dump<span class="w"> </span>-s<span class="w"> </span>dbname<span class="w"> </span>&gt;<span class="w"> </span>schema.sql
+
+<span class="c1"># 데이터만 (스키마 제외)</span>
+pg_dump<span class="w"> </span>-a<span class="w"> </span>dbname<span class="w"> </span>&gt;<span class="w"> </span>data.sql
+
+<span class="c1"># 특정 스키마만</span>
+pg_dump<span class="w"> </span>-n<span class="w"> </span>public<span class="w"> </span>dbname<span class="w"> </span>&gt;<span class="w"> </span>public_schema.sql
+</code></pre></div>
+
+<h3 id="docker">Docker에서 백업<a class="header-link" href="#docker" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Docker 컨테이너에서 pg_dump 실행</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-t<span class="w"> </span>postgres-container<span class="w"> </span>pg_dump<span class="w"> </span>-U<span class="w"> </span>postgres<span class="w"> </span>dbname<span class="w"> </span>&gt;<span class="w"> </span>backup.sql
+
+<span class="c1"># 압축 백업</span>
+docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-t<span class="w"> </span>postgres-container<span class="w"> </span>pg_dump<span class="w"> </span>-U<span class="w"> </span>postgres<span class="w"> </span>dbname<span class="w"> </span><span class="p">|</span><span class="w"> </span>gzip<span class="w"> </span>&gt;<span class="w"> </span>backup.sql.gz
+</code></pre></div>
+
+<hr />
+<h2 id="3-pg_dumpall-">3. pg_dumpall - 전체 클러스터 백업<a class="header-link" href="#3-pg_dumpall-" title="Permanent link">&para;</a></h2>
+<p>모든 데이터베이스와 전역 객체(사용자, 권한 등)를 백업합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 전체 클러스터 백업</span>
+pg_dumpall<span class="w"> </span>-U<span class="w"> </span>postgres<span class="w"> </span>&gt;<span class="w"> </span>full_backup.sql
+
+<span class="c1"># 전역 객체만 (사용자, Role 등)</span>
+pg_dumpall<span class="w"> </span>-U<span class="w"> </span>postgres<span class="w"> </span>--globals-only<span class="w"> </span>&gt;<span class="w"> </span>globals.sql
+
+<span class="c1"># 역할만</span>
+pg_dumpall<span class="w"> </span>-U<span class="w"> </span>postgres<span class="w"> </span>--roles-only<span class="w"> </span>&gt;<span class="w"> </span>roles.sql
+</code></pre></div>
+
+<hr />
+<h2 id="4-pg_restore-">4. pg_restore - 복원<a class="header-link" href="#4-pg_restore-" title="Permanent link">&para;</a></h2>
+<h3 id="sql">SQL 파일 복원<a class="header-link" href="#sql" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 평문 SQL 복원</span>
+psql<span class="w"> </span>dbname<span class="w"> </span>&lt;<span class="w"> </span>backup.sql
+
+<span class="c1"># 새 데이터베이스 생성 후 복원</span>
+createdb<span class="w"> </span>newdb
+psql<span class="w"> </span>newdb<span class="w"> </span>&lt;<span class="w"> </span>backup.sql
+</code></pre></div>
+
+<h3 id="_5">커스텀/디렉토리 포맷 복원<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 커스텀 포맷 복원</span>
+pg_restore<span class="w"> </span>-d<span class="w"> </span>dbname<span class="w"> </span>backup.dump
+
+<span class="c1"># 새 데이터베이스로 복원</span>
+createdb<span class="w"> </span>newdb
+pg_restore<span class="w"> </span>-d<span class="w"> </span>newdb<span class="w"> </span>backup.dump
+
+<span class="c1"># 특정 테이블만 복원</span>
+pg_restore<span class="w"> </span>-d<span class="w"> </span>dbname<span class="w"> </span>-t<span class="w"> </span>users<span class="w"> </span>backup.dump
+
+<span class="c1"># 병렬 복원 (4 작업자)</span>
+pg_restore<span class="w"> </span>-d<span class="w"> </span>dbname<span class="w"> </span>-j<span class="w"> </span><span class="m">4</span><span class="w"> </span>backup_dir
+</code></pre></div>
+
+<h3 id="_6">복원 옵션<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 기존 객체 삭제 후 복원</span>
+pg_restore<span class="w"> </span>-d<span class="w"> </span>dbname<span class="w"> </span>--clean<span class="w"> </span>backup.dump
+
+<span class="c1"># 오류 무시하고 계속</span>
+pg_restore<span class="w"> </span>-d<span class="w"> </span>dbname<span class="w"> </span>--if-exists<span class="w"> </span>backup.dump
+
+<span class="c1"># 데이터만 복원</span>
+pg_restore<span class="w"> </span>-d<span class="w"> </span>dbname<span class="w"> </span>--data-only<span class="w"> </span>backup.dump
+
+<span class="c1"># 스키마만 복원</span>
+pg_restore<span class="w"> </span>-d<span class="w"> </span>dbname<span class="w"> </span>--schema-only<span class="w"> </span>backup.dump
+</code></pre></div>
+
+<hr />
+<h2 id="5-pg_basebackup">5. 물리적 백업 (pg_basebackup)<a class="header-link" href="#5-pg_basebackup" title="Permanent link">&para;</a></h2>
+<p>전체 데이터 디렉토리를 백업합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 기본 백업</span>
+pg_basebackup<span class="w"> </span>-D<span class="w"> </span>/backup/path<span class="w"> </span>-U<span class="w"> </span>postgres<span class="w"> </span>-Fp<span class="w"> </span>-Xs<span class="w"> </span>-P
+
+<span class="c1"># 압축 백업</span>
+pg_basebackup<span class="w"> </span>-D<span class="w"> </span>/backup/path<span class="w"> </span>-U<span class="w"> </span>postgres<span class="w"> </span>-Ft<span class="w"> </span>-z<span class="w"> </span>-P
+
+<span class="c1"># 옵션 설명:</span>
+<span class="c1"># -D: 백업 디렉토리</span>
+<span class="c1"># -Fp: 평문 포맷</span>
+<span class="c1"># -Ft: tar 포맷</span>
+<span class="c1"># -Xs: WAL 스트리밍</span>
+<span class="c1"># -z: gzip 압축</span>
+<span class="c1"># -P: 진행률 표시</span>
+</code></pre></div>
+
+<h3 id="wal">WAL 아카이빙 설정<a class="header-link" href="#wal" title="Permanent link">&para;</a></h3>
+<p><code>postgresql.conf</code>:</p>
+<div class="highlight"><pre><span></span><code>wal_level = replica
+archive_mode = on
+archive_command = &#39;cp %p /archive/%f&#39;
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 자동 백업 스크립트<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="_7">일일 백업 스크립트<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="c1"># daily_backup.sh</span>
+
+<span class="c1"># 설정</span>
+<span class="nv">DB_NAME</span><span class="o">=</span><span class="s2">&quot;mydb&quot;</span>
+<span class="nv">DB_USER</span><span class="o">=</span><span class="s2">&quot;postgres&quot;</span>
+<span class="nv">BACKUP_DIR</span><span class="o">=</span><span class="s2">&quot;/backup/postgres&quot;</span>
+<span class="nv">DATE</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%Y%m%d_%H%M%S<span class="k">)</span>
+<span class="nv">RETENTION_DAYS</span><span class="o">=</span><span class="m">7</span>
+
+<span class="c1"># 백업 디렉토리 생성</span>
+mkdir<span class="w"> </span>-p<span class="w"> </span><span class="nv">$BACKUP_DIR</span>
+
+<span class="c1"># 백업 실행</span>
+pg_dump<span class="w"> </span>-U<span class="w"> </span><span class="nv">$DB_USER</span><span class="w"> </span>-Fc<span class="w"> </span><span class="nv">$DB_NAME</span><span class="w"> </span>&gt;<span class="w"> </span><span class="nv">$BACKUP_DIR</span>/<span class="si">${</span><span class="nv">DB_NAME</span><span class="si">}</span>_<span class="si">${</span><span class="nv">DATE</span><span class="si">}</span>.dump
+
+<span class="c1"># 압축</span>
+gzip<span class="w"> </span><span class="nv">$BACKUP_DIR</span>/<span class="si">${</span><span class="nv">DB_NAME</span><span class="si">}</span>_<span class="si">${</span><span class="nv">DATE</span><span class="si">}</span>.dump
+
+<span class="c1"># 오래된 백업 삭제</span>
+find<span class="w"> </span><span class="nv">$BACKUP_DIR</span><span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.dump.gz&quot;</span><span class="w"> </span>-mtime<span class="w"> </span>+<span class="nv">$RETENTION_DAYS</span><span class="w"> </span>-delete
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Backup completed: </span><span class="si">${</span><span class="nv">DB_NAME</span><span class="si">}</span><span class="s2">_</span><span class="si">${</span><span class="nv">DATE</span><span class="si">}</span><span class="s2">.dump.gz&quot;</span>
+</code></pre></div>
+
+<h3 id="cron">Cron 설정<a class="header-link" href="#cron" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># crontab -e</span>
+<span class="c1"># 매일 새벽 2시 백업</span>
+<span class="m">0</span><span class="w"> </span><span class="m">2</span><span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span>/scripts/daily_backup.sh<span class="w"> </span>&gt;&gt;<span class="w"> </span>/var/log/backup.log<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 모니터링<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="_8">데이터베이스 크기<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 데이터베이스별 크기</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">datname</span><span class="p">,</span>
+<span class="w">    </span><span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_database_size</span><span class="p">(</span><span class="n">datname</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">size</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_database</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">pg_database_size</span><span class="p">(</span><span class="n">datname</span><span class="p">)</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+
+<span class="c1">-- 테이블별 크기</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">schemaname</span><span class="p">,</span>
+<span class="w">    </span><span class="n">tablename</span><span class="p">,</span>
+<span class="w">    </span><span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_total_relation_size</span><span class="p">(</span><span class="n">schemaname</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;.&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">tablename</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_size</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_tables</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">schemaname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;public&#39;</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">pg_total_relation_size</span><span class="p">(</span><span class="n">schemaname</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;.&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">tablename</span><span class="p">)</span><span class="w"> </span><span class="k">DESC</span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="_9">연결 상태<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 현재 연결 수</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_activity</span><span class="p">;</span>
+
+<span class="c1">-- 상태별 연결</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">state</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_activity</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">state</span><span class="p">;</span>
+
+<span class="c1">-- 활성 쿼리</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">pid</span><span class="p">,</span>
+<span class="w">    </span><span class="n">now</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">query_start</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">duration</span><span class="p">,</span>
+<span class="w">    </span><span class="n">query</span><span class="p">,</span>
+<span class="w">    </span><span class="k">state</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_activity</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">state</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="s1">&#39;idle&#39;</span>
+<span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">query</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="s1">&#39;%pg_stat_activity%&#39;</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">duration</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="_10">느린 쿼리<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 오래 실행 중인 쿼리 (5초 이상)</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">pid</span><span class="p">,</span>
+<span class="w">    </span><span class="n">now</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">query_start</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">duration</span><span class="p">,</span>
+<span class="w">    </span><span class="n">query</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_activity</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;active&#39;</span>
+<span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">now</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">query_start</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="nb">interval</span><span class="w"> </span><span class="s1">&#39;5 seconds&#39;</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="_11">잠금 상태<a class="header-link" href="#_11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 잠금 대기 중인 쿼리</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">blocked</span><span class="p">.</span><span class="n">pid</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">blocked_pid</span><span class="p">,</span>
+<span class="w">    </span><span class="n">blocked</span><span class="p">.</span><span class="n">query</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">blocked_query</span><span class="p">,</span>
+<span class="w">    </span><span class="n">blocking</span><span class="p">.</span><span class="n">pid</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">blocking_pid</span><span class="p">,</span>
+<span class="w">    </span><span class="n">blocking</span><span class="p">.</span><span class="n">query</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">blocking_query</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_activity</span><span class="w"> </span><span class="n">blocked</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">pg_stat_activity</span><span class="w"> </span><span class="n">blocking</span>
+<span class="w">    </span><span class="k">ON</span><span class="w"> </span><span class="n">blocking</span><span class="p">.</span><span class="n">pid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">ANY</span><span class="p">(</span><span class="n">pg_blocking_pids</span><span class="p">(</span><span class="n">blocked</span><span class="p">.</span><span class="n">pid</span><span class="p">));</span>
+</code></pre></div>
+
+<hr />
+<h2 id="8">8. 성능 통계<a class="header-link" href="#8" title="Permanent link">&para;</a></h2>
+<h3 id="_12">테이블 통계<a class="header-link" href="#_12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 테이블 접근 통계</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">schemaname</span><span class="p">,</span>
+<span class="w">    </span><span class="n">relname</span><span class="p">,</span>
+<span class="w">    </span><span class="n">seq_scan</span><span class="p">,</span>
+<span class="w">    </span><span class="n">seq_tup_read</span><span class="p">,</span>
+<span class="w">    </span><span class="n">idx_scan</span><span class="p">,</span>
+<span class="w">    </span><span class="n">idx_tup_fetch</span><span class="p">,</span>
+<span class="w">    </span><span class="n">n_tup_ins</span><span class="p">,</span>
+<span class="w">    </span><span class="n">n_tup_upd</span><span class="p">,</span>
+<span class="w">    </span><span class="n">n_tup_del</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_user_tables</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">seq_scan</span><span class="w"> </span><span class="k">DESC</span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="_13">인덱스 사용률<a class="header-link" href="#_13" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 사용되지 않는 인덱스</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">schemaname</span><span class="p">,</span>
+<span class="w">    </span><span class="n">tablename</span><span class="p">,</span>
+<span class="w">    </span><span class="n">indexname</span><span class="p">,</span>
+<span class="w">    </span><span class="n">idx_scan</span><span class="p">,</span>
+<span class="w">    </span><span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">index_size</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_user_indexes</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">idx_scan</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">indexrelid</span><span class="p">)</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="_14">캐시 히트율<a class="header-link" href="#_14" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 캐시 히트율 (99% 이상이 좋음)</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="k">sum</span><span class="p">(</span><span class="n">blks_hit</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="p">.</span><span class="mi">0</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="k">sum</span><span class="p">(</span><span class="n">blks_hit</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">blks_read</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">cache_hit_ratio</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_database</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="9">9. 유지보수<a class="header-link" href="#9" title="Permanent link">&para;</a></h2>
+<h3 id="vacuum">VACUUM<a class="header-link" href="#vacuum" title="Permanent link">&para;</a></h3>
+<p>불필요한 공간을 정리합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 일반 VACUUM</span>
+<span class="k">VACUUM</span><span class="p">;</span>
+<span class="k">VACUUM</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+
+<span class="c1">-- VACUUM FULL (테이블 재구성, 잠금 발생)</span>
+<span class="k">VACUUM</span><span class="w"> </span><span class="k">FULL</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+
+<span class="c1">-- VACUUM ANALYZE (통계 갱신 포함)</span>
+<span class="k">VACUUM</span><span class="w"> </span><span class="k">ANALYZE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="analyze">ANALYZE<a class="header-link" href="#analyze" title="Permanent link">&para;</a></h3>
+<p>쿼리 최적화를 위한 통계를 수집합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="k">ANALYZE</span><span class="p">;</span>
+<span class="k">ANALYZE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="reindex">REINDEX<a class="header-link" href="#reindex" title="Permanent link">&para;</a></h3>
+<p>인덱스를 재구성합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="k">REINDEX</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+<span class="k">REINDEX</span><span class="w"> </span><span class="k">DATABASE</span><span class="w"> </span><span class="n">mydb</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="vacuum_1">자동 VACUUM 설정<a class="header-link" href="#vacuum_1" title="Permanent link">&para;</a></h3>
+<p><code>postgresql.conf</code>:</p>
+<div class="highlight"><pre><span></span><code>autovacuum = on
+autovacuum_naptime = 1min
+autovacuum_vacuum_threshold = 50
+autovacuum_analyze_threshold = 50
+</code></pre></div>
+
+<hr />
+<h2 id="10">10. 로그 설정<a class="header-link" href="#10" title="Permanent link">&para;</a></h2>
+<p><code>postgresql.conf</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="gh">#</span> 로그 대상
+logging_collector = on
+log_directory = &#39;pg_log&#39;
+log_filename = &#39;postgresql-%Y-%m-%d.log&#39;
+
+<span class="gh">#</span> 로그 레벨
+log_min_messages = warning
+log_min_error_statement = error
+
+<span class="gh">#</span> 쿼리 로깅
+log_statement = &#39;ddl&#39;           # none, ddl, mod, all
+log_duration = off
+log_min_duration_statement = 1000  # 1초 이상 걸리는 쿼리만
+
+<span class="gh">#</span> 연결 로깅
+log_connections = on
+log_disconnections = on
+</code></pre></div>
+
+<hr />
+<h2 id="11">11. 보안 설정<a class="header-link" href="#11" title="Permanent link">&para;</a></h2>
+<h3 id="pg_hbaconf">pg_hba.conf<a class="header-link" href="#pg_hbaconf" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code># TYPE  DATABASE    USER        ADDRESS         METHOD
+
+# 로컬 연결
+local   all         all                         peer
+
+# IPv4 로컬 연결
+host    all         all         127.0.0.1/32    scram-sha-256
+
+# 특정 네트워크 허용
+host    mydb        appuser     192.168.1.0/24  scram-sha-256
+
+# 특정 IP 거부
+host    all         all         192.168.1.100   reject
+</code></pre></div>
+
+<h3 id="ssl">SSL 설정<a class="header-link" href="#ssl" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="gh">#</span> postgresql.conf
+ssl = on
+ssl_cert_file = &#39;server.crt&#39;
+ssl_key_file = &#39;server.key&#39;
+</code></pre></div>
+
+<hr />
+<h2 id="12">12. 실습 예제<a class="header-link" href="#12" title="Permanent link">&para;</a></h2>
+<h3 id="1_1">실습 1: 백업 및 복원<a class="header-link" href="#1_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. 백업</span>
+pg_dump<span class="w"> </span>-U<span class="w"> </span>postgres<span class="w"> </span>-Fc<span class="w"> </span>mydb<span class="w"> </span>&gt;<span class="w"> </span>mydb_backup.dump
+
+<span class="c1"># 2. 새 데이터베이스 생성</span>
+createdb<span class="w"> </span>-U<span class="w"> </span>postgres<span class="w"> </span>mydb_restored
+
+<span class="c1"># 3. 복원</span>
+pg_restore<span class="w"> </span>-U<span class="w"> </span>postgres<span class="w"> </span>-d<span class="w"> </span>mydb_restored<span class="w"> </span>mydb_backup.dump
+
+<span class="c1"># 4. 확인</span>
+psql<span class="w"> </span>-U<span class="w"> </span>postgres<span class="w"> </span>-d<span class="w"> </span>mydb_restored<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;SELECT COUNT(*) FROM users;&quot;</span>
+</code></pre></div>
+
+<h3 id="2">실습 2: 모니터링 쿼리 저장<a class="header-link" href="#2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 모니터링 뷰 생성</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">v_db_stats</span><span class="w"> </span><span class="k">AS</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">datname</span><span class="p">,</span>
+<span class="w">    </span><span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_database_size</span><span class="p">(</span><span class="n">datname</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">size</span><span class="p">,</span>
+<span class="w">    </span><span class="n">numbackends</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">connections</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_database</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">datistemplate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">false</span><span class="p">;</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">v_slow_queries</span><span class="w"> </span><span class="k">AS</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">pid</span><span class="p">,</span>
+<span class="w">    </span><span class="n">now</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">query_start</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">duration</span><span class="p">,</span>
+<span class="w">    </span><span class="k">state</span><span class="p">,</span>
+<span class="w">    </span><span class="n">query</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_activity</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;active&#39;</span>
+<span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">now</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">query_start</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="nb">interval</span><span class="w"> </span><span class="s1">&#39;5 seconds&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 사용</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">v_db_stats</span><span class="p">;</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">v_slow_queries</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="3">실습 3: 유지보수 스크립트<a class="header-link" href="#3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 정기 유지보수 프로시저</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">PROCEDURE</span><span class="w"> </span><span class="n">run_maintenance</span><span class="p">()</span>
+<span class="k">AS</span><span class="w"> </span><span class="err">$$</span>
+<span class="k">BEGIN</span>
+<span class="w">    </span><span class="c1">-- 통계 갱신</span>
+<span class="w">    </span><span class="k">ANALYZE</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">-- 불필요한 공간 정리</span>
+<span class="w">    </span><span class="k">VACUUM</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">RAISE</span><span class="w"> </span><span class="n">NOTICE</span><span class="w"> </span><span class="s1">&#39;유지보수 완료: %&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">NOW</span><span class="p">();</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="err">$$</span><span class="w"> </span><span class="k">LANGUAGE</span><span class="w"> </span><span class="n">plpgsql</span><span class="p">;</span>
+
+<span class="c1">-- 실행</span>
+<span class="k">CALL</span><span class="w"> </span><span class="n">run_maintenance</span><span class="p">();</span>
+</code></pre></div>
+
+<hr />
+<h2 id="13">13. 체크리스트<a class="header-link" href="#13" title="Permanent link">&para;</a></h2>
+<h3 id="_15">일일 체크<a class="header-link" href="#_15" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] 백업 성공 확인</li>
+<li>[ ] 디스크 사용량 확인</li>
+<li>[ ] 연결 수 확인</li>
+<li>[ ] 오류 로그 확인</li>
+</ul>
+<h3 id="_16">주간 체크<a class="header-link" href="#_16" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] 인덱스 사용률 확인</li>
+<li>[ ] 느린 쿼리 분석</li>
+<li>[ ] 테이블 크기 추이</li>
+</ul>
+<h3 id="_17">월간 체크<a class="header-link" href="#_17" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] 백업 복원 테스트</li>
+<li>[ ] 불필요한 데이터 정리</li>
+<li>[ ] 성능 추이 분석</li>
+</ul>
+<hr />
+<h2 id="_18">마무리<a class="header-link" href="#_18" title="Permanent link">&para;</a></h2>
+<p>이것으로 PostgreSQL 학습 자료를 마칩니다.</p>
+<p><strong>학습 순서 복습</strong>:
+1. 기초 → DB 관리 → 테이블 → CRUD → 조건/정렬
+2. JOIN → 집계 → 서브쿼리 → 뷰/인덱스
+3. 함수 → 트랜잭션 → 트리거 → 백업/운영</p>
+<p>더 깊이 있는 학습을 위해:
+- <a href="https://www.postgresql.org/docs/">PostgreSQL 공식 문서</a>
+- <a href="https://www.postgresqltutorial.com/">PostgreSQL Tutorial</a></p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/PostgreSQL/12_Triggers.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">트리거</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/PostgreSQL/14_JSON_JSONB.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">14. PostgreSQL JSON/JSONB 기능</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

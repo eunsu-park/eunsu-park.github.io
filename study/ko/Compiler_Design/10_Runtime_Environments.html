@@ -1,0 +1,2104 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>레슨 10: 런타임 환경(Runtime Environments) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Compiler_Design/">Compiler Design</a>
+    <span class="separator">/</span>
+    <span class="current">레슨 10: 런타임 환경(Runtime Environments)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>레슨 10: 런타임 환경(Runtime Environments)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Compiler_Design/09_Intermediate_Representations.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">레슨 9: 중간 표현(Intermediate Representations)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Compiler_Design/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Compiler_Design/11_Code_Generation.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">레슨 11: 코드 생성(Code Generation)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#1-storage-organization">1. 저장 구성(Storage Organization)</a><ul>
+<li><a href="#11">1.1 메모리 모델</a></li>
+<li><a href="#12">1.2 코드(텍스트) 세그먼트</a></li>
+<li><a href="#13-staticglobal-data">1.3 정적/전역 데이터(Static/Global Data)</a></li>
+<li><a href="#14-the-stack">1.4 스택(The Stack)</a></li>
+<li><a href="#15-the-heap">1.5 힙(The Heap)</a></li>
+<li><a href="#16-aslr">1.6 주소 공간 레이아웃 무작위화(ASLR)</a></li>
+</ul>
+</li>
+<li><a href="#2-activation-records">2. 활성화 레코드(Activation Records)(스택 프레임)</a><ul>
+<li><a href="#21">2.1 활성화 레코드란?</a></li>
+<li><a href="#22">2.2 활성화 레코드의 구조</a></li>
+<li><a href="#23">2.3 구성 요소 상세 설명</a><ul>
+<li><a href="#return-address">반환 주소(Return Address)</a></li>
+<li><a href="#dynamic-link">동적 링크(Dynamic Link)(저장된 프레임 포인터)</a></li>
+<li><a href="#static-link">정적 링크(Static Link)(액세스 링크)</a></li>
+<li><a href="#saved-registers">저장된 레지스터(Saved Registers)</a></li>
+<li><a href="#local-variables">지역 변수(Local Variables)</a></li>
+<li><a href="#temporaries">임시 변수(Temporaries)</a></li>
+</ul>
+</li>
+<li><a href="#24">2.4 지역 변수 접근</a></li>
+<li><a href="#25">2.5 예시: 함수 호출 시퀀스</a></li>
+</ul>
+</li>
+<li><a href="#3-calling-conventions">3. 호출 규약(Calling Conventions)</a><ul>
+<li><a href="#31">3.1 호출 규약이란?</a></li>
+<li><a href="#32-cdecl-c">3.2 cdecl (C 선언)</a></li>
+<li><a href="#33-stdcall">3.3 stdcall</a></li>
+<li><a href="#34-system-v-amd64-abi-linuxmacos-x86-64">3.4 System V AMD64 ABI (Linux/macOS x86-64)</a></li>
+<li><a href="#35">3.5 비교 표</a></li>
+<li><a href="#36-windows-x64">3.6 Windows x64 호출 규약</a></li>
+</ul>
+</li>
+<li><a href="#4-parameter-passing-mechanisms">4. 매개변수 전달 메커니즘(Parameter Passing Mechanisms)</a><ul>
+<li><a href="#41-call-by-value">4.1 값에 의한 전달(Call by Value)</a></li>
+<li><a href="#42-call-by-reference">4.2 참조에 의한 전달(Call by Reference)</a></li>
+<li><a href="#43-call-by-value-result-">4.3 값-결과에 의한 전달(Call by Value-Result)(복사-입력, 복사-출력)</a></li>
+<li><a href="#44-call-by-name">4.4 이름에 의한 전달(Call by Name)</a></li>
+<li><a href="#45">4.5 매개변수 전달 메커니즘 비교</a></li>
+</ul>
+</li>
+<li><a href="#5-nested-functions-and-static-scoping">5. 중첩 함수와 정적 스코핑(Nested Functions and Static Scoping)</a><ul>
+<li><a href="#51">5.1 중첩 스코프의 문제</a></li>
+<li><a href="#52-access-links">5.2 액세스 링크(Access Links)(정적 링크)</a></li>
+<li><a href="#53">5.3 액세스 링크 유지 방법</a></li>
+<li><a href="#54-displays">5.4 디스플레이(Displays)</a></li>
+<li><a href="#55-vs">5.5 비교: 액세스 링크 vs 디스플레이</a></li>
+<li><a href="#56-closures">5.6 클로저(Closures)</a></li>
+</ul>
+</li>
+<li><a href="#6-dynamic-scoping-vs-static-scoping">6. 동적 스코핑(Dynamic Scoping) vs 정적 스코핑(Static Scoping)</a><ul>
+<li><a href="#61">6.1 정적(렉시컬) 스코핑</a></li>
+<li><a href="#62">6.2 동적 스코핑</a></li>
+<li><a href="#63">6.3 런타임 구현</a><ul>
+<li><a href="#_2">정적 스코핑 런타임</a></li>
+<li><a href="#_3">동적 스코핑 런타임</a></li>
+</ul>
+</li>
+<li><a href="#64-python-vs">6.4 Python 시뮬레이션: 정적 스코핑 vs 동적 스코핑</a></li>
+</ul>
+</li>
+<li><a href="#7-heap-management">7. 힙 관리(Heap Management)</a><ul>
+<li><a href="#71">7.1 왜 힙 할당이 필요한가?</a></li>
+<li><a href="#72">7.2 명시적 할당과 해제</a></li>
+<li><a href="#73-free-list-management">7.3 자유 리스트 관리(Free List Management)</a><ul>
+<li><a href="#_4">할당 전략</a></li>
+<li><a href="#coalescing">병합(Coalescing)</a></li>
+</ul>
+</li>
+<li><a href="#74-buddy-system">7.4 버디 시스템(Buddy System)</a></li>
+<li><a href="#75-garbage-collection">7.5 가비지 컬렉션(Garbage Collection)(개요)</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 실제 메모리 레이아웃</a><ul>
+<li><a href="#81-c">8.1 C 프로그램 레이아웃 살펴보기</a></li>
+<li><a href="#82-x86-64-system-v-abi">8.2 x86-64의 스택 프레임 레이아웃 (System V ABI)</a></li>
+</ul>
+</li>
+<li><a href="#9-stack-unwinding-for-exceptions">9. 예외를 위한 스택 언와인딩(Stack Unwinding for Exceptions)</a><ul>
+<li><a href="#91">9.1 문제</a></li>
+<li><a href="#92">9.2 접근 방법</a><ul>
+<li><a href="#_5">테이블 기반 언와인딩</a></li>
+<li><a href="#setjmplongjmp">Setjmp/Longjmp 기반</a></li>
+</ul>
+</li>
+<li><a href="#93">9.3 스택 언와인딩 과정</a></li>
+</ul>
+</li>
+<li><a href="#10-python">10. Python 시뮬레이션: 런타임 호출 스택</a></li>
+<li><a href="#11_1">11. 런타임 환경에 대한 컴파일러 지원</a><ul>
+<li><a href="#111">11.1 컴파일러가 생성하는 것</a></li>
+<li><a href="#112">11.2 심볼 테이블 정보</a></li>
+<li><a href="#113">11.3 프레임 레이아웃 최적화</a></li>
+</ul>
+</li>
+<li><a href="#12_1">12. 요약</a></li>
+<li><a href="#_6">연습 문제</a><ul>
+<li><a href="#1">연습 1: 스택 프레임 다이어그램</a></li>
+<li><a href="#2">연습 2: 액세스 링크</a></li>
+<li><a href="#3">연습 3: 호출 규약 비교</a></li>
+<li><a href="#4-vs">연습 4: 동적 vs 정적 스코핑</a></li>
+<li><a href="#5">연습 5: 버디 시스템</a></li>
+<li><a href="#6">연습 6: 구현 과제</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="10-runtime-environments">레슨 10: 런타임 환경(Runtime Environments)<a class="header-link" href="#10-runtime-environments" title="Permanent link">&para;</a></h1>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<p>이 레슨을 마치면 다음을 할 수 있습니다:</p>
+<ol>
+<li>실행 중인 프로그램의 표준 메모리 레이아웃(코드, 정적, 스택, 힙)을 <strong>설명</strong>할 수 있다</li>
+<li>활성화 레코드(Activation Records)(스택 프레임)와 그 내용을 <strong>설명</strong>할 수 있다</li>
+<li>호출 규약(Calling Conventions)(cdecl, stdcall, System V AMD64 ABI)과 그 함의를 <strong>비교</strong>할 수 있다</li>
+<li>값에 의한 전달, 참조에 의한 전달, 이름에 의한 전달 등 매개변수 전달 메커니즘을 <strong>구현</strong>할 수 있다</li>
+<li>액세스 링크(Access Links)와 디스플레이(Displays)를 사용하여 중첩 함수를 <strong>처리</strong>할 수 있다</li>
+<li>정적 스코핑(Static Scoping)과 동적 스코핑(Dynamic Scoping)의 차이 및 런타임 구현을 <strong>구별</strong>할 수 있다</li>
+<li>힙 관리 전략(자유 리스트(Free Lists), 버디 시스템(Buddy System), 가비지 컬렉션(Garbage Collection))을 <strong>설명</strong>할 수 있다</li>
+<li>Python으로 런타임 호출 스택을 <strong>시뮬레이션</strong>할 수 있다</li>
+</ol>
+<hr />
+<h2 id="1-storage-organization">1. 저장 구성(Storage Organization)<a class="header-link" href="#1-storage-organization" title="Permanent link">&para;</a></h2>
+<h3 id="11">1.1 메모리 모델<a class="header-link" href="#11" title="Permanent link">&para;</a></h3>
+<p>컴파일된 프로그램이 실행될 때, 운영 체제는 서로 다른 영역으로 구성된 메모리를 할당합니다. 각 영역은 특정 목적을 가지고 있습니다:</p>
+<div class="highlight"><pre><span></span><code>높은 주소
+┌─────────────────────┐
+│       Stack         │  ← 아래 방향으로 성장
+│         │           │
+│         ▼           │
+│                     │
+│         ▲           │
+│         │           │
+│        Heap         │  ← 위 방향으로 성장
+├─────────────────────┤
+│    Static/Global    │  ← 로드 시 고정 크기
+│       Data          │
+├─────────────────────┤
+│    Read-Only Data   │  ← 문자열 리터럴, 상수
+├─────────────────────┤
+│       Code          │  ← 텍스트 세그먼트 (명령어)
+│      (Text)         │
+└─────────────────────┘
+낮은 주소
+</code></pre></div>
+
+<h3 id="12">1.2 코드(텍스트) 세그먼트<a class="header-link" href="#12" title="Permanent link">&para;</a></h3>
+<p><strong>코드 세그먼트</strong>(또는 텍스트 세그먼트)는 컴파일된 프로그램의 기계 명령어를 보관합니다.</p>
+<p><strong>특성</strong>:
+- <strong>읽기 전용</strong>: 명령어의 우발적이거나 악의적인 수정을 방지
+- <strong>공유 가능</strong>: 동일한 프로그램을 실행하는 여러 프로세스가 단일 복사본을 공유 가능
+- <strong>고정 크기</strong>: 컴파일/링크 시점에 결정
+- <strong>한 번 로드</strong>: 프로세스 시작 시 메모리에 매핑</p>
+<h3 id="13-staticglobal-data">1.3 정적/전역 데이터(Static/Global Data)<a class="header-link" href="#13-staticglobal-data" title="Permanent link">&para;</a></h3>
+<p><strong>정적 데이터</strong> 영역은 전역 변수와 함수 내에서 <code>static</code>으로 선언된 변수를 저장합니다. 이 영역의 크기는 컴파일 시점에 결정되며 고정됩니다.</p>
+<p>일반적으로 다음과 같이 세분화됩니다:</p>
+<table>
+<thead>
+<tr>
+<th>하위 영역</th>
+<th>내용</th>
+<th>예시</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.data</code></td>
+<td>초기화된 전역/정적 변수</td>
+<td><code>int count = 42;</code></td>
+</tr>
+<tr>
+<td><code>.bss</code></td>
+<td>초기화되지 않은 전역/정적 변수 (0으로 채워짐)</td>
+<td><code>static int buffer[1024];</code></td>
+</tr>
+<tr>
+<td><code>.rodata</code></td>
+<td>읽기 전용 데이터: 문자열 리터럴, 상수</td>
+<td><code>"Hello, World!"</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>주소 지정</strong>: 정적 영역의 변수는 링크 시점에 알 수 있는 <strong>절대 주소</strong>를 가집니다. 컴파일러는 직접 주소 참조를 생성합니다.</p>
+<h3 id="14-the-stack">1.4 스택(The Stack)<a class="header-link" href="#14-the-stack" title="Permanent link">&para;</a></h3>
+<p><strong>스택</strong>은 함수 호출 관리에 사용됩니다. 스택에는 다음이 저장됩니다:</p>
+<ul>
+<li>각 활성 함수 호출에 대한 <strong>활성화 레코드(Activation Records)</strong>(스택 프레임)</li>
+<li>함수의 <strong>지역 변수</strong></li>
+<li>함수에 전달된 <strong>매개변수</strong></li>
+<li>호출자를 재개하기 위한 <strong>반환 주소</strong></li>
+<li>피호출자(Callee)가 보존해야 하는 <strong>저장된 레지스터</strong></li>
+</ul>
+<p>스택은 대부분의 아키텍처에서 <strong>아래 방향</strong>으로 성장합니다(낮은 주소 방향). <strong>스택 포인터</strong>(SP)는 스택의 현재 상단을 표시하고, <strong>프레임 포인터</strong>(FP, 베이스 포인터 BP라고도 함)는 현재 프레임 내의 고정 기준점을 표시합니다.</p>
+<h3 id="15-the-heap">1.5 힙(The Heap)<a class="header-link" href="#15-the-heap" title="Permanent link">&para;</a></h3>
+<p><strong>힙</strong>은 동적으로 할당된 메모리를 위해 사용됩니다 -- 컴파일 시점에 크기나 수명을 결정할 수 없는 데이터입니다.</p>
+<p><strong>예시</strong>:
+- C에서의 <code>malloc()</code> / <code>free()</code>
+- C++에서의 <code>new</code> / <code>delete</code>
+- Java, Python에서의 객체 생성
+- 동적 크기 배열, 연결 리스트, 트리</p>
+<p>힙은 <strong>위 방향</strong>으로 성장합니다(더 높은 주소 방향). 스택과 힙 사이에는 미사용 주소 공간이 있어 두 영역 모두 성장할 수 있는 공간을 제공합니다.</p>
+<h3 id="16-aslr">1.6 주소 공간 레이아웃 무작위화(ASLR)<a class="header-link" href="#16-aslr" title="Permanent link">&para;</a></h3>
+<p>현대 운영 체제는 프로그램 실행 시마다 스택, 힙, 공유 라이브러리의 위치를 무작위로 배치합니다. 이를 통해 공격자가 메모리 주소를 예측하기 어렵게 만들어 버퍼 오버플로우 악용과 반환 지향 프로그래밍(ROP) 공격을 완화합니다.</p>
+<hr />
+<h2 id="2-activation-records">2. 활성화 레코드(Activation Records)(스택 프레임)<a class="header-link" href="#2-activation-records" title="Permanent link">&para;</a></h2>
+<h3 id="21">2.1 활성화 레코드란?<a class="header-link" href="#21" title="Permanent link">&para;</a></h3>
+<p>함수가 호출될 때마다 새로운 <strong>활성화 레코드</strong>(또는 <strong>스택 프레임</strong>)가 런타임 스택에 푸시됩니다. 이 레코드에는 함수를 실행하고 호출자에게 반환하는 데 필요한 모든 정보가 포함되어 있습니다.</p>
+<h3 id="22">2.2 활성화 레코드의 구조<a class="header-link" href="#22" title="Permanent link">&para;</a></h3>
+<p>일반적인 활성화 레코드는 다음과 같습니다(높은 주소에서 낮은 주소 방향으로 성장):</p>
+<div class="highlight"><pre><span></span><code>┌───────────────────────┐  높은 주소
+│    호출자가 전달한     │  ← 호출자가 푸시 (스택에 있는 경우)
+│    인수               │
+├───────────────────────┤
+│    반환 주소          │  ← CALL 명령어가 푸시
+├───────────────────────┤  ◀── 프레임 포인터 (FP / BP)
+│    저장된 이전 FP     │  ← 동적 링크 (이전 프레임 포인터)
+├───────────────────────┤
+│    저장된 레지스터    │  ← 피호출자가 저장한 레지스터
+├───────────────────────┤
+│    지역 변수          │  ← 함수의 지역 저장소
+├───────────────────────┤
+│    임시 변수          │  ← 컴파일러가 생성한 임시 변수
+├───────────────────────┤
+│    나가는 인수        │  ← 이 함수가 호출하는 함수의
+│    (필요한 경우)      │     인수
+└───────────────────────┘  ◀── 스택 포인터 (SP)
+                           낮은 주소
+</code></pre></div>
+
+<h3 id="23">2.3 구성 요소 상세 설명<a class="header-link" href="#23" title="Permanent link">&para;</a></h3>
+<h4 id="return-address">반환 주소(Return Address)<a class="header-link" href="#return-address" title="Permanent link">&para;</a></h4>
+<p>피호출자가 끝난 후 제어가 반환되어야 하는 호출자의 명령어 주소입니다. x86에서 <code>CALL</code> 명령어는 자동으로 반환 주소를 스택에 푸시합니다.</p>
+<h4 id="dynamic-link">동적 링크(Dynamic Link)(저장된 프레임 포인터)<a class="header-link" href="#dynamic-link" title="Permanent link">&para;</a></h4>
+<p>호출자의 활성화 레코드(특히 호출자의 프레임 포인터)를 가리키는 포인터입니다. 이는 디버깅(스택 언와인딩)을 위해 순회할 수 있는 프레임의 <strong>체인</strong>을 형성합니다.</p>
+<div class="highlight"><pre><span></span><code>       호출자 프레임
+       ┌──────────┐
+FP ──▶ │ saved FP │ ───▶ 이전 프레임 ...
+       ├──────────┤
+       │  locals  │
+       └──────────┘
+</code></pre></div>
+
+<h4 id="static-link">정적 링크(Static Link)(액세스 링크)<a class="header-link" href="#static-link" title="Permanent link">&para;</a></h4>
+<p>중첩 함수에 사용됩니다(섹션 5에서 설명). 렉시컬 방식으로 둘러싸는(Lexically Enclosing) 함수의 활성화 레코드를 가리킵니다.</p>
+<h4 id="saved-registers">저장된 레지스터(Saved Registers)<a class="header-link" href="#saved-registers" title="Permanent link">&para;</a></h4>
+<p>피호출자가 보존해야 하는 레지스터(피호출자 저장 레지스터). 함수는 진입 시 이들을 저장하고 반환 전에 복원합니다.</p>
+<h4 id="local-variables">지역 변수(Local Variables)<a class="header-link" href="#local-variables" title="Permanent link">&para;</a></h4>
+<p>프레임 포인터로부터 알려진 오프셋에 할당된 함수의 지역 변수 저장소입니다.</p>
+<h4 id="temporaries">임시 변수(Temporaries)<a class="header-link" href="#temporaries" title="Permanent link">&para;</a></h4>
+<p>레지스터에 맞지 않는 컴파일러가 생성한 임시 값입니다.</p>
+<h3 id="24">2.4 지역 변수 접근<a class="header-link" href="#24" title="Permanent link">&para;</a></h3>
+<p>지역 변수는 프레임 포인터로부터 고정 <strong>오프셋</strong>으로 접근됩니다:</p>
+<div class="highlight"><pre><span></span><code>FP로부터 오프셋 -8에 선언된 변수 x:
+    x = FP - 8
+
+FP로부터 오프셋 +16에 선언된 매개변수 p (반환 주소 위):
+    p = FP + 16
+</code></pre></div>
+
+<p>프레임 포인터는 함수 실행 중 스택 포인터가 이동하더라도(예: 중첩 호출을 위한 인수 푸시 시) 안정적인 기준점을 제공합니다.</p>
+<h3 id="25">2.5 예시: 함수 호출 시퀀스<a class="header-link" href="#25" title="Permanent link">&para;</a></h3>
+<p>다음 C 코드를 고려해 보겠습니다:</p>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">z</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">add</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">z</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><code>add(x, y)</code> 호출 중 발생하는 이벤트 순서:</p>
+<p><strong>1. 호출자(main) -- 호출 전</strong>:</p>
+<div class="highlight"><pre><span></span><code>push y        ; 두 번째 인수 푸시 (또는 레지스터 사용)
+push x        ; 첫 번째 인수 푸시 (또는 레지스터 사용)
+call add      ; 반환 주소 푸시, add로 점프
+</code></pre></div>
+
+<p><strong>2. 피호출자(add) -- 함수 프롤로그</strong>:</p>
+<div class="highlight"><pre><span></span><code>push rbp      ; 호출자의 프레임 포인터 저장
+mov rbp, rsp  ; 새 프레임 포인터 설정
+sub rsp, 16   ; 지역 변수 공간 할당
+</code></pre></div>
+
+<p><strong>3. 피호출자(add) -- 함수 본문</strong>:</p>
+<div class="highlight"><pre><span></span><code>mov eax, [rbp+16]   ; 매개변수 a 로드
+add eax, [rbp+24]   ; 매개변수 b 더하기
+mov [rbp-8], eax     ; 결과 저장
+</code></pre></div>
+
+<p><strong>4. 피호출자(add) -- 함수 에필로그</strong>:</p>
+<div class="highlight"><pre><span></span><code>mov eax, [rbp-8]     ; 반환값을 레지스터에 로드
+mov rsp, rbp         ; 지역 변수 해제
+pop rbp              ; 호출자의 프레임 포인터 복원
+ret                  ; 반환 주소를 팝하고 돌아가기
+</code></pre></div>
+
+<p><strong>5. 호출자(main) -- 호출 후</strong>:</p>
+<div class="highlight"><pre><span></span><code>add rsp, 16          ; 인수 정리 (cdecl에서)
+mov [rbp-24], eax    ; 반환값을 z에 저장
+</code></pre></div>
+
+<hr />
+<h2 id="3-calling-conventions">3. 호출 규약(Calling Conventions)<a class="header-link" href="#3-calling-conventions" title="Permanent link">&para;</a></h2>
+<h3 id="31">3.1 호출 규약이란?<a class="header-link" href="#31" title="Permanent link">&para;</a></h3>
+<p><strong>호출 규약</strong>은 다음을 정의하는 프로토콜입니다:</p>
+<ol>
+<li><strong>인수 전달 방법</strong> (레지스터? 스택? 어떤 순서?)</li>
+<li><strong>스택 정리 담당</strong> (호출자 또는 피호출자?)</li>
+<li><strong>보존할 레지스터</strong> (호출자 저장 vs 피호출자 저장)</li>
+<li><strong>반환값 전달 방법</strong></li>
+<li><strong>스택 프레임 구성 방법</strong></li>
+</ol>
+<p>호출 규약은 별도로 컴파일된 함수들이 올바르게 상호 작용할 수 있도록 보장합니다.</p>
+<h3 id="32-cdecl-c">3.2 cdecl (C 선언)<a class="header-link" href="#32-cdecl-c" title="Permanent link">&para;</a></h3>
+<p>32비트 x86에서 C의 기본 호출 규약입니다.</p>
+<table>
+<thead>
+<tr>
+<th>측면</th>
+<th>cdecl</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>인수</td>
+<td>오른쪽에서 왼쪽으로 스택에 푸시</td>
+</tr>
+<tr>
+<td>스택 정리</td>
+<td>호출자가 정리</td>
+</tr>
+<tr>
+<td>반환값</td>
+<td><code>EAX</code>에 (정수), <code>ST(0)</code>에 (부동소수점)</td>
+</tr>
+<tr>
+<td>피호출자 저장 레지스터</td>
+<td><code>EBX</code>, <code>ESI</code>, <code>EDI</code>, <code>EBP</code></td>
+</tr>
+<tr>
+<td>가변인수 지원</td>
+<td>예 (호출자가 인수 개수를 앎)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>오른쪽에서 왼쪽으로 푸시</strong>하면 첫 번째 인수가 가장 낮은 스택 주소에, 스택 상단에 가장 가깝게 위치합니다. 이를 통해 첫 번째 인수가 항상 알려진 오프셋에 있으므로 가변인수 함수(<code>printf</code> 등)가 가능합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// 호출: add(3, 4)</span>
+<span class="n">push</span><span class="w"> </span><span class="mi">4</span><span class="w">         </span><span class="p">;</span><span class="w"> </span>두<span class="w"> </span>번째<span class="w"> </span>인수
+<span class="n">push</span><span class="w"> </span><span class="mi">3</span><span class="w">         </span><span class="p">;</span><span class="w"> </span>첫<span class="w"> </span>번째<span class="w"> </span>인수
+<span class="nb">call</span><span class="w"> </span><span class="n">add</span>
+<span class="n">add</span><span class="w"> </span><span class="n">esp</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="w">    </span><span class="p">;</span><span class="w"> </span>호출자가<span class="w"> </span>정리<span class="w"> </span><span class="p">(</span>인수<span class="w"> </span><span class="mi">2</span>개<span class="w"> </span>×<span class="w"> </span><span class="mi">4</span>바이트<span class="p">)</span>
+</code></pre></div>
+
+<h3 id="33-stdcall">3.3 stdcall<a class="header-link" href="#33-stdcall" title="Permanent link">&para;</a></h3>
+<p>Windows API(Win32 API)에서 사용합니다.</p>
+<table>
+<thead>
+<tr>
+<th>측면</th>
+<th>stdcall</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>인수</td>
+<td>오른쪽에서 왼쪽으로 스택에 푸시</td>
+</tr>
+<tr>
+<td>스택 정리</td>
+<td><strong>피호출자</strong>가 정리</td>
+</tr>
+<tr>
+<td>반환값</td>
+<td><code>EAX</code>에</td>
+</tr>
+<tr>
+<td>가변인수 지원</td>
+<td>불가 (피호출자가 정확한 인수 개수를 알아야 함)</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="c1">// 피호출자 에필로그에 포함:</span>
+<span class="n">ret</span><span class="w"> </span><span class="mi">8</span><span class="w">          </span><span class="p">;</span><span class="w"> </span>반환하고<span class="w"> </span><span class="mi">8</span>바이트<span class="w"> </span>팝<span class="w"> </span><span class="p">(</span>인수<span class="w"> </span><span class="mi">2</span>개<span class="w"> </span>×<span class="w"> </span><span class="mi">4</span>바이트<span class="p">)</span>
+</code></pre></div>
+
+<p><strong>장점</strong>: 정리 명령어가 모든 호출 위치가 아닌 피호출자에 한 번만 나타나므로 코드 크기가 약간 줄어듭니다.</p>
+<p><strong>단점</strong>: 가변인수 함수를 지원할 수 없습니다.</p>
+<h3 id="34-system-v-amd64-abi-linuxmacos-x86-64">3.4 System V AMD64 ABI (Linux/macOS x86-64)<a class="header-link" href="#34-system-v-amd64-abi-linuxmacos-x86-64" title="Permanent link">&para;</a></h3>
+<p>Linux, macOS, FreeBSD 및 기타 유닉스 계열 시스템에서 사용되는 현대적인 64비트 호출 규약입니다.</p>
+<table>
+<thead>
+<tr>
+<th>측면</th>
+<th>System V AMD64</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>정수 인수 (처음 6개)</td>
+<td><code>RDI</code>, <code>RSI</code>, <code>RDX</code>, <code>RCX</code>, <code>R8</code>, <code>R9</code></td>
+</tr>
+<tr>
+<td>부동소수점 인수 (처음 8개)</td>
+<td><code>XMM0</code>--<code>XMM7</code></td>
+</tr>
+<tr>
+<td>추가 인수</td>
+<td>오른쪽에서 왼쪽으로 스택에 푸시</td>
+</tr>
+<tr>
+<td>스택 정리</td>
+<td>호출자</td>
+</tr>
+<tr>
+<td>반환값</td>
+<td><code>RAX</code> (정수), <code>XMM0</code> (부동소수점)</td>
+</tr>
+<tr>
+<td>피호출자 저장 레지스터</td>
+<td><code>RBX</code>, <code>RBP</code>, <code>R12</code>--<code>R15</code></td>
+</tr>
+<tr>
+<td>스택 정렬</td>
+<td><code>CALL</code> 전 16바이트 정렬</td>
+</tr>
+<tr>
+<td>레드 존(Red zone)</td>
+<td>RSP 아래 128바이트 (리프 함수는 RSP 조정 없이 사용 가능)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>예시</strong>: <code>f(1, 2, 3, 4, 5, 6, 7, 8)</code> 호출:</p>
+<div class="highlight"><pre><span></span><code><span class="c1">; 인수 1-6은 레지스터에</span>
+<span class="nf">mov</span><span class="w"> </span><span class="no">rdi</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span>
+<span class="nf">mov</span><span class="w"> </span><span class="no">rsi</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span>
+<span class="nf">mov</span><span class="w"> </span><span class="no">rdx</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span>
+<span class="nf">mov</span><span class="w"> </span><span class="no">rcx</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span>
+<span class="nf">mov</span><span class="w"> </span><span class="no">r8</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span>
+<span class="nf">mov</span><span class="w"> </span><span class="no">r9</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span>
+<span class="c1">; 인수 7-8은 스택에 (오른쪽에서 왼쪽으로)</span>
+<span class="nf">push</span><span class="w"> </span><span class="mi">8</span>
+<span class="nf">push</span><span class="w"> </span><span class="mi">7</span>
+<span class="nf">call</span><span class="w"> </span><span class="no">f</span>
+<span class="nf">add</span><span class="w"> </span><span class="no">rsp</span><span class="p">,</span><span class="w"> </span><span class="mi">16</span><span class="w">   </span><span class="c1">; 호출자가 스택 인수 정리</span>
+</code></pre></div>
+
+<h3 id="35">3.5 비교 표<a class="header-link" href="#35" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>기능</th>
+<th>cdecl (x86)</th>
+<th>stdcall (x86)</th>
+<th>System V AMD64</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>인수 전달</td>
+<td>스택만</td>
+<td>스택만</td>
+<td>레지스터 6개 + 스택</td>
+</tr>
+<tr>
+<td>인수 순서</td>
+<td>오른쪽에서 왼쪽</td>
+<td>오른쪽에서 왼쪽</td>
+<td>왼쪽에서 오른쪽 (레지스터)</td>
+</tr>
+<tr>
+<td>정리</td>
+<td>호출자</td>
+<td>피호출자</td>
+<td>호출자</td>
+</tr>
+<tr>
+<td>가변인수</td>
+<td>예</td>
+<td>아니오</td>
+<td>예</td>
+</tr>
+<tr>
+<td>성능</td>
+<td>보통</td>
+<td>보통</td>
+<td>더 좋음 (레지스터 전달)</td>
+</tr>
+<tr>
+<td>플랫폼</td>
+<td>Unix/Windows 32비트</td>
+<td>Windows 32비트</td>
+<td>Linux/macOS 64비트</td>
+</tr>
+</tbody>
+</table>
+<h3 id="36-windows-x64">3.6 Windows x64 호출 규약<a class="header-link" href="#36-windows-x64" title="Permanent link">&para;</a></h3>
+<p>참고로, Windows 64비트는 다른 규약을 사용합니다:</p>
+<table>
+<thead>
+<tr>
+<th>측면</th>
+<th>Windows x64</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>정수 인수 (처음 4개)</td>
+<td><code>RCX</code>, <code>RDX</code>, <code>R8</code>, <code>R9</code></td>
+</tr>
+<tr>
+<td>부동소수점 인수 (처음 4개)</td>
+<td><code>XMM0</code>--<code>XMM3</code></td>
+</tr>
+<tr>
+<td>섀도우 공간(Shadow space)</td>
+<td>피호출자 사용을 위해 호출자가 32바이트 예약</td>
+</tr>
+<tr>
+<td>반환값</td>
+<td><code>RAX</code> (정수), <code>XMM0</code> (부동소수점)</td>
+</tr>
+<tr>
+<td>스택 정렬</td>
+<td>16바이트 정렬</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-parameter-passing-mechanisms">4. 매개변수 전달 메커니즘(Parameter Passing Mechanisms)<a class="header-link" href="#4-parameter-passing-mechanisms" title="Permanent link">&para;</a></h2>
+<h3 id="41-call-by-value">4.1 값에 의한 전달(Call by Value)<a class="header-link" href="#41-call-by-value" title="Permanent link">&para;</a></h3>
+<p><strong>호출자</strong>가 인수 표현식을 평가하고 값의 <strong>복사본</strong>을 피호출자에게 전달합니다. 피호출자 내에서 매개변수를 수정해도 원래 변수에는 영향을 미치지 않습니다.</p>
+<div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="nf">increment</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">   </span><span class="c1">// 지역 복사본만 수정</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+<span class="w">    </span><span class="n">increment</span><span class="p">(</span><span class="n">a</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// a는 여전히 5</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>구현</strong>: 값이 피호출자의 매개변수 슬롯(레지스터 또는 스택 위치)에 복사됩니다.</p>
+<p><strong>언어</strong>: C, Java (기본 타입), Go (비포인터 타입)</p>
+<h3 id="42-call-by-reference">4.2 참조에 의한 전달(Call by Reference)<a class="header-link" href="#42-call-by-reference" title="Permanent link">&para;</a></h3>
+<p>호출자가 인수의 <strong>주소</strong>(참조)를 전달합니다. 피호출자는 이 주소를 통해 원래 변수를 읽고 수정할 수 있습니다.</p>
+<div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="nf">increment</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">&amp;</span><span class="n">x</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">   </span><span class="c1">// 원래 변수 수정</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+<span class="w">    </span><span class="n">increment</span><span class="p">(</span><span class="n">a</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// a는 이제 6</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>구현</strong>: 변수의 주소가 전달됩니다. 피호출자 내에서 매개변수에 대한 모든 접근은 포인터를 통한 간접 메모리 접근입니다.</p>
+<div class="highlight"><pre><span></span><code><span class="p">;</span><span class="w"> </span><span class="nl">호출자</span><span class="p">:</span>
+<span class="n">lea</span><span class="w"> </span><span class="n">rdi</span><span class="p">,</span><span class="w"> </span><span class="o">[</span><span class="n">rbp-8</span><span class="o">]</span><span class="w">    </span><span class="p">;</span><span class="w"> </span><span class="n">a의</span><span class="w"> </span><span class="n">주소</span><span class="w"> </span><span class="n">전달</span>
+<span class="k">call</span><span class="w"> </span><span class="n">increment</span>
+
+<span class="p">;</span><span class="w"> </span><span class="nl">피호출자</span><span class="p">:</span>
+<span class="n">mov</span><span class="w"> </span><span class="n">eax</span><span class="p">,</span><span class="w"> </span><span class="o">[</span><span class="n">rdi</span><span class="o">]</span><span class="w">      </span><span class="p">;</span><span class="w"> </span><span class="n">a를</span><span class="w"> </span><span class="n">읽기</span><span class="w"> </span><span class="n">위해</span><span class="w"> </span><span class="n">역참조</span>
+<span class="k">add</span><span class="w"> </span><span class="n">eax</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span>
+<span class="n">mov</span><span class="w"> </span><span class="o">[</span><span class="n">rdi</span><span class="o">]</span><span class="p">,</span><span class="w"> </span><span class="n">eax</span><span class="w">      </span><span class="p">;</span><span class="w"> </span><span class="n">a를</span><span class="w"> </span><span class="n">쓰기</span><span class="w"> </span><span class="n">위해</span><span class="w"> </span><span class="n">역참조</span>
+</code></pre></div>
+
+<p><strong>언어</strong>: C++ (참조), Fortran (기본값), C# (<code>ref</code> 매개변수)</p>
+<h3 id="43-call-by-value-result-">4.3 값-결과에 의한 전달(Call by Value-Result)(복사-입력, 복사-출력)<a class="header-link" href="#43-call-by-value-result-" title="Permanent link">&para;</a></h3>
+<p>함수가 호출될 때 값이 <strong>복사 입력</strong>되고 함수가 반환될 때 <strong>복사 출력</strong>됩니다. 이는 에일리어싱(Aliasing)이 발생할 때 참조에 의한 전달과 다릅니다.</p>
+<div class="highlight"><pre><span></span><code><span class="k">proc</span><span class="nv">edure</span><span class="w"> </span><span class="nv">swap</span><span class="p">(</span><span class="nv">x</span><span class="p">,</span><span class="w"> </span><span class="nv">y</span><span class="p">):</span>
+<span class="w">    </span><span class="err">//</span><span class="w"> </span><span class="err">실제</span><span class="w"> </span><span class="err">인수의</span><span class="w"> </span><span class="err">복사본</span><span class="w"> </span><span class="err">생성</span><span class="w"> </span><span class="err">(복사</span><span class="w"> </span><span class="err">입력)</span>
+<span class="w">    </span><span class="nf">temp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">x</span>
+<span class="w">    </span><span class="nf">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">y</span>
+<span class="w">    </span><span class="nf">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">temp</span>
+<span class="w">    </span><span class="err">//</span><span class="w"> </span><span class="err">복사본을</span><span class="w"> </span><span class="err">실제</span><span class="w"> </span><span class="err">인수에</span><span class="w"> </span><span class="err">다시</span><span class="w"> </span><span class="err">씀</span><span class="w"> </span><span class="err">(복사</span><span class="w"> </span><span class="err">출력)</span>
+</code></pre></div>
+
+<p>참조에 의한 전달로 <code>swap(a, a)</code>를 호출하면 두 매개변수가 동일한 변수를 참조하므로 결과가 정의되지 않습니다. 값-결과에 의한 전달에서는 최종 값이 어느 복사 출력이 마지막에 발생하는지에 따라 달라집니다.</p>
+<p><strong>언어</strong>: Ada (<code>in out</code> 매개변수)</p>
+<h3 id="44-call-by-name">4.4 이름에 의한 전달(Call by Name)<a class="header-link" href="#44-call-by-name" title="Permanent link">&para;</a></h3>
+<p>인수는 호출 위치에서 평가되지 않습니다. 대신, 인수 표현식의 <strong>텍스트</strong>(또는 클로저와 유사한 썽크(Thunk))가 전달됩니다. 피호출자가 매개변수를 참조할 때마다 표현식이 호출자의 환경에서 재평가됩니다.</p>
+<p>이는 역사적으로 Algol 60과 연관됩니다. 인수는 본질적으로 <strong>썽크</strong> -- 호출될 때 표현식을 평가하는 매개변수 없는 함수입니다.</p>
+<p><strong>고전 예시 -- Jensen의 장치</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="o">//</span><span class="w"> </span><span class="n">Algol</span><span class="w"> </span><span class="mi">60</span><span class="w"> </span><span class="err">의사</span><span class="w"> </span><span class="err">코드</span>
+<span class="n">real</span><span class="w"> </span><span class="n">procedure</span><span class="w"> </span><span class="n">sum</span><span class="p">(</span><span class="n">i</span><span class="o">,</span><span class="w"> </span><span class="n">lo</span><span class="o">,</span><span class="w"> </span><span class="n">hi</span><span class="o">,</span><span class="w"> </span><span class="n">expr</span><span class="p">);</span>
+<span class="w">    </span><span class="n">name</span><span class="w"> </span><span class="n">i</span><span class="o">,</span><span class="w"> </span><span class="n">expr</span><span class="p">;</span><span class="w">       </span><span class="o">//</span><span class="w"> </span><span class="err">이름에</span><span class="w"> </span><span class="err">의한</span><span class="w"> </span><span class="err">전달</span>
+<span class="w">    </span><span class="n">value</span><span class="w"> </span><span class="n">lo</span><span class="o">,</span><span class="w"> </span><span class="n">hi</span><span class="p">;</span><span class="w">       </span><span class="o">//</span><span class="w"> </span><span class="err">값에</span><span class="w"> </span><span class="err">의한</span><span class="w"> </span><span class="err">전달</span>
+<span class="w">    </span><span class="n">integer</span><span class="w"> </span><span class="n">i</span><span class="o">,</span><span class="w"> </span><span class="n">lo</span><span class="o">,</span><span class="w"> </span><span class="n">hi</span><span class="p">;</span>
+<span class="w">    </span><span class="n">real</span><span class="w"> </span><span class="n">expr</span><span class="p">;</span>
+<span class="n">begin</span>
+<span class="w">    </span><span class="n">real</span><span class="w"> </span><span class="n">s</span><span class="p">;</span>
+<span class="w">    </span><span class="n">s</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="n">lo</span><span class="w"> </span><span class="n">step</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">until</span><span class="w"> </span><span class="n">hi</span><span class="w"> </span><span class="k">do</span>
+<span class="w">        </span><span class="n">s</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">expr</span><span class="p">;</span><span class="w">  </span><span class="o">//</span><span class="w"> </span><span class="err">매</span><span class="w"> </span><span class="err">반복마다</span><span class="w"> </span><span class="n">expr</span><span class="w"> </span><span class="err">재평가</span>
+<span class="w">    </span><span class="n">sum</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="n">s</span><span class="p">;</span>
+<span class="k">end</span><span class="p">;</span>
+
+<span class="o">//</span><span class="w"> </span><span class="err">사용</span><span class="o">:</span><span class="w"> </span><span class="n">i</span><span class="err">가</span><span class="w"> </span><span class="mi">1</span><span class="err">부터</span><span class="w"> </span><span class="mi">10</span><span class="err">까지</span><span class="w"> </span><span class="n">i</span><span class="o">*</span><span class="n">i</span><span class="err">의</span><span class="w"> </span><span class="err">합</span><span class="w"> </span><span class="err">계산</span>
+<span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sum</span><span class="p">(</span><span class="n">i</span><span class="o">,</span><span class="w"> </span><span class="mi">1</span><span class="o">,</span><span class="w"> </span><span class="mi">10</span><span class="o">,</span><span class="w"> </span><span class="n">i</span><span class="o">*</span><span class="n">i</span><span class="p">);</span>
+</code></pre></div>
+
+<p><code>expr</code>이 참조될 때마다 썽크 <code>i*i</code>가 현재 <code>i</code> 값으로 평가됩니다.</p>
+<p><strong>구현</strong>: 썽크는 표현식 코드와 이를 평가할 환경을 포함하는 작은 클로저입니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Python으로 썽크를 사용한 이름에 의한 전달 시뮬레이션</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">call_by_name_demo</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;썽크를 사용한 이름에 의한 전달 시연.&quot;&quot;&quot;</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">i_thunk</span><span class="p">():</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;i의 현재 값을 반환하는 썽크.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">i</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">a_i_thunk</span><span class="p">():</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;호출될 때마다 a[i]를 평가하는 썽크.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_a_i</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;a[i]를 설정하는 썽크.&quot;&quot;&quot;</span>
+        <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+
+    <span class="c1"># 이름에 의한 전달로 swap(i, a[i]) 시뮬레이션</span>
+    <span class="c1"># 매개변수에 대한 각 접근은 썽크를 재평가</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Before: i=</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">, a=</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># swap 본문: temp = x; x = y; y = temp</span>
+    <span class="n">temp</span> <span class="o">=</span> <span class="n">i_thunk</span><span class="p">()</span>            <span class="c1"># temp = i (0으로 평가)</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="n">a_i_thunk</span><span class="p">()</span>             <span class="c1"># i = a[i] = a[0] = 1</span>
+    <span class="n">set_a_i</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>               <span class="c1"># a[i] = temp, 하지만 이제 i=1이므로 a[1] = 0</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;After:  i=</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">, a=</span><span class="si">{</span><span class="n">a</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># 결과: i=1, a=[1, 0, 3, 4, 5]</span>
+    <span class="c1"># 참고: 쓰는 시점에 i가 1로 변경되었으므로 a[0]은 변경되지 않음</span>
+
+<span class="n">call_by_name_demo</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="45">4.5 매개변수 전달 메커니즘 비교<a class="header-link" href="#45" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>메커니즘</th>
+<th>평가 시점</th>
+<th>에일리어싱 효과</th>
+<th>성능</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>값에 의한 전달</td>
+<td>호출 위치</td>
+<td>없음</td>
+<td>복사 비용</td>
+</tr>
+<tr>
+<td>참조에 의한 전달</td>
+<td>호출 위치</td>
+<td>있음</td>
+<td>간접 참조 비용</td>
+</tr>
+<tr>
+<td>값-결과에 의한 전달</td>
+<td>호출 + 반환 시</td>
+<td>복사 순서로 정의</td>
+<td>두 번의 복사</td>
+</tr>
+<tr>
+<td>이름에 의한 전달</td>
+<td>사용할 때마다</td>
+<td>복잡함</td>
+<td>사용마다 썽크 오버헤드</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="5-nested-functions-and-static-scoping">5. 중첩 함수와 정적 스코핑(Nested Functions and Static Scoping)<a class="header-link" href="#5-nested-functions-and-static-scoping" title="Permanent link">&para;</a></h2>
+<h3 id="51">5.1 중첩 스코프의 문제<a class="header-link" href="#51" title="Permanent link">&para;</a></h3>
+<p>Pascal, Ada, Python, ML과 같은 언어는 함수를 다른 함수 안에 중첩할 수 있습니다. 중첩 함수는 둘러싸는 스코프의 변수에 접근할 수 있습니다:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">outer</span><span class="p">():</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="mi">10</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">middle</span><span class="p">():</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="mi">20</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">inner</span><span class="p">():</span>
+            <span class="c1"># inner는 x, y 및 자신의 지역 변수에 접근 가능</span>
+            <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span> <span class="o">+</span> <span class="mi">30</span>
+
+        <span class="k">return</span> <span class="n">inner</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">middle</span><span class="p">()</span>
+</code></pre></div>
+
+<p><code>inner</code>가 실행될 때 <code>outer</code> 프레임의 <code>x</code>와 <code>middle</code> 프레임의 <code>y</code>에 접근해야 합니다. 하지만 이들 프레임은 스택에 있고 <code>inner</code>의 프레임이 가장 위에 있습니다. <code>inner</code>는 어떻게 렉시컬 방식으로 둘러싸는 함수들의 프레임을 찾을 수 있을까요?</p>
+<h3 id="52-access-links">5.2 액세스 링크(Access Links)(정적 링크)<a class="header-link" href="#52-access-links" title="Permanent link">&para;</a></h3>
+<p><strong>액세스 링크</strong>(또는 <strong>정적 링크</strong>)는 각 활성화 레코드에 저장된 포인터로, <strong>렉시컬 방식으로 둘러싸는 함수</strong>의 활성화 레코드를 가리킵니다.</p>
+<div class="highlight"><pre><span></span><code>스택:
+┌────────────────────┐
+│  inner의 프레임   │
+│  access link ──────┼───┐
+│  local: (없음)     │   │
+├────────────────────┤   │
+│  middle의 프레임  │ ◀─┘
+│  access link ──────┼───┐
+│  local: y = 20     │   │
+├────────────────────┤   │
+│  outer의 프레임   │ ◀─┘
+│  access link = nil │
+│  local: x = 10     │
+└────────────────────┘
+</code></pre></div>
+
+<p>깊이 $d_{\text{var}}$의 변수에 깊이 $d_{\text{func}}$의 함수에서 접근하려면, 런타임은 $d_{\text{func}} - d_{\text{var}}$개의 액세스 링크를 따라갑니다.</p>
+<p><strong>변수 접근의 시간 복잡도</strong>: $O(d_{\text{func}} - d_{\text{var}})$, 중첩 깊이 차이에 비례합니다.</p>
+<h3 id="53">5.3 액세스 링크 유지 방법<a class="header-link" href="#53" title="Permanent link">&para;</a></h3>
+<p>깊이 $d_f$의 함수 $f$가 깊이 $d_g$의 함수 $g$를 호출할 때:</p>
+<ol>
+<li>$d_g = d_f + 1$인 경우 (직접 중첩 함수 호출):</li>
+<li>
+<p>$g$의 액세스 링크는 $f$의 프레임을 가리킵니다.</p>
+</li>
+<li>
+<p>$d_g \leq d_f$인 경우 (같은 수준 또는 외부 수준의 함수 호출):</p>
+</li>
+<li>$f$의 프레임에서 $d_f - d_g + 1$개의 액세스 링크를 따라 $g$의 렉시컬 방식으로 둘러싸는 함수의 프레임을 찾습니다.</li>
+<li>$g$의 액세스 링크는 그 프레임을 가리킵니다.</li>
+</ol>
+<h3 id="54-displays">5.4 디스플레이(Displays)<a class="header-link" href="#54-displays" title="Permanent link">&para;</a></h3>
+<p><strong>디스플레이</strong>는 액세스 링크를 위한 배열 기반 최적화입니다. 링크 체인을 따르는 대신, 디스플레이는 전역 배열 $D$를 유지하며 $D[i]$는 중첩 깊이 $i$의 가장 최근 활성화 레코드에 대한 포인터를 가집니다.</p>
+<div class="highlight"><pre><span></span><code>디스플레이 D:
+D[0] ──▶ outer의 프레임
+D[1] ──▶ middle의 프레임
+D[2] ──▶ inner의 프레임
+</code></pre></div>
+
+<p><strong>깊이 $k$의 변수 접근</strong>: 단순히 $D[k]$를 조회하고 오프셋을 더합니다. 이는 중첩 깊이와 무관하게 $O(1)$입니다.</p>
+<p><strong>유지 관리</strong>: 깊이 $k$의 함수에 진입 시:
+1. $D[k]$의 이전 값을 저장
+2. $D[k]$를 현재 프레임 포인터로 설정</p>
+<p>나갈 때:
+1. 저장된 값에서 $D[k]$ 복원</p>
+<h3 id="55-vs">5.5 비교: 액세스 링크 vs 디스플레이<a class="header-link" href="#55-vs" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>측면</th>
+<th>액세스 링크</th>
+<th>디스플레이</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>저장소</td>
+<td>프레임당 포인터 하나</td>
+<td>전역 배열 (크기 = 최대 깊이)</td>
+</tr>
+<tr>
+<td>변수 접근</td>
+<td>$O(\text{깊이 차이})$</td>
+<td>$O(1)$</td>
+</tr>
+<tr>
+<td>유지 관리</td>
+<td>단순 포인터 대입</td>
+<td>배열 항목 저장/복원</td>
+</tr>
+<tr>
+<td>클로저</td>
+<td>자연스러움 (링크가 클로저의 일부)</td>
+<td>더 복잡함 (배열 상태 캡처 필요)</td>
+</tr>
+<tr>
+<td>사용처</td>
+<td>현대 컴파일러</td>
+<td>구형 컴파일러 (Burroughs B5000)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="56-closures">5.6 클로저(Closures)<a class="header-link" href="#56-closures" title="Permanent link">&para;</a></h3>
+<p><strong>클로저</strong>는 함수를 렉시컬 환경(액세스 링크 또는 동등한 것)과 함께 캡처합니다. 함수가 값으로 반환되거나 데이터 구조에 저장될 때, 클로저는 함수가 둘러싸는 스코프의 변수에 여전히 접근할 수 있도록 보장합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">make_adder</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="n">y</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span>    <span class="c1"># x는 make_adder의 스코프에서 캡처됨</span>
+    <span class="k">return</span> <span class="n">add</span>           <span class="c1"># 클로저 반환</span>
+
+<span class="n">add5</span> <span class="o">=</span> <span class="n">make_adder</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">add5</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>           <span class="c1"># 출력: 8</span>
+</code></pre></div>
+
+<p><strong>구현 과제</strong>:
+- 둘러싸는 함수의 프레임이 스택에 있으면, 함수가 반환될 때 해제됩니다.
+- 클로저는 캡처된 변수들을 살려두어야 하며, 일반적으로 스택 대신 <strong>힙</strong>에 할당합니다 (이를 "변수 탈출(Variable Escape)" 또는 "클로저 변환(Closure Conversion)"이라 합니다).</p>
+<hr />
+<h2 id="6-dynamic-scoping-vs-static-scoping">6. 동적 스코핑(Dynamic Scoping) vs 정적 스코핑(Static Scoping)<a class="header-link" href="#6-dynamic-scoping-vs-static-scoping" title="Permanent link">&para;</a></h2>
+<h3 id="61">6.1 정적(렉시컬) 스코핑<a class="header-link" href="#61" title="Permanent link">&para;</a></h3>
+<p><strong>정적 스코핑</strong>에서는 변수의 바인딩이 프로그램의 텍스트(렉시컬 구조)에 의해 결정됩니다. 변수 참조는 컴파일 시점에 둘러싸는 스코프를 바깥쪽으로 검색하여 해석됩니다.</p>
+<div class="highlight"><pre><span></span><code><span class="n">x</span> <span class="o">=</span> <span class="mi">10</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">foo</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">x</span>     <span class="c1"># 항상 전역 x (=10)를 참조</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">bar</span><span class="p">():</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="mi">20</span>
+    <span class="k">return</span> <span class="n">foo</span><span class="p">()</span> <span class="c1"># foo는 여전히 x=10을 봄 (정적 스코핑)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">bar</span><span class="p">())</span>     <span class="c1"># 출력: 10</span>
+</code></pre></div>
+
+<p><strong>구현</strong>: 런타임에서 액세스 링크 또는 디스플레이 사용. 스코프 체인은 함수가 <strong>정의</strong>된 곳에 의해 결정되며, <strong>호출</strong>되는 곳이 아닙니다.</p>
+<h3 id="62">6.2 동적 스코핑<a class="header-link" href="#62" title="Permanent link">&para;</a></h3>
+<p><strong>동적 스코핑</strong>에서는 변수의 바인딩이 런타임 호출 체인에 의해 결정됩니다. 변수 참조는 가장 최근의 바인딩을 찾기 위해 <strong>호출 스택</strong>을 통해 검색됩니다.</p>
+<div class="highlight"><pre><span></span><code><span class="nv">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span>
+
+<span class="nv">function</span><span class="w"> </span><span class="nv">foo</span><span class="ss">()</span>:
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">x</span><span class="w">     </span><span class="o">//</span><span class="w"> </span>동적<span class="w"> </span>스코핑에서는<span class="w"> </span><span class="nv">foo</span>를<span class="w"> </span>호출한<span class="w"> </span>사람에<span class="w"> </span>따라<span class="w"> </span>다름
+
+<span class="nv">function</span><span class="w"> </span><span class="nv">bar</span><span class="ss">()</span>:
+<span class="w">    </span><span class="nv">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">20</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">foo</span><span class="ss">()</span><span class="w"> </span><span class="o">//</span><span class="w"> </span><span class="nv">foo</span>는<span class="w"> </span><span class="nv">bar</span>의<span class="w"> </span>바인딩이<span class="w"> </span>스택에<span class="w"> </span>있으므로<span class="w"> </span><span class="nv">x</span><span class="o">=</span><span class="mi">20</span>을<span class="w"> </span>봄
+
+<span class="nv">bar</span><span class="ss">()</span><span class="w">            </span><span class="o">//</span><span class="w"> </span><span class="mi">20</span><span class="w"> </span>반환<span class="w"> </span><span class="ss">(</span>동적<span class="w"> </span>스코핑<span class="ss">)</span>
+</code></pre></div>
+
+<p><strong>언어</strong>: 초기 Lisp, Bash/셸 스크립트, Emacs Lisp, Perl (<code>local</code> 사용).</p>
+<h3 id="63">6.3 런타임 구현<a class="header-link" href="#63" title="Permanent link">&para;</a></h3>
+<h4 id="_2">정적 스코핑 런타임<a class="header-link" href="#_2" title="Permanent link">&para;</a></h4>
+<ul>
+<li>렉시컬 중첩을 따르는 <strong>액세스 링크</strong> 사용</li>
+<li>변수 위치는 <strong>컴파일 시점</strong>에 결정 (특정 프레임에서의 오프셋)</li>
+<li>액세스 링크 체인은 함수가 <strong>정의</strong>된 곳을 기반으로 함</li>
+</ul>
+<h4 id="_3">동적 스코핑 런타임<a class="header-link" href="#_3" title="Permanent link">&para;</a></h4>
+<p>두 가지 일반적인 구현이 있습니다:</p>
+<p><strong>1. 깊은 접근(Deep access)</strong>: 변수 바인딩을 찾기 위해 <strong>호출 스택</strong>(동적 체인)을 위로 올라가며 검색합니다. 각 프레임은 변수 이름과 값을 저장합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="k">function</span><span class="w"> </span><span class="nf">lookup</span><span class="p">(</span>var_name<span class="p">):</span>
+<span class="w">    </span><span class="n">frame</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">current_frame</span>
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="n">frame</span><span class="w"> </span><span class="n">is</span><span class="w"> </span><span class="n">not</span><span class="w"> </span><span class="nb">null</span><span class="p">:</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">var_name</span><span class="w"> </span><span class="n">in</span><span class="w"> </span><span class="n">frame</span><span class="p">.</span><span class="n">locals</span><span class="p">:</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">frame</span><span class="p">.</span><span class="n">locals</span><span class="p">[</span><span class="n">var_name</span><span class="p">]</span>
+<span class="w">        </span><span class="n">frame</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">frame</span><span class="p">.</span><span class="n">dynamic_link</span><span class="w">    </span><span class="o">//</span><span class="w"> </span>호출<span class="w"> </span>체인<span class="w"> </span>따라가기
+<span class="w">    </span><span class="nb">error</span><span class="p">(</span><span class="s">&quot;unbound variable&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>시간 복잡도</strong>: $O(d)$ (d는 호출 스택의 깊이).</p>
+<p><strong>2. 얕은 접근(Shallow access)</strong>: <strong>중앙 테이블</strong>(변수 이름당 하나의 항목)을 유지하여 항상 현재 바인딩을 보관합니다. 함수가 진입될 때 이전 바인딩을 저장하고 새 것을 설치합니다. 함수가 종료될 때 이전 바인딩을 복원합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="n">central_table</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">{}</span>
+<span class="n">save_stack</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">{}</span>
+
+<span class="k">function</span><span class="w"> </span><span class="n">enter_scope</span><span class="p">(</span><span class="n">var_name</span><span class="p">,</span><span class="w"> </span><span class="k">value</span><span class="p">)</span><span class="err">:</span>
+<span class="w">    </span><span class="k">save</span><span class="w"> </span><span class="k">old</span><span class="w"> </span><span class="n">central_table</span><span class="o">[</span><span class="n">var_name</span><span class="o">]</span>
+<span class="w">    </span><span class="n">central_table</span><span class="o">[</span><span class="n">var_name</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">value</span>
+
+<span class="k">function</span><span class="w"> </span><span class="n">exit_scope</span><span class="p">(</span><span class="n">var_name</span><span class="p">)</span><span class="err">:</span>
+<span class="w">    </span><span class="n">central_table</span><span class="o">[</span><span class="n">var_name</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">saved</span><span class="w"> </span><span class="k">value</span>
+</code></pre></div>
+
+<p><strong>시간 복잡도</strong>: 변수 접근은 $O(1)$; $k$개의 지역 변수를 가진 스코프 진입/종료는 $O(k)$.</p>
+<h3 id="64-python-vs">6.4 Python 시뮬레이션: 정적 스코핑 vs 동적 스코핑<a class="header-link" href="#64-python-vs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="sd">&quot;&quot;&quot;정적 스코핑과 동적 스코핑의 차이를 시연합니다.&quot;&quot;&quot;</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Environment</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;변수 조회를 위한 간단한 환경.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bindings</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bindings</span> <span class="o">=</span> <span class="n">bindings</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">lookup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">bindings</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">bindings</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">NameError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unbound variable: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bindings</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+
+<span class="c1"># ---------- 정적 스코핑 ----------</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">StaticScopingInterpreter</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    정적(렉시컬) 스코핑을 사용하는 인터프리터.</span>
+<span class="sd">    각 함수는 정의 환경을 캡처합니다.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">global_env</span> <span class="o">=</span> <span class="n">Environment</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">define_var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">global_env</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">define_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">body</span><span class="p">,</span> <span class="n">def_env</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        함수를 클로저로 저장: (params, body, defining_env).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="n">def_env</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">global_env</span>
+        <span class="n">closure</span> <span class="o">=</span> <span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">body</span><span class="p">,</span> <span class="n">env</span><span class="p">)</span>  <span class="c1"># 정의 환경 캡처</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">global_env</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">closure</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">closure</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">call_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        함수 호출. 변수 조회는 정의 환경을 사용합니다.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">closure</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">global_env</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">params</span><span class="p">,</span> <span class="n">body</span><span class="p">,</span> <span class="n">def_env</span> <span class="o">=</span> <span class="n">closure</span>
+
+        <span class="c1"># 정의 환경을 부모로 하는 새 스코프 생성 (정적)</span>
+        <span class="n">call_env</span> <span class="o">=</span> <span class="n">Environment</span><span class="p">(</span>
+            <span class="n">bindings</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">args</span><span class="p">)),</span>
+            <span class="n">parent</span><span class="o">=</span><span class="n">def_env</span>  <span class="c1"># &lt;-- 정적: 정의 환경 사용</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">body</span><span class="p">(</span><span class="n">call_env</span><span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">DynamicScopingInterpreter</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    동적 스코핑을 사용하는 인터프리터.</span>
+<span class="sd">    변수 조회는 호출 체인을 따릅니다.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">global_env</span> <span class="o">=</span> <span class="n">Environment</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">define_var</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">global_env</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">define_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">body</span><span class="p">):</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">body</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">global_env</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">func</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">func</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">call_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">caller_env</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        함수 호출. 변수 조회는 호출자의 환경을 사용합니다.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">global_env</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">params</span><span class="p">,</span> <span class="n">body</span> <span class="o">=</span> <span class="n">func</span>
+
+        <span class="n">parent</span> <span class="o">=</span> <span class="n">caller_env</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">global_env</span>
+
+        <span class="c1"># 호출자 환경을 부모로 하는 새 스코프 생성 (동적)</span>
+        <span class="n">call_env</span> <span class="o">=</span> <span class="n">Environment</span><span class="p">(</span>
+            <span class="n">bindings</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">args</span><span class="p">)),</span>
+            <span class="n">parent</span><span class="o">=</span><span class="n">parent</span>  <span class="c1"># &lt;-- 동적: 호출자의 환경 사용</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">body</span><span class="p">(</span><span class="n">call_env</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">demo_scoping</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;차이를 시연합니다.&quot;&quot;&quot;</span>
+
+    <span class="c1"># --- 정적 스코핑 ---</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=== Static Scoping ===&quot;</span><span class="p">)</span>
+    <span class="n">static</span> <span class="o">=</span> <span class="n">StaticScopingInterpreter</span><span class="p">()</span>
+    <span class="n">static</span><span class="o">.</span><span class="n">define_var</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+    <span class="c1"># foo는 x를 반환 (x=10인 전역 스코프에서 정의)</span>
+    <span class="n">static</span><span class="o">.</span><span class="n">define_function</span><span class="p">(</span><span class="s2">&quot;foo&quot;</span><span class="p">,</span> <span class="p">[],</span>
+        <span class="k">lambda</span> <span class="n">env</span><span class="p">:</span> <span class="n">env</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">))</span>
+
+    <span class="c1"># bar는 x=20을 지역적으로 설정하고 foo를 호출</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">bar_body_static</span><span class="p">(</span><span class="n">env</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">static</span><span class="o">.</span><span class="n">call_function</span><span class="p">(</span><span class="s2">&quot;foo&quot;</span><span class="p">,</span> <span class="p">[])</span>
+
+    <span class="n">static</span><span class="o">.</span><span class="n">define_function</span><span class="p">(</span><span class="s2">&quot;bar&quot;</span><span class="p">,</span> <span class="p">[],</span>
+        <span class="k">lambda</span> <span class="n">env</span><span class="p">:</span> <span class="p">(</span>
+            <span class="n">env</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span>
+            <span class="n">static</span><span class="o">.</span><span class="n">call_function</span><span class="p">(</span><span class="s2">&quot;foo&quot;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">static</span><span class="o">.</span><span class="n">call_function</span><span class="p">(</span><span class="s2">&quot;bar&quot;</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  bar() calls foo(), foo sees x = </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># 정적: foo는 x=10을 봄 (정의 환경에서)</span>
+
+    <span class="c1"># --- 동적 스코핑 ---</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== Dynamic Scoping ===&quot;</span><span class="p">)</span>
+    <span class="n">dynamic</span> <span class="o">=</span> <span class="n">DynamicScopingInterpreter</span><span class="p">()</span>
+    <span class="n">dynamic</span><span class="o">.</span><span class="n">define_var</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+    <span class="n">dynamic</span><span class="o">.</span><span class="n">define_function</span><span class="p">(</span><span class="s2">&quot;foo&quot;</span><span class="p">,</span> <span class="p">[],</span>
+        <span class="k">lambda</span> <span class="n">env</span><span class="p">:</span> <span class="n">env</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">bar_body_dynamic</span><span class="p">(</span><span class="n">env</span><span class="p">):</span>
+        <span class="n">env</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dynamic</span><span class="o">.</span><span class="n">call_function</span><span class="p">(</span><span class="s2">&quot;foo&quot;</span><span class="p">,</span> <span class="p">[],</span> <span class="n">caller_env</span><span class="o">=</span><span class="n">env</span><span class="p">)</span>
+
+    <span class="n">dynamic</span><span class="o">.</span><span class="n">define_function</span><span class="p">(</span><span class="s2">&quot;bar&quot;</span><span class="p">,</span> <span class="p">[],</span> <span class="n">bar_body_dynamic</span><span class="p">)</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">dynamic</span><span class="o">.</span><span class="n">call_function</span><span class="p">(</span><span class="s2">&quot;bar&quot;</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  bar() calls foo(), foo sees x = </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># 동적: foo는 x=20을 봄 (호출 체인의 bar 환경에서)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">demo_scoping</span><span class="p">()</span>
+</code></pre></div>
+
+<p><strong>예상 출력</strong>:</p>
+<div class="highlight"><pre><span></span><code>=== Static Scoping ===
+  bar() calls foo(), foo sees x = 10
+
+=== Dynamic Scoping ===
+  bar() calls foo(), foo sees x = 20
+</code></pre></div>
+
+<hr />
+<h2 id="7-heap-management">7. 힙 관리(Heap Management)<a class="header-link" href="#7-heap-management" title="Permanent link">&para;</a></h2>
+<h3 id="71">7.1 왜 힙 할당이 필요한가?<a class="header-link" href="#71" title="Permanent link">&para;</a></h3>
+<p>스택은 <strong>후입선출(LIFO)</strong> 방식의 수명을 가진 데이터에 대해 효율적인 메모리 관리를 제공합니다. 하지만 모든 데이터가 이 패턴을 따르지는 않습니다:</p>
+<ul>
+<li>생성한 함수보다 수명이 긴 객체</li>
+<li>동적으로 증가하거나 축소하는 데이터 구조 (리스트, 트리, 해시 테이블)</li>
+<li>둘러싸는 스코프의 변수를 캡처하는 클로저</li>
+</ul>
+<p>이런 데이터는 <strong>힙</strong>에 할당되어야 합니다.</p>
+<h3 id="72">7.2 명시적 할당과 해제<a class="header-link" href="#72" title="Permanent link">&para;</a></h3>
+<p>C와 C++같은 언어에서는 프로그래머가 힙 메모리를 명시적으로 관리합니다:</p>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">100</span><span class="p">);</span><span class="w">  </span><span class="c1">// 할당</span>
+<span class="c1">// ... p 사용 ...</span>
+<span class="n">free</span><span class="p">(</span><span class="n">p</span><span class="p">);</span><span class="w">                              </span><span class="c1">// 해제</span>
+</code></pre></div>
+
+<p><strong>명시적 관리의 문제점</strong>:
+- <strong>메모리 누수</strong>: 메모리 해제를 잊어버림
+- <strong>댕글링 포인터(Dangling Pointers)</strong>: 해제된 메모리 사용
+- <strong>이중 해제(Double Free)</strong>: 동일한 메모리를 두 번 해제
+- <strong>단편화(Fragmentation)</strong>: 힙 전반에 걸쳐 흩어진 빈 블록</p>
+<h3 id="73-free-list-management">7.3 자유 리스트 관리(Free List Management)<a class="header-link" href="#73-free-list-management" title="Permanent link">&para;</a></h3>
+<p><strong>자유 리스트</strong>는 빈 메모리 블록의 연결 리스트입니다. 할당자는 각 할당 요청에 맞는 블록을 찾기 위해 이 리스트를 검색합니다.</p>
+<div class="highlight"><pre><span></span><code>힙:
+┌─────┬──────────┬─────┬──────┬─────┬──────────┐
+│USED │  FREE    │USED │ FREE │USED │  FREE    │
+│100B │  200B    │150B │  50B │80B  │  300B    │
+└─────┴──────────┴─────┴──────┴─────┴──────────┘
+
+자유 리스트:
+head ──▶ [200B] ──▶ [50B] ──▶ [300B] ──▶ null
+</code></pre></div>
+
+<h4 id="_4">할당 전략<a class="header-link" href="#_4" title="Permanent link">&para;</a></h4>
+<p><strong>최초 적합(First Fit)</strong>: 자유 리스트의 처음부터 스캔하여 충분히 큰 첫 번째 블록을 반환합니다.
+- 빠른 할당
+- 힙의 시작 부분에 단편화를 유발하는 경향</p>
+<p><strong>최적 적합(Best Fit)</strong>: 전체 자유 리스트를 스캔하여 충분히 큰 가장 작은 블록을 반환합니다.
+- 할당당 낭비되는 공간 최소화
+- 느림 (전체 리스트 스캔 필요); 많은 작은 사용 불가 단편 생성</p>
+<p><strong>최악 적합(Worst Fit)</strong>: 가장 큰 빈 블록을 반환합니다.
+- 가장 큰 나머지 단편을 남김 (나중에 유용할 수 있음)
+- 역시 느림; 실제로는 종종 성능이 낮음</p>
+<p><strong>다음 적합(Next Fit)</strong>: 최초 적합과 비슷하지만 이전 검색이 끝난 곳에서 스캔을 시작합니다.
+- 힙 전반에 걸쳐 할당을 더 균등하게 분배
+- 항상 시작 부분이 단편화되는 것을 방지</p>
+<h4 id="coalescing">병합(Coalescing)<a class="header-link" href="#coalescing" title="Permanent link">&para;</a></h4>
+<p>블록이 해제될 때, 할당자는 인접한 블록도 빈지 확인하고 <strong>병합</strong>합니다:</p>
+<div class="highlight"><pre><span></span><code>free(B) 전:
+┌─────┬──────────┬─────┬──────────┐
+│  A  │  B(used) │  C  │  D(free) │
+│free │          │free │          │
+└─────┴──────────┴─────┴──────────┘
+
+병합하여 free(B) 후:
+┌─────────────────────────┬──────────┐
+│   A + B + C (병합)      │  D(free) │
+│        free             │          │
+└─────────────────────────┴──────────┘
+</code></pre></div>
+
+<p>병합은 외부 단편화를 줄입니다. 병합을 효율적으로 하려면, 각 블록은 일반적으로 다음을 저장합니다:
+- 블록 크기와 할당 상태를 포함하는 <strong>헤더</strong>
+- 역방향 병합을 가능하게 하는 블록 크기를 포함하는 <strong>푸터</strong>(경계 태그)</p>
+<h3 id="74-buddy-system">7.4 버디 시스템(Buddy System)<a class="header-link" href="#74-buddy-system" title="Permanent link">&para;</a></h3>
+<p><strong>버디 시스템</strong>은 크기가 2의 거듭제곱인 블록으로 힙 메모리를 구성합니다. 이는 분할과 병합을 단순화합니다.</p>
+<p><strong>알고리즘</strong>:</p>
+<ol>
+<li>메모리는 $2^0, 2^1, 2^2, \ldots, 2^k$ 크기의 블록으로 나뉩니다</li>
+<li>각 블록 크기에 대한 별도의 자유 리스트를 유지합니다</li>
+</ol>
+<p>$n$ 바이트 <strong>할당</strong>:
+1. $n$을 다음 2의 거듭제곱인 $2^j$로 올림
+2. 크기 $\geq 2^j$의 가장 작은 빈 블록 찾기
+3. 찾은 블록이 필요한 것보다 크면 (크기 $2^{j+k}$인 경우):
+   - 크기 $2^j$의 블록을 얻을 때까지 <strong>버디</strong>(두 개의 같은 절반)로 반복 분할
+   - 사용되지 않은 버디는 해당 자유 리스트에 추가</p>
+<p><strong>해제</strong>:
+1. 블록 해제
+2. <strong>버디</strong>(분할의 다른 절반)도 빈지 확인
+3. 그렇다면, 더 큰 블록으로 병합
+4. 재귀적으로 병합 반복</p>
+<p><strong>버디 찾기</strong>: 주소 $A$에서 크기 $2^j$인 블록의 버디는 다음 위치에 있습니다:</p>
+<p>$$\text{buddy}(A, j) = A \oplus 2^j$$</p>
+<p>여기서 $\oplus$는 비트 단위 XOR 연산입니다.</p>
+<p><strong>예시</strong>:</p>
+<div class="highlight"><pre><span></span><code>초기 상태: 1024바이트의 블록 하나
+
+100바이트 요청 (128로 올림):
+1024 → 분할 → 512 + 512
+           → 분할 → 256 + 256
+               → 분할 → 128 + 128
+                           ↑ 할당
+
+할당 후 자유 리스트:
+512: [512에 있는 블록]
+256: [256에 있는 블록]
+128: [128에 있는 블록]    (다른 버디)
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="sd">&quot;&quot;&quot;버디 시스템 할당자 시뮬레이션.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">BuddyAllocator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    단순화된 버디 시스템 메모리 할당자.</span>
+<span class="sd">    모든 크기는 2의 거듭제곱.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">total_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;total_size로 초기화 (2의 거듭제곱이어야 함).&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">total_size</span> <span class="o">=</span> <span class="n">total_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_block</span> <span class="o">=</span> <span class="mi">16</span>  <span class="c1"># 최소 블록 크기</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_order</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">total_size</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_order</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_block</span><span class="p">))</span>
+
+        <span class="c1"># 순서별로 인덱싱된 자유 리스트 (2^order = 블록 크기)</span>
+        <span class="c1"># 각 항목은 블록 시작 주소의 집합</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">free_lists</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">set</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">order</span><span class="p">:</span> <span class="nb">set</span><span class="p">()</span> <span class="k">for</span> <span class="n">order</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_order</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_order</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="p">}</span>
+
+        <span class="c1"># 초기에는 하나의 큰 빈 블록</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">free_lists</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">max_order</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># 할당된 블록 추적: 주소 -&gt; 순서</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allocated</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_order_for_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;요청한 크기 &gt;= 블록 크기인 가장 작은 순서를 찾습니다.&quot;&quot;&quot;</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_order</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="mi">1</span><span class="p">))))</span>
+        <span class="k">return</span> <span class="n">order</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_buddy_address</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">address</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">order</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;XOR을 사용하여 버디의 주소를 계산합니다.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">address</span> <span class="o">^</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="n">order</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">allocate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        최소 &#39;size&#39; 바이트의 블록을 할당합니다.</span>
+<span class="sd">        시작 주소를 반환하거나, 할당 실패 시 -1을 반환합니다.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">needed_order</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_order_for_size</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+
+        <span class="c1"># 사용 가능한 가장 작은 블록 찾기</span>
+        <span class="n">found_order</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">for</span> <span class="n">order</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">needed_order</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_order</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">free_lists</span><span class="p">[</span><span class="n">order</span><span class="p">]:</span>
+                <span class="n">found_order</span> <span class="o">=</span> <span class="n">order</span>
+                <span class="k">break</span>
+
+        <span class="k">if</span> <span class="n">found_order</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  FAILED: Cannot allocate </span><span class="si">{</span><span class="n">size</span><span class="si">}</span><span class="s2"> bytes&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="c1"># 자유 리스트에서 블록 제거</span>
+        <span class="n">address</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">free_lists</span><span class="p">[</span><span class="n">found_order</span><span class="p">])</span>  <span class="c1"># 가장 낮은 주소 선택</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">free_lists</span><span class="p">[</span><span class="n">found_order</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
+
+        <span class="c1"># 필요한 순서로 분할</span>
+        <span class="n">current_order</span> <span class="o">=</span> <span class="n">found_order</span>
+        <span class="k">while</span> <span class="n">current_order</span> <span class="o">&gt;</span> <span class="n">needed_order</span><span class="p">:</span>
+            <span class="n">current_order</span> <span class="o">-=</span> <span class="mi">1</span>
+            <span class="c1"># 상위 절반에 버디 생성</span>
+            <span class="n">buddy_addr</span> <span class="o">=</span> <span class="n">address</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="n">current_order</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">free_lists</span><span class="p">[</span><span class="n">current_order</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">buddy_addr</span><span class="p">)</span>
+
+        <span class="c1"># 할당 기록</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allocated</span><span class="p">[</span><span class="n">address</span><span class="p">]</span> <span class="o">=</span> <span class="n">needed_order</span>
+        <span class="n">block_size</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="n">needed_order</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Allocated </span><span class="si">{</span><span class="n">size</span><span class="si">}</span><span class="s2">B at address </span><span class="si">{</span><span class="n">address</span><span class="si">}</span><span class="s2"> &quot;</span>
+              <span class="sa">f</span><span class="s2">&quot;(block size </span><span class="si">{</span><span class="n">block_size</span><span class="si">}</span><span class="s2">B, order </span><span class="si">{</span><span class="n">needed_order</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">address</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">free</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">address</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;이전에 할당된 블록을 해제하고 버디와 병합합니다.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">address</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">allocated</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ERROR: Address </span><span class="si">{</span><span class="n">address</span><span class="si">}</span><span class="s2"> not allocated&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="n">order</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">allocated</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
+        <span class="n">block_size</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="n">order</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Freeing address </span><span class="si">{</span><span class="n">address</span><span class="si">}</span><span class="s2"> (block size </span><span class="si">{</span><span class="n">block_size</span><span class="si">}</span><span class="s2">B, order </span><span class="si">{</span><span class="n">order</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+
+        <span class="c1"># 버디와 병합</span>
+        <span class="n">current_addr</span> <span class="o">=</span> <span class="n">address</span>
+        <span class="n">current_order</span> <span class="o">=</span> <span class="n">order</span>
+
+        <span class="k">while</span> <span class="n">current_order</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_order</span><span class="p">:</span>
+            <span class="n">buddy_addr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_buddy_address</span><span class="p">(</span><span class="n">current_addr</span><span class="p">,</span> <span class="n">current_order</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">buddy_addr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">free_lists</span><span class="p">[</span><span class="n">current_order</span><span class="p">]:</span>
+                <span class="c1"># 버디가 빔 -- 병합!</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">free_lists</span><span class="p">[</span><span class="n">current_order</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">buddy_addr</span><span class="p">)</span>
+                <span class="c1"># 병합된 블록은 더 낮은 주소에서 시작</span>
+                <span class="n">current_addr</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">current_addr</span><span class="p">,</span> <span class="n">buddy_addr</span><span class="p">)</span>
+                <span class="n">current_order</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Coalesced with buddy at </span><span class="si">{</span><span class="n">buddy_addr</span><span class="si">}</span><span class="s2"> &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;-&gt; new block at </span><span class="si">{</span><span class="n">current_addr</span><span class="si">}</span><span class="s2"> (order </span><span class="si">{</span><span class="n">current_order</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">break</span>
+
+        <span class="c1"># (가능하면 병합된) 블록을 자유 리스트에 추가</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">free_lists</span><span class="p">[</span><span class="n">current_order</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">current_addr</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">print_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;할당자의 현재 상태를 출력합니다.&quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  Free lists:&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">order</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_order</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_order</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">free_lists</span><span class="p">[</span><span class="n">order</span><span class="p">]:</span>
+                <span class="n">size</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="n">order</span>
+                <span class="n">addrs</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">free_lists</span><span class="p">[</span><span class="n">order</span><span class="p">])</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Order </span><span class="si">{</span><span class="n">order</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">size</span><span class="si">:</span><span class="s2">4d</span><span class="si">}</span><span class="s2">B): </span><span class="si">{</span><span class="n">addrs</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">allocated</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Allocated blocks:&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">addr</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">allocated</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+                <span class="n">order</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">allocated</span><span class="p">[</span><span class="n">addr</span><span class="p">]</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Address </span><span class="si">{</span><span class="n">addr</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="mi">1</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">order</span><span class="si">}</span><span class="s2">B (order </span><span class="si">{</span><span class="n">order</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">demo_buddy</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;버디 시스템 할당 및 해제를 시연합니다.&quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=== Buddy System Allocator (1024 bytes) ===</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">allocator</span> <span class="o">=</span> <span class="n">BuddyAllocator</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Initial state:&quot;</span><span class="p">)</span>
+    <span class="n">allocator</span><span class="o">.</span><span class="n">print_state</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;--- Allocations ---&quot;</span><span class="p">)</span>
+    <span class="n">a1</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>   <span class="c1"># 128B 필요</span>
+    <span class="n">a2</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>   <span class="c1"># 256B 필요</span>
+    <span class="n">a3</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>    <span class="c1"># 64B 필요</span>
+    <span class="n">a4</span> <span class="o">=</span> <span class="n">allocator</span><span class="o">.</span><span class="n">allocate</span><span class="p">(</span><span class="mi">60</span><span class="p">)</span>    <span class="c1"># 64B 필요</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">After allocations:&quot;</span><span class="p">)</span>
+    <span class="n">allocator</span><span class="o">.</span><span class="n">print_state</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;--- Deallocations ---&quot;</span><span class="p">)</span>
+    <span class="n">allocator</span><span class="o">.</span><span class="n">free</span><span class="p">(</span><span class="n">a3</span><span class="p">)</span>
+    <span class="n">allocator</span><span class="o">.</span><span class="n">free</span><span class="p">(</span><span class="n">a4</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">After freeing a3 and a4:&quot;</span><span class="p">)</span>
+    <span class="n">allocator</span><span class="o">.</span><span class="n">print_state</span><span class="p">()</span>
+
+    <span class="n">allocator</span><span class="o">.</span><span class="n">free</span><span class="p">(</span><span class="n">a1</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;After freeing a1:&quot;</span><span class="p">)</span>
+    <span class="n">allocator</span><span class="o">.</span><span class="n">print_state</span><span class="p">()</span>
+
+    <span class="n">allocator</span><span class="o">.</span><span class="n">free</span><span class="p">(</span><span class="n">a2</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;After freeing a2 (everything freed):&quot;</span><span class="p">)</span>
+    <span class="n">allocator</span><span class="o">.</span><span class="n">print_state</span><span class="p">()</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">demo_buddy</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="75-garbage-collection">7.5 가비지 컬렉션(Garbage Collection)(개요)<a class="header-link" href="#75-garbage-collection" title="Permanent link">&para;</a></h3>
+<p>자동 메모리 관리를 지원하는 언어(Java, Python, Go, OCaml)는 <strong>가비지 컬렉션(GC)</strong>을 사용하여 도달할 수 없는 힙 객체를 회수합니다.</p>
+<p>주요 GC 전략:</p>
+<table>
+<thead>
+<tr>
+<th>전략</th>
+<th>설명</th>
+<th>장점</th>
+<th>단점</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>참조 계산(Reference counting)</strong></td>
+<td>각 객체는 자신을 가리키는 참조 수를 추적</td>
+<td>즉각적인 회수; 단순</td>
+<td>순환 참조 처리 불가; 카운터 오버헤드</td>
+</tr>
+<tr>
+<td><strong>표시-청소(Mark-and-sweep)</strong></td>
+<td>루트에서 도달 가능한 객체 표시, 미표시 청소</td>
+<td>순환 처리</td>
+<td>전체 정지(Stop-the-world) 일시 중지; 단편화</td>
+</tr>
+<tr>
+<td><strong>표시-압축(Mark-and-compact)</strong></td>
+<td>표시-청소와 같지만 살아있는 객체 압축</td>
+<td>단편화 없음</td>
+<td>비용이 큰 객체 이동</td>
+</tr>
+<tr>
+<td><strong>복사(Cheney)</strong></td>
+<td>살아있는 객체를 새 공간에 복사</td>
+<td>빠른 할당; 단편화 없음</td>
+<td>사용 가능한 메모리 절반</td>
+</tr>
+<tr>
+<td><strong>세대별(Generational)</strong></td>
+<td>객체를 나이로 분류; 젊은 세대를 더 자주 수집</td>
+<td>세대별 가설 활용</td>
+<td>복잡한 구현</td>
+</tr>
+</tbody>
+</table>
+<p><strong>세대별 가설</strong>은 대부분의 객체가 젊은 시절에 사망한다고 말합니다. 세대별 컬렉터는 <strong>보육원(Nursery)</strong>(젊은 세대)을 자주 수집하고 <strong>구세대(Old generation)</strong>는 드물게 수집하여 이를 활용합니다.</p>
+<hr />
+<h2 id="8">8. 실제 메모리 레이아웃<a class="header-link" href="#8" title="Permanent link">&para;</a></h2>
+<h3 id="81-c">8.1 C 프로그램 레이아웃 살펴보기<a class="header-link" href="#81-c" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+
+<span class="c1">// 전역/정적 데이터 (.data와 .bss)</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">global_initialized</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span><span class="w">     </span><span class="c1">// .data</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">global_uninitialized</span><span class="p">;</span><span class="w">        </span><span class="c1">// .bss</span>
+<span class="k">static</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">static_var</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span><span class="w">     </span><span class="c1">// .data</span>
+<span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">string_lit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">&quot;hello&quot;</span><span class="p">;</span><span class="w"> </span><span class="c1">// .data에 포인터, .rodata에 문자열</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">function</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 스택</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">local_var</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">array</span><span class="p">[</span><span class="mi">100</span><span class="p">];</span>
+
+<span class="w">    </span><span class="c1">// 힙</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">heap_data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">50</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Code:    %p (function address)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="n">function</span><span class="p">);</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Global:  %p (global_initialized)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">global_initialized</span><span class="p">);</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;BSS:     %p (global_uninitialized)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">global_uninitialized</span><span class="p">);</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Static:  %p (static_var)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">static_var</span><span class="p">);</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Literal: %p (string literal)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="n">string_lit</span><span class="p">);</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Stack:   %p (local_var)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="o">&amp;</span><span class="n">local_var</span><span class="p">);</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Heap:    %p (malloc&#39;d data)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="n">heap_data</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">free</span><span class="p">(</span><span class="n">heap_data</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">function</span><span class="p">();</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>x86-64 Linux의 일반적인 출력</strong> (ASLR로 인해 주소가 다를 수 있음):</p>
+<div class="highlight"><pre><span></span><code><span class="n">Code</span><span class="o">:</span><span class="w">    </span><span class="mh">0x55a3b7c00169</span>
+<span class="n">Global</span><span class="o">:</span><span class="w">  </span><span class="mh">0x55a3b7e03010</span>
+<span class="n">BSS</span><span class="o">:</span><span class="w">     </span><span class="mh">0x55a3b7e03018</span>
+<span class="n">Static</span><span class="o">:</span><span class="w">  </span><span class="mh">0x55a3b7e03014</span>
+<span class="n">Literal</span><span class="o">:</span><span class="w"> </span><span class="mh">0x55a3b7c00200</span>
+<span class="n">Stack</span><span class="o">:</span><span class="w">   </span><span class="mh">0x7ffd9a3b4c0c</span>
+<span class="n">Heap</span><span class="o">:</span><span class="w">    </span><span class="mh">0x55a3b8a046b0</span>
+</code></pre></div>
+
+<p>스택 주소(<code>0x7ffd...</code>)와 힙 주소(<code>0x55a3...</code>) 사이의 큰 간격에 주목하십시오.</p>
+<h3 id="82-x86-64-system-v-abi">8.2 x86-64의 스택 프레임 레이아웃 (System V ABI)<a class="header-link" href="#82-x86-64-system-v-abi" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">높은</span><span class="w"> </span><span class="err">주소</span>
+<span class="err">┌─────────────────────────┐</span>
+<span class="err">│</span><span class="w"> </span><span class="n">Argument</span><span class="w"> </span><span class="mi">8</span><span class="w"> </span><span class="p">(</span><span class="k">if</span><span class="w"> </span><span class="n">any</span><span class="p">)</span><span class="w">     </span><span class="err">│</span><span class="w">  </span><span class="p">[</span><span class="n">RBP</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">24</span><span class="p">]</span>
+<span class="err">├─────────────────────────┤</span>
+<span class="err">│</span><span class="w"> </span><span class="n">Argument</span><span class="w"> </span><span class="mi">7</span><span class="w">              </span><span class="err">│</span><span class="w">  </span><span class="p">[</span><span class="n">RBP</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">16</span><span class="p">]</span>
+<span class="err">├─────────────────────────┤</span>
+<span class="err">│</span><span class="w"> </span><span class="n">Return</span><span class="w"> </span><span class="n">address</span><span class="w">          </span><span class="err">│</span><span class="w">  </span><span class="p">[</span><span class="n">RBP</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">8</span><span class="p">]</span><span class="w">   </span><span class="p">(</span><span class="n">CALL에</span><span class="w"> </span><span class="err">의해</span><span class="w"> </span><span class="err">푸시</span><span class="p">)</span>
+<span class="err">├─────────────────────────┤</span>
+<span class="err">│</span><span class="w"> </span><span class="n">Saved</span><span class="w"> </span><span class="n">RBP</span><span class="w">               </span><span class="err">│</span><span class="w">  </span><span class="p">[</span><span class="n">RBP</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">0</span><span class="p">]</span><span class="w">   </span><span class="err">◀──</span><span class="w"> </span><span class="n">RBP가</span><span class="w"> </span><span class="err">여기를</span><span class="w"> </span><span class="err">가리킴</span>
+<span class="err">├─────────────────────────┤</span>
+<span class="err">│</span><span class="w"> </span><span class="n">Local</span><span class="w"> </span><span class="n">variable</span><span class="w"> </span><span class="mi">1</span><span class="w">        </span><span class="err">│</span><span class="w">  </span><span class="p">[</span><span class="n">RBP</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">8</span><span class="p">]</span>
+<span class="err">├─────────────────────────┤</span>
+<span class="err">│</span><span class="w"> </span><span class="n">Local</span><span class="w"> </span><span class="n">variable</span><span class="w"> </span><span class="mi">2</span><span class="w">        </span><span class="err">│</span><span class="w">  </span><span class="p">[</span><span class="n">RBP</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">16</span><span class="p">]</span>
+<span class="err">├─────────────────────────┤</span>
+<span class="err">│</span><span class="w"> </span><span class="n">Saved</span><span class="w"> </span><span class="n">callee</span><span class="o">-</span><span class="n">saved</span><span class="w"> </span><span class="n">regs</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="p">[</span><span class="n">RBP</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">24</span><span class="p">]</span>
+<span class="err">├─────────────────────────┤</span>
+<span class="err">│</span><span class="w"> </span><span class="n">Alignment</span><span class="w"> </span><span class="n">padding</span><span class="w">       </span><span class="err">│</span>
+<span class="err">├─────────────────────────┤</span>
+<span class="err">│</span><span class="w"> </span><span class="n">Outgoing</span><span class="w"> </span><span class="n">arg</span><span class="w"> </span><span class="mi">7</span><span class="o">+</span><span class="w">         </span><span class="err">│</span><span class="w">  </span><span class="err">◀──</span><span class="w"> </span><span class="n">RSP가</span><span class="w"> </span><span class="err">여기를</span><span class="w"> </span><span class="err">가리킴</span>
+<span class="err">└─────────────────────────┘</span>
+<span class="err">낮은</span><span class="w"> </span><span class="err">주소</span>
+</code></pre></div>
+
+<p><strong>레드 존(Red zone)</strong>: System V AMD64에서 리프 함수(다른 함수를 호출하지 않는 함수)는 RSP를 조정하지 않고 RSP 아래 최대 128바이트까지 사용할 수 있습니다. 이는 작은 리프 함수에서 <code>sub rsp</code> / <code>add rsp</code>의 오버헤드를 방지합니다.</p>
+<hr />
+<h2 id="9-stack-unwinding-for-exceptions">9. 예외를 위한 스택 언와인딩(Stack Unwinding for Exceptions)<a class="header-link" href="#9-stack-unwinding-for-exceptions" title="Permanent link">&para;</a></h2>
+<h3 id="91">9.1 문제<a class="header-link" href="#91" title="Permanent link">&para;</a></h3>
+<p>예외가 던져지면, 제어는 호출 스택 위의 여러 프레임을 건너 적절한 예외 처리기로 전달되어야 합니다. 그 사이의 모든 프레임은 적절하게 정리되어야 합니다(소멸자 호출, 리소스 해제).</p>
+<h3 id="92">9.2 접근 방법<a class="header-link" href="#92" title="Permanent link">&para;</a></h3>
+<h4 id="_5">테이블 기반 언와인딩<a class="header-link" href="#_5" title="Permanent link">&para;</a></h4>
+<p>현대 컴파일러(GCC, Clang)는 각 프레임의 레지스터를 복원하고 언와인드하는 방법을 설명하는 <strong>언와인드 테이블</strong>을 생성합니다. 이 테이블은 코드와 함께 저장되며 예외가 던져질 때만 참조됩니다.</p>
+<div class="highlight"><pre><span></span><code><span class="na">.eh_frame</span><span class="w"> </span><span class="err">섹션</span><span class="p">:</span>
+<span class="w">  </span><span class="err">함수:</span><span class="w"> </span><span class="nf">foo</span>
+<span class="w">    </span><span class="err">오프셋</span><span class="w"> </span><span class="err">0에서:</span><span class="w">  </span><span class="nf">CFA</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="no">RSP</span><span class="w"> </span><span class="err">+</span><span class="w"> </span><span class="mi">8</span>
+<span class="w">    </span><span class="err">오프셋</span><span class="w"> </span><span class="err">4에서:</span><span class="w">  </span><span class="nf">CFA</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="no">RSP</span><span class="w"> </span><span class="err">+</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span><span class="w"> </span><span class="no">RBP</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="p">[</span><span class="no">CFA</span><span class="w"> </span><span class="p">-</span><span class="w"> </span><span class="mi">16</span><span class="p">]</span>
+<span class="w">    </span><span class="err">오프셋</span><span class="w"> </span><span class="err">8에서:</span><span class="w">  </span><span class="nf">CFA</span><span class="w"> </span><span class="err">=</span><span class="w"> </span><span class="no">RBP</span><span class="w"> </span><span class="err">+</span><span class="w"> </span><span class="mi">16</span>
+</code></pre></div>
+
+<p><strong>장점</strong>: 예외가 던져지지 않을 때 비용 없음(정상 경로에 추가 명령어 없음).</p>
+<p><strong>단점</strong>: 테이블이 바이너리 크기를 증가시킵니다.</p>
+<h4 id="setjmplongjmp">Setjmp/Longjmp 기반<a class="header-link" href="#setjmplongjmp" title="Permanent link">&para;</a></h4>
+<p>구형 접근 방식: 각 try 블록에서 <code>setjmp</code>를 사용하여 현재 상태를 저장하고, 처리기로 점프하기 위해 <code>longjmp</code>를 사용합니다.</p>
+<p><strong>장점</strong>: 단순한 구현.</p>
+<p><strong>단점</strong>: <code>setjmp</code>는 예외가 던져지지 않아도 비용이 발생합니다.</p>
+<h3 id="93">9.3 스택 언와인딩 과정<a class="header-link" href="#93" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>baz()에서 예외가 던져질 때의 호출 스택:
+
+main() → foo() → bar() → baz()
+                           ↑ 여기서 예외 던져짐
+
+언와인딩:
+1. baz()에서 처리기 검색 → 없음
+2. baz()의 프레임 언와인드 (정리 실행)
+3. bar()에서 처리기 검색 → 없음
+4. bar()의 프레임 언와인드 (정리 실행)
+5. foo()에서 처리기 검색 → 발견
+6. foo()의 catch 블록으로 제어 전달
+</code></pre></div>
+
+<hr />
+<h2 id="10-python">10. Python 시뮬레이션: 런타임 호출 스택<a class="header-link" href="#10-python" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">활성화 레코드를 포함한 런타임 호출 스택 시뮬레이션.</span>
+<span class="sd">함수 호출, 반환, 중첩 스코프를 시연합니다.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span>
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ActivationRecord</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    함수 호출을 위한 활성화 레코드(스택 프레임).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">function_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">return_address</span><span class="p">:</span> <span class="nb">int</span>                          <span class="c1"># 반환할 명령어 인덱스</span>
+    <span class="n">parameters</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">local_variables</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">temporaries</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">saved_registers</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="n">static_link</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s1">&#39;ActivationRecord&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>   <span class="c1"># 중첩 함수용</span>
+    <span class="n">dynamic_link</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s1">&#39;ActivationRecord&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>   <span class="c1"># 호출자 프레임</span>
+    <span class="n">return_value</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_variable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;이 프레임에서 변수를 조회합니다.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_variables</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_variables</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_variable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;지역 변수를 설정합니다.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">local_variables</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;  Frame: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">function_name</span><span class="si">}</span><span class="s2">()&quot;</span><span class="p">]</span>
+        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Return addr: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">return_address</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Parameters: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_variables</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Locals: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">local_variables</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">temporaries</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Temps: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">temporaries</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">return_value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Return value: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">return_value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">static_link</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Static link -&gt; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">static_link</span><span class="o">.</span><span class="n">function_name</span><span class="si">}</span><span class="s2">()&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dynamic_link</span><span class="p">:</span>
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Dynamic link -&gt; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dynamic_link</span><span class="o">.</span><span class="n">function_name</span><span class="si">}</span><span class="s2">()&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">RuntimeStack</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    런타임 호출 스택 시뮬레이션.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ActivationRecord</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pc</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># 프로그램 카운터</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">current_frame</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ActivationRecord</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">depth</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">push_frame</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">function_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">parameters</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                   <span class="n">return_address</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                   <span class="n">static_link</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ActivationRecord</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;새 활성화 레코드 푸시 (함수 호출).&quot;&quot;&quot;</span>
+        <span class="n">frame</span> <span class="o">=</span> <span class="n">ActivationRecord</span><span class="p">(</span>
+            <span class="n">function_name</span><span class="o">=</span><span class="n">function_name</span><span class="p">,</span>
+            <span class="n">return_address</span><span class="o">=</span><span class="n">return_address</span><span class="p">,</span>
+            <span class="n">parameters</span><span class="o">=</span><span class="n">parameters</span><span class="p">,</span>
+            <span class="n">dynamic_link</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">current_frame</span><span class="p">,</span>
+            <span class="n">static_link</span><span class="o">=</span><span class="n">static_link</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&gt;&gt;&gt; CALL </span><span class="si">{</span><span class="n">function_name</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">parameters</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Stack depth: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">depth</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">pop_frame</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ActivationRecord</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;현재 활성화 레코드 팝 (함수 반환).&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Stack underflow!&quot;</span><span class="p">)</span>
+
+        <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&lt;&lt;&lt; RETURN from </span><span class="si">{</span><span class="n">frame</span><span class="o">.</span><span class="n">function_name</span><span class="si">}</span><span class="s2">() &quot;</span>
+              <span class="sa">f</span><span class="s2">&quot;= </span><span class="si">{</span><span class="n">frame</span><span class="o">.</span><span class="n">return_value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    Stack depth: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">depth</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># 프로그램 카운터 복원</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pc</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">return_address</span>
+
+        <span class="k">return</span> <span class="n">frame</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">lookup_variable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">use_static_scope</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        정적 또는 동적 스코프 체인을 사용하여 변수를 조회합니다.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">use_static_scope</span><span class="p">:</span>
+            <span class="c1"># 정적 링크 따라가기 (렉시컬 스코핑)</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_frame</span>
+            <span class="k">while</span> <span class="n">frame</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">value</span>
+                <span class="n">frame</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">static_link</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># 동적 링크 따라가기 (동적 스코핑)</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_frame</span>
+            <span class="k">while</span> <span class="n">frame</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">get_variable</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">value</span>
+                <span class="n">frame</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">dynamic_link</span>
+
+        <span class="k">raise</span> <span class="ne">NameError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Variable &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; not found&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">print_stack</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;전체 호출 스택을 출력합니다.&quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== Runtime Stack ===&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  (empty)&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">marker</span> <span class="o">=</span> <span class="s2">&quot; ◀── TOP&quot;</span> <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  [</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">]</span><span class="si">{</span><span class="n">marker</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">40</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">demo_factorial</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    재귀 팩토리얼 함수 실행을 시뮬레이션합니다.</span>
+
+<span class="sd">    def factorial(n):</span>
+<span class="sd">        if n &lt;= 1:</span>
+<span class="sd">            return 1</span>
+<span class="sd">        return n * factorial(n - 1)</span>
+
+<span class="sd">    result = factorial(4)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Simulating: result = factorial(4)&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+
+    <span class="n">stack</span> <span class="o">=</span> <span class="n">RuntimeStack</span><span class="p">()</span>
+
+    <span class="c1"># main 프레임 푸시</span>
+    <span class="n">stack</span><span class="o">.</span><span class="n">push_frame</span><span class="p">(</span><span class="s2">&quot;main&quot;</span><span class="p">,</span> <span class="p">{},</span> <span class="n">return_address</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">stack</span><span class="o">.</span><span class="n">current_frame</span><span class="o">.</span><span class="n">set_variable</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="c1"># 재귀 호출: factorial(4) -&gt; factorial(3) -&gt; ... -&gt; factorial(1)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">simulate_factorial</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">return_addr</span><span class="p">):</span>
+        <span class="n">stack</span><span class="o">.</span><span class="n">push_frame</span><span class="p">(</span><span class="s2">&quot;factorial&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;n&quot;</span><span class="p">:</span> <span class="n">n</span><span class="p">},</span> <span class="n">return_address</span><span class="o">=</span><span class="n">return_addr</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">stack</span><span class="o">.</span><span class="n">current_frame</span><span class="o">.</span><span class="n">return_value</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">stack</span><span class="o">.</span><span class="n">print_stack</span><span class="p">()</span>
+            <span class="n">returned</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">pop_frame</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">returned</span><span class="o">.</span><span class="n">return_value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># 재귀 호출</span>
+            <span class="n">sub_result</span> <span class="o">=</span> <span class="n">simulate_factorial</span><span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">return_addr</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">sub_result</span>
+            <span class="n">stack</span><span class="o">.</span><span class="n">current_frame</span><span class="o">.</span><span class="n">return_value</span> <span class="o">=</span> <span class="n">result</span>
+            <span class="n">returned</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">pop_frame</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">returned</span><span class="o">.</span><span class="n">return_value</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">simulate_factorial</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+    <span class="n">stack</span><span class="o">.</span><span class="n">current_frame</span><span class="o">.</span><span class="n">set_variable</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">main: result = </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">stack</span><span class="o">.</span><span class="n">print_stack</span><span class="p">()</span>
+
+    <span class="c1"># main 팝</span>
+    <span class="n">stack</span><span class="o">.</span><span class="n">current_frame</span><span class="o">.</span><span class="n">return_value</span> <span class="o">=</span> <span class="n">result</span>
+    <span class="n">stack</span><span class="o">.</span><span class="n">pop_frame</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">demo_nested_functions</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    액세스 링크를 사용한 중첩 함수 호출을 시뮬레이션합니다.</span>
+
+<span class="sd">    def outer():</span>
+<span class="sd">        x = 10</span>
+<span class="sd">        def inner():</span>
+<span class="sd">            return x + 20   # 정적 링크를 통해 outer의 x에 접근</span>
+<span class="sd">        return inner()</span>
+
+<span class="sd">    result = outer()</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Simulating: nested functions with access links&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+
+    <span class="n">stack</span> <span class="o">=</span> <span class="n">RuntimeStack</span><span class="p">()</span>
+
+    <span class="c1"># main 프레임</span>
+    <span class="n">stack</span><span class="o">.</span><span class="n">push_frame</span><span class="p">(</span><span class="s2">&quot;main&quot;</span><span class="p">,</span> <span class="p">{},</span> <span class="n">return_address</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># outer 프레임</span>
+    <span class="n">stack</span><span class="o">.</span><span class="n">push_frame</span><span class="p">(</span><span class="s2">&quot;outer&quot;</span><span class="p">,</span> <span class="p">{},</span> <span class="n">return_address</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">stack</span><span class="o">.</span><span class="n">current_frame</span><span class="o">.</span><span class="n">set_variable</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+    <span class="n">outer_frame</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">current_frame</span>
+
+    <span class="c1"># outer에 대한 정적 링크를 가진 inner 프레임</span>
+    <span class="n">stack</span><span class="o">.</span><span class="n">push_frame</span><span class="p">(</span><span class="s2">&quot;inner&quot;</span><span class="p">,</span> <span class="p">{},</span> <span class="n">return_address</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                     <span class="n">static_link</span><span class="o">=</span><span class="n">outer_frame</span><span class="p">)</span>
+
+    <span class="n">stack</span><span class="o">.</span><span class="n">print_stack</span><span class="p">()</span>
+
+    <span class="c1"># inner는 정적 링크를 통해 x에 접근</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">stack</span><span class="o">.</span><span class="n">lookup_variable</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="n">use_static_scope</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">20</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">inner: x (via static link) = </span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;inner: result = </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># inner에서 반환</span>
+    <span class="n">stack</span><span class="o">.</span><span class="n">current_frame</span><span class="o">.</span><span class="n">return_value</span> <span class="o">=</span> <span class="n">result</span>
+    <span class="n">stack</span><span class="o">.</span><span class="n">pop_frame</span><span class="p">()</span>
+
+    <span class="c1"># outer에서 반환</span>
+    <span class="n">stack</span><span class="o">.</span><span class="n">current_frame</span><span class="o">.</span><span class="n">return_value</span> <span class="o">=</span> <span class="n">result</span>
+    <span class="n">stack</span><span class="o">.</span><span class="n">pop_frame</span><span class="p">()</span>
+
+    <span class="c1"># main에 저장</span>
+    <span class="n">stack</span><span class="o">.</span><span class="n">current_frame</span><span class="o">.</span><span class="n">set_variable</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">,</span> <span class="n">result</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">main: result = </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">stack</span><span class="o">.</span><span class="n">pop_frame</span><span class="p">()</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">demo_factorial</span><span class="p">()</span>
+    <span class="n">demo_nested_functions</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2 id="11_1">11. 런타임 환경에 대한 컴파일러 지원<a class="header-link" href="#11_1" title="Permanent link">&para;</a></h2>
+<h3 id="111">11.1 컴파일러가 생성하는 것<a class="header-link" href="#111" title="Permanent link">&para;</a></h3>
+<p>컴파일러는 런타임 환경을 올바르게 관리하는 코드를 생성할 책임이 있습니다:</p>
+<ol>
+<li><strong>함수 프롤로그(Function prologue)</strong>: 각 함수 시작 시의 코드:</li>
+<li>이전 프레임 포인터 저장</li>
+<li>새 프레임 포인터 설정</li>
+<li>지역 변수 공간 할당</li>
+<li>
+<p>피호출자 저장 레지스터 저장</p>
+</li>
+<li>
+<p><strong>함수 에필로그(Function epilogue)</strong>: 각 함수 끝의 코드:</p>
+</li>
+<li>피호출자 저장 레지스터 복원</li>
+<li>지역 변수 해제</li>
+<li>이전 프레임 포인터 복원</li>
+<li>
+<p>호출자에게 반환</p>
+</li>
+<li>
+<p><strong>변수 접근 코드</strong>: 스코프에 따라 변수의 주소를 계산하는 명령어:</p>
+</li>
+<li>지역 변수: FP로부터의 오프셋</li>
+<li>매개변수: FP로부터의 양의 오프셋 (또는 레지스터)</li>
+<li>
+<p>비지역 변수: 액세스 링크 따라가기 + 오프셋</p>
+</li>
+<li>
+<p><strong>호출 위치 코드</strong>: 각 함수 호출 시의 명령어:</p>
+</li>
+<li>인수 평가 및 전달</li>
+<li>호출자 저장 레지스터 저장</li>
+<li>호출 수행</li>
+<li>반환값 처리</li>
+</ol>
+<h3 id="112">11.2 심볼 테이블 정보<a class="header-link" href="#112" title="Permanent link">&para;</a></h3>
+<p>컴파일러의 심볼 테이블은 다음을 기록해야 합니다:</p>
+<table>
+<thead>
+<tr>
+<th>정보</th>
+<th>목적</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>변수 타입 및 크기</td>
+<td>스택 오프셋 및 접근 너비 결정</td>
+</tr>
+<tr>
+<td>스코프 레벨</td>
+<td>따라갈 액세스 링크 수 결정</td>
+</tr>
+<tr>
+<td>프레임 내 오프셋</td>
+<td>주소 계산</td>
+</tr>
+<tr>
+<td>매개변수 인덱스</td>
+<td>인수를 위한 레지스터 또는 스택 슬롯 결정</td>
+</tr>
+<tr>
+<td>클로저에 캡처되었는지?</td>
+<td>그렇다면, 스택 대신 힙에 할당</td>
+</tr>
+</tbody>
+</table>
+<h3 id="113">11.3 프레임 레이아웃 최적화<a class="header-link" href="#113" title="Permanent link">&para;</a></h3>
+<p>현대 컴파일러는 프레임 레이아웃을 최적화합니다:</p>
+<ul>
+<li><strong>지역 변수 재배열</strong>: 패딩(정렬)을 최소화</li>
+<li><strong>가능하면 프레임 포인터 생략</strong>: SP 상대 주소 지정 사용, 레지스터 절약</li>
+<li><strong>레지스터 할당</strong>: 자주 사용되는 변수를 스택 대신 레지스터에 유지</li>
+<li><strong>스택 슬롯 공유</strong>: 수명이 겹치지 않는 변수가 동일한 스택 슬롯을 공유 가능</li>
+</ul>
+<hr />
+<h2 id="12_1">12. 요약<a class="header-link" href="#12_1" title="Permanent link">&para;</a></h2>
+<p>이 레슨에서는 프로그램이 런타임에 메모리에서 어떻게 구성되는지 살펴보았습니다:</p>
+<ol>
+<li>
+<p><strong>메모리 레이아웃</strong>: 코드, 정적 데이터, 스택(아래 방향으로 성장), 힙(위 방향으로 성장)이 네 가지 주요 영역입니다.</p>
+</li>
+<li>
+<p><strong>활성화 레코드</strong>는 함수 호출에 필요한 모든 것을 저장합니다: 매개변수, 지역 변수, 반환 주소, 저장된 레지스터, 스코프 링크.</p>
+</li>
+<li>
+<p><strong>호출 규약</strong>(cdecl, stdcall, System V AMD64)은 인수 전달, 스택 정리, 레지스터 사용 프로토콜을 정의합니다. System V AMD64 ABI는 효율성을 위해 처음 6개의 정수 인수를 레지스터로 전달합니다.</p>
+</li>
+<li>
+<p><strong>매개변수 전달 메커니즘</strong>에는 값에 의한 전달(복사), 참조에 의한 전달(주소), 값-결과에 의한 전달(복사 입/출력), 이름에 의한 전달(썽크)이 있습니다.</p>
+</li>
+<li>
+<p><strong>중첩 함수</strong>는 둘러싸는 스코프의 변수에 도달하기 위해 액세스 링크 또는 디스플레이가 필요합니다. 클로저는 캡처된 변수를 둘러싸는 함수의 수명 이후에도 살려두어야 합니다.</p>
+</li>
+<li>
+<p><strong>정적 스코핑</strong>은 렉시컬 중첩으로 변수를 해석(컴파일 시점에 결정 가능)하고, <strong>동적 스코핑</strong>은 런타임 호출 체인으로 해석합니다.</p>
+</li>
+<li>
+<p><strong>힙 관리</strong>는 자유 리스트(최초 적합, 최적 적합) 또는 버디 시스템을 사용합니다. 가비지 컬렉션은 관리되는 언어에서 회수를 자동화합니다.</p>
+</li>
+<li>
+<p><strong>예외를 위한 스택 언와인딩</strong>은 정상 경로에서 비용 없는 예외 처리를 위해 테이블 기반 메커니즘을 사용합니다.</p>
+</li>
+</ol>
+<hr />
+<h2 id="_6">연습 문제<a class="header-link" href="#_6" title="Permanent link">&para;</a></h2>
+<h3 id="1">연습 1: 스택 프레임 다이어그램<a class="header-link" href="#1" title="Permanent link">&para;</a></h3>
+<p>System V AMD64에서 다음 C 함수 호출에 대한 완전한 스택 레이아웃(FP로부터의 실제 바이트 오프셋 포함)을 그리시오:</p>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="nf">compute</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">c</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">d</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">e</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">f</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">g</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">h</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">d</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">z</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">e</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">f</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">g</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">h</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">z</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p>참고: <code>a</code>--<code>f</code>는 레지스터로 전달; <code>g</code>와 <code>h</code>는 스택에 있습니다.</p>
+<h3 id="2">연습 2: 액세스 링크<a class="header-link" href="#2" title="Permanent link">&para;</a></h3>
+<p>다음 중첩 함수 구조에서 <code>innermost()</code>가 실행될 때 액세스 링크가 있는 스택 프레임을 그리시오:</p>
+<div class="highlight"><pre><span></span><code><span class="k">function</span><span class="w"> </span><span class="nf">level0</span><span class="p">():</span>
+<span class="w">    </span><span class="nb">var</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">    </span><span class="k">function</span><span class="w"> </span><span class="nf">level1</span><span class="p">():</span>
+<span class="w">        </span><span class="nb">var</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">2</span>
+<span class="w">        </span><span class="k">function</span><span class="w"> </span><span class="nf">level2</span><span class="p">():</span>
+<span class="w">            </span><span class="nb">var</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">3</span>
+<span class="w">            </span><span class="k">function</span><span class="w"> </span><span class="nf">level3</span><span class="p">():</span>
+<span class="w">                </span><span class="k">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">c</span><span class="w">   </span><span class="o">//</span><span class="w"> </span>어떻게<span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="n">c를</span><span class="w"> </span>찾을까?
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">level3</span><span class="p">()</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">level2</span><span class="p">()</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">level1</span><span class="p">()</span>
+</code></pre></div>
+
+<p><code>level3()</code>에서 <code>a</code>에 도달하려면 몇 개의 액세스 링크를 따라야 합니까?</p>
+<h3 id="3">연습 3: 호출 규약 비교<a class="header-link" href="#3" title="Permanent link">&para;</a></h3>
+<p>다음 함수 호출을 cdecl (32비트)와 System V AMD64 (64비트) 두 가지 방식으로 x86 어셈블리로 번역하시오:</p>
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">multiply_add</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">);</span>
+</code></pre></div>
+
+<p>각 규약에 대한 인수 전달, 호출 명령어, 스택 정리를 보이시오.</p>
+<h3 id="4-vs">연습 4: 동적 vs 정적 스코핑<a class="header-link" href="#4-vs" title="Permanent link">&para;</a></h3>
+<p>다음 프로그램의 정적 스코핑과 동적 스코핑 하에서의 실행을 추적하시오. 각 경우에 <code>baz()</code>는 어떤 값을 반환합니까?</p>
+<div class="highlight"><pre><span></span><code><span class="nv">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span>
+
+<span class="nv">function</span><span class="w"> </span><span class="nv">foo</span><span class="ss">()</span>:
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">x</span>
+
+<span class="nv">function</span><span class="w"> </span><span class="nv">bar</span><span class="ss">()</span>:
+<span class="w">    </span><span class="nv">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">foo</span><span class="ss">()</span>
+
+<span class="nv">function</span><span class="w"> </span><span class="nv">baz</span><span class="ss">()</span>:
+<span class="w">    </span><span class="nv">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">bar</span><span class="ss">()</span>
+</code></pre></div>
+
+<h3 id="5">연습 5: 버디 시스템<a class="header-link" href="#5" title="Permanent link">&para;</a></h3>
+<p>512바이트의 총 메모리를 가진 버디 시스템 할당자가 주어졌을 때:</p>
+<ol>
+<li>크기 50, 120, 30, 60의 블록을 할당한 후의 상태를 보이시오</li>
+<li>50바이트와 120바이트 블록을 해제한 후의 상태를 보이시오</li>
+<li>병합이 발생합니까? 그렇다면 어떤 블록이 병합되는지 설명하시오.</li>
+</ol>
+<h3 id="6">연습 6: 구현 과제<a class="header-link" href="#6" title="Permanent link">&para;</a></h3>
+<p><code>RuntimeStack</code> 시뮬레이션을 다음을 지원하도록 확장하시오:
+1. <strong>예외 처리</strong>: 스택 언와인딩이 있는 try/catch 블록 구현
+2. <strong>클로저</strong>: 함수가 중첩 함수를 반환할 때, 캡처된 변수가 여전히 접근 가능하도록 보장 (캡처된 변수의 힙 할당 시뮬레이션)</p>
+<p>여러 프레임을 통해 예외를 던지는 프로그램으로 테스트하시오.</p>
+<hr />
+<p><a href="./09_Intermediate_Representations.md">Previous: 09_Intermediate_Representations.md</a> | <a href="./11_Code_Generation.md">Next: 11_Code_Generation.md</a> | <a href="./00_Overview.md">Overview</a></p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Compiler_Design/09_Intermediate_Representations.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">레슨 9: 중간 표현(Intermediate Representations)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Compiler_Design/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Compiler_Design/11_Code_Generation.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">레슨 11: 코드 생성(Code Generation)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

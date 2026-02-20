@@ -1,0 +1,883 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Block and File Storage (EBS/EFS vs Persistent Disk/Filestore) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/en/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/en/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/en/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" selected>
+                        English
+                    </option>
+                    
+                    <option value="ko" >
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/en/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/en/Cloud_Computing/">Cloud Computing</a>
+    <span class="separator">/</span>
+    <span class="current">Block and File Storage (EBS/EFS vs Persistent Disk/Filestore)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>Block and File Storage (EBS/EFS vs Persistent Disk/Filestore)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/Cloud_Computing/07_Object_Storage.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">Object Storage (S3 / Cloud Storage)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/Cloud_Computing/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/Cloud_Computing/09_Virtual_Private_Cloud.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">VPC (Virtual Private Cloud)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#1-storage-type-comparison">1. Storage Type Comparison</a><ul>
+<li><a href="#11-block-vs-file-vs-object-storage">1.1 Block vs File vs Object Storage</a></li>
+<li><a href="#12-service-mapping">1.2 Service Mapping</a></li>
+</ul>
+</li>
+<li><a href="#2-block-storage">2. Block Storage</a><ul>
+<li><a href="#21-aws-ebs-elastic-block-store">2.1 AWS EBS (Elastic Block Store)</a></li>
+<li><a href="#22-gcp-persistent-disk">2.2 GCP Persistent Disk</a></li>
+</ul>
+</li>
+<li><a href="#3-snapshots">3. Snapshots</a><ul>
+<li><a href="#31-aws-ebs-snapshots">3.1 AWS EBS Snapshots</a></li>
+<li><a href="#32-gcp-snapshots">3.2 GCP Snapshots</a></li>
+</ul>
+</li>
+<li><a href="#4-volume-expansion">4. Volume Expansion</a><ul>
+<li><a href="#41-aws-ebs-volume-expansion">4.1 AWS EBS Volume Expansion</a></li>
+<li><a href="#42-gcp-persistent-disk-expansion">4.2 GCP Persistent Disk Expansion</a></li>
+</ul>
+</li>
+<li><a href="#5-file-storage">5. File Storage</a><ul>
+<li><a href="#51-aws-efs-elastic-file-system">5.1 AWS EFS (Elastic File System)</a></li>
+<li><a href="#52-gcp-filestore">5.2 GCP Filestore</a></li>
+</ul>
+</li>
+<li><a href="#6-local-ssd">6. Local SSD</a><ul>
+<li><a href="#61-aws-instance-store">6.1 AWS Instance Store</a></li>
+<li><a href="#62-gcp-local-ssd">6.2 GCP Local SSD</a></li>
+</ul>
+</li>
+<li><a href="#7-performance-optimization">7. Performance Optimization</a><ul>
+<li><a href="#71-iops-vs-throughput">7.1 IOPS vs Throughput</a></li>
+<li><a href="#72-optimization-tips">7.2 Optimization Tips</a></li>
+</ul>
+</li>
+<li><a href="#8-cost-comparison">8. Cost Comparison</a><ul>
+<li><a href="#81-block-storage-cost-seoul-region">8.1 Block Storage Cost (Seoul Region)</a></li>
+<li><a href="#82-file-storage-cost">8.2 File Storage Cost</a></li>
+</ul>
+</li>
+<li><a href="#9-hands-on-setting-up-shared-storage">9. Hands-on: Setting Up Shared Storage</a><ul>
+<li><a href="#91-aws-efs-multi-instance-mount">9.1 AWS EFS Multi-Instance Mount</a></li>
+<li><a href="#92-gcp-filestore-multi-instance-mount">9.2 GCP Filestore Multi-Instance Mount</a></li>
+</ul>
+</li>
+<li><a href="#10-next-steps">10. Next Steps</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="block-and-file-storage-ebsefs-vs-persistent-diskfilestore">Block and File Storage (EBS/EFS vs Persistent Disk/Filestore)<a class="header-link" href="#block-and-file-storage-ebsefs-vs-persistent-diskfilestore" title="Permanent link">&para;</a></h1>
+<h2 id="1-storage-type-comparison">1. Storage Type Comparison<a class="header-link" href="#1-storage-type-comparison" title="Permanent link">&para;</a></h2>
+<h3 id="11-block-vs-file-vs-object-storage">1.1 Block vs File vs Object Storage<a class="header-link" href="#11-block-vs-file-vs-object-storage" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Characteristics</th>
+<th>Use Cases</th>
+<th>AWS</th>
+<th>GCP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Block</strong></td>
+<td>Low-level disk access</td>
+<td>Databases, OS boot disk</td>
+<td>EBS</td>
+<td>Persistent Disk</td>
+</tr>
+<tr>
+<td><strong>File</strong></td>
+<td>Shared filesystem</td>
+<td>Shared storage, CMS</td>
+<td>EFS</td>
+<td>Filestore</td>
+</tr>
+<tr>
+<td><strong>Object</strong></td>
+<td>HTTP-based, unlimited</td>
+<td>Backup, media, logs</td>
+<td>S3</td>
+<td>Cloud Storage</td>
+</tr>
+</tbody>
+</table>
+<h3 id="12-service-mapping">1.2 Service Mapping<a class="header-link" href="#12-service-mapping" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>AWS</th>
+<th>GCP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Block Storage</td>
+<td>EBS (Elastic Block Store)</td>
+<td>Persistent Disk (PD)</td>
+</tr>
+<tr>
+<td>Shared File Storage</td>
+<td>EFS (Elastic File System)</td>
+<td>Filestore</td>
+</tr>
+<tr>
+<td>Local SSD</td>
+<td>Instance Store</td>
+<td>Local SSD</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-block-storage">2. Block Storage<a class="header-link" href="#2-block-storage" title="Permanent link">&para;</a></h2>
+<h3 id="21-aws-ebs-elastic-block-store">2.1 AWS EBS (Elastic Block Store)<a class="header-link" href="#21-aws-ebs-elastic-block-store" title="Permanent link">&para;</a></h3>
+<p><strong>EBS Volume Types:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Use Case</th>
+<th>IOPS</th>
+<th>Throughput</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>gp3</strong></td>
+<td>General purpose SSD</td>
+<td>Up to 16,000</td>
+<td>Up to 1,000 MB/s</td>
+<td>Low</td>
+</tr>
+<tr>
+<td><strong>gp2</strong></td>
+<td>General purpose SSD (legacy)</td>
+<td>Up to 16,000</td>
+<td>Up to 250 MB/s</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td><strong>io2</strong></td>
+<td>Provisioned IOPS</td>
+<td>Up to 64,000</td>
+<td>Up to 1,000 MB/s</td>
+<td>High</td>
+</tr>
+<tr>
+<td><strong>st1</strong></td>
+<td>Throughput-optimized HDD</td>
+<td>Up to 500</td>
+<td>Up to 500 MB/s</td>
+<td>Low</td>
+</tr>
+<tr>
+<td><strong>sc1</strong></td>
+<td>Cold HDD</td>
+<td>Up to 250</td>
+<td>Up to 250 MB/s</td>
+<td>Very low</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="c1"># EBS 볼륨 생성</span>
+aws<span class="w"> </span>ec2<span class="w"> </span>create-volume<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--availability-zone<span class="w"> </span>ap-northeast-2a<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--size<span class="w"> </span><span class="m">100</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--volume-type<span class="w"> </span>gp3<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--iops<span class="w"> </span><span class="m">3000</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--throughput<span class="w"> </span><span class="m">125</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--tag-specifications<span class="w"> </span><span class="s1">&#39;ResourceType=volume,Tags=[{Key=Name,Value=MyVolume}]&#39;</span>
+
+<span class="c1"># EC2에 볼륨 연결</span>
+aws<span class="w"> </span>ec2<span class="w"> </span>attach-volume<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--volume-id<span class="w"> </span>vol-1234567890abcdef0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--instance-id<span class="w"> </span>i-1234567890abcdef0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--device<span class="w"> </span>/dev/sdf
+
+<span class="c1"># 인스턴스 내에서 마운트</span>
+sudo<span class="w"> </span>mkfs<span class="w"> </span>-t<span class="w"> </span>xfs<span class="w"> </span>/dev/xvdf
+sudo<span class="w"> </span>mkdir<span class="w"> </span>/data
+sudo<span class="w"> </span>mount<span class="w"> </span>/dev/xvdf<span class="w"> </span>/data
+
+<span class="c1"># fstab에 추가 (영구 마운트)</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;/dev/xvdf /data xfs defaults,nofail 0 2&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/fstab
+</code></pre></div>
+
+<h3 id="22-gcp-persistent-disk">2.2 GCP Persistent Disk<a class="header-link" href="#22-gcp-persistent-disk" title="Permanent link">&para;</a></h3>
+<p><strong>Persistent Disk Types:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Use Case</th>
+<th>IOPS (read)</th>
+<th>Throughput (read)</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>pd-standard</strong></td>
+<td>HDD</td>
+<td>Up to 7,500</td>
+<td>Up to 180 MB/s</td>
+<td>Low</td>
+</tr>
+<tr>
+<td><strong>pd-balanced</strong></td>
+<td>SSD (balanced)</td>
+<td>Up to 80,000</td>
+<td>Up to 1,200 MB/s</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td><strong>pd-ssd</strong></td>
+<td>SSD (high performance)</td>
+<td>Up to 100,000</td>
+<td>Up to 1,200 MB/s</td>
+<td>High</td>
+</tr>
+<tr>
+<td><strong>pd-extreme</strong></td>
+<td>High IOPS SSD</td>
+<td>Up to 120,000</td>
+<td>Up to 2,400 MB/s</td>
+<td>Very high</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="c1"># Persistent Disk 생성</span>
+gcloud<span class="w"> </span>compute<span class="w"> </span>disks<span class="w"> </span>create<span class="w"> </span>my-disk<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--zone<span class="o">=</span>asia-northeast3-a<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--size<span class="o">=</span>100GB<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--type<span class="o">=</span>pd-ssd
+
+<span class="c1"># VM에 디스크 연결</span>
+gcloud<span class="w"> </span>compute<span class="w"> </span>instances<span class="w"> </span>attach-disk<span class="w"> </span>my-instance<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--disk<span class="o">=</span>my-disk<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--zone<span class="o">=</span>asia-northeast3-a
+
+<span class="c1"># 인스턴스 내에서 마운트</span>
+sudo<span class="w"> </span>mkfs.ext4<span class="w"> </span>-m<span class="w"> </span><span class="m">0</span><span class="w"> </span>-E<span class="w"> </span><span class="nv">lazy_itable_init</span><span class="o">=</span><span class="m">0</span>,lazy_journal_init<span class="o">=</span><span class="m">0</span>,discard<span class="w"> </span>/dev/sdb
+sudo<span class="w"> </span>mkdir<span class="w"> </span>/data
+sudo<span class="w"> </span>mount<span class="w"> </span>-o<span class="w"> </span>discard,defaults<span class="w"> </span>/dev/sdb<span class="w"> </span>/data
+
+<span class="c1"># fstab에 추가</span>
+<span class="nb">echo</span><span class="w"> </span><span class="nv">UUID</span><span class="o">=</span><span class="k">$(</span>sudo<span class="w"> </span>blkid<span class="w"> </span>-s<span class="w"> </span>UUID<span class="w"> </span>-o<span class="w"> </span>value<span class="w"> </span>/dev/sdb<span class="k">)</span><span class="w"> </span>/data<span class="w"> </span>ext4<span class="w"> </span>discard,defaults,nofail<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/fstab
+</code></pre></div>
+
+<hr />
+<h2 id="3-snapshots">3. Snapshots<a class="header-link" href="#3-snapshots" title="Permanent link">&para;</a></h2>
+<h3 id="31-aws-ebs-snapshots">3.1 AWS EBS Snapshots<a class="header-link" href="#31-aws-ebs-snapshots" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 스냅샷 생성</span>
+aws<span class="w"> </span>ec2<span class="w"> </span>create-snapshot<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--volume-id<span class="w"> </span>vol-1234567890abcdef0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--description<span class="w"> </span><span class="s2">&quot;My snapshot&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--tag-specifications<span class="w"> </span><span class="s1">&#39;ResourceType=snapshot,Tags=[{Key=Name,Value=MySnapshot}]&#39;</span>
+
+<span class="c1"># 스냅샷 목록 조회</span>
+aws<span class="w"> </span>ec2<span class="w"> </span>describe-snapshots<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--owner-ids<span class="w"> </span>self<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--query<span class="w"> </span><span class="s1">&#39;Snapshots[*].[SnapshotId,VolumeId,StartTime,State]&#39;</span>
+
+<span class="c1"># 스냅샷에서 볼륨 복원</span>
+aws<span class="w"> </span>ec2<span class="w"> </span>create-volume<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--availability-zone<span class="w"> </span>ap-northeast-2a<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--snapshot-id<span class="w"> </span>snap-1234567890abcdef0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--volume-type<span class="w"> </span>gp3
+
+<span class="c1"># 스냅샷 복사 (다른 리전)</span>
+aws<span class="w"> </span>ec2<span class="w"> </span>copy-snapshot<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--source-region<span class="w"> </span>ap-northeast-2<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--source-snapshot-id<span class="w"> </span>snap-1234567890abcdef0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--destination-region<span class="w"> </span>us-east-1
+
+<span class="c1"># 스냅샷 삭제</span>
+aws<span class="w"> </span>ec2<span class="w"> </span>delete-snapshot<span class="w"> </span>--snapshot-id<span class="w"> </span>snap-1234567890abcdef0
+</code></pre></div>
+
+<p><strong>Automated Snapshots (Data Lifecycle Manager):</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># DLM 정책 생성 (매일 스냅샷, 7일 보관)</span>
+aws<span class="w"> </span>dlm<span class="w"> </span>create-lifecycle-policy<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--description<span class="w"> </span><span class="s2">&quot;Daily snapshots&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--state<span class="w"> </span>ENABLED<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--execution-role-arn<span class="w"> </span>arn:aws:iam::123456789012:role/AWSDataLifecycleManagerDefaultRole<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--policy-details<span class="w"> </span><span class="s1">&#39;{</span>
+<span class="s1">        &quot;ResourceTypes&quot;: [&quot;VOLUME&quot;],</span>
+<span class="s1">        &quot;TargetTags&quot;: [{&quot;Key&quot;: &quot;Backup&quot;, &quot;Value&quot;: &quot;true&quot;}],</span>
+<span class="s1">        &quot;Schedules&quot;: [{</span>
+<span class="s1">            &quot;Name&quot;: &quot;DailySnapshots&quot;,</span>
+<span class="s1">            &quot;CreateRule&quot;: {&quot;Interval&quot;: 24, &quot;IntervalUnit&quot;: &quot;HOURS&quot;, &quot;Times&quot;: [&quot;03:00&quot;]},</span>
+<span class="s1">            &quot;RetainRule&quot;: {&quot;Count&quot;: 7}</span>
+<span class="s1">        }]</span>
+<span class="s1">    }&#39;</span>
+</code></pre></div>
+
+<h3 id="32-gcp-snapshots">3.2 GCP Snapshots<a class="header-link" href="#32-gcp-snapshots" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 스냅샷 생성</span>
+gcloud<span class="w"> </span>compute<span class="w"> </span>snapshots<span class="w"> </span>create<span class="w"> </span>my-snapshot<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--source-disk<span class="o">=</span>my-disk<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--source-disk-zone<span class="o">=</span>asia-northeast3-a
+
+<span class="c1"># 스냅샷 목록 조회</span>
+gcloud<span class="w"> </span>compute<span class="w"> </span>snapshots<span class="w"> </span>list
+
+<span class="c1"># 스냅샷에서 디스크 복원</span>
+gcloud<span class="w"> </span>compute<span class="w"> </span>disks<span class="w"> </span>create<span class="w"> </span>restored-disk<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--source-snapshot<span class="o">=</span>my-snapshot<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--zone<span class="o">=</span>asia-northeast3-a
+
+<span class="c1"># 스냅샷 삭제</span>
+gcloud<span class="w"> </span>compute<span class="w"> </span>snapshots<span class="w"> </span>delete<span class="w"> </span>my-snapshot
+</code></pre></div>
+
+<p><strong>Snapshot Schedule:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 스케줄 정책 생성 (매일, 7일 보관)</span>
+gcloud<span class="w"> </span>compute<span class="w"> </span>resource-policies<span class="w"> </span>create<span class="w"> </span>snapshot-schedule<span class="w"> </span>daily-snapshot<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--region<span class="o">=</span>asia-northeast3<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--max-retention-days<span class="o">=</span><span class="m">7</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--start-time<span class="o">=</span><span class="m">04</span>:00<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--daily-schedule
+
+<span class="c1"># 디스크에 스케줄 연결</span>
+gcloud<span class="w"> </span>compute<span class="w"> </span>disks<span class="w"> </span>add-resource-policies<span class="w"> </span>my-disk<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--resource-policies<span class="o">=</span>daily-snapshot<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--zone<span class="o">=</span>asia-northeast3-a
+</code></pre></div>
+
+<hr />
+<h2 id="4-volume-expansion">4. Volume Expansion<a class="header-link" href="#4-volume-expansion" title="Permanent link">&para;</a></h2>
+<h3 id="41-aws-ebs-volume-expansion">4.1 AWS EBS Volume Expansion<a class="header-link" href="#41-aws-ebs-volume-expansion" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. 볼륨 크기 수정 (온라인 가능)</span>
+aws<span class="w"> </span>ec2<span class="w"> </span>modify-volume<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--volume-id<span class="w"> </span>vol-1234567890abcdef0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--size<span class="w"> </span><span class="m">200</span>
+
+<span class="c1"># 2. 수정 상태 확인</span>
+aws<span class="w"> </span>ec2<span class="w"> </span>describe-volumes-modifications<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--volume-id<span class="w"> </span>vol-1234567890abcdef0
+
+<span class="c1"># 3. 인스턴스 내에서 파일시스템 확장</span>
+<span class="c1"># XFS</span>
+sudo<span class="w"> </span>xfs_growfs<span class="w"> </span>-d<span class="w"> </span>/data
+
+<span class="c1"># ext4</span>
+sudo<span class="w"> </span>resize2fs<span class="w"> </span>/dev/xvdf
+</code></pre></div>
+
+<h3 id="42-gcp-persistent-disk-expansion">4.2 GCP Persistent Disk Expansion<a class="header-link" href="#42-gcp-persistent-disk-expansion" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. 디스크 크기 확장 (온라인 가능)</span>
+gcloud<span class="w"> </span>compute<span class="w"> </span>disks<span class="w"> </span>resize<span class="w"> </span>my-disk<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--size<span class="o">=</span>200GB<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--zone<span class="o">=</span>asia-northeast3-a
+
+<span class="c1"># 2. 인스턴스 내에서 파일시스템 확장</span>
+<span class="c1"># ext4</span>
+sudo<span class="w"> </span>resize2fs<span class="w"> </span>/dev/sdb
+
+<span class="c1"># XFS</span>
+sudo<span class="w"> </span>xfs_growfs<span class="w"> </span>/data
+</code></pre></div>
+
+<hr />
+<h2 id="5-file-storage">5. File Storage<a class="header-link" href="#5-file-storage" title="Permanent link">&para;</a></h2>
+<h3 id="51-aws-efs-elastic-file-system">5.1 AWS EFS (Elastic File System)<a class="header-link" href="#51-aws-efs-elastic-file-system" title="Permanent link">&para;</a></h3>
+<p><strong>Features:</strong>
+- NFS v4.1 protocol
+- Auto-scaling (expand/shrink)
+- Multi-AZ support
+- Supports thousands of concurrent EC2 connections</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. EFS 파일 시스템 생성</span>
+aws<span class="w"> </span>efs<span class="w"> </span>create-file-system<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--performance-mode<span class="w"> </span>generalPurpose<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--throughput-mode<span class="w"> </span>bursting<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--encrypted<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--tags<span class="w"> </span><span class="nv">Key</span><span class="o">=</span>Name,Value<span class="o">=</span>my-efs
+
+<span class="c1"># 2. 마운트 타겟 생성 (각 서브넷)</span>
+aws<span class="w"> </span>efs<span class="w"> </span>create-mount-target<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--file-system-id<span class="w"> </span>fs-12345678<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--subnet-id<span class="w"> </span>subnet-12345678<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--security-groups<span class="w"> </span>sg-12345678
+
+<span class="c1"># 3. EC2에서 마운트</span>
+sudo<span class="w"> </span>yum<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>amazon-efs-utils
+sudo<span class="w"> </span>mkdir<span class="w"> </span>/efs
+sudo<span class="w"> </span>mount<span class="w"> </span>-t<span class="w"> </span>efs<span class="w"> </span>fs-12345678:/<span class="w"> </span>/efs
+
+<span class="c1"># 또는 NFS로 마운트</span>
+sudo<span class="w"> </span>mount<span class="w"> </span>-t<span class="w"> </span>nfs4<span class="w"> </span>-o<span class="w"> </span><span class="nv">nfsvers</span><span class="o">=</span><span class="m">4</span>.1<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>fs-12345678.efs.ap-northeast-2.amazonaws.com:/<span class="w"> </span>/efs
+
+<span class="c1"># fstab에 추가</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;fs-12345678:/ /efs efs defaults,_netdev 0 0&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/fstab
+</code></pre></div>
+
+<p><strong>EFS Storage Classes:</strong>
+| Class | Use Case | Cost |
+|--------|------|------|
+| Standard | Frequent access | High |
+| Infrequent Access (IA) | Infrequent access | Low |
+| Archive | Long-term retention | Very low |</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 수명 주기 정책 설정 (30일 후 IA로 이동)</span>
+aws<span class="w"> </span>efs<span class="w"> </span>put-lifecycle-configuration<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--file-system-id<span class="w"> </span>fs-12345678<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--lifecycle-policies<span class="w"> </span><span class="s1">&#39;[{&quot;TransitionToIA&quot;:&quot;AFTER_30_DAYS&quot;}]&#39;</span>
+</code></pre></div>
+
+<h3 id="52-gcp-filestore">5.2 GCP Filestore<a class="header-link" href="#52-gcp-filestore" title="Permanent link">&para;</a></h3>
+<p><strong>Features:</strong>
+- NFS v3 protocol
+- Pre-provisioned capacity
+- High-performance options available</p>
+<p><strong>Filestore Tiers:</strong>
+| Tier | Capacity | Performance | Use Case |
+|------|------|------|------|
+| Basic HDD | 1TB-63.9TB | 100 MB/s | File sharing |
+| Basic SSD | 2.5TB-63.9TB | 1,200 MB/s | High performance |
+| Zonal | 1TB-100TB | Up to 2,560 MB/s | High-performance workloads |
+| Enterprise | 1TB-10TB | Up to 1,200 MB/s | Mission-critical |</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. Filestore 인스턴스 생성</span>
+gcloud<span class="w"> </span>filestore<span class="w"> </span>instances<span class="w"> </span>create<span class="w"> </span>my-filestore<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--zone<span class="o">=</span>asia-northeast3-a<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--tier<span class="o">=</span>BASIC_SSD<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--file-share<span class="o">=</span><span class="nv">name</span><span class="o">=</span>vol1,capacity<span class="o">=</span><span class="m">2</span>.5TB<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--network<span class="o">=</span><span class="nv">name</span><span class="o">=</span>default
+
+<span class="c1"># 2. Filestore 정보 조회</span>
+gcloud<span class="w"> </span>filestore<span class="w"> </span>instances<span class="w"> </span>describe<span class="w"> </span>my-filestore<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--zone<span class="o">=</span>asia-northeast3-a
+
+<span class="c1"># 3. VM에서 마운트</span>
+sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>nfs-common
+sudo<span class="w"> </span>mkdir<span class="w"> </span>/filestore
+sudo<span class="w"> </span>mount<span class="w"> </span><span class="m">10</span>.0.0.2:/vol1<span class="w"> </span>/filestore
+
+<span class="c1"># fstab에 추가</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;10.0.0.2:/vol1 /filestore nfs defaults,_netdev 0 0&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/fstab
+</code></pre></div>
+
+<hr />
+<h2 id="6-local-ssd">6. Local SSD<a class="header-link" href="#6-local-ssd" title="Permanent link">&para;</a></h2>
+<h3 id="61-aws-instance-store">6.1 AWS Instance Store<a class="header-link" href="#61-aws-instance-store" title="Permanent link">&para;</a></h3>
+<p>Instance Store is temporary storage physically attached to EC2 instances.</p>
+<p><strong>Features:</strong>
+- Data loss on instance stop/termination
+- Very high IOPS
+- No additional cost (included in instance price)</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Instance Store가 있는 인스턴스 유형 확인</span>
+aws<span class="w"> </span>ec2<span class="w"> </span>describe-instance-types<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--filters<span class="w"> </span><span class="s2">&quot;Name=instance-storage-supported,Values=true&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--query<span class="w"> </span><span class="s1">&#39;InstanceTypes[*].[InstanceType,InstanceStorageInfo.TotalSizeInGB]&#39;</span>
+
+<span class="c1"># 예: i3.large, d2.xlarge 등</span>
+
+<span class="c1"># 인스턴스 내에서 마운트</span>
+sudo<span class="w"> </span>mkfs.xfs<span class="w"> </span>/dev/nvme1n1
+sudo<span class="w"> </span>mkdir<span class="w"> </span>/local-ssd
+sudo<span class="w"> </span>mount<span class="w"> </span>/dev/nvme1n1<span class="w"> </span>/local-ssd
+</code></pre></div>
+
+<h3 id="62-gcp-local-ssd">6.2 GCP Local SSD<a class="header-link" href="#62-gcp-local-ssd" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Local SSD가 있는 인스턴스 생성</span>
+gcloud<span class="w"> </span>compute<span class="w"> </span>instances<span class="w"> </span>create<span class="w"> </span>my-instance<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--zone<span class="o">=</span>asia-northeast3-a<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--machine-type<span class="o">=</span>n2-standard-4<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--local-ssd<span class="o">=</span><span class="nv">interface</span><span class="o">=</span>NVME<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--local-ssd<span class="o">=</span><span class="nv">interface</span><span class="o">=</span>NVME
+
+<span class="c1"># 인스턴스 내에서 마운트</span>
+sudo<span class="w"> </span>mkfs.ext4<span class="w"> </span>/dev/nvme0n1
+sudo<span class="w"> </span>mkdir<span class="w"> </span>/local-ssd
+sudo<span class="w"> </span>mount<span class="w"> </span>/dev/nvme0n1<span class="w"> </span>/local-ssd
+</code></pre></div>
+
+<p><strong>Local SSD Features:</strong>
+- Added in 375GB units
+- Up to 24 units (9TB)
+- Data loss on instance stop
+- Live Migration not available (for some)</p>
+<hr />
+<h2 id="7-performance-optimization">7. Performance Optimization<a class="header-link" href="#7-performance-optimization" title="Permanent link">&para;</a></h2>
+<h3 id="71-iops-vs-throughput">7.1 IOPS vs Throughput<a class="header-link" href="#71-iops-vs-throughput" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nv">IOPS</span><span class="w"> </span><span class="ss">(</span><span class="nv">Input</span><span class="o">/</span><span class="nv">Output</span><span class="w"> </span><span class="nv">Per</span><span class="w"> </span><span class="nv">Second</span><span class="ss">)</span>:
+<span class="o">-</span><span class="w"> </span><span class="nv">Number</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">read</span><span class="o">/</span><span class="nv">write</span><span class="w"> </span><span class="nv">operations</span><span class="w"> </span><span class="nv">per</span><span class="w"> </span><span class="nv">second</span>
+<span class="o">-</span><span class="w"> </span><span class="nv">Important</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nv">small</span><span class="w"> </span><span class="k">random</span><span class="w"> </span><span class="nv">I</span><span class="o">/</span><span class="nv">O</span>
+<span class="o">-</span><span class="w"> </span><span class="nv">Databases</span>,<span class="w"> </span><span class="nv">transaction</span><span class="w"> </span><span class="nv">processing</span>
+
+<span class="nv">Throughput</span>:
+<span class="o">-</span><span class="w"> </span><span class="nv">Amount</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">data</span><span class="w"> </span><span class="nv">transferred</span><span class="w"> </span><span class="nv">per</span><span class="w"> </span><span class="nv">second</span><span class="w"> </span><span class="ss">(</span><span class="nv">MB</span><span class="o">/</span><span class="nv">s</span><span class="ss">)</span>
+<span class="o">-</span><span class="w"> </span><span class="nv">Important</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nv">large</span><span class="w"> </span><span class="nv">sequential</span><span class="w"> </span><span class="nv">I</span><span class="o">/</span><span class="nv">O</span>
+<span class="o">-</span><span class="w"> </span><span class="nv">Video</span><span class="w"> </span><span class="nv">streaming</span>,<span class="w"> </span><span class="nv">big</span><span class="w"> </span><span class="nv">data</span>
+</code></pre></div>
+
+<h3 id="72-optimization-tips">7.2 Optimization Tips<a class="header-link" href="#72-optimization-tips" title="Permanent link">&para;</a></h3>
+<p><strong>AWS EBS:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># gp3 IOPS/처리량 조정</span>
+aws<span class="w"> </span>ec2<span class="w"> </span>modify-volume<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--volume-id<span class="w"> </span>vol-xxx<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--iops<span class="w"> </span><span class="m">10000</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--throughput<span class="w"> </span><span class="m">500</span>
+
+<span class="c1"># EBS 최적화 인스턴스 사용</span>
+aws<span class="w"> </span>ec2<span class="w"> </span>run-instances<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--instance-type<span class="w"> </span>m5.large<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--ebs-optimized<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>...
+</code></pre></div>
+
+<p><strong>GCP Persistent Disk:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 더 큰 디스크 = 더 높은 성능</span>
+<span class="c1"># pd-ssd 100GB: 최대 3,000 IOPS</span>
+<span class="c1"># pd-ssd 500GB: 최대 15,000 IOPS</span>
+<span class="c1"># pd-ssd 1TB: 최대 30,000 IOPS</span>
+
+<span class="c1"># 성능을 위해 디스크 크기 증가</span>
+gcloud<span class="w"> </span>compute<span class="w"> </span>disks<span class="w"> </span>resize<span class="w"> </span>my-disk<span class="w"> </span>--size<span class="o">=</span>500GB
+</code></pre></div>
+
+<hr />
+<h2 id="8-cost-comparison">8. Cost Comparison<a class="header-link" href="#8-cost-comparison" title="Permanent link">&para;</a></h2>
+<h3 id="81-block-storage-cost-seoul-region">8.1 Block Storage Cost (Seoul Region)<a class="header-link" href="#81-block-storage-cost-seoul-region" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>AWS EBS</th>
+<th>GCP PD</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>General Purpose SSD</td>
+<td>$0.114/GB (gp3) | $0.102/GB (pd-balanced)</td>
+<td></td>
+</tr>
+<tr>
+<td>High Performance SSD</td>
+<td>$0.138/GB (io1) | $0.180/GB (pd-ssd)</td>
+<td></td>
+</tr>
+<tr>
+<td>HDD</td>
+<td>$0.054/GB (st1) | $0.044/GB (pd-standard)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="82-file-storage-cost">8.2 File Storage Cost<a class="header-link" href="#82-file-storage-cost" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AWS EFS Standard</td>
+<td>~$0.33/GB/month</td>
+</tr>
+<tr>
+<td>AWS EFS IA</td>
+<td>~$0.025/GB/month</td>
+</tr>
+<tr>
+<td>GCP Filestore Basic SSD</td>
+<td>~$0.24/GB/month</td>
+</tr>
+<tr>
+<td>GCP Filestore Basic HDD</td>
+<td>~$0.12/GB/month</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-hands-on-setting-up-shared-storage">9. Hands-on: Setting Up Shared Storage<a class="header-link" href="#9-hands-on-setting-up-shared-storage" title="Permanent link">&para;</a></h2>
+<h3 id="91-aws-efs-multi-instance-mount">9.1 AWS EFS Multi-Instance Mount<a class="header-link" href="#91-aws-efs-multi-instance-mount" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. 두 개의 서브넷에 마운트 타겟 생성</span>
+aws<span class="w"> </span>efs<span class="w"> </span>create-mount-target<span class="w"> </span>--file-system-id<span class="w"> </span>fs-xxx<span class="w"> </span>--subnet-id<span class="w"> </span>subnet-1<span class="w"> </span>--security-groups<span class="w"> </span>sg-xxx
+aws<span class="w"> </span>efs<span class="w"> </span>create-mount-target<span class="w"> </span>--file-system-id<span class="w"> </span>fs-xxx<span class="w"> </span>--subnet-id<span class="w"> </span>subnet-2<span class="w"> </span>--security-groups<span class="w"> </span>sg-xxx
+
+<span class="c1"># 2. 보안 그룹에 NFS 규칙 추가</span>
+aws<span class="w"> </span>ec2<span class="w"> </span>authorize-security-group-ingress<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--group-id<span class="w"> </span>sg-xxx<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--protocol<span class="w"> </span>tcp<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--port<span class="w"> </span><span class="m">2049</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--source-group<span class="w"> </span>sg-instance
+
+<span class="c1"># 3. 각 인스턴스에서 마운트</span>
+<span class="c1"># Instance 1</span>
+sudo<span class="w"> </span>mkdir<span class="w"> </span>/shared<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>mount<span class="w"> </span>-t<span class="w"> </span>efs<span class="w"> </span>fs-xxx:/<span class="w"> </span>/shared
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Hello from Instance 1&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/shared/test.txt
+
+<span class="c1"># Instance 2</span>
+sudo<span class="w"> </span>mkdir<span class="w"> </span>/shared<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>mount<span class="w"> </span>-t<span class="w"> </span>efs<span class="w"> </span>fs-xxx:/<span class="w"> </span>/shared
+cat<span class="w"> </span>/shared/test.txt<span class="w">  </span><span class="c1"># &quot;Hello from Instance 1&quot; 출력</span>
+</code></pre></div>
+
+<h3 id="92-gcp-filestore-multi-instance-mount">9.2 GCP Filestore Multi-Instance Mount<a class="header-link" href="#92-gcp-filestore-multi-instance-mount" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. 방화벽 규칙 추가</span>
+gcloud<span class="w"> </span>compute<span class="w"> </span>firewall-rules<span class="w"> </span>create<span class="w"> </span>allow-nfs<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--allow<span class="w"> </span>tcp:2049,tcp:111,udp:2049,udp:111<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--source-ranges<span class="w"> </span><span class="m">10</span>.0.0.0/8
+
+<span class="c1"># 2. 각 인스턴스에서 마운트</span>
+<span class="c1"># Instance 1</span>
+sudo<span class="w"> </span>mkdir<span class="w"> </span>/shared<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>mount<span class="w"> </span><span class="m">10</span>.0.0.2:/vol1<span class="w"> </span>/shared
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Hello from Instance 1&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/shared/test.txt
+
+<span class="c1"># Instance 2</span>
+sudo<span class="w"> </span>mkdir<span class="w"> </span>/shared<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>mount<span class="w"> </span><span class="m">10</span>.0.0.2:/vol1<span class="w"> </span>/shared
+cat<span class="w"> </span>/shared/test.txt<span class="w">  </span><span class="c1"># &quot;Hello from Instance 1&quot; 출력</span>
+</code></pre></div>
+
+<hr />
+<h2 id="10-next-steps">10. Next Steps<a class="header-link" href="#10-next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./09_Virtual_Private_Cloud.md">09_Virtual_Private_Cloud.md</a> - VPC Networking</li>
+<li><a href="./11_Managed_Relational_DB.md">11_Managed_Relational_DB.md</a> - Database Storage</li>
+</ul>
+<hr />
+<h2 id="references">References<a class="header-link" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://docs.aws.amazon.com/ebs/">AWS EBS Documentation</a></li>
+<li><a href="https://docs.aws.amazon.com/efs/">AWS EFS Documentation</a></li>
+<li><a href="https://cloud.google.com/compute/docs/disks">GCP Persistent Disk</a></li>
+<li><a href="https://cloud.google.com/filestore/docs">GCP Filestore</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/Cloud_Computing/07_Object_Storage.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">Object Storage (S3 / Cloud Storage)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/Cloud_Computing/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/Cloud_Computing/09_Virtual_Private_Cloud.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">VPC (Virtual Private Cloud)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'en';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

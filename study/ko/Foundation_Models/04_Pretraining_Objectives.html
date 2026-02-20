@@ -1,0 +1,1019 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>04. Pre-training 목적함수 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Foundation_Models/">Foundation Models</a>
+    <span class="separator">/</span>
+    <span class="current">04. Pre-training 목적함수</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>04. Pre-training 목적함수</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Foundation_Models/03_Emergent_Abilities.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">Emergent Abilities (창발적 능력)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Foundation_Models/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Foundation_Models/05_Data_Curation.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">05. 데이터 큐레이션</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">개요</a></li>
+<li><a href="#1-language-modeling">1. Language Modeling 패러다임</a><ul>
+<li><a href="#11">1.1 세 가지 주요 접근법</a></li>
+<li><a href="#12">1.2 각 패러다임 비교</a></li>
+</ul>
+</li>
+<li><a href="#2-causal-language-modeling-clm">2. Causal Language Modeling (CLM)</a><ul>
+<li><a href="#21">2.1 수학적 정의</a></li>
+<li><a href="#22-pytorch">2.2 PyTorch 구현</a></li>
+<li><a href="#23-gpt">2.3 GPT 스타일 학습</a></li>
+</ul>
+</li>
+<li><a href="#3-masked-language-modeling-mlm">3. Masked Language Modeling (MLM)</a><ul>
+<li><a href="#31-bert-mlm">3.1 BERT 스타일 MLM</a></li>
+<li><a href="#32">3.2 구현</a></li>
+<li><a href="#33-roberta">3.3 RoBERTa 개선점</a></li>
+</ul>
+</li>
+<li><a href="#4-span-corruption-t5">4. Span Corruption (T5)</a><ul>
+<li><a href="#41">4.1 개념</a></li>
+<li><a href="#42">4.2 구현</a></li>
+</ul>
+</li>
+<li><a href="#5-ul2-unified-language-learner">5. UL2: Unified Language Learner</a><ul>
+<li><a href="#51-mixture-of-denoisers-mod">5.1 Mixture of Denoisers (MoD)</a></li>
+<li><a href="#52">5.2 구현</a></li>
+</ul>
+</li>
+<li><a href="#6-next-sentence-prediction-nsp-vs-sentence-order-prediction-sop">6. Next Sentence Prediction (NSP) vs Sentence Order Prediction (SOP)</a><ul>
+<li><a href="#61-nsp-bert">6.1 NSP (BERT)</a></li>
+<li><a href="#62-sop-albert">6.2 SOP (ALBERT)</a></li>
+</ul>
+</li>
+<li><a href="#7-pre-training">7. Pre-training 목적함수 선택 가이드</a><ul>
+<li><a href="#71">7.1 태스크별 권장 목적함수</a></li>
+<li><a href="#72">7.2 모델 크기별 전략</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 실습: 목적함수 비교</a></li>
+<li><a href="#_2">참고 자료</a><ul>
+<li><a href="#_3">논문</a></li>
+<li><a href="#_4">관련 레슨</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="04-pre-training">04. Pre-training 목적함수<a class="header-link" href="#04-pre-training" title="Permanent link">&para;</a></h1>
+<h2 id="_1">개요<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<p>Pre-training 목적함수는 Foundation Model이 대규모 데이터에서 <strong>어떤 패턴을 학습할지</strong> 결정합니다. 목적함수 선택이 모델의 능력과 downstream task 성능에 직접적인 영향을 미칩니다.</p>
+<hr />
+<h2 id="1-language-modeling">1. Language Modeling 패러다임<a class="header-link" href="#1-language-modeling" title="Permanent link">&para;</a></h2>
+<h3 id="11">1.1 세 가지 주요 접근법<a class="header-link" href="#11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                    </span><span class="k">Language</span><span class="w"> </span><span class="n">Modeling</span><span class="w"> </span><span class="n">패러다임</span><span class="w">                     </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Causal</span><span class="w"> </span><span class="n">LM</span><span class="w"> </span><span class="p">(</span><span class="n">Autoregressive</span><span class="p">)</span><span class="w">        </span><span class="n">Masked</span><span class="w"> </span><span class="n">LM</span><span class="w"> </span><span class="p">(</span><span class="n">Bidirectional</span><span class="p">)</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌───┬───┬───┬───┬───┐</span><span class="w">            </span><span class="err">┌───┬───┬───┬───┬───┐</span><span class="w">        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">B</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">C</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">D</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="vm">?</span><span class="w"> </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="err">│</span><span class="o">[</span><span class="n">M</span><span class="o">]</span><span class="err">│</span><span class="w"> </span><span class="n">C</span><span class="w"> </span><span class="err">│</span><span class="o">[</span><span class="n">M</span><span class="o">]</span><span class="err">│</span><span class="w"> </span><span class="n">E</span><span class="w"> </span><span class="err">│</span><span class="w">        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└───┴───┴───┴───┴───┘</span><span class="w">            </span><span class="err">└───┴───┴───┴───┴───┘</span><span class="w">        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">       </span><span class="err">↓</span><span class="w">                                 </span><span class="err">↓</span><span class="w">                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">P</span><span class="p">(</span><span class="n">x_t</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">x_</span><span class="o">&lt;</span><span class="n">t</span><span class="p">)</span><span class="w">                     </span><span class="n">P</span><span class="p">(</span><span class="n">x_mask</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">x_context</span><span class="p">)</span><span class="w">        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="ss">&quot;다음 토큰 예측&quot;</span><span class="w">                   </span><span class="ss">&quot;마스킹된 토큰 복원&quot;</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="k">Prefix</span><span class="w"> </span><span class="n">LM</span><span class="w"> </span><span class="p">(</span><span class="n">Encoder</span><span class="o">-</span><span class="n">Decoder</span><span class="p">)</span><span class="w">                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌───┬───┬───┐</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="err">┌───┬───┬───┐</span><span class="w">                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">A</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">B</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">C</span><span class="w"> </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">X</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">Y</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">Z</span><span class="w"> </span><span class="err">│</span><span class="w">                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└───┴───┴───┘</span><span class="w">   </span><span class="err">└───┴───┴───┘</span><span class="w">                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Bidirectional</span><span class="w">    </span><span class="n">Autoregressive</span><span class="w">                                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="ss">&quot;입력 인코딩&quot;</span><span class="w">      </span><span class="ss">&quot;출력 생성&quot;</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="12">1.2 각 패러다임 비교<a class="header-link" href="#12" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>특성</th>
+<th>Causal LM</th>
+<th>Masked LM</th>
+<th>Prefix LM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>대표 모델</td>
+<td>GPT, LLaMA</td>
+<td>BERT, RoBERTa</td>
+<td>T5, BART</td>
+</tr>
+<tr>
+<td>컨텍스트</td>
+<td>왼쪽만 참조</td>
+<td>양방향 참조</td>
+<td>인코더: 양방향, 디코더: 왼쪽</td>
+</tr>
+<tr>
+<td>학습 신호</td>
+<td>모든 토큰</td>
+<td>마스킹된 토큰만 (15%)</td>
+<td>Span/시퀀스</td>
+</tr>
+<tr>
+<td>생성 능력</td>
+<td>자연스러운 생성</td>
+<td>추가 학습 필요</td>
+<td>자연스러운 생성</td>
+</tr>
+<tr>
+<td>이해 능력</td>
+<td>Zero-shot으로 가능</td>
+<td>강력한 표현 학습</td>
+<td>균형적</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-causal-language-modeling-clm">2. Causal Language Modeling (CLM)<a class="header-link" href="#2-causal-language-modeling-clm" title="Permanent link">&para;</a></h2>
+<h3 id="21">2.1 수학적 정의<a class="header-link" href="#21" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">목적함수</span><span class="o">:</span>
+<span class="n">L_CLM</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="err">Σ</span><span class="w"> </span><span class="n">log</span><span class="w"> </span><span class="n">P</span><span class="o">(</span><span class="n">x_t</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">x_1</span><span class="o">,</span><span class="w"> </span><span class="n">x_2</span><span class="o">,</span><span class="w"> </span><span class="o">...,</span><span class="w"> </span><span class="n">x_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">})</span>
+
+<span class="err">특징</span><span class="o">:</span>
+<span class="o">-</span><span class="w"> </span><span class="err">시퀀스의</span><span class="w"> </span><span class="err">모든</span><span class="w"> </span><span class="err">토큰을</span><span class="w"> </span><span class="err">학습</span><span class="w"> </span><span class="err">신호로</span><span class="w"> </span><span class="err">사용</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Autoregressive</span><span class="o">:</span><span class="w"> </span><span class="err">왼쪽→오른쪽</span><span class="w"> </span><span class="err">순차</span><span class="w"> </span><span class="err">생성</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Causal</span><span class="w"> </span><span class="n">Mask로</span><span class="w"> </span><span class="err">미래</span><span class="w"> </span><span class="err">토큰</span><span class="w"> </span><span class="err">접근</span><span class="w"> </span><span class="err">차단</span>
+</code></pre></div>
+
+<h3 id="22-pytorch">2.2 PyTorch 구현<a class="header-link" href="#22-pytorch" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn.functional</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">F</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">CausalLMHead</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Causal Language Model 출력 레이어&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lm_head</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hidden_states</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            hidden_states: (batch, seq_len, hidden_dim)</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            logits: (batch, seq_len, vocab_size)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">lm_head</span><span class="p">(</span><span class="n">hidden_states</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">causal_lm_loss</span><span class="p">(</span>
+    <span class="n">logits</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">labels</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">ignore_index</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">100</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Causal LM Loss 계산</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        logits: (batch, seq_len, vocab_size)</span>
+<span class="sd">        labels: (batch, seq_len) - 다음 토큰이 레이블</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Shift: logits[:-1]이 labels[1:]을 예측</span>
+    <span class="n">shift_logits</span> <span class="o">=</span> <span class="n">logits</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">contiguous</span><span class="p">()</span>
+    <span class="n">shift_labels</span> <span class="o">=</span> <span class="n">labels</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">contiguous</span><span class="p">()</span>
+
+    <span class="c1"># Flatten</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">cross_entropy</span><span class="p">(</span>
+        <span class="n">shift_logits</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">shift_logits</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)),</span>
+        <span class="n">shift_labels</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">ignore_index</span><span class="o">=</span><span class="n">ignore_index</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">loss</span>
+
+
+<span class="c1"># Causal Mask 생성</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_causal_mask</span><span class="p">(</span><span class="n">seq_len</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    상삼각 마스크 생성 (미래 토큰 차단)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        mask: (seq_len, seq_len) - True = 마스킹</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">triu</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">seq_len</span><span class="p">,</span> <span class="n">seq_len</span><span class="p">),</span> <span class="n">diagonal</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">bool</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">mask</span>
+
+
+<span class="c1"># 사용 예시</span>
+<span class="n">batch_size</span><span class="p">,</span> <span class="n">seq_len</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">,</span> <span class="n">vocab_size</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">768</span><span class="p">,</span> <span class="mi">50257</span>
+<span class="n">hidden_states</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">seq_len</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">)</span>
+<span class="n">labels</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">,</span> <span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">seq_len</span><span class="p">))</span>
+
+<span class="n">lm_head</span> <span class="o">=</span> <span class="n">CausalLMHead</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">)</span>
+<span class="n">logits</span> <span class="o">=</span> <span class="n">lm_head</span><span class="p">(</span><span class="n">hidden_states</span><span class="p">)</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">causal_lm_loss</span><span class="p">(</span><span class="n">logits</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CLM Loss: </span><span class="si">{</span><span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="23-gpt">2.3 GPT 스타일 학습<a class="header-link" href="#23-gpt" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">GPTPretraining</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;GPT 스타일 Pre-training&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">tokenizer</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">1024</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span> <span class="o">=</span> <span class="n">tokenizer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_length</span> <span class="o">=</span> <span class="n">max_length</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">prepare_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">texts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        연속된 텍스트를 고정 길이로 분할</span>
+
+<span class="sd">        Document 1: &quot;The cat sat on...&quot;</span>
+<span class="sd">        Document 2: &quot;Machine learning is...&quot;</span>
+
+<span class="sd">        → [BOS] The cat sat on... [EOS] [BOS] Machine learning is... [EOS]</span>
+<span class="sd">        → 고정 길이 청크로 분할 (max_length 단위)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># 전체 텍스트 연결</span>
+        <span class="n">all_tokens</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">texts</span><span class="p">:</span>
+            <span class="n">tokens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+            <span class="n">all_tokens</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span>
+            <span class="n">all_tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">eos_token_id</span><span class="p">)</span>
+
+        <span class="c1"># 고정 길이로 분할</span>
+        <span class="n">chunks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_tokens</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_length</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_length</span><span class="p">):</span>
+            <span class="n">chunk</span> <span class="o">=</span> <span class="n">all_tokens</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_length</span><span class="p">]</span>
+            <span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;input_ids&#39;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">chunks</span><span class="p">),</span>
+            <span class="s1">&#39;labels&#39;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">chunks</span><span class="p">)</span>  <span class="c1"># 동일 (shift는 loss에서)</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">train_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;단일 학습 스텝&quot;&quot;&quot;</span>
+        <span class="n">input_ids</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[</span><span class="s1">&#39;input_ids&#39;</span><span class="p">]</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[</span><span class="s1">&#39;labels&#39;</span><span class="p">]</span>
+
+        <span class="c1"># Forward</span>
+        <span class="n">outputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="n">input_ids</span><span class="p">)</span>
+        <span class="n">logits</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">logits</span>
+
+        <span class="c1"># Loss</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">causal_lm_loss</span><span class="p">(</span><span class="n">logits</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">loss</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-masked-language-modeling-mlm">3. Masked Language Modeling (MLM)<a class="header-link" href="#3-masked-language-modeling-mlm" title="Permanent link">&para;</a></h2>
+<h3 id="31-bert-mlm">3.1 BERT 스타일 MLM<a class="header-link" href="#31-bert-mlm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nl">원본</span><span class="p">:</span><span class="w"> </span><span class="ss">&quot;The quick brown fox jumps over the lazy dog&quot;</span>
+
+<span class="n">마스킹</span><span class="w"> </span><span class="n">전략</span><span class="w"> </span><span class="p">(</span><span class="mi">15</span><span class="o">%</span><span class="w"> </span><span class="n">토큰</span><span class="p">)</span><span class="err">:</span>
+<span class="o">-</span><span class="w"> </span><span class="mi">80</span><span class="o">%</span><span class="err">:</span><span class="w"> </span><span class="o">[</span><span class="n">MASK</span><span class="o">]</span><span class="w"> </span><span class="n">토큰으로</span><span class="w"> </span><span class="n">대체</span>
+<span class="o">-</span><span class="w"> </span><span class="mi">10</span><span class="o">%</span><span class="err">:</span><span class="w"> </span><span class="n">랜덤</span><span class="w"> </span><span class="n">토큰으로</span><span class="w"> </span><span class="n">대체</span>
+<span class="o">-</span><span class="w"> </span><span class="mi">10</span><span class="o">%</span><span class="err">:</span><span class="w"> </span><span class="n">원본</span><span class="w"> </span><span class="n">유지</span>
+
+<span class="nl">결과</span><span class="p">:</span><span class="w"> </span><span class="ss">&quot;The [MASK] brown fox jumps over the [MASK] dog&quot;</span>
+<span class="w">                </span><span class="err">↓</span><span class="w">                          </span><span class="err">↓</span>
+<span class="nl">목표</span><span class="p">:</span><span class="w">        </span><span class="ss">&quot;quick&quot;</span><span class="w">                    </span><span class="ss">&quot;lazy&quot;</span>
+</code></pre></div>
+
+<h3 id="32">3.2 구현<a class="header-link" href="#32" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MLMDataCollator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Masked Language Modeling 데이터 전처리&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">tokenizer</span><span class="p">,</span>
+        <span class="n">mlm_probability</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.15</span><span class="p">,</span>
+        <span class="n">mask_token_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.8</span><span class="p">,</span>
+        <span class="n">random_token_ratio</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span> <span class="o">=</span> <span class="n">tokenizer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mlm_probability</span> <span class="o">=</span> <span class="n">mlm_probability</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mask_token_ratio</span> <span class="o">=</span> <span class="n">mask_token_ratio</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">random_token_ratio</span> <span class="o">=</span> <span class="n">random_token_ratio</span>
+
+        <span class="c1"># 특수 토큰 ID</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mask_token_id</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">mask_token_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vocab_size</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">vocab_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">special_tokens</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span>
+            <span class="n">tokenizer</span><span class="o">.</span><span class="n">cls_token_id</span><span class="p">,</span>
+            <span class="n">tokenizer</span><span class="o">.</span><span class="n">sep_token_id</span><span class="p">,</span>
+            <span class="n">tokenizer</span><span class="o">.</span><span class="n">pad_token_id</span>
+        <span class="p">])</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;배치 처리&quot;&quot;&quot;</span>
+        <span class="n">input_ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">item</span><span class="p">[</span><span class="s1">&#39;input_ids&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">])</span>
+
+        <span class="c1"># 마스킹</span>
+        <span class="n">input_ids</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mask_tokens</span><span class="p">(</span><span class="n">input_ids</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;input_ids&#39;</span><span class="p">:</span> <span class="n">input_ids</span><span class="p">,</span>
+            <span class="s1">&#39;labels&#39;</span><span class="p">:</span> <span class="n">labels</span><span class="p">,</span>
+            <span class="s1">&#39;attention_mask&#39;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">item</span><span class="p">[</span><span class="s1">&#39;attention_mask&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">])</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">mask_tokens</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">input_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        토큰 마스킹 수행</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            masked_input_ids: 마스킹된 입력</span>
+<span class="sd">            labels: 원본 토큰 (마스킹 안 된 위치는 -100)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">input_ids</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+
+        <span class="c1"># 마스킹 확률 행렬</span>
+        <span class="n">probability_matrix</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">input_ids</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mlm_probability</span><span class="p">)</span>
+
+        <span class="c1"># 특수 토큰은 마스킹하지 않음</span>
+        <span class="n">special_tokens_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">input_ids</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">token_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">special_tokens</span><span class="p">:</span>
+            <span class="n">special_tokens_mask</span> <span class="o">|=</span> <span class="p">(</span><span class="n">input_ids</span> <span class="o">==</span> <span class="n">token_id</span><span class="p">)</span>
+
+        <span class="n">probability_matrix</span><span class="o">.</span><span class="n">masked_fill_</span><span class="p">(</span><span class="n">special_tokens_mask</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+
+        <span class="c1"># 마스킹할 위치 선택</span>
+        <span class="n">masked_indices</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">bernoulli</span><span class="p">(</span><span class="n">probability_matrix</span><span class="p">)</span><span class="o">.</span><span class="n">bool</span><span class="p">()</span>
+
+        <span class="c1"># 마스킹 안 된 위치는 -100 (loss 무시)</span>
+        <span class="n">labels</span><span class="p">[</span><span class="o">~</span><span class="n">masked_indices</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">100</span>
+
+        <span class="c1"># 80%: [MASK]로 대체</span>
+        <span class="n">indices_replaced</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">bernoulli</span><span class="p">(</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">input_ids</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mask_token_ratio</span><span class="p">)</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">bool</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">masked_indices</span>
+        <span class="n">input_ids</span><span class="p">[</span><span class="n">indices_replaced</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mask_token_id</span>
+
+        <span class="c1"># 10%: 랜덤 토큰</span>
+        <span class="n">indices_random</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">bernoulli</span><span class="p">(</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">input_ids</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">random_token_ratio</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mask_token_ratio</span><span class="p">))</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">bool</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">masked_indices</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">indices_replaced</span>
+        <span class="n">random_words</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">input_ids</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>
+        <span class="n">input_ids</span><span class="p">[</span><span class="n">indices_random</span><span class="p">]</span> <span class="o">=</span> <span class="n">random_words</span><span class="p">[</span><span class="n">indices_random</span><span class="p">]</span>
+
+        <span class="c1"># 나머지 10%: 원본 유지 (암묵적으로 처리됨)</span>
+
+        <span class="k">return</span> <span class="n">input_ids</span><span class="p">,</span> <span class="n">labels</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">mlm_loss</span><span class="p">(</span><span class="n">logits</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">labels</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;MLM Loss (마스킹된 위치만 계산)&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">F</span><span class="o">.</span><span class="n">cross_entropy</span><span class="p">(</span>
+        <span class="n">logits</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">logits</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)),</span>
+        <span class="n">labels</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">ignore_index</span><span class="o">=-</span><span class="mi">100</span>
+    <span class="p">)</span>
+</code></pre></div>
+
+<h3 id="33-roberta">3.3 RoBERTa 개선점<a class="header-link" href="#33-roberta" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">RoBERTaMLM</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    RoBERTa: MLM 개선 버전</span>
+
+<span class="sd">    BERT 대비 변경점:</span>
+<span class="sd">    1. Dynamic Masking: 에폭마다 다른 마스킹</span>
+<span class="sd">    2. 더 긴 시퀀스 (512 → 더 길게)</span>
+<span class="sd">    3. 더 큰 배치 (256 → 8K)</span>
+<span class="sd">    4. NSP 제거</span>
+<span class="sd">    5. 더 많은 데이터, 더 긴 학습</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tokenizer</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collator</span> <span class="o">=</span> <span class="n">MLMDataCollator</span><span class="p">(</span><span class="n">tokenizer</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_epoch_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">texts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">epoch</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Dynamic Masking: 매 에폭마다 새로운 마스킹 패턴</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># 시드를 에폭에 따라 변경</span>
+        <span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">epoch</span><span class="p">)</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">epoch</span><span class="p">)</span>
+
+        <span class="c1"># 데이터 전처리 (새로운 마스킹 적용)</span>
+        <span class="c1"># ...</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-span-corruption-t5">4. Span Corruption (T5)<a class="header-link" href="#4-span-corruption-t5" title="Permanent link">&para;</a></h2>
+<h3 id="41">4.1 개념<a class="header-link" href="#41" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>원본: &quot;The quick brown fox jumps over the lazy dog&quot;
+
+Span Corruption:
+<span class="k">-</span> 연속된 토큰 span을 하나의 sentinel 토큰으로 대체
+<span class="k">-</span> 디코더가 원본 span 복원
+
+입력: &quot;The &lt;X&gt; fox &lt;Y&gt; over the lazy dog&quot;
+출력: &quot;&lt;X&gt; quick brown &lt;Y&gt; jumps&quot;
+
+특징:
+<span class="k">-</span> 평균 span 길이: 3 토큰
+<span class="k">-</span> 마스킹 비율: 15%
+<span class="k">-</span> Sentinel: &lt;extra_id_0&gt;, &lt;extra_id_1&gt;, ...
+</code></pre></div>
+
+<h3 id="42">4.2 구현<a class="header-link" href="#42" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">SpanCorruptionCollator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;T5 스타일 Span Corruption&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">tokenizer</span><span class="p">,</span>
+        <span class="n">noise_density</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.15</span><span class="p">,</span>
+        <span class="n">mean_span_length</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3.0</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span> <span class="o">=</span> <span class="n">tokenizer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">noise_density</span> <span class="o">=</span> <span class="n">noise_density</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean_span_length</span> <span class="o">=</span> <span class="n">mean_span_length</span>
+
+        <span class="c1"># Sentinel 토큰 (&lt;extra_id_0&gt;, &lt;extra_id_1&gt;, ...)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sentinel_start_id</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">convert_tokens_to_ids</span><span class="p">(</span><span class="s2">&quot;&lt;extra_id_0&gt;&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">examples</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;배치 처리&quot;&quot;&quot;</span>
+        <span class="n">batch_inputs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">batch_targets</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">example</span> <span class="ow">in</span> <span class="n">examples</span><span class="p">:</span>
+            <span class="n">input_ids</span> <span class="o">=</span> <span class="n">example</span><span class="p">[</span><span class="s1">&#39;input_ids&#39;</span><span class="p">]</span>
+            <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">corrupt_span</span><span class="p">(</span><span class="n">input_ids</span><span class="p">)</span>
+            <span class="n">batch_inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+            <span class="n">batch_targets</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">targets</span><span class="p">)</span>
+
+        <span class="c1"># 패딩</span>
+        <span class="n">inputs_padded</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pad_sequences</span><span class="p">(</span><span class="n">batch_inputs</span><span class="p">)</span>
+        <span class="n">targets_padded</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pad_sequences</span><span class="p">(</span><span class="n">batch_targets</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;input_ids&#39;</span><span class="p">:</span> <span class="n">inputs_padded</span><span class="p">,</span>
+            <span class="s1">&#39;labels&#39;</span><span class="p">:</span> <span class="n">targets_padded</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">corrupt_span</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">input_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Span Corruption 적용</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_ids</span><span class="p">)</span>
+        <span class="n">num_noise_tokens</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">length</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">noise_density</span><span class="p">)</span>
+        <span class="n">num_spans</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">num_noise_tokens</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_span_length</span><span class="p">))</span>
+
+        <span class="c1"># Span 시작 위치 샘플링</span>
+        <span class="n">span_starts</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">length</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span> <span class="n">num_spans</span><span class="p">))</span>
+
+        <span class="c1"># 각 span의 길이 (지수 분포)</span>
+        <span class="n">span_lengths</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">num_spans</span><span class="p">,),</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_span_length</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">long</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="c1"># Span 마스크 생성</span>
+        <span class="n">noise_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">length</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">span_len</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">span_starts</span><span class="p">,</span> <span class="n">span_lengths</span><span class="p">):</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="n">span_len</span><span class="p">,</span> <span class="n">length</span><span class="p">)</span>
+            <span class="n">noise_mask</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># 입력 구성: 노이즈 span을 sentinel로 대체</span>
+        <span class="n">input_tokens</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">target_tokens</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">sentinel_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sentinel_start_id</span>
+
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">length</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">noise_mask</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="c1"># Span 시작: sentinel 추가</span>
+                <span class="n">input_tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sentinel_id</span><span class="p">)</span>
+                <span class="n">target_tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sentinel_id</span><span class="p">)</span>
+
+                <span class="c1"># Span 내용을 target에 추가</span>
+                <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">length</span> <span class="ow">and</span> <span class="n">noise_mask</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                    <span class="n">target_tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">input_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+                    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                <span class="n">sentinel_id</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">input_tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">input_ids</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">input_tokens</span><span class="p">),</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">target_tokens</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pad_sequences</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sequences</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;시퀀스 패딩&quot;&quot;&quot;</span>
+        <span class="n">max_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="k">for</span> <span class="n">seq</span> <span class="ow">in</span> <span class="n">sequences</span><span class="p">)</span>
+        <span class="n">padded</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">sequences</span><span class="p">),</span> <span class="n">max_len</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">pad_token_id</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">seq</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sequences</span><span class="p">):</span>
+            <span class="n">padded</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)]</span> <span class="o">=</span> <span class="n">seq</span>
+        <span class="k">return</span> <span class="n">padded</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-ul2-unified-language-learner">5. UL2: Unified Language Learner<a class="header-link" href="#5-ul2-unified-language-learner" title="Permanent link">&para;</a></h2>
+<h3 id="51-mixture-of-denoisers-mod">5.1 Mixture of Denoisers (MoD)<a class="header-link" href="#51-mixture-of-denoisers-mod" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nl">UL2</span><span class="p">:</span><span class="w"> </span><span class="n">여러</span><span class="w"> </span><span class="n">목적함수를</span><span class="w"> </span><span class="n">혼합하여</span><span class="w"> </span><span class="n">학습</span>
+
+<span class="err">┌────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                    </span><span class="n">Mixture</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="n">Denoisers</span><span class="w">                        </span><span class="err">│</span>
+<span class="err">├────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">R</span><span class="o">-</span><span class="n">Denoiser</span><span class="w"> </span><span class="p">(</span><span class="n">Regular</span><span class="p">)</span><span class="w">      </span><span class="n">S</span><span class="o">-</span><span class="n">Denoiser</span><span class="w"> </span><span class="p">(</span><span class="n">Short</span><span class="p">)</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">짧은</span><span class="w"> </span><span class="n">span</span><span class="w"> </span><span class="p">(</span><span class="mi">3</span><span class="o">-</span><span class="mi">8</span><span class="w"> </span><span class="n">토큰</span><span class="p">)</span><span class="w">     </span><span class="o">-</span><span class="w"> </span><span class="n">매우</span><span class="w"> </span><span class="n">짧은</span><span class="w"> </span><span class="n">span</span><span class="w"> </span><span class="p">(</span><span class="err">≤</span><span class="mi">3</span><span class="w"> </span><span class="n">토큰</span><span class="p">)</span><span class="w">          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="mi">15</span><span class="o">%</span><span class="w"> </span><span class="n">마스킹</span><span class="w">               </span><span class="o">-</span><span class="w"> </span><span class="mi">15</span><span class="o">%</span><span class="w"> </span><span class="n">마스킹</span><span class="w">                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">NLU</span><span class="w"> </span><span class="n">태스크에</span><span class="w"> </span><span class="n">유리</span><span class="w">         </span><span class="o">-</span><span class="w"> </span><span class="n">세밀한</span><span class="w"> </span><span class="n">이해에</span><span class="w"> </span><span class="n">유리</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">X</span><span class="o">-</span><span class="n">Denoiser</span><span class="w"> </span><span class="p">(</span><span class="n">Extreme</span><span class="p">)</span><span class="w">                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">긴</span><span class="w"> </span><span class="n">span</span><span class="w"> </span><span class="p">(</span><span class="mi">12</span><span class="o">-</span><span class="mi">64</span><span class="w"> </span><span class="n">토큰</span><span class="p">)</span><span class="w">                                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="mi">50</span><span class="o">%</span><span class="w"> </span><span class="n">마스킹</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">생성</span><span class="w"> </span><span class="n">태스크에</span><span class="w"> </span><span class="n">유리</span><span class="w">                                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Mode</span><span class="w"> </span><span class="nl">Switching</span><span class="p">:</span><span class="w"> </span><span class="n">입력에</span><span class="w"> </span><span class="o">[</span><span class="n">R</span><span class="o">]</span><span class="p">,</span><span class="w"> </span><span class="o">[</span><span class="n">S</span><span class="o">]</span><span class="p">,</span><span class="w"> </span><span class="o">[</span><span class="n">X</span><span class="o">]</span><span class="w"> </span><span class="n">프리픽스</span><span class="w"> </span><span class="n">추가</span><span class="w">             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                </span><span class="err">│</span>
+<span class="err">└────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="52">5.2 구현<a class="header-link" href="#52" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">UL2Collator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;UL2 Mixture of Denoisers&quot;&quot;&quot;</span>
+
+    <span class="n">DENOISERS</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;R&#39;</span><span class="p">:</span> <span class="p">{</span>  <span class="c1"># Regular</span>
+            <span class="s1">&#39;span_length&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">8</span><span class="p">),</span>
+            <span class="s1">&#39;noise_density&#39;</span><span class="p">:</span> <span class="mf">0.15</span><span class="p">,</span>
+            <span class="s1">&#39;prefix&#39;</span><span class="p">:</span> <span class="s1">&#39;[R]&#39;</span>
+        <span class="p">},</span>
+        <span class="s1">&#39;S&#39;</span><span class="p">:</span> <span class="p">{</span>  <span class="c1"># Short</span>
+            <span class="s1">&#39;span_length&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+            <span class="s1">&#39;noise_density&#39;</span><span class="p">:</span> <span class="mf">0.15</span><span class="p">,</span>
+            <span class="s1">&#39;prefix&#39;</span><span class="p">:</span> <span class="s1">&#39;[S]&#39;</span>
+        <span class="p">},</span>
+        <span class="s1">&#39;X&#39;</span><span class="p">:</span> <span class="p">{</span>  <span class="c1"># Extreme</span>
+            <span class="s1">&#39;span_length&#39;</span><span class="p">:</span> <span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">64</span><span class="p">),</span>
+            <span class="s1">&#39;noise_density&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+            <span class="s1">&#39;prefix&#39;</span><span class="p">:</span> <span class="s1">&#39;[X]&#39;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tokenizer</span><span class="p">,</span> <span class="n">denoiser_weights</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span> <span class="o">=</span> <span class="n">tokenizer</span>
+        <span class="c1"># 기본 가중치: R=50%, S=25%, X=25%</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weights</span> <span class="o">=</span> <span class="n">denoiser_weights</span> <span class="ow">or</span> <span class="p">{</span><span class="s1">&#39;R&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;S&#39;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span> <span class="s1">&#39;X&#39;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">examples</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;배치 처리: 각 예제에 랜덤 denoiser 적용&quot;&quot;&quot;</span>
+        <span class="n">batch_inputs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">batch_targets</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">example</span> <span class="ow">in</span> <span class="n">examples</span><span class="p">:</span>
+            <span class="c1"># Denoiser 선택</span>
+            <span class="n">denoiser</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choices</span><span class="p">(</span>
+                <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DENOISERS</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+                <span class="n">weights</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+            <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">DENOISERS</span><span class="p">[</span><span class="n">denoiser</span><span class="p">]</span>
+
+            <span class="c1"># Span corruption 적용</span>
+            <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">apply_denoiser</span><span class="p">(</span>
+                <span class="n">example</span><span class="p">[</span><span class="s1">&#39;input_ids&#39;</span><span class="p">],</span>
+                <span class="n">config</span>
+            <span class="p">)</span>
+
+            <span class="n">batch_inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+            <span class="n">batch_targets</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">targets</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collate</span><span class="p">(</span><span class="n">batch_inputs</span><span class="p">,</span> <span class="n">batch_targets</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">apply_denoiser</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">input_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;특정 denoiser 설정으로 corruption 적용&quot;&quot;&quot;</span>
+        <span class="c1"># 프리픽스 추가</span>
+        <span class="n">prefix_ids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span>
+            <span class="n">config</span><span class="p">[</span><span class="s1">&#39;prefix&#39;</span><span class="p">],</span>
+            <span class="n">add_special_tokens</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Span corruption (config에 따라)</span>
+        <span class="n">span_len</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="o">*</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;span_length&#39;</span><span class="p">])</span>
+        <span class="c1"># ... corruption 로직</span>
+
+        <span class="c1"># 프리픽스 + 입력</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">prefix_ids</span><span class="p">),</span>
+            <span class="n">input_ids</span>  <span class="c1"># corrupted</span>
+        <span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">targets</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-next-sentence-prediction-nsp-vs-sentence-order-prediction-sop">6. Next Sentence Prediction (NSP) vs Sentence Order Prediction (SOP)<a class="header-link" href="#6-next-sentence-prediction-nsp-vs-sentence-order-prediction-sop" title="Permanent link">&para;</a></h2>
+<h3 id="61-nsp-bert">6.1 NSP (BERT)<a class="header-link" href="#61-nsp-bert" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">NSPDataCollator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Next Sentence Prediction</span>
+
+<span class="sd">    50%: 실제 다음 문장 (IsNext)</span>
+<span class="sd">    50%: 랜덤 문장 (NotNext)</span>
+
+<span class="sd">    문제점: 너무 쉬움 → RoBERTa에서 제거</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_nsp_pair</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">sentence_a</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">sentence_b</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">all_sentences</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;NSP 데이터 생성&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">:</span>
+            <span class="c1"># 실제 다음 문장</span>
+            <span class="k">return</span> <span class="n">sentence_a</span><span class="p">,</span> <span class="n">sentence_b</span><span class="p">,</span> <span class="mi">1</span>  <span class="c1"># IsNext</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># 랜덤 문장</span>
+            <span class="n">random_sentence</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">all_sentences</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">sentence_a</span><span class="p">,</span> <span class="n">random_sentence</span><span class="p">,</span> <span class="mi">0</span>  <span class="c1"># NotNext</span>
+</code></pre></div>
+
+<h3 id="62-sop-albert">6.2 SOP (ALBERT)<a class="header-link" href="#62-sop-albert" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">SOPDataCollator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Sentence Order Prediction (더 어려운 태스크)</span>
+
+<span class="sd">    50%: 정상 순서 (A → B)</span>
+<span class="sd">    50%: 역순 (B → A)</span>
+
+<span class="sd">    토픽 예측이 아닌 순서 예측 → 더 유용한 학습 신호</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_sop_pair</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">sentence_a</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">sentence_b</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;SOP 데이터 생성&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">sentence_a</span><span class="p">,</span> <span class="n">sentence_b</span><span class="p">,</span> <span class="mi">1</span>  <span class="c1"># 정상 순서</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">sentence_b</span><span class="p">,</span> <span class="n">sentence_a</span><span class="p">,</span> <span class="mi">0</span>  <span class="c1"># 역순</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7-pre-training">7. Pre-training 목적함수 선택 가이드<a class="header-link" href="#7-pre-training" title="Permanent link">&para;</a></h2>
+<h3 id="71">7.1 태스크별 권장 목적함수<a class="header-link" href="#71" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌──────────────────┬─────────────────────────────────────────┐
+│ Downstream Task  │ 권장 Pre-training 목적함수              │
+├──────────────────┼─────────────────────────────────────────┤
+│ 텍스트 생성      │ Causal LM (GPT 스타일)                  │
+│ 텍스트 분류      │ MLM (BERT) 또는 Causal LM + Fine-tuning │
+│ 질의응답         │ Span Corruption (T5) 또는 MLM           │
+│ 번역/요약        │ Encoder-Decoder (T5, BART)              │
+│ 범용 (Few-shot)  │ Causal LM 대규모 (GPT-3 스타일)         │
+│ 범용 (다양한)    │ UL2 (Mixture of Denoisers)              │
+└──────────────────┴─────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="72">7.2 모델 크기별 전략<a class="header-link" href="#72" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>모델 크기</th>
+<th>권장 접근법</th>
+<th>이유</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&lt; 1B</td>
+<td>MLM + Fine-tuning</td>
+<td>태스크 특화 성능 우수</td>
+</tr>
+<tr>
+<td>1B - 10B</td>
+<td>Causal LM</td>
+<td>범용성과 효율의 균형</td>
+</tr>
+<tr>
+<td>&gt; 10B</td>
+<td>Causal LM</td>
+<td>In-context Learning 출현</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8">8. 실습: 목적함수 비교<a class="header-link" href="#8" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">AutoModelForCausalLM</span><span class="p">,</span>
+    <span class="n">AutoModelForMaskedLM</span><span class="p">,</span>
+    <span class="n">T5ForConditionalGeneration</span><span class="p">,</span>
+    <span class="n">AutoTokenizer</span>
+<span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">compare_objectives</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;세 가지 목적함수 비교&quot;&quot;&quot;</span>
+
+    <span class="c1"># 1. Causal LM (GPT-2)</span>
+    <span class="n">causal_tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;gpt2&#39;</span><span class="p">)</span>
+    <span class="n">causal_model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;gpt2&#39;</span><span class="p">)</span>
+
+    <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;The capital of France is&quot;</span>
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">causal_tokenizer</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;pt&#39;</span><span class="p">)</span>
+
+    <span class="c1"># 생성</span>
+    <span class="n">outputs</span> <span class="o">=</span> <span class="n">causal_model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span>
+        <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;input_ids&#39;</span><span class="p">],</span>
+        <span class="n">max_new_tokens</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+        <span class="n">do_sample</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Causal LM:&quot;</span><span class="p">,</span> <span class="n">causal_tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="c1"># → &quot;The capital of France is Paris.&quot;</span>
+
+    <span class="c1"># 2. Masked LM (BERT)</span>
+    <span class="n">mlm_tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;bert-base-uncased&#39;</span><span class="p">)</span>
+    <span class="n">mlm_model</span> <span class="o">=</span> <span class="n">AutoModelForMaskedLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;bert-base-uncased&#39;</span><span class="p">)</span>
+
+    <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;The capital of France is [MASK].&quot;</span>
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">mlm_tokenizer</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;pt&#39;</span><span class="p">)</span>
+
+    <span class="n">outputs</span> <span class="o">=</span> <span class="n">mlm_model</span><span class="p">(</span><span class="o">**</span><span class="n">inputs</span><span class="p">)</span>
+    <span class="n">mask_idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;input_ids&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">mlm_tokenizer</span><span class="o">.</span><span class="n">mask_token_id</span><span class="p">)</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">predicted_id</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">logits</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">mask_idx</span><span class="p">]</span><span class="o">.</span><span class="n">argmax</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Masked LM:&quot;</span><span class="p">,</span> <span class="n">mlm_tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">predicted_id</span><span class="p">))</span>
+    <span class="c1"># → &quot;paris&quot;</span>
+
+    <span class="c1"># 3. Span Corruption (T5)</span>
+    <span class="n">t5_tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;t5-small&#39;</span><span class="p">)</span>
+    <span class="n">t5_model</span> <span class="o">=</span> <span class="n">T5ForConditionalGeneration</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;t5-small&#39;</span><span class="p">)</span>
+
+    <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;translate English to French: The house is wonderful.&quot;</span>
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">t5_tokenizer</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s1">&#39;pt&#39;</span><span class="p">)</span>
+
+    <span class="n">outputs</span> <span class="o">=</span> <span class="n">t5_model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;input_ids&#39;</span><span class="p">],</span> <span class="n">max_new_tokens</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;T5:&quot;</span><span class="p">,</span> <span class="n">t5_tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">skip_special_tokens</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="c1"># → &quot;La maison est merveilleuse.&quot;</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">compare_objectives</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_2">참고 자료<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<h3 id="_3">논문<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Devlin et al. (2018). "BERT: Pre-training of Deep Bidirectional Transformers"</li>
+<li>Radford et al. (2019). "Language Models are Unsupervised Multitask Learners" (GPT-2)</li>
+<li>Raffel et al. (2019). "Exploring the Limits of Transfer Learning with T5"</li>
+<li>Tay et al. (2022). "UL2: Unifying Language Learning Paradigms"</li>
+</ul>
+<h3 id="_4">관련 레슨<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="../LLM_and_NLP/03_BERT_GPT_Architecture.md">../LLM_and_NLP/03_BERT_GPT_Architecture.md</a></li>
+<li><a href="../Deep_Learning/12_Transformer_Architecture.md">../Deep_Learning/12_Transformer_Architecture.md</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Foundation_Models/03_Emergent_Abilities.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">Emergent Abilities (창발적 능력)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Foundation_Models/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Foundation_Models/05_Data_Curation.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">05. 데이터 큐레이션</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

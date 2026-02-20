@@ -1,0 +1,185 @@
+# Kubernetes ConfigMap for application configuration
+# ConfigMaps store non-sensitive configuration data as key-value pairs
+
+---
+# Application Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flask-config
+  labels:
+    app: flask-app
+  annotations:
+    description: "Configuration for Flask application"
+data:
+  # Simple key-value pairs
+  flask_env: "production"
+  log_level: "INFO"
+  max_workers: "4"
+  timeout: "60"
+
+  # Feature flags
+  enable_cache: "true"
+  enable_metrics: "true"
+  enable_debug_mode: "false"
+
+  # Application settings
+  app_name: "Flask Microservice"
+  app_version: "1.0.0"
+
+  # Multiline configuration file
+  app.ini: |
+    [server]
+    host = 0.0.0.0
+    port = 5000
+    workers = 4
+
+    [logging]
+    level = INFO
+    format = %(asctime)s - %(name)s - %(levelname)s - %(message)s
+
+    [features]
+    cache_enabled = true
+    metrics_enabled = true
+    rate_limiting = true
+
+    [cache]
+    backend = redis
+    ttl = 3600
+    max_entries = 10000
+
+  # JSON configuration
+  features.json: |
+    {
+      "authentication": {
+        "enabled": true,
+        "provider": "oauth2",
+        "timeout": 3600
+      },
+      "ratelimit": {
+        "enabled": true,
+        "requests_per_minute": 100,
+        "burst": 20
+      },
+      "monitoring": {
+        "enabled": true,
+        "exporters": ["prometheus", "statsd"]
+      }
+    }
+
+---
+# Secrets (sensitive data)
+# Note: This is an example. In production, use proper secret management
+# (e.g., Sealed Secrets, External Secrets Operator, or HashiCorp Vault)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: flask-secrets
+  labels:
+    app: flask-app
+type: Opaque
+data:
+  # Base64 encoded values
+  # To encode: echo -n "value" | base64
+  # To decode: echo "encoded" | base64 -d
+
+  # Database URL
+  database_url: cG9zdGdyZXNxbDovL3VzZXI6cGFzc3dvcmRAZGI6NTQzMi9teWRi
+  # Decodes to: postgresql://user:password@db:5432/mydb
+
+  # Redis URL
+  redis_url: cmVkaXM6Ly86cmVkaXNwYXNzd29yZEBjYWNoZTo2Mzc5LzA=
+  # Decodes to: redis://:redispassword@cache:6379/0
+
+  # API Keys
+  api_key: c3VwZXJzZWNyZXRhcGlrZXkxMjM=
+  # Decodes to: supersecretapikey123
+
+  # JWT Secret
+  jwt_secret: anRzZWNyZXRrZXlmb3J0b2tlbnM=
+  # Decodes to: jtsecretkeyfortokens
+
+---
+# Usage in Deployment:
+#
+# Method 1: Individual environment variables
+# env:
+# - name: FLASK_ENV
+#   valueFrom:
+#     configMapKeyRef:
+#       name: flask-config
+#       key: flask_env
+# - name: DATABASE_URL
+#   valueFrom:
+#     secretKeyRef:
+#       name: flask-secrets
+#       key: database_url
+#
+# Method 2: All keys as environment variables
+# envFrom:
+# - configMapRef:
+#     name: flask-config
+# - secretRef:
+#     name: flask-secrets
+#
+# Method 3: Mount as files
+# volumeMounts:
+# - name: config
+#   mountPath: /app/config
+#   readOnly: true
+# volumes:
+# - name: config
+#   configMap:
+#     name: flask-config
+#     items:
+#     - key: app.ini
+#       path: app.ini
+#
+# Commands:
+#
+# 1. Create ConfigMap from file:
+#    kubectl create configmap flask-config --from-file=app.ini
+#
+# 2. Create ConfigMap from literal:
+#    kubectl create configmap flask-config --from-literal=flask_env=production
+#
+# 3. Create Secret from file:
+#    kubectl create secret generic flask-secrets --from-file=database_url.txt
+#
+# 4. Create Secret from literal:
+#    kubectl create secret generic flask-secrets --from-literal=api_key=xyz123
+#
+# 5. View ConfigMap:
+#    kubectl get configmap flask-config -o yaml
+#
+# 6. Edit ConfigMap:
+#    kubectl edit configmap flask-config
+#
+# 7. Delete and recreate (to force pod restart):
+#    kubectl delete configmap flask-config
+#    kubectl apply -f configmap.yaml
+#    kubectl rollout restart deployment/flask-app
+
+---
+# Best Practices for Secrets:
+#
+# 1. Use External Secrets Operator:
+#    - Sync secrets from AWS Secrets Manager, GCP Secret Manager, etc.
+#    - GitHub: external-secrets/external-secrets
+#
+# 2. Use Sealed Secrets:
+#    - Encrypt secrets in Git
+#    - GitHub: bitnami-labs/sealed-secrets
+#
+# 3. Use HashiCorp Vault:
+#    - Dynamic secrets
+#    - Automatic rotation
+#    - Audit logging
+#
+# 4. Enable encryption at rest:
+#    - Configure etcd encryption
+#    - See: https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
+#
+# 5. RBAC for secrets:
+#    - Restrict who can view/edit secrets
+#    - Use separate service accounts

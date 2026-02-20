@@ -1,0 +1,1336 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>객체 검출 기초 (Object Detection Basics) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Computer_Vision/">Computer Vision</a>
+    <span class="separator">/</span>
+    <span class="current">객체 검출 기초 (Object Detection Basics)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>객체 검출 기초 (Object Detection Basics)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Computer_Vision/14_Feature_Matching.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">특징점 매칭 (Feature Matching)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Computer_Vision/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Computer_Vision/16_Face_Detection.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">얼굴 검출 및 인식 (Face Detection and Recognition)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">개요</a></li>
+<li><a href="#_2">목차</a></li>
+<li><a href="#1-template-matching">1. 템플릿 매칭 (Template Matching)</a><ul>
+<li><a href="#_3">기본 개념</a></li>
+<li><a href="#matchtemplate">matchTemplate() 기본 사용</a></li>
+<li><a href="#_4">템플릿 매칭 결과 이해</a></li>
+</ul>
+</li>
+<li><a href="#2">2. 템플릿 매칭 방법 비교</a><ul>
+<li><a href="#_5">매칭 방법 종류</a></li>
+<li><a href="#_6">방법별 특징</a></li>
+<li><a href="#_7">다중 객체 검출</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 다중 스케일 템플릿 매칭</a><ul>
+<li><a href="#_8">문제점과 해결책</a></li>
+<li><a href="#_9">다중 스케일 매칭 구현</a></li>
+<li><a href="#_10">피라미드 기반 다중 스케일 매칭</a></li>
+</ul>
+</li>
+<li><a href="#4-haar-cascade">4. Haar Cascade 분류기</a><ul>
+<li><a href="#haar">Haar 특징 이해</a></li>
+<li><a href="#integral-image">Integral Image (적분 이미지)</a></li>
+<li><a href="#cascade">Cascade 구조</a></li>
+</ul>
+</li>
+<li><a href="#5-cascadeclassifier">5. CascadeClassifier 사용법</a><ul>
+<li><a href="#_11">기본 사용법</a></li>
+<li><a href="#detectmultiscale">detectMultiScale 매개변수</a></li>
+<li><a href="#cascade_1">사용 가능한 Cascade 파일</a></li>
+<li><a href="#cascade_2">다중 Cascade 조합</a></li>
+</ul>
+</li>
+<li><a href="#6-hog-svm">6. HOG + SVM 보행자 검출</a><ul>
+<li><a href="#hog-histogram-of-oriented-gradients">HOG (Histogram of Oriented Gradients) 이해</a></li>
+<li><a href="#hog">HOG 보행자 검출기 사용</a></li>
+<li><a href="#non-maximum-suppression-nms">Non-Maximum Suppression (NMS)</a></li>
+<li><a href="#hog_1">HOG 특징 시각화</a></li>
+<li><a href="#hog-svm">커스텀 HOG + SVM 학습 (개념)</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 연습 문제</a><ul>
+<li><a href="#1">문제 1: 다중 템플릿 매칭</a></li>
+<li><a href="#2_1">문제 2: 회전 불변 템플릿 매칭</a></li>
+<li><a href="#3_1">문제 3: 실시간 얼굴 검출 최적화</a></li>
+<li><a href="#4-hog">문제 4: HOG 시각화 도구</a></li>
+<li><a href="#5">문제 5: 자동차 번호판 검출기</a></li>
+</ul>
+</li>
+<li><a href="#_12">다음 단계</a></li>
+<li><a href="#_13">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="object-detection-basics">객체 검출 기초 (Object Detection Basics)<a class="header-link" href="#object-detection-basics" title="Permanent link">&para;</a></h1>
+<h2 id="_1">개요<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<p>이미지에서 특정 객체를 찾아내는 객체 검출의 기초 방법들을 학습합니다. 템플릿 매칭, Haar Cascade, HOG+SVM 등 전통적인 객체 검출 기법의 원리와 구현 방법을 익힙니다.</p>
+<p><strong>난이도</strong>: ⭐⭐⭐</p>
+<p><strong>선수 지식</strong>: 이미지 필터링, 엣지 검출, 특징점 검출</p>
+<hr />
+<h2 id="_2">목차<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-템플릿-매칭-template-matching">템플릿 매칭 (Template Matching)</a></li>
+<li><a href="#2-템플릿-매칭-방법-비교">템플릿 매칭 방법 비교</a></li>
+<li><a href="#3-다중-스케일-템플릿-매칭">다중 스케일 템플릿 매칭</a></li>
+<li><a href="#4-haar-cascade-분류기">Haar Cascade 분류기</a></li>
+<li><a href="#5-cascadeclassifier-사용법">CascadeClassifier 사용법</a></li>
+<li><a href="#6-hog--svm-보행자-검출">HOG + SVM 보행자 검출</a></li>
+<li><a href="#7-연습-문제">연습 문제</a></li>
+</ol>
+<hr />
+<h2 id="1-template-matching">1. 템플릿 매칭 (Template Matching)<a class="header-link" href="#1-template-matching" title="Permanent link">&para;</a></h2>
+<h3 id="_3">기본 개념<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>템플릿 매칭: 작은 템플릿 이미지를 큰 이미지 위에서
+            슬라이딩하며 유사도를 계산하는 방법
+
+┌─────────────────────────────────┐
+│  원본 이미지                     │
+│    ┌─────────────────────┐      │
+│    │                     │      │
+│    │    ┌────┐           │      │
+│    │    │ T  │ ← 템플릿  │      │
+│    │    └────┘   위치 탐색│      │
+│    │                     │      │
+│    └─────────────────────┘      │
+│                                 │
+│  결과: 각 위치에서의 유사도 맵   │
+└─────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="matchtemplate">matchTemplate() 기본 사용<a class="header-link" href="#matchtemplate" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="c1"># 이미지와 템플릿 로드</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;image.jpg&#39;</span><span class="p">)</span>
+<span class="n">img_gray</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2GRAY</span><span class="p">)</span>
+<span class="n">template</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;template.jpg&#39;</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">IMREAD_GRAYSCALE</span><span class="p">)</span>
+
+<span class="c1"># 템플릿 크기</span>
+<span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">shape</span>
+
+<span class="c1"># 템플릿 매칭 수행</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">matchTemplate</span><span class="p">(</span><span class="n">img_gray</span><span class="p">,</span> <span class="n">template</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">TM_CCOEFF_NORMED</span><span class="p">)</span>
+
+<span class="c1"># 최대/최소 위치 찾기</span>
+<span class="n">min_val</span><span class="p">,</span> <span class="n">max_val</span><span class="p">,</span> <span class="n">min_loc</span><span class="p">,</span> <span class="n">max_loc</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">minMaxLoc</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+<span class="c1"># TM_CCOEFF_NORMED는 최댓값이 최적 매칭</span>
+<span class="n">top_left</span> <span class="o">=</span> <span class="n">max_loc</span>
+<span class="n">bottom_right</span> <span class="o">=</span> <span class="p">(</span><span class="n">top_left</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">w</span><span class="p">,</span> <span class="n">top_left</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">h</span><span class="p">)</span>
+
+<span class="c1"># 결과 시각화</span>
+<span class="n">cv2</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">top_left</span><span class="p">,</span> <span class="n">bottom_right</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s1">&#39;Detected&#39;</span><span class="p">,</span> <span class="n">img</span><span class="p">)</span>
+<span class="n">cv2</span><span class="o">.</span><span class="n">waitKey</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="_4">템플릿 매칭 결과 이해<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>원본 이미지 (W x H)     템플릿 (w x h)     결과 이미지
+┌───────────────┐       ┌───┐            ┌───────────┐
+│               │       │ T │            │           │
+│       W       │   +   │w×h│     =      │ (W-w+1)   │
+│               │       └───┘            │   ×       │
+│       H       │                        │ (H-h+1)   │
+│               │                        │           │
+└───────────────┘                        └───────────┘
+
+결과 이미지의 각 픽셀 = 해당 위치에서의 매칭 점수
+</code></pre></div>
+
+<hr />
+<h2 id="2">2. 템플릿 매칭 방법 비교<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="_5">매칭 방법 종류<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="c1"># 이미지 로드</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;image.jpg&#39;</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">IMREAD_GRAYSCALE</span><span class="p">)</span>
+<span class="n">template</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;template.jpg&#39;</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">IMREAD_GRAYSCALE</span><span class="p">)</span>
+
+<span class="c1"># 6가지 매칭 방법</span>
+<span class="n">methods</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s1">&#39;TM_SQDIFF&#39;</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">TM_SQDIFF</span><span class="p">),</span>           <span class="c1"># 제곱 차이</span>
+    <span class="p">(</span><span class="s1">&#39;TM_SQDIFF_NORMED&#39;</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">TM_SQDIFF_NORMED</span><span class="p">),</span>  <span class="c1"># 정규화된 제곱 차이</span>
+    <span class="p">(</span><span class="s1">&#39;TM_CCORR&#39;</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">TM_CCORR</span><span class="p">),</span>             <span class="c1"># 상관관계</span>
+    <span class="p">(</span><span class="s1">&#39;TM_CCORR_NORMED&#39;</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">TM_CCORR_NORMED</span><span class="p">),</span>   <span class="c1"># 정규화된 상관관계</span>
+    <span class="p">(</span><span class="s1">&#39;TM_CCOEFF&#39;</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">TM_CCOEFF</span><span class="p">),</span>           <span class="c1"># 상관계수</span>
+    <span class="p">(</span><span class="s1">&#39;TM_CCOEFF_NORMED&#39;</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">TM_CCOEFF_NORMED</span><span class="p">)</span>  <span class="c1"># 정규화된 상관계수</span>
+<span class="p">]</span>
+
+<span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">shape</span>
+
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">method</span> <span class="ow">in</span> <span class="n">methods</span><span class="p">:</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">matchTemplate</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">template</span><span class="p">,</span> <span class="n">method</span><span class="p">)</span>
+
+    <span class="c1"># SQDIFF는 최솟값이 최적, 나머지는 최댓값이 최적</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="ow">in</span> <span class="p">[</span><span class="n">cv2</span><span class="o">.</span><span class="n">TM_SQDIFF</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">TM_SQDIFF_NORMED</span><span class="p">]:</span>
+        <span class="n">min_val</span><span class="p">,</span> <span class="n">max_val</span><span class="p">,</span> <span class="n">min_loc</span><span class="p">,</span> <span class="n">max_loc</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">minMaxLoc</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+        <span class="n">top_left</span> <span class="o">=</span> <span class="n">min_loc</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">min_val</span><span class="p">,</span> <span class="n">max_val</span><span class="p">,</span> <span class="n">min_loc</span><span class="p">,</span> <span class="n">max_loc</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">minMaxLoc</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+        <span class="n">top_left</span> <span class="o">=</span> <span class="n">max_loc</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">: 위치=</span><span class="si">{</span><span class="n">top_left</span><span class="si">}</span><span class="s2">, 점수=</span><span class="si">{</span><span class="n">max_val</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="_6">방법별 특징<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌────────────────────┬─────────────────────────────────────────┐
+│      방법          │                  특징                    │
+├────────────────────┼─────────────────────────────────────────┤
+│ TM_SQDIFF          │ 제곱 차이 합. 0에 가까울수록 좋음         │
+│                    │ 조명 변화에 민감                         │
+├────────────────────┼─────────────────────────────────────────┤
+│ TM_SQDIFF_NORMED   │ 정규화된 제곱 차이. 0~1 범위             │
+│                    │ 0에 가까울수록 좋음                      │
+├────────────────────┼─────────────────────────────────────────┤
+│ TM_CCORR           │ 상관관계. 값이 클수록 좋음                │
+│                    │ 밝은 영역에 편향될 수 있음               │
+├────────────────────┼─────────────────────────────────────────┤
+│ TM_CCORR_NORMED    │ 정규화된 상관관계. 0~1 범위              │
+│                    │ 값이 클수록 좋음                         │
+├────────────────────┼─────────────────────────────────────────┤
+│ TM_CCOEFF          │ 상관계수. 평균을 빼서 조명 변화에 강함    │
+│                    │ 값이 클수록 좋음                         │
+├────────────────────┼─────────────────────────────────────────┤
+│ TM_CCOEFF_NORMED   │ 정규화된 상관계수. -1~1 범위             │
+│                    │ 1에 가까울수록 좋음. 가장 널리 사용       │
+└────────────────────┴─────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_7">다중 객체 검출<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">find_multiple_matches</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">template</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.8</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;여러 개의 동일한 객체 검출&quot;&quot;&quot;</span>
+    <span class="n">img_gray</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2GRAY</span><span class="p">)</span>
+    <span class="n">template_gray</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2GRAY</span><span class="p">)</span> \
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">template</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span> <span class="k">else</span> <span class="n">template</span>
+
+    <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">template_gray</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="c1"># 템플릿 매칭</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">matchTemplate</span><span class="p">(</span><span class="n">img_gray</span><span class="p">,</span> <span class="n">template_gray</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">TM_CCOEFF_NORMED</span><span class="p">)</span>
+
+    <span class="c1"># 임계값 이상인 위치 찾기</span>
+    <span class="n">locations</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">result</span> <span class="o">&gt;=</span> <span class="n">threshold</span><span class="p">)</span>
+
+    <span class="c1"># 결과 그리기</span>
+    <span class="n">img_result</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">matches</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">pt</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">locations</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>  <span class="c1"># x, y 순서로 변환</span>
+        <span class="c1"># Non-Maximum Suppression (간단 버전)</span>
+        <span class="n">is_new</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">for</span> <span class="n">existing</span> <span class="ow">in</span> <span class="n">matches</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">pt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">existing</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&lt;</span> <span class="n">w</span><span class="o">//</span><span class="mi">2</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">pt</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">existing</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="n">h</span><span class="o">//</span><span class="mi">2</span><span class="p">:</span>
+                <span class="n">is_new</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">break</span>
+
+        <span class="k">if</span> <span class="n">is_new</span><span class="p">:</span>
+            <span class="n">matches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pt</span><span class="p">)</span>
+            <span class="n">cv2</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="n">img_result</span><span class="p">,</span> <span class="n">pt</span><span class="p">,</span> <span class="p">(</span><span class="n">pt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">w</span><span class="p">,</span> <span class="n">pt</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">h</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;검출된 객체 수: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">matches</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">img_result</span><span class="p">,</span> <span class="n">matches</span>
+
+<span class="c1"># 사용 예</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;coins.jpg&#39;</span><span class="p">)</span>
+<span class="n">template</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;coin_template.jpg&#39;</span><span class="p">)</span>
+<span class="n">result</span><span class="p">,</span> <span class="n">locations</span> <span class="o">=</span> <span class="n">find_multiple_matches</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">template</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.85</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3">3. 다중 스케일 템플릿 매칭<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="_8">문제점과 해결책<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">문제</span><span class="o">:</span><span class="w"> </span><span class="err">템플릿</span><span class="w"> </span><span class="err">매칭은</span><span class="w"> </span><span class="err">크기</span><span class="w"> </span><span class="err">변화에</span><span class="w"> </span><span class="err">취약</span>
+<span class="w">     </span><span class="err">원본과</span><span class="w"> </span><span class="err">템플릿의</span><span class="w"> </span><span class="err">크기가</span><span class="w"> </span><span class="err">다르면</span><span class="w"> </span><span class="err">검출</span><span class="w"> </span><span class="err">실패</span>
+
+<span class="err">해결</span><span class="o">:</span><span class="w"> </span><span class="err">다양한</span><span class="w"> </span><span class="err">스케일에서</span><span class="w"> </span><span class="err">매칭</span><span class="w"> </span><span class="err">수행</span>
+
+<span class="err">원본</span><span class="w"> </span><span class="err">이미지</span><span class="w">       </span><span class="err">다양한</span><span class="w"> </span><span class="err">크기의</span><span class="w"> </span><span class="err">템플릿</span>
+<span class="err">┌─────────┐</span><span class="w">       </span><span class="err">┌──┐</span><span class="w">  </span><span class="err">┌───┐</span><span class="w">  </span><span class="err">┌────┐</span>
+<span class="err">│</span><span class="w">   </span><span class="o">?</span><span class="w">     </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="n">T</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">T</span><span class="w">  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w">   </span><span class="err">×</span><span class="w">   </span><span class="err">└──┘</span><span class="w">  </span><span class="err">└───┘</span><span class="w">  </span><span class="err">└────┘</span>
+<span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w">       </span><span class="err">작음</span><span class="w">   </span><span class="err">중간</span><span class="w">   </span><span class="err">크기</span>
+<span class="err">└─────────┘</span>
+
+<span class="err">또는</span>
+
+<span class="err">다양한</span><span class="w"> </span><span class="err">크기의</span><span class="w"> </span><span class="err">원본</span><span class="w">   </span><span class="err">템플릿</span>
+<span class="err">┌─────────┐</span>
+<span class="err">│</span><span class="w">         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w">         </span><span class="err">┌───┐</span>
+<span class="err">└─────────┘</span><span class="w">         </span><span class="err">│</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="err">│</span>
+<span class="err">┌───────┐</span><span class="w">    </span><span class="err">×</span><span class="w">     </span><span class="err">└───┘</span>
+<span class="err">│</span><span class="w">       </span><span class="err">│</span>
+<span class="err">└───────┘</span>
+</code></pre></div>
+
+<h3 id="_9">다중 스케일 매칭 구현<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">multi_scale_template_matching</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">template</span><span class="p">,</span> <span class="n">scale_range</span><span class="o">=</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">),</span>
+                                  <span class="n">scale_step</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">TM_CCOEFF_NORMED</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;다중 스케일 템플릿 매칭&quot;&quot;&quot;</span>
+    <span class="n">img_gray</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2GRAY</span><span class="p">)</span>
+    <span class="n">template_gray</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2GRAY</span><span class="p">)</span> \
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">template</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span> <span class="k">else</span> <span class="n">template</span>
+
+    <span class="n">best_match</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">best_val</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">best_scale</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+    <span class="n">th</span><span class="p">,</span> <span class="n">tw</span> <span class="o">=</span> <span class="n">template_gray</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="c1"># 다양한 스케일에서 매칭</span>
+    <span class="k">for</span> <span class="n">scale</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">scale_range</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">scale_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">scale_step</span><span class="p">,</span> <span class="n">scale_step</span><span class="p">):</span>
+        <span class="c1"># 템플릿 크기 조정</span>
+        <span class="n">new_w</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">tw</span> <span class="o">*</span> <span class="n">scale</span><span class="p">)</span>
+        <span class="n">new_h</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">th</span> <span class="o">*</span> <span class="n">scale</span><span class="p">)</span>
+
+        <span class="c1"># 이미지보다 큰 템플릿은 스킵</span>
+        <span class="k">if</span> <span class="n">new_w</span> <span class="o">&gt;</span> <span class="n">img_gray</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">or</span> <span class="n">new_h</span> <span class="o">&gt;</span> <span class="n">img_gray</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">continue</span>
+
+        <span class="n">scaled_template</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">template_gray</span><span class="p">,</span> <span class="p">(</span><span class="n">new_w</span><span class="p">,</span> <span class="n">new_h</span><span class="p">))</span>
+
+        <span class="c1"># 템플릿 매칭</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">matchTemplate</span><span class="p">(</span><span class="n">img_gray</span><span class="p">,</span> <span class="n">scaled_template</span><span class="p">,</span> <span class="n">method</span><span class="p">)</span>
+
+        <span class="c1"># 최댓값 찾기</span>
+        <span class="n">min_val</span><span class="p">,</span> <span class="n">max_val</span><span class="p">,</span> <span class="n">min_loc</span><span class="p">,</span> <span class="n">max_loc</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">minMaxLoc</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">method</span> <span class="ow">in</span> <span class="p">[</span><span class="n">cv2</span><span class="o">.</span><span class="n">TM_SQDIFF</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">TM_SQDIFF_NORMED</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">best_match</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">max_val</span> <span class="o">&lt;</span> <span class="n">best_val</span><span class="p">:</span>
+                <span class="n">best_val</span> <span class="o">=</span> <span class="n">max_val</span>
+                <span class="n">best_match</span> <span class="o">=</span> <span class="n">min_loc</span>
+                <span class="n">best_scale</span> <span class="o">=</span> <span class="n">scale</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">max_val</span> <span class="o">&gt;</span> <span class="n">best_val</span><span class="p">:</span>
+                <span class="n">best_val</span> <span class="o">=</span> <span class="n">max_val</span>
+                <span class="n">best_match</span> <span class="o">=</span> <span class="n">max_loc</span>
+                <span class="n">best_scale</span> <span class="o">=</span> <span class="n">scale</span>
+
+    <span class="c1"># 결과 시각화</span>
+    <span class="k">if</span> <span class="n">best_match</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">result_img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">top_left</span> <span class="o">=</span> <span class="n">best_match</span>
+        <span class="n">bottom_right</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">top_left</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">tw</span> <span class="o">*</span> <span class="n">best_scale</span><span class="p">),</span>
+                       <span class="nb">int</span><span class="p">(</span><span class="n">top_left</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">th</span> <span class="o">*</span> <span class="n">best_scale</span><span class="p">))</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="n">result_img</span><span class="p">,</span> <span class="n">top_left</span><span class="p">,</span> <span class="n">bottom_right</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;최적 스케일: </span><span class="si">{</span><span class="n">best_scale</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;매칭 점수: </span><span class="si">{</span><span class="n">best_val</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;위치: </span><span class="si">{</span><span class="n">top_left</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result_img</span><span class="p">,</span> <span class="n">best_match</span><span class="p">,</span> <span class="n">best_scale</span><span class="p">,</span> <span class="n">best_val</span>
+
+    <span class="k">return</span> <span class="n">img</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+<span class="c1"># 사용 예</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;scene.jpg&#39;</span><span class="p">)</span>
+<span class="n">template</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;object.jpg&#39;</span><span class="p">)</span>
+<span class="n">result</span><span class="p">,</span> <span class="n">loc</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">score</span> <span class="o">=</span> <span class="n">multi_scale_template_matching</span><span class="p">(</span>
+    <span class="n">img</span><span class="p">,</span> <span class="n">template</span><span class="p">,</span>
+    <span class="n">scale_range</span><span class="o">=</span><span class="p">(</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span>
+    <span class="n">scale_step</span><span class="o">=</span><span class="mf">0.05</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<h3 id="_10">피라미드 기반 다중 스케일 매칭<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">pyramid_template_matching</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">template</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">scale_factor</span><span class="o">=</span><span class="mf">0.75</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;이미지 피라미드를 이용한 다중 스케일 매칭&quot;&quot;&quot;</span>
+    <span class="n">img_gray</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2GRAY</span><span class="p">)</span>
+    <span class="n">template_gray</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2GRAY</span><span class="p">)</span> \
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">template</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span> <span class="k">else</span> <span class="n">template</span>
+
+    <span class="n">best_result</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;location&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="s1">&#39;scale&#39;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="s1">&#39;size&#39;</span><span class="p">:</span> <span class="n">template_gray</span><span class="o">.</span><span class="n">shape</span>
+    <span class="p">}</span>
+
+    <span class="n">current_scale</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+    <span class="k">for</span> <span class="n">level</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">levels</span><span class="p">):</span>
+        <span class="c1"># 현재 스케일에서의 이미지 크기</span>
+        <span class="n">scaled_img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">img_gray</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span>
+                                <span class="n">fx</span><span class="o">=</span><span class="n">current_scale</span><span class="p">,</span> <span class="n">fy</span><span class="o">=</span><span class="n">current_scale</span><span class="p">)</span>
+
+        <span class="c1"># 템플릿이 이미지보다 크면 중단</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">scaled_img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">template_gray</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span>
+            <span class="n">scaled_img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">template_gray</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="k">break</span>
+
+        <span class="c1"># 템플릿 매칭</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">matchTemplate</span><span class="p">(</span><span class="n">scaled_img</span><span class="p">,</span> <span class="n">template_gray</span><span class="p">,</span>
+                                   <span class="n">cv2</span><span class="o">.</span><span class="n">TM_CCOEFF_NORMED</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">max_val</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">max_loc</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">minMaxLoc</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">max_val</span> <span class="o">&gt;</span> <span class="n">best_result</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]:</span>
+            <span class="c1"># 원본 이미지 좌표로 변환</span>
+            <span class="n">orig_loc</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">max_loc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">current_scale</span><span class="p">),</span>
+                       <span class="nb">int</span><span class="p">(</span><span class="n">max_loc</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">current_scale</span><span class="p">))</span>
+            <span class="n">best_result</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;location&#39;</span><span class="p">:</span> <span class="n">orig_loc</span><span class="p">,</span>
+                <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">max_val</span><span class="p">,</span>
+                <span class="s1">&#39;scale&#39;</span><span class="p">:</span> <span class="n">current_scale</span><span class="p">,</span>
+                <span class="s1">&#39;size&#39;</span><span class="p">:</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">template_gray</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">current_scale</span><span class="p">),</span>
+                        <span class="nb">int</span><span class="p">(</span><span class="n">template_gray</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">current_scale</span><span class="p">))</span>
+            <span class="p">}</span>
+
+        <span class="n">current_scale</span> <span class="o">*=</span> <span class="n">scale_factor</span>
+
+    <span class="k">return</span> <span class="n">best_result</span>
+
+<span class="c1"># 사용 예</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;scene.jpg&#39;</span><span class="p">)</span>
+<span class="n">template</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;object.jpg&#39;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">pyramid_template_matching</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">template</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="s1">&#39;location&#39;</span><span class="p">]:</span>
+    <span class="n">img_result</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s1">&#39;location&#39;</span><span class="p">]</span>
+    <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s1">&#39;size&#39;</span><span class="p">]</span>
+    <span class="n">cv2</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="n">img_result</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">),</span> <span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="n">w</span><span class="p">,</span> <span class="n">y</span> <span class="o">+</span> <span class="n">h</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;검출 위치: </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;location&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;검출 스케일: </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;scale&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;매칭 점수: </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-haar-cascade">4. Haar Cascade 분류기<a class="header-link" href="#4-haar-cascade" title="Permanent link">&para;</a></h2>
+<h3 id="haar">Haar 특징 이해<a class="header-link" href="#haar" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Haar-like 특징: 밝은 영역과 어두운 영역의 차이를 이용
+
+기본 Haar 특징들:
+┌───────────────────────────────────────────────────────┐
+│                                                       │
+│   Edge features (엣지 특징)                           │
+│   ┌────┬────┐    ┌────┐                              │
+│   │████│    │    │████│                              │
+│   │████│    │    ├────┤                              │
+│   └────┴────┘    │    │                              │
+│                  └────┘                              │
+│                                                       │
+│   Line features (선 특징)                             │
+│   ┌────┬────┬────┐    ┌────┐                         │
+│   │████│    │████│    │████│                         │
+│   └────┴────┴────┘    ├────┤                         │
+│                       │    │                         │
+│                       ├────┤                         │
+│                       │████│                         │
+│                       └────┘                         │
+│                                                       │
+│   Center-surround features (중심-주변 특징)          │
+│   ┌────┬────┬────┐                                   │
+│   │████│    │████│                                   │
+│   ├────┼────┼────┤                                   │
+│   │████│    │████│                                   │
+│   └────┴────┴────┘                                   │
+│                                                       │
+│   ████ = 검은 영역 (합산 후 빼기)                    │
+│   빈칸 = 흰 영역 (합산)                              │
+│                                                       │
+│   특징값 = Σ(흰 영역) - Σ(검은 영역)                 │
+└───────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="integral-image">Integral Image (적분 이미지)<a class="header-link" href="#integral-image" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>적분<span class="w"> </span>이미지:<span class="w"> </span>특징<span class="w"> </span>계산을<span class="w"> </span><span class="nv">O</span><span class="ss">(</span><span class="mi">1</span><span class="ss">)</span>로<span class="w"> </span>만드는<span class="w"> </span>기법
+
+원본<span class="w"> </span>이미지<span class="w">           </span>적분<span class="w"> </span>이미지
+┌───┬───┬───┐<span class="w">        </span>┌───┬───┬───┐
+│<span class="w"> </span><span class="mi">1</span><span class="w"> </span>│<span class="w"> </span><span class="mi">2</span><span class="w"> </span>│<span class="w"> </span><span class="mi">3</span><span class="w"> </span>│<span class="w">        </span>│<span class="w"> </span><span class="mi">1</span><span class="w"> </span>│<span class="w"> </span><span class="mi">3</span><span class="w"> </span>│<span class="w"> </span><span class="mi">6</span><span class="w"> </span>│
+├───┼───┼───┤<span class="w">   </span>→<span class="w">    </span>├───┼───┼───┤
+│<span class="w"> </span><span class="mi">4</span><span class="w"> </span>│<span class="w"> </span><span class="mi">5</span><span class="w"> </span>│<span class="w"> </span><span class="mi">6</span><span class="w"> </span>│<span class="w">        </span>│<span class="w"> </span><span class="mi">5</span><span class="w"> </span>│<span class="mi">12</span><span class="w"> </span>│<span class="mi">21</span><span class="w"> </span>│
+├───┼───┼───┤<span class="w">        </span>├───┼───┼───┤
+│<span class="w"> </span><span class="mi">7</span><span class="w"> </span>│<span class="w"> </span><span class="mi">8</span><span class="w"> </span>│<span class="w"> </span><span class="mi">9</span><span class="w"> </span>│<span class="w">        </span>│<span class="mi">12</span><span class="w"> </span>│<span class="mi">27</span><span class="w"> </span>│<span class="mi">45</span><span class="w"> </span>│
+└───┴───┴───┘<span class="w">        </span>└───┴───┴───┘
+
+적분<span class="w"> </span>이미지<span class="w"> </span>계산:
+<span class="nv">ii</span><span class="ss">(</span><span class="nv">x</span>,<span class="nv">y</span><span class="ss">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>Σ<span class="w"> </span><span class="nv">i</span><span class="ss">(</span><span class="nv">x</span><span class="s1">&#39;,y&#39;</span><span class="ss">)</span><span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="nv">x</span><span class="s1">&#39;≤x, y&#39;</span>≤<span class="nv">y</span>
+
+영역<span class="w"> </span>합<span class="w"> </span>계산<span class="w"> </span><span class="ss">(</span><span class="mi">4</span>번의<span class="w"> </span>배열<span class="w"> </span>접근으로<span class="w"> </span>가능<span class="ss">)</span>:
+<span class="nv">A</span><span class="w"> </span>─────<span class="w"> </span><span class="nv">B</span>
+│<span class="w">       </span>│
+│<span class="w">  </span>영역<span class="w"> </span>│
+│<span class="w">       </span>│
+<span class="nv">C</span><span class="w"> </span>─────<span class="w"> </span><span class="nv">D</span>
+
+영역<span class="w"> </span>합<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">ii</span><span class="ss">(</span><span class="nv">D</span><span class="ss">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nv">ii</span><span class="ss">(</span><span class="nv">B</span><span class="ss">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nv">ii</span><span class="ss">(</span><span class="nv">C</span><span class="ss">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nv">ii</span><span class="ss">(</span><span class="nv">A</span><span class="ss">)</span>
+</code></pre></div>
+
+<h3 id="cascade">Cascade 구조<a class="header-link" href="#cascade" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Cascade (캐스케이드): 단계적 분류기
+
+이미지 윈도우
+    │
+    ▼
+┌─────────┐    NO (빠른 거부)
+│ Stage 1 │ ──────────────────→ 비객체
+│ (간단)  │
+└────┬────┘
+     │ YES
+     ▼
+┌─────────┐    NO
+│ Stage 2 │ ──────────────────→ 비객체
+│         │
+└────┬────┘
+     │ YES
+     ▼
+    ...
+     │
+     ▼
+┌─────────┐    NO
+│ Stage N │ ──────────────────→ 비객체
+│ (복잡)  │
+└────┬────┘
+     │ YES
+     ▼
+   객체!
+
+장점: 대부분의 비객체를 초기 단계에서 빠르게 제거
+</code></pre></div>
+
+<hr />
+<h2 id="5-cascadeclassifier">5. CascadeClassifier 사용법<a class="header-link" href="#5-cascadeclassifier" title="Permanent link">&para;</a></h2>
+<h3 id="_11">기본 사용법<a class="header-link" href="#_11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+
+<span class="c1"># Haar Cascade 분류기 로드</span>
+<span class="c1"># OpenCV에 포함된 사전 학습된 분류기 사용</span>
+<span class="n">face_cascade</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">CascadeClassifier</span><span class="p">(</span>
+    <span class="n">cv2</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">haarcascades</span> <span class="o">+</span> <span class="s1">&#39;haarcascade_frontalface_default.xml&#39;</span>
+<span class="p">)</span>
+<span class="n">eye_cascade</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">CascadeClassifier</span><span class="p">(</span>
+    <span class="n">cv2</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">haarcascades</span> <span class="o">+</span> <span class="s1">&#39;haarcascade_eye.xml&#39;</span>
+<span class="p">)</span>
+
+<span class="c1"># 이미지 로드</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;people.jpg&#39;</span><span class="p">)</span>
+<span class="n">gray</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2GRAY</span><span class="p">)</span>
+
+<span class="c1"># 얼굴 검출</span>
+<span class="n">faces</span> <span class="o">=</span> <span class="n">face_cascade</span><span class="o">.</span><span class="n">detectMultiScale</span><span class="p">(</span>
+    <span class="n">gray</span><span class="p">,</span>           <span class="c1"># 입력 이미지 (그레이스케일)</span>
+    <span class="n">scaleFactor</span><span class="o">=</span><span class="mf">1.1</span><span class="p">,</span> <span class="c1"># 이미지 축소 비율</span>
+    <span class="n">minNeighbors</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>  <span class="c1"># 최소 이웃 수 (높을수록 엄격)</span>
+    <span class="n">minSize</span><span class="o">=</span><span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="mi">30</span><span class="p">),</span> <span class="c1"># 최소 객체 크기</span>
+    <span class="n">maxSize</span><span class="o">=</span><span class="p">(</span><span class="mi">300</span><span class="p">,</span> <span class="mi">300</span><span class="p">)</span> <span class="c1"># 최대 객체 크기</span>
+<span class="p">)</span>
+
+<span class="c1"># 검출 결과 그리기</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span> <span class="ow">in</span> <span class="n">faces</span><span class="p">:</span>
+    <span class="n">cv2</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">),</span> <span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="n">w</span><span class="p">,</span> <span class="n">y</span><span class="o">+</span><span class="n">h</span><span class="p">),</span> <span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1"># 얼굴 영역에서 눈 검출</span>
+    <span class="n">roi_gray</span> <span class="o">=</span> <span class="n">gray</span><span class="p">[</span><span class="n">y</span><span class="p">:</span><span class="n">y</span><span class="o">+</span><span class="n">h</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span><span class="n">x</span><span class="o">+</span><span class="n">w</span><span class="p">]</span>
+    <span class="n">roi_color</span> <span class="o">=</span> <span class="n">img</span><span class="p">[</span><span class="n">y</span><span class="p">:</span><span class="n">y</span><span class="o">+</span><span class="n">h</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span><span class="n">x</span><span class="o">+</span><span class="n">w</span><span class="p">]</span>
+
+    <span class="n">eyes</span> <span class="o">=</span> <span class="n">eye_cascade</span><span class="o">.</span><span class="n">detectMultiScale</span><span class="p">(</span><span class="n">roi_gray</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">ex</span><span class="p">,</span> <span class="n">ey</span><span class="p">,</span> <span class="n">ew</span><span class="p">,</span> <span class="n">eh</span><span class="p">)</span> <span class="ow">in</span> <span class="n">eyes</span><span class="p">:</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="n">roi_color</span><span class="p">,</span> <span class="p">(</span><span class="n">ex</span><span class="p">,</span> <span class="n">ey</span><span class="p">),</span> <span class="p">(</span><span class="n">ex</span><span class="o">+</span><span class="n">ew</span><span class="p">,</span> <span class="n">ey</span><span class="o">+</span><span class="n">eh</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;검출된 얼굴 수: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">faces</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s1">&#39;Face Detection&#39;</span><span class="p">,</span> <span class="n">img</span><span class="p">)</span>
+<span class="n">cv2</span><span class="o">.</span><span class="n">waitKey</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="detectmultiscale">detectMultiScale 매개변수<a class="header-link" href="#detectmultiscale" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>detectMultiScale(image, scaleFactor, minNeighbors, ...)
+
+┌─────────────────────────────────────────────────────────────┐
+│ scaleFactor: 각 스케일에서의 이미지 축소 비율               │
+│                                                             │
+│   scaleFactor = 1.1 (기본값)                               │
+│   ┌─────────┐                                              │
+│   │ 100x100 │ → 91x91 → 83x83 → 75x75 → ...               │
+│   └─────────┘                                              │
+│   작을수록 더 정밀하지만 느림                               │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│ minNeighbors: 객체로 인정하기 위한 최소 이웃 검출 수        │
+│                                                             │
+│   minNeighbors = 3                                         │
+│   ┌───────────────┐                                        │
+│   │   ┌─┐ ┌─┐     │ → 2개 검출 → 무시 (&lt; 3)              │
+│   │   └─┘ └─┘     │                                        │
+│   └───────────────┘                                        │
+│   높을수록 오검출 감소, 미검출 증가                         │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│ minSize, maxSize: 검출할 객체의 크기 범위                   │
+│                                                             │
+│   minSize=(30, 30)  maxSize=(300, 300)                     │
+│   30x30 픽셀 미만이나 300x300 픽셀 초과는 무시              │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="cascade_1">사용 가능한 Cascade 파일<a class="header-link" href="#cascade_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<span class="c1"># 사용 가능한 Haar Cascade 파일 목록</span>
+<span class="n">cascade_dir</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">haarcascades</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;사용 가능한 Cascade 파일:&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">cascade_dir</span><span class="p">)):</span>
+    <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.xml&#39;</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  - </span><span class="si">{</span><span class="n">f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># 주요 Cascade 파일:</span>
+<span class="c1"># haarcascade_frontalface_default.xml  - 정면 얼굴</span>
+<span class="c1"># haarcascade_frontalface_alt.xml      - 정면 얼굴 (대안)</span>
+<span class="c1"># haarcascade_frontalface_alt2.xml     - 정면 얼굴 (대안 2)</span>
+<span class="c1"># haarcascade_profileface.xml          - 측면 얼굴</span>
+<span class="c1"># haarcascade_eye.xml                  - 눈</span>
+<span class="c1"># haarcascade_eye_tree_eyeglasses.xml  - 안경 낀 눈</span>
+<span class="c1"># haarcascade_smile.xml                - 웃음</span>
+<span class="c1"># haarcascade_fullbody.xml             - 전신</span>
+<span class="c1"># haarcascade_upperbody.xml            - 상체</span>
+<span class="c1"># haarcascade_lowerbody.xml            - 하체</span>
+<span class="c1"># haarcascade_frontalcatface.xml       - 고양이 얼굴</span>
+<span class="c1"># haarcascade_russian_plate_number.xml - 러시아 차량 번호판</span>
+</code></pre></div>
+
+<h3 id="cascade_2">다중 Cascade 조합<a class="header-link" href="#cascade_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">FaceFeatureDetector</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;얼굴 특징 검출기&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">face_cascade</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">CascadeClassifier</span><span class="p">(</span>
+            <span class="n">cv2</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">haarcascades</span> <span class="o">+</span> <span class="s1">&#39;haarcascade_frontalface_default.xml&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eye_cascade</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">CascadeClassifier</span><span class="p">(</span>
+            <span class="n">cv2</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">haarcascades</span> <span class="o">+</span> <span class="s1">&#39;haarcascade_eye.xml&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">smile_cascade</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">CascadeClassifier</span><span class="p">(</span>
+            <span class="n">cv2</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">haarcascades</span> <span class="o">+</span> <span class="s1">&#39;haarcascade_smile.xml&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">detect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">img</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;얼굴, 눈, 웃음 검출&quot;&quot;&quot;</span>
+        <span class="n">gray</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2GRAY</span><span class="p">)</span>
+        <span class="n">gray</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">equalizeHist</span><span class="p">(</span><span class="n">gray</span><span class="p">)</span>  <span class="c1"># 히스토그램 평활화</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># 얼굴 검출</span>
+        <span class="n">faces</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">face_cascade</span><span class="o">.</span><span class="n">detectMultiScale</span><span class="p">(</span><span class="n">gray</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span>
+                                                    <span class="n">minSize</span><span class="o">=</span><span class="p">(</span><span class="mi">60</span><span class="p">,</span> <span class="mi">60</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span> <span class="ow">in</span> <span class="n">faces</span><span class="p">:</span>
+            <span class="n">face_roi_gray</span> <span class="o">=</span> <span class="n">gray</span><span class="p">[</span><span class="n">y</span><span class="p">:</span><span class="n">y</span><span class="o">+</span><span class="n">h</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span><span class="n">x</span><span class="o">+</span><span class="n">w</span><span class="p">]</span>
+
+            <span class="n">face_data</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;bbox&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">),</span>
+                <span class="s1">&#39;eyes&#39;</span><span class="p">:</span> <span class="p">[],</span>
+                <span class="s1">&#39;smiling&#39;</span><span class="p">:</span> <span class="kc">False</span>
+            <span class="p">}</span>
+
+            <span class="c1"># 얼굴 상단 절반에서 눈 검출</span>
+            <span class="n">eye_roi</span> <span class="o">=</span> <span class="n">face_roi_gray</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">h</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="n">eyes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eye_cascade</span><span class="o">.</span><span class="n">detectMultiScale</span><span class="p">(</span><span class="n">eye_roi</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span>
+                                                      <span class="n">minSize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">))</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">ex</span><span class="p">,</span> <span class="n">ey</span><span class="p">,</span> <span class="n">ew</span><span class="p">,</span> <span class="n">eh</span><span class="p">)</span> <span class="ow">in</span> <span class="n">eyes</span><span class="p">:</span>
+                <span class="n">face_data</span><span class="p">[</span><span class="s1">&#39;eyes&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">x</span> <span class="o">+</span> <span class="n">ex</span><span class="p">,</span> <span class="n">y</span> <span class="o">+</span> <span class="n">ey</span><span class="p">,</span> <span class="n">ew</span><span class="p">,</span> <span class="n">eh</span><span class="p">))</span>
+
+            <span class="c1"># 얼굴 하단에서 웃음 검출</span>
+            <span class="n">smile_roi</span> <span class="o">=</span> <span class="n">face_roi_gray</span><span class="p">[</span><span class="n">h</span><span class="o">//</span><span class="mi">2</span><span class="p">:,</span> <span class="p">:]</span>
+            <span class="n">smiles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">smile_cascade</span><span class="o">.</span><span class="n">detectMultiScale</span><span class="p">(</span><span class="n">smile_roi</span><span class="p">,</span> <span class="mf">1.7</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span>
+                                                          <span class="n">minSize</span><span class="o">=</span><span class="p">(</span><span class="mi">25</span><span class="p">,</span> <span class="mi">25</span><span class="p">))</span>
+            <span class="n">face_data</span><span class="p">[</span><span class="s1">&#39;smiling&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">smiles</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">face_data</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">results</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">draw_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">img</span><span class="p">,</span> <span class="n">results</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;결과 시각화&quot;&quot;&quot;</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">face</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">face</span><span class="p">[</span><span class="s1">&#39;bbox&#39;</span><span class="p">]</span>
+
+            <span class="c1"># 얼굴 사각형</span>
+            <span class="n">color</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="k">if</span> <span class="n">face</span><span class="p">[</span><span class="s1">&#39;smiling&#39;</span><span class="p">]</span> <span class="k">else</span> <span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">cv2</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">),</span> <span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="n">w</span><span class="p">,</span> <span class="n">y</span><span class="o">+</span><span class="n">h</span><span class="p">),</span> <span class="n">color</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+            <span class="c1"># 눈 원</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">ex</span><span class="p">,</span> <span class="n">ey</span><span class="p">,</span> <span class="n">ew</span><span class="p">,</span> <span class="n">eh</span><span class="p">)</span> <span class="ow">in</span> <span class="n">face</span><span class="p">[</span><span class="s1">&#39;eyes&#39;</span><span class="p">]:</span>
+                <span class="n">center</span> <span class="o">=</span> <span class="p">(</span><span class="n">ex</span> <span class="o">+</span> <span class="n">ew</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">ey</span> <span class="o">+</span> <span class="n">eh</span><span class="o">//</span><span class="mi">2</span><span class="p">)</span>
+                <span class="n">radius</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">ew</span><span class="p">,</span> <span class="n">eh</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+                <span class="n">cv2</span><span class="o">.</span><span class="n">circle</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">center</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+
+            <span class="c1"># 웃음 상태 표시</span>
+            <span class="n">label</span> <span class="o">=</span> <span class="s2">&quot;Smiling :)&quot;</span> <span class="k">if</span> <span class="n">face</span><span class="p">[</span><span class="s1">&#39;smiling&#39;</span><span class="p">]</span> <span class="k">else</span> <span class="s2">&quot;Neutral&quot;</span>
+            <span class="n">cv2</span><span class="o">.</span><span class="n">putText</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">-</span><span class="mi">10</span><span class="p">),</span>
+                       <span class="n">cv2</span><span class="o">.</span><span class="n">FONT_HERSHEY_SIMPLEX</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">,</span> <span class="n">color</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output</span>
+
+<span class="c1"># 사용 예</span>
+<span class="n">detector</span> <span class="o">=</span> <span class="n">FaceFeatureDetector</span><span class="p">()</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;group_photo.jpg&#39;</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">detector</span><span class="o">.</span><span class="n">detect</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">detector</span><span class="o">.</span><span class="n">draw_results</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">results</span><span class="p">)</span>
+<span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s1">&#39;Face Features&#39;</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-hog-svm">6. HOG + SVM 보행자 검출<a class="header-link" href="#6-hog-svm" title="Permanent link">&para;</a></h2>
+<h3 id="hog-histogram-of-oriented-gradients">HOG (Histogram of Oriented Gradients) 이해<a class="header-link" href="#hog-histogram-of-oriented-gradients" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">HOG</span><span class="o">:</span><span class="w"> </span><span class="err">국소</span><span class="w"> </span><span class="err">영역의</span><span class="w"> </span><span class="err">기울기</span><span class="o">(</span><span class="n">gradient</span><span class="o">)</span><span class="w"> </span><span class="err">방향</span><span class="w"> </span><span class="err">분포를</span><span class="w"> </span><span class="err">특징으로</span><span class="w"> </span><span class="err">사용</span>
+
+<span class="mi">1</span><span class="o">.</span><span class="w"> </span><span class="err">그레이스케일</span><span class="w"> </span><span class="err">변환</span>
+
+<span class="mi">2</span><span class="o">.</span><span class="w"> </span><span class="err">기울기</span><span class="w"> </span><span class="err">계산</span>
+<span class="w">   </span><span class="err">┌───────────────────────────────────────────┐</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="n">Gx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">수평</span><span class="w"> </span><span class="err">기울기</span><span class="w"> </span><span class="o">(</span><span class="n">Sobel</span><span class="w"> </span><span class="n">x</span><span class="o">)</span><span class="w">               </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="n">Gy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">수직</span><span class="w"> </span><span class="err">기울기</span><span class="w"> </span><span class="o">(</span><span class="n">Sobel</span><span class="w"> </span><span class="n">y</span><span class="o">)</span><span class="w">               </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">                                           </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">크기</span><span class="o">:</span><span class="w"> </span><span class="n">G</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">√</span><span class="o">(</span><span class="n">Gx²</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">Gy²</span><span class="o">)</span><span class="w">                  </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">방향</span><span class="o">:</span><span class="w"> </span><span class="err">θ</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arctan</span><span class="o">(</span><span class="n">Gy</span><span class="o">/</span><span class="n">Gx</span><span class="o">)</span><span class="w">                 </span><span class="err">│</span>
+<span class="w">   </span><span class="err">└───────────────────────────────────────────┘</span>
+
+<span class="mi">3</span><span class="o">.</span><span class="w"> </span><span class="err">셀</span><span class="w"> </span><span class="err">단위로</span><span class="w"> </span><span class="err">기울기</span><span class="w"> </span><span class="err">히스토그램</span><span class="w"> </span><span class="err">계산</span>
+<span class="w">   </span><span class="err">┌─────────────────────────────────────────┐</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">이미지를</span><span class="w"> </span><span class="mi">8</span><span class="n">x8</span><span class="w"> </span><span class="err">픽셀</span><span class="w"> </span><span class="err">셀로</span><span class="w"> </span><span class="err">분할</span><span class="w">            </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">각</span><span class="w"> </span><span class="err">셀에서</span><span class="w"> </span><span class="err">방향</span><span class="w"> </span><span class="err">히스토그램</span><span class="w"> </span><span class="o">(</span><span class="mi">9</span><span class="err">개</span><span class="w"> </span><span class="err">빈</span><span class="o">)</span><span class="w">     </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">                                         </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="mi">0</span><span class="err">°</span><span class="w">  </span><span class="mi">20</span><span class="err">°</span><span class="w"> </span><span class="mi">40</span><span class="err">°</span><span class="w"> </span><span class="mi">60</span><span class="err">°</span><span class="w"> </span><span class="mi">80</span><span class="err">°</span><span class="w"> </span><span class="mi">100</span><span class="err">°</span><span class="mi">120</span><span class="err">°</span><span class="mi">140</span><span class="err">°</span><span class="mi">160</span><span class="err">°</span><span class="w">  </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">┌───┬───┬───┬───┬───┬───┬───┬───┬───┐</span><span class="w"> </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="err">│███│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">│█████│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">└───┴───┴───┴───┴───┴───┴───┴───┴───┘</span><span class="w"> </span><span class="err">│</span>
+<span class="w">   </span><span class="err">└─────────────────────────────────────────┘</span>
+
+<span class="mi">4</span><span class="o">.</span><span class="w"> </span><span class="err">블록</span><span class="w"> </span><span class="err">정규화</span>
+<span class="w">   </span><span class="err">┌─────────────────────────────────────────┐</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="mi">2</span><span class="n">x2</span><span class="w"> </span><span class="err">셀</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="err">블록</span><span class="w">                        </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">블록</span><span class="w"> </span><span class="err">내</span><span class="w"> </span><span class="err">히스토그램을</span><span class="w"> </span><span class="err">연결</span><span class="w"> </span><span class="err">후</span><span class="w"> </span><span class="err">정규화</span><span class="w">    </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">                                         </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">┌────┬────┐</span><span class="w">                            </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="n">cell</span><span class="err">│</span><span class="n">cell</span><span class="err">│</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="o">[</span><span class="mi">36</span><span class="err">차원</span><span class="w"> </span><span class="err">특징</span><span class="w"> </span><span class="err">벡터</span><span class="o">]</span><span class="w">       </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">├────┼────┤</span><span class="w">     </span><span class="o">(</span><span class="mi">9</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">36</span><span class="o">)</span><span class="w">          </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="n">cell</span><span class="err">│</span><span class="n">cell</span><span class="err">│</span><span class="w">                            </span><span class="err">│</span>
+<span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">└────┴────┘</span><span class="w">                            </span><span class="err">│</span>
+<span class="w">   </span><span class="err">└─────────────────────────────────────────┘</span>
+
+<span class="mi">5</span><span class="o">.</span><span class="w"> </span><span class="err">모든</span><span class="w"> </span><span class="err">블록의</span><span class="w"> </span><span class="err">특징을</span><span class="w"> </span><span class="err">연결하여</span><span class="w"> </span><span class="err">최종</span><span class="w"> </span><span class="n">HOG</span><span class="w"> </span><span class="err">디스크립터</span><span class="w"> </span><span class="err">생성</span>
+</code></pre></div>
+
+<h3 id="hog">HOG 보행자 검출기 사용<a class="header-link" href="#hog" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="c1"># HOG 디스크립터 + SVM 분류기</span>
+<span class="n">hog</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">HOGDescriptor</span><span class="p">()</span>
+<span class="n">hog</span><span class="o">.</span><span class="n">setSVMDetector</span><span class="p">(</span><span class="n">cv2</span><span class="o">.</span><span class="n">HOGDescriptor_getDefaultPeopleDetector</span><span class="p">())</span>
+
+<span class="c1"># 이미지 로드</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;street.jpg&#39;</span><span class="p">)</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">fx</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">fy</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>  <span class="c1"># 속도를 위해 축소</span>
+
+<span class="c1"># 보행자 검출</span>
+<span class="c1"># detectMultiScale 반환: (검출 영역, 신뢰도 가중치)</span>
+<span class="n">boxes</span><span class="p">,</span> <span class="n">weights</span> <span class="o">=</span> <span class="n">hog</span><span class="o">.</span><span class="n">detectMultiScale</span><span class="p">(</span>
+    <span class="n">img</span><span class="p">,</span>
+    <span class="n">winStride</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">),</span>    <span class="c1"># 윈도우 이동 간격</span>
+    <span class="n">padding</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>       <span class="c1"># 패딩</span>
+    <span class="n">scale</span><span class="o">=</span><span class="mf">1.05</span><span class="p">,</span>           <span class="c1"># 스케일 팩터</span>
+    <span class="n">hitThreshold</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>       <span class="c1"># SVM 임계값</span>
+    <span class="n">finalThreshold</span><span class="o">=</span><span class="mf">2.0</span>    <span class="c1"># 최종 그룹화 임계값</span>
+<span class="p">)</span>
+
+<span class="c1"># 결과 그리기</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">),</span> <span class="n">weight</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">boxes</span><span class="p">,</span> <span class="n">weights</span><span class="p">):</span>
+    <span class="n">cv2</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">),</span> <span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="n">w</span><span class="p">,</span> <span class="n">y</span><span class="o">+</span><span class="n">h</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">cv2</span><span class="o">.</span><span class="n">putText</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">weight</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s1">.2f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">-</span><span class="mi">5</span><span class="p">),</span>
+                <span class="n">cv2</span><span class="o">.</span><span class="n">FONT_HERSHEY_SIMPLEX</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;검출된 보행자 수: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">boxes</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s1">&#39;Pedestrian Detection&#39;</span><span class="p">,</span> <span class="n">img</span><span class="p">)</span>
+<span class="n">cv2</span><span class="o">.</span><span class="n">waitKey</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="non-maximum-suppression-nms">Non-Maximum Suppression (NMS)<a class="header-link" href="#non-maximum-suppression-nms" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">non_max_suppression</span><span class="p">(</span><span class="n">boxes</span><span class="p">,</span> <span class="n">scores</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Non-Maximum Suppression 구현&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">boxes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="c1"># 좌표를 float로 변환</span>
+    <span class="n">boxes</span> <span class="o">=</span> <span class="n">boxes</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="c1"># 좌표 분리</span>
+    <span class="n">x1</span> <span class="o">=</span> <span class="n">boxes</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">y1</span> <span class="o">=</span> <span class="n">boxes</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">x2</span> <span class="o">=</span> <span class="n">boxes</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">boxes</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="n">y2</span> <span class="o">=</span> <span class="n">boxes</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">boxes</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span>
+
+    <span class="c1"># 면적 계산</span>
+    <span class="n">areas</span> <span class="o">=</span> <span class="p">(</span><span class="n">x2</span> <span class="o">-</span> <span class="n">x1</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">y2</span> <span class="o">-</span> <span class="n">y1</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># 점수로 정렬 (내림차순)</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span><span class="o">.</span><span class="n">argsort</span><span class="p">()[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">keep</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">while</span> <span class="n">order</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># 가장 높은 점수의 박스 선택</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">order</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">keep</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+        <span class="c1"># 나머지 박스들과의 IoU 계산</span>
+        <span class="n">xx1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">x1</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">x1</span><span class="p">[</span><span class="n">order</span><span class="p">[</span><span class="mi">1</span><span class="p">:]])</span>
+        <span class="n">yy1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">y1</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y1</span><span class="p">[</span><span class="n">order</span><span class="p">[</span><span class="mi">1</span><span class="p">:]])</span>
+        <span class="n">xx2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">x2</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">x2</span><span class="p">[</span><span class="n">order</span><span class="p">[</span><span class="mi">1</span><span class="p">:]])</span>
+        <span class="n">yy2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">y2</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y2</span><span class="p">[</span><span class="n">order</span><span class="p">[</span><span class="mi">1</span><span class="p">:]])</span>
+
+        <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">xx2</span> <span class="o">-</span> <span class="n">xx1</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">yy2</span> <span class="o">-</span> <span class="n">yy1</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">intersection</span> <span class="o">=</span> <span class="n">w</span> <span class="o">*</span> <span class="n">h</span>
+        <span class="n">iou</span> <span class="o">=</span> <span class="n">intersection</span> <span class="o">/</span> <span class="p">(</span><span class="n">areas</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">areas</span><span class="p">[</span><span class="n">order</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span> <span class="o">-</span> <span class="n">intersection</span><span class="p">)</span>
+
+        <span class="c1"># IoU가 임계값보다 작은 박스만 유지</span>
+        <span class="n">inds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">iou</span> <span class="o">&lt;=</span> <span class="n">threshold</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="n">order</span><span class="p">[</span><span class="n">inds</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">keep</span>
+
+<span class="c1"># HOG 검출과 NMS 적용</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">detect_pedestrians_with_nms</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">nms_threshold</span><span class="o">=</span><span class="mf">0.3</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;NMS를 적용한 보행자 검출&quot;&quot;&quot;</span>
+    <span class="n">hog</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">HOGDescriptor</span><span class="p">()</span>
+    <span class="n">hog</span><span class="o">.</span><span class="n">setSVMDetector</span><span class="p">(</span><span class="n">cv2</span><span class="o">.</span><span class="n">HOGDescriptor_getDefaultPeopleDetector</span><span class="p">())</span>
+
+    <span class="c1"># 검출</span>
+    <span class="n">boxes</span><span class="p">,</span> <span class="n">weights</span> <span class="o">=</span> <span class="n">hog</span><span class="o">.</span><span class="n">detectMultiScale</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">winStride</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">),</span>
+                                          <span class="n">padding</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.05</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">boxes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">img</span><span class="p">,</span> <span class="p">[]</span>
+
+    <span class="c1"># NMS 적용</span>
+    <span class="n">boxes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">boxes</span><span class="p">)</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+    <span class="n">keep</span> <span class="o">=</span> <span class="n">non_max_suppression</span><span class="p">(</span><span class="n">boxes</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">nms_threshold</span><span class="p">)</span>
+
+    <span class="c1"># 결과 그리기</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">final_boxes</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">keep</span><span class="p">:</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span> <span class="o">=</span> <span class="n">boxes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">final_boxes</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">y</span><span class="p">)),</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="o">+</span><span class="n">w</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">y</span><span class="o">+</span><span class="n">h</span><span class="p">)),</span>
+                     <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span><span class="p">,</span> <span class="n">final_boxes</span>
+
+<span class="c1"># 사용 예</span>
+<span class="n">img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="s1">&#39;crowd.jpg&#39;</span><span class="p">)</span>
+<span class="n">result</span><span class="p">,</span> <span class="n">detections</span> <span class="o">=</span> <span class="n">detect_pedestrians_with_nms</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;NMS 후 검출 수: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">detections</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="hog_1">HOG 특징 시각화<a class="header-link" href="#hog_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">skimage.feature</span><span class="w"> </span><span class="kn">import</span> <span class="n">hog</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">skimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">exposure</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">visualize_hog</span><span class="p">(</span><span class="n">img</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;HOG 특징 시각화&quot;&quot;&quot;</span>
+    <span class="c1"># 그레이스케일 변환</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">gray</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2GRAY</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">gray</span> <span class="o">=</span> <span class="n">img</span>
+
+    <span class="c1"># 크기 조정 (64x128 - HOG 보행자 검출 표준 크기)</span>
+    <span class="n">resized</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">gray</span><span class="p">,</span> <span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">))</span>
+
+    <span class="c1"># scikit-image의 hog 사용 (시각화 포함)</span>
+    <span class="n">features</span><span class="p">,</span> <span class="n">hog_image</span> <span class="o">=</span> <span class="n">hog</span><span class="p">(</span>
+        <span class="n">resized</span><span class="p">,</span>
+        <span class="n">orientations</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span>        <span class="c1"># 기울기 방향 빈 수</span>
+        <span class="n">pixels_per_cell</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">),</span>  <span class="c1"># 셀 크기</span>
+        <span class="n">cells_per_block</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>  <span class="c1"># 블록 내 셀 수</span>
+        <span class="n">visualize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">block_norm</span><span class="o">=</span><span class="s1">&#39;L2-Hys&#39;</span>
+    <span class="p">)</span>
+
+    <span class="c1"># 시각화를 위한 rescale</span>
+    <span class="n">hog_image_rescaled</span> <span class="o">=</span> <span class="n">exposure</span><span class="o">.</span><span class="n">rescale_intensity</span><span class="p">(</span><span class="n">hog_image</span><span class="p">,</span>
+                                                     <span class="n">out_range</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">))</span>
+    <span class="n">hog_image_rescaled</span> <span class="o">=</span> <span class="n">hog_image_rescaled</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;HOG 특징 벡터 크기: </span><span class="si">{</span><span class="n">features</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">hog_image_rescaled</span><span class="p">,</span> <span class="n">features</span>
+
+<span class="c1"># 사용 예 (scikit-image 설치 필요: pip install scikit-image)</span>
+<span class="c1"># img = cv2.imread(&#39;person.jpg&#39;)</span>
+<span class="c1"># hog_vis, features = visualize_hog(img)</span>
+<span class="c1"># cv2.imshow(&#39;HOG Visualization&#39;, hog_vis)</span>
+</code></pre></div>
+
+<h3 id="hog-svm">커스텀 HOG + SVM 학습 (개념)<a class="header-link" href="#hog-svm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">cv2</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn</span><span class="w"> </span><span class="kn">import</span> <span class="n">svm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">train_test_split</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">train_hog_svm_classifier</span><span class="p">(</span><span class="n">positive_samples</span><span class="p">,</span> <span class="n">negative_samples</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;HOG + SVM 분류기 학습 (개념 예제)&quot;&quot;&quot;</span>
+
+    <span class="c1"># HOG 디스크립터 설정</span>
+    <span class="n">win_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+    <span class="n">block_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span>
+    <span class="n">block_stride</span> <span class="o">=</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+    <span class="n">cell_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+    <span class="n">nbins</span> <span class="o">=</span> <span class="mi">9</span>
+
+    <span class="n">hog</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">HOGDescriptor</span><span class="p">(</span><span class="n">win_size</span><span class="p">,</span> <span class="n">block_size</span><span class="p">,</span> <span class="n">block_stride</span><span class="p">,</span>
+                            <span class="n">cell_size</span><span class="p">,</span> <span class="n">nbins</span><span class="p">)</span>
+
+    <span class="c1"># 특징 추출</span>
+    <span class="n">features</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Positive 샘플 (객체가 있는 이미지)</span>
+    <span class="k">for</span> <span class="n">img</span> <span class="ow">in</span> <span class="n">positive_samples</span><span class="p">:</span>
+        <span class="n">img_resized</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">win_size</span><span class="p">)</span>
+        <span class="n">gray</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">img_resized</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2GRAY</span><span class="p">)</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">hog</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="n">gray</span><span class="p">)</span>
+        <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+        <span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Negative 샘플 (객체가 없는 이미지)</span>
+    <span class="k">for</span> <span class="n">img</span> <span class="ow">in</span> <span class="n">negative_samples</span><span class="p">:</span>
+        <span class="n">img_resized</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">win_size</span><span class="p">)</span>
+        <span class="n">gray</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">img_resized</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2GRAY</span><span class="p">)</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">hog</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="n">gray</span><span class="p">)</span>
+        <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+        <span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">features</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+
+    <span class="c1"># 학습/테스트 분리</span>
+    <span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">train_test_split</span><span class="p">(</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span>
+    <span class="p">)</span>
+
+    <span class="c1"># SVM 학습</span>
+    <span class="n">clf</span> <span class="o">=</span> <span class="n">svm</span><span class="o">.</span><span class="n">LinearSVC</span><span class="p">(</span><span class="n">C</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
+    <span class="n">clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+
+    <span class="c1"># 정확도 출력</span>
+    <span class="n">accuracy</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;테스트 정확도: </span><span class="si">{</span><span class="n">accuracy</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">hog</span><span class="p">,</span> <span class="n">clf</span>
+
+<span class="c1"># 학습된 SVM을 HOGDescriptor에 설정하는 방법</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">set_svm_detector</span><span class="p">(</span><span class="n">hog</span><span class="p">,</span> <span class="n">clf</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;학습된 SVM을 HOG 검출기에 설정&quot;&quot;&quot;</span>
+    <span class="c1"># LinearSVC의 계수와 절편을 추출</span>
+    <span class="n">sv</span> <span class="o">=</span> <span class="n">clf</span><span class="o">.</span><span class="n">coef_</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="n">rho</span> <span class="o">=</span> <span class="o">-</span><span class="n">clf</span><span class="o">.</span><span class="n">intercept_</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="c1"># HOG 디스크립터가 기대하는 형식으로 변환</span>
+    <span class="n">detector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sv</span><span class="p">,</span> <span class="n">rho</span><span class="p">)</span>
+
+    <span class="n">hog</span><span class="o">.</span><span class="n">setSVMDetector</span><span class="p">(</span><span class="n">detector</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">hog</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 연습 문제<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="1">문제 1: 다중 템플릿 매칭<a class="header-link" href="#1" title="Permanent link">&para;</a></h3>
+<p>여러 종류의 템플릿을 동시에 매칭하는 프로그램을 작성하세요.</p>
+<p><strong>요구사항</strong>:
+- 3개 이상의 서로 다른 템플릿 이미지 사용
+- 각 템플릿에 대해 다른 색상으로 검출 결과 표시
+- 각 템플릿의 매칭 점수 출력</p>
+<details>
+<summary>힌트</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="n">templates</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s1">&#39;template1.jpg&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>   <span class="c1"># 파란색</span>
+    <span class="p">(</span><span class="s1">&#39;template2.jpg&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>   <span class="c1"># 녹색</span>
+    <span class="p">(</span><span class="s1">&#39;template3.jpg&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">))</span>    <span class="c1"># 빨간색</span>
+<span class="p">]</span>
+
+<span class="k">for</span> <span class="n">template_path</span><span class="p">,</span> <span class="n">color</span> <span class="ow">in</span> <span class="n">templates</span><span class="p">:</span>
+    <span class="n">template</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imread</span><span class="p">(</span><span class="n">template_path</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">IMREAD_GRAYSCALE</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">matchTemplate</span><span class="p">(</span><span class="n">img_gray</span><span class="p">,</span> <span class="n">template</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">TM_CCOEFF_NORMED</span><span class="p">)</span>
+    <span class="c1"># ... 매칭 및 그리기</span>
+</code></pre></div>
+
+
+
+</details>
+
+<h3 id="2_1">문제 2: 회전 불변 템플릿 매칭<a class="header-link" href="#2_1" title="Permanent link">&para;</a></h3>
+<p>템플릿을 다양한 각도로 회전시켜 매칭하는 프로그램을 구현하세요.</p>
+<p><strong>요구사항</strong>:
+- 템플릿을 0도부터 360도까지 10도 간격으로 회전
+- 각 회전 각도에서 가장 높은 매칭 점수 기록
+- 최적의 회전 각도와 위치 출력</p>
+<details>
+<summary>힌트</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">rotate_image</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">angle</span><span class="p">):</span>
+    <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">center</span> <span class="o">=</span> <span class="p">(</span><span class="n">w</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">h</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">M</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">getRotationMatrix2D</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">angle</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">rotated</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">warpAffine</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">rotated</span>
+
+<span class="k">for</span> <span class="n">angle</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">360</span><span class="p">,</span> <span class="mi">10</span><span class="p">):</span>
+    <span class="n">rotated_template</span> <span class="o">=</span> <span class="n">rotate_image</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">angle</span><span class="p">)</span>
+    <span class="c1"># 템플릿 매칭 수행</span>
+</code></pre></div>
+
+
+
+</details>
+
+<h3 id="3_1">문제 3: 실시간 얼굴 검출 최적화<a class="header-link" href="#3_1" title="Permanent link">&para;</a></h3>
+<p>웹캠에서 실시간으로 얼굴을 검출하되, 30 FPS 이상을 유지하도록 최적화하세요.</p>
+<p><strong>요구사항</strong>:
+- 프레임 크기 조절
+- detectMultiScale 매개변수 최적화
+- FPS 표시</p>
+<details>
+<summary>힌트</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="c1"># 최적화 팁:</span>
+<span class="c1"># 1. 프레임을 절반 크기로 축소</span>
+<span class="c1"># 2. scaleFactor를 1.2~1.3으로 증가</span>
+<span class="c1"># 3. minNeighbors를 3으로 낮춤</span>
+<span class="c1"># 4. minSize를 적절히 설정</span>
+
+<span class="n">cap</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">VideoCapture</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="n">ret</span><span class="p">,</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">cap</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+    <span class="n">small_frame</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">fx</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">fy</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+    <span class="c1"># 검출 후 좌표를 2배로 스케일</span>
+</code></pre></div>
+
+
+
+</details>
+
+<h3 id="4-hog">문제 4: HOG 시각화 도구<a class="header-link" href="#4-hog" title="Permanent link">&para;</a></h3>
+<p>이미지의 HOG 특징을 실시간으로 시각화하는 프로그램을 작성하세요.</p>
+<p><strong>요구사항</strong>:
+- 트랙바로 HOG 파라미터 조절 (cell_size, nbins)
+- 원본 이미지와 HOG 시각화를 나란히 표시
+- 특징 벡터의 차원 표시</p>
+<details>
+<summary>힌트</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">on_trackbar</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+    <span class="n">cell_size</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">getTrackbarPos</span><span class="p">(</span><span class="s1">&#39;Cell Size&#39;</span><span class="p">,</span> <span class="s1">&#39;HOG&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cell_size</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="n">cell_size</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="c1"># HOG 재계산 및 시각화</span>
+</code></pre></div>
+
+
+
+</details>
+
+<h3 id="5">문제 5: 자동차 번호판 검출기<a class="header-link" href="#5" title="Permanent link">&para;</a></h3>
+<p>Haar Cascade 또는 템플릿 매칭을 사용하여 자동차 번호판을 검출하는 프로그램을 구현하세요.</p>
+<p><strong>요구사항</strong>:
+- 번호판 영역 검출
+- 검출된 영역 크롭 및 저장
+- 신뢰도 점수 표시</p>
+<details>
+<summary>힌트</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="c1"># haarcascade_russian_plate_number.xml 또는</span>
+<span class="c1"># 직접 학습한 cascade 사용</span>
+
+<span class="c1"># 또는 번호판 특성을 이용한 검출:</span>
+<span class="c1"># 1. 엣지 검출</span>
+<span class="c1"># 2. 직사각형 윤곽선 검출</span>
+<span class="c1"># 3. 가로세로 비율 필터링 (번호판은 보통 4:1 ~ 5:1)</span>
+</code></pre></div>
+
+
+
+</details>
+
+<hr />
+<h2 id="_12">다음 단계<a class="header-link" href="#_12" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./16_Face_Detection.md">16_Face_Detection.md</a> - dlib, face_recognition, 실시간 얼굴 인식</li>
+</ul>
+<hr />
+<h2 id="_13">참고 자료<a class="header-link" href="#_13" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://docs.opencv.org/4.x/d4/dc6/tutorial_py_template_matching.html">OpenCV Template Matching</a></li>
+<li><a href="https://docs.opencv.org/4.x/db/d28/tutorial_cascade_classifier.html">OpenCV Cascade Classifier</a></li>
+<li><a href="https://learnopencv.com/histogram-of-oriented-gradients/">HOG Tutorial - Learn OpenCV</a></li>
+<li>Dalal, N., &amp; Triggs, B. (2005). "Histograms of Oriented Gradients for Human Detection"</li>
+<li>Viola, P., &amp; Jones, M. (2001). "Rapid Object Detection using a Boosted Cascade of Simple Features"</li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Computer_Vision/14_Feature_Matching.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">특징점 매칭 (Feature Matching)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Computer_Vision/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Computer_Vision/16_Face_Detection.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">얼굴 검출 및 인식 (Face Detection and Recognition)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

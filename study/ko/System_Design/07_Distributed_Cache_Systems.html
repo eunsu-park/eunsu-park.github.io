@@ -1,0 +1,1228 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>분산 캐시 시스템 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/System_Design/">System Design</a>
+    <span class="separator">/</span>
+    <span class="current">분산 캐시 시스템</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>분산 캐시 시스템</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/System_Design/06_Caching_Strategies.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">캐싱 전략</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/System_Design/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/System_Design/08_Database_Scaling.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">데이터베이스 확장</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_2">개요</a></li>
+<li><a href="#_3">목차</a></li>
+<li><a href="#1">1. 분산 캐시란?</a><ul>
+<li><a href="#11">1.1 분산 캐시의 필요성</a></li>
+<li><a href="#12-vs">1.2 로컬 캐시 vs 분산 캐시</a></li>
+</ul>
+</li>
+<li><a href="#2-redis">2. Redis 데이터 구조</a><ul>
+<li><a href="#21-string">2.1 String</a></li>
+<li><a href="#22-hash">2.2 Hash</a></li>
+<li><a href="#23-list">2.3 List</a></li>
+<li><a href="#24-set">2.4 Set</a></li>
+<li><a href="#25-sorted-set-zset">2.5 Sorted Set (ZSet)</a></li>
+<li><a href="#26">2.6 데이터 구조 요약</a></li>
+</ul>
+</li>
+<li><a href="#3-redis-sentinel">3. Redis 클러스터와 Sentinel</a><ul>
+<li><a href="#31-redis-sentinel">3.1 Redis Sentinel</a></li>
+<li><a href="#32-redis-cluster">3.2 Redis Cluster</a></li>
+<li><a href="#33-sentinel-vs-cluster">3.3 Sentinel vs Cluster</a></li>
+</ul>
+</li>
+<li><a href="#4-memcached">4. Memcached 비교</a><ul>
+<li><a href="#41-redis-vs-memcached">4.1 Redis vs Memcached</a></li>
+<li><a href="#42">4.2 비교 표</a></li>
+<li><a href="#43">4.3 선택 기준</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 일관성 해싱</a><ul>
+<li><a href="#51">5.1 기존 해싱의 문제</a></li>
+<li><a href="#52">5.2 일관성 해싱 원리</a></li>
+<li><a href="#53-virtual-nodes">5.3 가상 노드 (Virtual Nodes)</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 연습 문제</a><ul>
+<li><a href="#1-redis">문제 1: Redis 데이터 구조 선택</a></li>
+<li><a href="#2-sentinel-vs-cluster">문제 2: Sentinel vs Cluster</a></li>
+<li><a href="#3">문제 3: 일관성 해싱</a></li>
+<li><a href="#4-redis">문제 4: Redis 설계</a></li>
+</ul>
+</li>
+<li><a href="#_4">정답</a><ul>
+<li><a href="#1_1">문제 1 정답</a></li>
+<li><a href="#2">문제 2 정답</a></li>
+<li><a href="#3_1">문제 3 정답</a></li>
+<li><a href="#4">문제 4 정답</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 다음 단계</a><ul>
+<li><a href="#_5">다음 레슨</a></li>
+<li><a href="#_6">관련 레슨</a></li>
+<li><a href="#_7">추천 실습</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 참고 자료</a><ul>
+<li><a href="#_8">공식 문서</a></li>
+<li><a href="#_9">도구</a></li>
+<li><a href="#_10">논문</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="_1">분산 캐시 시스템<a class="header-link" href="#_1" title="Permanent link">&para;</a></h1>
+<h2 id="_2">개요<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<p>이 문서에서는 분산 캐시 시스템의 핵심 개념을 다룹니다. Redis의 데이터 구조와 클러스터 구성, Memcached와의 비교, 그리고 일관성 해싱(Consistent Hashing)을 학습합니다.</p>
+<p><strong>난이도</strong>: ⭐⭐⭐
+<strong>예상 학습 시간</strong>: 2-3시간
+<strong>선수 지식</strong>: <a href="./06_Caching_Strategies.md">06_Caching_Strategies.md</a></p>
+<hr />
+<h2 id="_3">목차<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-분산-캐시란">분산 캐시란?</a></li>
+<li><a href="#2-redis-데이터-구조">Redis 데이터 구조</a></li>
+<li><a href="#3-redis-클러스터와-sentinel">Redis 클러스터와 Sentinel</a></li>
+<li><a href="#4-memcached-비교">Memcached 비교</a></li>
+<li><a href="#5-일관성-해싱">일관성 해싱</a></li>
+<li><a href="#6-연습-문제">연습 문제</a></li>
+<li><a href="#7-다음-단계">다음 단계</a></li>
+<li><a href="#8-참고-자료">참고 자료</a></li>
+</ol>
+<hr />
+<h2 id="1">1. 분산 캐시란?<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="11">1.1 분산 캐시의 필요성<a class="header-link" href="#11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                   분산 캐시의 필요성                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  로컬 캐시의 문제:                                              │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  [Server 1]     [Server 2]     [Server 3]                  │ │
+│  │  Local Cache    Local Cache    Local Cache                 │ │
+│  │  user:123 ✓     user:123 ✗     user:123 ✗                  │ │
+│  │                                                            │ │
+│  │  문제:                                                     │ │
+│  │  1. 각 서버의 캐시가 다름 (불일치)                         │ │
+│  │  2. 메모리 낭비 (같은 데이터 중복)                         │ │
+│  │  3. 캐시 무효화 어려움                                     │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  분산 캐시 적용:                                                │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  [Server 1]     [Server 2]     [Server 3]                  │ │
+│  │       │              │              │                      │ │
+│  │       └──────────────┼──────────────┘                      │ │
+│  │                      │                                     │ │
+│  │                      ▼                                     │ │
+│  │            ┌────────────────────┐                          │ │
+│  │            │   Distributed      │                          │ │
+│  │            │   Cache (Redis)    │                          │ │
+│  │            │   user:123 ✓       │                          │ │
+│  │            └────────────────────┘                          │ │
+│  │                                                            │ │
+│  │  장점:                                                     │ │
+│  │  1. 모든 서버가 같은 캐시 공유                             │ │
+│  │  2. 캐시 일관성 유지                                       │ │
+│  │  3. 중앙 집중식 관리                                       │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="12-vs">1.2 로컬 캐시 vs 분산 캐시<a class="header-link" href="#12-vs" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>로컬 캐시</th>
+<th>분산 캐시</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>저장 위치</td>
+<td>애플리케이션 메모리</td>
+<td>별도 서버 (Redis 등)</td>
+</tr>
+<tr>
+<td>속도</td>
+<td>매우 빠름 (ns~us)</td>
+<td>빠름 (ms)</td>
+</tr>
+<tr>
+<td>용량</td>
+<td>서버 메모리 제한</td>
+<td>확장 가능</td>
+</tr>
+<tr>
+<td>일관성</td>
+<td>서버별 다름</td>
+<td>공유/일관</td>
+</tr>
+<tr>
+<td>장애</td>
+<td>서버 재시작 시 손실</td>
+<td>독립적 관리 가능</td>
+</tr>
+<tr>
+<td>사용 예</td>
+<td>단일 서버, 읽기 전용</td>
+<td>다중 서버, 세션 등</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-redis">2. Redis 데이터 구조<a class="header-link" href="#2-redis" title="Permanent link">&para;</a></h2>
+<h3 id="21-string">2.1 String<a class="header-link" href="#21-string" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                       String                                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  가장 기본적인 키-값 저장                                       │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  SET user:123:name &quot;John&quot;                                  │ │
+│  │  GET user:123:name  → &quot;John&quot;                               │ │
+│  │                                                            │ │
+│  │  # 만료 시간 설정 (초)                                     │ │
+│  │  SET session:abc &quot;data&quot; EX 3600                            │ │
+│  │  SETEX session:abc 3600 &quot;data&quot;  # 동일                     │ │
+│  │                                                            │ │
+│  │  # 원자적 증가/감소                                        │ │
+│  │  SET counter 0                                             │ │
+│  │  INCR counter  → 1                                         │ │
+│  │  INCRBY counter 10  → 11                                   │ │
+│  │  DECR counter  → 10                                        │ │
+│  │                                                            │ │
+│  │  # NX (Not eXists): 키가 없을 때만 설정                    │ │
+│  │  SET lock:resource &quot;owner&quot; NX EX 30  # 분산 락             │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  사용 사례:                                                     │
+│  • 세션 저장                                                    │
+│  • 캐시 (JSON 직렬화)                                           │
+│  • 카운터 (조회수, 좋아요)                                      │
+│  • 분산 락                                                      │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="22-hash">2.2 Hash<a class="header-link" href="#22-hash" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                        </span><span class="n">Hash</span><span class="w">                                      </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">필드</span><span class="o">-</span><span class="n">값</span><span class="w"> </span><span class="n">쌍의</span><span class="w"> </span><span class="n">컬렉션</span><span class="w"> </span><span class="p">(</span><span class="n">객체</span><span class="w"> </span><span class="n">저장에</span><span class="w"> </span><span class="n">적합</span><span class="p">)</span><span class="w">                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">#</span><span class="w"> </span><span class="n">사용자</span><span class="w"> </span><span class="n">객체</span><span class="w"> </span><span class="n">저장</span><span class="w">                                        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">HSET</span><span class="w"> </span><span class="k">user</span><span class="err">:</span><span class="mi">123</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="ss">&quot;John&quot;</span><span class="w"> </span><span class="n">age</span><span class="w"> </span><span class="mi">30</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="ss">&quot;john@example.com&quot;</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">#</span><span class="w"> </span><span class="n">단일</span><span class="w"> </span><span class="n">필드</span><span class="w"> </span><span class="n">조회</span><span class="w">                                          </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">HGET</span><span class="w"> </span><span class="k">user</span><span class="err">:</span><span class="mi">123</span><span class="w"> </span><span class="n">name</span><span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="ss">&quot;John&quot;</span><span class="w">                              </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">#</span><span class="w"> </span><span class="n">전체</span><span class="w"> </span><span class="n">조회</span><span class="w">                                               </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">HGETALL</span><span class="w"> </span><span class="k">user</span><span class="err">:</span><span class="mi">123</span><span class="w">                                          </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="err">{</span><span class="ss">&quot;name&quot;</span><span class="err">:</span><span class="w"> </span><span class="ss">&quot;John&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;age&quot;</span><span class="err">:</span><span class="w"> </span><span class="ss">&quot;30&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;email&quot;</span><span class="err">:</span><span class="w"> </span><span class="ss">&quot;...&quot;</span><span class="err">}</span><span class="w">           </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">#</span><span class="w"> </span><span class="n">필드</span><span class="w"> </span><span class="n">증가</span><span class="w">                                               </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">HINCRBY</span><span class="w"> </span><span class="k">user</span><span class="err">:</span><span class="mi">123</span><span class="w"> </span><span class="n">age</span><span class="w"> </span><span class="mi">1</span><span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="mi">31</span><span class="w">                              </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">#</span><span class="w"> </span><span class="n">필드</span><span class="w"> </span><span class="n">존재</span><span class="w"> </span><span class="n">확인</span><span class="w">                                          </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">HEXISTS</span><span class="w"> </span><span class="k">user</span><span class="err">:</span><span class="mi">123</span><span class="w"> </span><span class="n">name</span><span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="mi">1</span><span class="w">                                </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nl">구조</span><span class="p">:</span><span class="w">                                                     </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────────────────────────────────┐</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="k">user</span><span class="err">:</span><span class="mi">123</span><span class="w">                                        </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nl">name</span><span class="p">:</span><span class="w"> </span><span class="ss">&quot;John&quot;</span><span class="w">                              </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="nl">age</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="w">                                   </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="nl">email</span><span class="p">:</span><span class="w"> </span><span class="ss">&quot;john@example.com&quot;</span><span class="w">                 </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">└─────────────────────────────────────────────────┘</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">장점</span><span class="w"> </span><span class="p">(</span><span class="n">vs</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">JSON</span><span class="p">)</span><span class="err">:</span><span class="w">                                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">개별</span><span class="w"> </span><span class="n">필드</span><span class="w"> </span><span class="n">접근</span><span class="o">/</span><span class="n">수정</span><span class="w"> </span><span class="n">가능</span><span class="w">                                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">부분</span><span class="w"> </span><span class="n">업데이트</span><span class="w"> </span><span class="n">효율적</span><span class="w">                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">메모리</span><span class="w"> </span><span class="n">효율</span><span class="w"> </span><span class="p">(</span><span class="n">작은</span><span class="w"> </span><span class="n">해시</span><span class="p">)</span><span class="w">                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="23-list">2.3 List<a class="header-link" href="#23-list" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                        </span><span class="n">List</span><span class="w">                                      </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">순서가</span><span class="w"> </span><span class="n">있는</span><span class="w"> </span><span class="n">문자열</span><span class="w"> </span><span class="n">컬렉션</span><span class="w"> </span><span class="p">(</span><span class="n">Linked</span><span class="w"> </span><span class="n">List</span><span class="p">)</span><span class="w">                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">#</span><span class="w"> </span><span class="n">오른쪽에</span><span class="w"> </span><span class="n">추가</span><span class="w"> </span><span class="p">(</span><span class="n">Queue</span><span class="w"> </span><span class="n">용도</span><span class="p">)</span><span class="w">                              </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">RPUSH</span><span class="w"> </span><span class="nl">queue</span><span class="p">:</span><span class="n">jobs</span><span class="w"> </span><span class="ss">&quot;job1&quot;</span><span class="w"> </span><span class="ss">&quot;job2&quot;</span><span class="w"> </span><span class="ss">&quot;job3&quot;</span><span class="w">                     </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">#</span><span class="w"> </span><span class="n">왼쪽에서</span><span class="w"> </span><span class="n">꺼내기</span><span class="w">                                         </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">LPOP</span><span class="w"> </span><span class="nl">queue</span><span class="p">:</span><span class="n">jobs</span><span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="ss">&quot;job1&quot;</span><span class="w">                                 </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">#</span><span class="w"> </span><span class="n">왼쪽에</span><span class="w"> </span><span class="n">추가</span><span class="w"> </span><span class="p">(</span><span class="n">Stack</span><span class="w"> </span><span class="n">용도</span><span class="p">)</span><span class="w">                                </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">LPUSH</span><span class="w"> </span><span class="nl">stack</span><span class="p">:</span><span class="n">items</span><span class="w"> </span><span class="ss">&quot;item1&quot;</span><span class="w">                                 </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">LPOP</span><span class="w"> </span><span class="nl">stack</span><span class="p">:</span><span class="n">items</span><span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="ss">&quot;item1&quot;</span><span class="w">                               </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">#</span><span class="w"> </span><span class="n">범위</span><span class="w"> </span><span class="n">조회</span><span class="w">                                               </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">LRANGE</span><span class="w"> </span><span class="nl">queue</span><span class="p">:</span><span class="n">jobs</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="o">[</span><span class="n">&quot;job2&quot;, &quot;job3&quot;</span><span class="o">]</span><span class="w">                </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">#</span><span class="w"> </span><span class="n">블로킹</span><span class="w"> </span><span class="n">Pop</span><span class="w"> </span><span class="p">(</span><span class="n">작업</span><span class="w"> </span><span class="n">큐</span><span class="p">)</span><span class="w">                                    </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">BLPOP</span><span class="w"> </span><span class="nl">queue</span><span class="p">:</span><span class="n">jobs</span><span class="w"> </span><span class="mi">30</span><span class="w">  </span><span class="err">#</span><span class="w"> </span><span class="mi">30</span><span class="n">초</span><span class="w"> </span><span class="n">대기</span><span class="w">                          </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nl">구조</span><span class="p">:</span><span class="w">                                                     </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────────────────────────────────┐</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nl">queue</span><span class="p">:</span><span class="n">jobs</span><span class="w">                                      </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="o">[</span><span class="n">job2</span><span class="o">]</span><span class="w"> </span><span class="err">←→</span><span class="w"> </span><span class="o">[</span><span class="n">job3</span><span class="o">]</span><span class="w">                              </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">    </span><span class="n">Head</span><span class="w">        </span><span class="n">Tail</span><span class="w">                             </span><span class="err">│</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">└─────────────────────────────────────────────────┘</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">사용</span><span class="w"> </span><span class="nl">사례</span><span class="p">:</span><span class="w">                                                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">작업</span><span class="w"> </span><span class="n">큐</span><span class="w"> </span><span class="p">(</span><span class="n">Job</span><span class="w"> </span><span class="n">Queue</span><span class="p">)</span><span class="w">                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">최근</span><span class="w"> </span><span class="n">항목</span><span class="w"> </span><span class="n">리스트</span><span class="w"> </span><span class="p">(</span><span class="n">최근</span><span class="w"> </span><span class="n">본</span><span class="w"> </span><span class="n">상품</span><span class="p">)</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">타임라인</span><span class="w">                                                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="24-set">2.4 Set<a class="header-link" href="#24-set" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                         Set                                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  중복 없는 문자열 컬렉션 (순서 없음)                            │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  # 멤버 추가                                               │ │
+│  │  SADD user:123:followers &quot;user:456&quot; &quot;user:789&quot;             │ │
+│  │                                                            │ │
+│  │  # 멤버 확인                                               │ │
+│  │  SISMEMBER user:123:followers &quot;user:456&quot;  → 1              │ │
+│  │                                                            │ │
+│  │  # 전체 멤버                                               │ │
+│  │  SMEMBERS user:123:followers  → {&quot;user:456&quot;, &quot;user:789&quot;}   │ │
+│  │                                                            │ │
+│  │  # 집합 연산                                               │ │
+│  │  SINTER user:123:followers user:456:followers  # 교집합    │ │
+│  │  SUNION user:123:followers user:456:followers  # 합집합    │ │
+│  │  SDIFF user:123:followers user:456:followers   # 차집합    │ │
+│  │                                                            │ │
+│  │  # 개수                                                    │ │
+│  │  SCARD user:123:followers  → 2                             │ │
+│  │                                                            │ │
+│  │  구조:                                                     │ │
+│  │  ┌─────────────────────────────────────────────────┐       │ │
+│  │  │ user:123:followers                              │       │ │
+│  │  │   { &quot;user:456&quot;, &quot;user:789&quot; }                    │       │ │
+│  │  └─────────────────────────────────────────────────┘       │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  사용 사례:                                                     │
+│  • 태그                                                         │
+│  • 팔로워/팔로잉                                                │
+│  • 좋아요 사용자 목록                                           │
+│  • 고유 방문자                                                  │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="25-sorted-set-zset">2.5 Sorted Set (ZSet)<a class="header-link" href="#25-sorted-set-zset" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                     Sorted Set                                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  점수(score)로 정렬된 Set                                       │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  # 점수와 함께 추가                                        │ │
+│  │  ZADD leaderboard 100 &quot;user:123&quot; 85 &quot;user:456&quot; 92 &quot;user:789&quot;│ │
+│  │                                                            │ │
+│  │  # 순위별 조회 (오름차순)                                  │ │
+│  │  ZRANGE leaderboard 0 2 WITHSCORES                         │ │
+│  │  → [(&quot;user:456&quot;, 85), (&quot;user:789&quot;, 92), (&quot;user:123&quot;, 100)] │ │
+│  │                                                            │ │
+│  │  # 순위별 조회 (내림차순) - 상위 3명                       │ │
+│  │  ZREVRANGE leaderboard 0 2 WITHSCORES                      │ │
+│  │  → [(&quot;user:123&quot;, 100), (&quot;user:789&quot;, 92), (&quot;user:456&quot;, 85)] │ │
+│  │                                                            │ │
+│  │  # 점수 범위 조회                                          │ │
+│  │  ZRANGEBYSCORE leaderboard 80 95 WITHSCORES                │ │
+│  │                                                            │ │
+│  │  # 순위 조회                                               │ │
+│  │  ZRANK leaderboard &quot;user:123&quot;  → 2 (0부터 시작)            │ │
+│  │  ZREVRANK leaderboard &quot;user:123&quot;  → 0 (1등)                │ │
+│  │                                                            │ │
+│  │  # 점수 증가                                               │ │
+│  │  ZINCRBY leaderboard 10 &quot;user:456&quot;  → 95                   │ │
+│  │                                                            │ │
+│  │  구조:                                                     │ │
+│  │  ┌─────────────────────────────────────────────────┐       │ │
+│  │  │ leaderboard                                     │       │ │
+│  │  │   score: 85  → &quot;user:456&quot;                       │       │ │
+│  │  │   score: 92  → &quot;user:789&quot;                       │       │ │
+│  │  │   score: 100 → &quot;user:123&quot;                       │       │ │
+│  │  └─────────────────────────────────────────────────┘       │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  사용 사례:                                                     │
+│  • 리더보드                                                     │
+│  • 우선순위 큐                                                  │
+│  • 시간순 타임라인 (score = timestamp)                          │
+│  • Rate Limiting (슬라이딩 윈도우)                              │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="26">2.6 데이터 구조 요약<a class="header-link" href="#26" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>타입</th>
+<th>구조</th>
+<th>시간 복잡도</th>
+<th>사용 예</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>String</td>
+<td>키-값</td>
+<td>O(1)</td>
+<td>캐시, 세션, 카운터</td>
+</tr>
+<tr>
+<td>Hash</td>
+<td>필드-값 맵</td>
+<td>O(1)</td>
+<td>객체, 사용자 프로필</td>
+</tr>
+<tr>
+<td>List</td>
+<td>연결 리스트</td>
+<td>O(1) Push/Pop</td>
+<td>큐, 최근 항목</td>
+</tr>
+<tr>
+<td>Set</td>
+<td>해시셋</td>
+<td>O(1)</td>
+<td>태그, 유니크 방문자</td>
+</tr>
+<tr>
+<td>Sorted Set</td>
+<td>스킵 리스트</td>
+<td>O(log N)</td>
+<td>리더보드, 랭킹</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-redis-sentinel">3. Redis 클러스터와 Sentinel<a class="header-link" href="#3-redis-sentinel" title="Permanent link">&para;</a></h2>
+<h3 id="31-redis-sentinel">3.1 Redis Sentinel<a class="header-link" href="#31-redis-sentinel" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    Redis Sentinel                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  &quot;Redis 고가용성을 위한 모니터링 및 자동 페일오버&quot;              │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │        ┌─────────────────────────────────────┐             │ │
+│  │        │         Sentinels                   │             │ │
+│  │        │  ┌───────┐ ┌───────┐ ┌───────┐     │             │ │
+│  │        │  │Sent 1 │ │Sent 2 │ │Sent 3 │     │             │ │
+│  │        │  └───┬───┘ └───┬───┘ └───┬───┘     │             │ │
+│  │        │      │         │         │         │             │ │
+│  │        └──────┼─────────┼─────────┼─────────┘             │ │
+│  │               │         │         │                        │ │
+│  │        ┌──────┴─────────┴─────────┴──────┐                 │ │
+│  │        │                                 │                 │ │
+│  │        ▼                                 ▼                 │ │
+│  │   ┌─────────┐                      ┌─────────┐             │ │
+│  │   │ Master  │ ════복제════════▶    │ Replica │             │ │
+│  │   │  (R/W)  │                      │  (R/O)  │             │ │
+│  │   └─────────┘                      └─────────┘             │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  역할:                                                          │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  1. 모니터링: Master/Replica 상태 감시                     │ │
+│  │  2. 알림: 장애 발생 시 관리자에게 알림                     │ │
+│  │  3. 자동 페일오버: Master 장애 시 Replica를 Master로 승격  │ │
+│  │  4. 설정 제공: 클라이언트에게 현재 Master 주소 제공        │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  페일오버 과정:                                                 │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  1. Master 장애 감지 (다수 Sentinel 동의)                  │ │
+│  │  2. 하나의 Sentinel이 리더로 선출                          │ │
+│  │  3. 리더가 Replica 중 하나를 Master로 승격                 │ │
+│  │  4. 다른 Replica들이 새 Master에 연결                      │ │
+│  │  5. 클라이언트에게 새 Master 주소 전달                     │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  제약:                                                          │
+│  • 수평 확장 불가 (단일 Master)                                 │
+│  • 쓰기는 Master에만 가능                                       │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="32-redis-cluster">3.2 Redis Cluster<a class="header-link" href="#32-redis-cluster" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│<span class="w">                    </span><span class="nv">Redis</span><span class="w"> </span><span class="nv">Cluster</span><span class="w">                                 </span>│
+├─────────────────────────────────────────────────────────────────┤
+│<span class="w">                                                                  </span>│
+│<span class="w">  </span><span class="s2">&quot;Redis 수평 확장 및 자동 샤딩&quot;</span><span class="w">                                 </span>│
+│<span class="w">                                                                  </span>│
+│<span class="w">  </span>┌────────────────────────────────────────────────────────────┐<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">                                                            </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="mi">16384</span><span class="w"> </span><span class="nv">Hash</span><span class="w"> </span><span class="nv">Slots</span><span class="w"> </span>분배:<span class="w">                                    </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">                                                            </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>┌─────────────┐<span class="w"> </span>┌─────────────┐<span class="w"> </span>┌─────────────┐<span class="w">          </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>│<span class="w">   </span><span class="nv">Node</span><span class="w"> </span><span class="nv">A</span><span class="w">    </span>│<span class="w"> </span>│<span class="w">   </span><span class="nv">Node</span><span class="w"> </span><span class="nv">B</span><span class="w">    </span>│<span class="w"> </span>│<span class="w">   </span><span class="nv">Node</span><span class="w"> </span><span class="nv">C</span><span class="w">    </span>│<span class="w">          </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>│<span class="w"> </span><span class="nv">Master</span><span class="w">      </span>│<span class="w"> </span>│<span class="w"> </span><span class="nv">Master</span><span class="w">      </span>│<span class="w"> </span>│<span class="w"> </span><span class="nv">Master</span><span class="w">      </span>│<span class="w">          </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>│<span class="w"> </span><span class="nv">Slots</span>:<span class="w">      </span>│<span class="w"> </span>│<span class="w"> </span><span class="nv">Slots</span>:<span class="w">      </span>│<span class="w"> </span>│<span class="w"> </span><span class="nv">Slots</span>:<span class="w">      </span>│<span class="w">          </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>│<span class="w"> </span><span class="mi">0</span><span class="o">-</span><span class="mi">5460</span><span class="w">      </span>│<span class="w"> </span>│<span class="w"> </span><span class="mi">5461</span><span class="o">-</span><span class="mi">10922</span><span class="w">  </span>│<span class="w"> </span>│<span class="w"> </span><span class="mi">10923</span><span class="o">-</span><span class="mi">16383</span><span class="w"> </span>│<span class="w">          </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>└──────┬──────┘<span class="w"> </span>└──────┬──────┘<span class="w"> </span>└──────┬──────┘<span class="w">          </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">         </span>│<span class="w">               </span>│<span class="w">               </span>│<span class="w">                  </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">         </span>▼<span class="w">               </span>▼<span class="w">               </span>▼<span class="w">                  </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>┌─────────────┐<span class="w"> </span>┌─────────────┐<span class="w"> </span>┌─────────────┐<span class="w">          </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>│<span class="w">  </span><span class="nv">Replica</span><span class="w"> </span><span class="nv">A</span><span class="w">  </span>│<span class="w"> </span>│<span class="w">  </span><span class="nv">Replica</span><span class="w"> </span><span class="nv">B</span><span class="w">  </span>│<span class="w"> </span>│<span class="w">  </span><span class="nv">Replica</span><span class="w"> </span><span class="nv">C</span><span class="w">  </span>│<span class="w">          </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>└─────────────┘<span class="w"> </span>└─────────────┘<span class="w"> </span>└─────────────┘<span class="w">          </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">                                                            </span>│<span class="w"> </span>│
+│<span class="w">  </span>└────────────────────────────────────────────────────────────┘<span class="w"> </span>│
+│<span class="w">                                                                  </span>│
+│<span class="w">  </span><span class="nv">Hash</span><span class="w"> </span><span class="nv">Slot</span><span class="w"> </span>계산:<span class="w">                                                </span>│
+│<span class="w">  </span>┌────────────────────────────────────────────────────────────┐<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">                                                            </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="nv">slot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">CRC16</span><span class="ss">(</span><span class="nv">key</span><span class="ss">)</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">16384</span><span class="w">                                 </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">                                                            </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>예:<span class="w"> </span><span class="nv">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;user:123&quot;</span><span class="w">                                      </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">      </span><span class="k">CRC16</span><span class="ss">(</span><span class="s2">&quot;user:123&quot;</span><span class="ss">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">12345</span><span class="w">                             </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">      </span><span class="nv">slot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">12345</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">16384</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">12345</span><span class="w"> </span>→<span class="w"> </span><span class="nv">Node</span><span class="w"> </span><span class="nv">C</span><span class="w">                 </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">                                                            </span>│<span class="w"> </span>│
+│<span class="w">  </span>└────────────────────────────────────────────────────────────┘<span class="w"> </span>│
+│<span class="w">                                                                  </span>│
+│<span class="w">  </span><span class="nv">Hash</span><span class="w"> </span><span class="nv">Tag</span><span class="w"> </span><span class="ss">(</span>같은<span class="w"> </span>슬롯<span class="w"> </span>강제<span class="ss">)</span>:<span class="w">                                     </span>│
+│<span class="w">  </span>┌────────────────────────────────────────────────────────────┐<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">                                                            </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>#<span class="w"> </span>{<span class="nv">user</span>:<span class="mi">123</span>}이<span class="w"> </span>해시<span class="w"> </span>대상<span class="w">                                  </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="nv">user</span>:{<span class="nv">user</span>:<span class="mi">123</span>}:<span class="nv">profile</span><span class="w">                                   </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="nv">user</span>:{<span class="nv">user</span>:<span class="mi">123</span>}:<span class="nv">settings</span><span class="w">                                  </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="nv">user</span>:{<span class="nv">user</span>:<span class="mi">123</span>}:<span class="nv">orders</span><span class="w">                                    </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">                                                            </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>→<span class="w"> </span>모두<span class="w"> </span>같은<span class="w"> </span>슬롯에<span class="w"> </span>저장됨<span class="w">                                 </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>→<span class="w"> </span>멀티<span class="w"> </span>키<span class="w"> </span>연산<span class="w"> </span>가능<span class="w">                                       </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">                                                            </span>│<span class="w"> </span>│
+│<span class="w">  </span>└────────────────────────────────────────────────────────────┘<span class="w"> </span>│
+│<span class="w">                                                                  </span>│
+│<span class="w">  </span>특징:<span class="w">                                                          </span>│
+│<span class="w">  </span>•<span class="w"> </span>수평<span class="w"> </span>확장<span class="w"> </span>가능<span class="w"> </span><span class="ss">(</span>노드<span class="w"> </span>추가<span class="ss">)</span><span class="w">                                   </span>│
+│<span class="w">  </span>•<span class="w"> </span>자동<span class="w"> </span>샤딩<span class="w">                                                    </span>│
+│<span class="w">  </span>•<span class="w"> </span>고가용성<span class="w"> </span><span class="ss">(</span><span class="nv">Replica</span><span class="w"> </span>자동<span class="w"> </span>페일오버<span class="ss">)</span><span class="w">                             </span>│
+│<span class="w">  </span>•<span class="w"> </span>일부<span class="w"> </span>제약:<span class="w"> </span>멀티<span class="w"> </span>키<span class="w"> </span>연산은<span class="w"> </span>같은<span class="w"> </span>슬롯만<span class="w"> </span>가능<span class="w">                   </span>│
+│<span class="w">                                                                  </span>│
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="33-sentinel-vs-cluster">3.3 Sentinel vs Cluster<a class="header-link" href="#33-sentinel-vs-cluster" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>Sentinel</th>
+<th>Cluster</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>목적</td>
+<td>고가용성</td>
+<td>고가용성 + 수평확장</td>
+</tr>
+<tr>
+<td>샤딩</td>
+<td>없음 (단일 Master)</td>
+<td>자동 샤딩</td>
+</tr>
+<tr>
+<td>용량</td>
+<td>단일 서버 메모리</td>
+<td>분산 저장</td>
+</tr>
+<tr>
+<td>복잡도</td>
+<td>낮음</td>
+<td>높음</td>
+</tr>
+<tr>
+<td>멀티 키 연산</td>
+<td>자유로움</td>
+<td>Hash Tag 필요</td>
+</tr>
+<tr>
+<td>적합한 경우</td>
+<td>중소규모</td>
+<td>대규모</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-memcached">4. Memcached 비교<a class="header-link" href="#4-memcached" title="Permanent link">&para;</a></h2>
+<h3 id="41-redis-vs-memcached">4.1 Redis vs Memcached<a class="header-link" href="#41-redis-vs-memcached" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│<span class="w">                  </span><span class="nv">Redis</span><span class="w"> </span><span class="nv">vs</span><span class="w"> </span><span class="nv">Memcached</span><span class="w">                              </span>│
+├─────────────────────────────────────────────────────────────────┤
+│<span class="w">                                                                  </span>│
+│<span class="w">  </span><span class="nv">Redis</span>:<span class="w">                                                         </span>│
+│<span class="w">  </span>┌────────────────────────────────────────────────────────────┐<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">                                                            </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>•<span class="w"> </span>다양한<span class="w"> </span>데이터<span class="w"> </span>구조<span class="w"> </span><span class="ss">(</span><span class="nv">String</span>,<span class="w"> </span><span class="nv">Hash</span>,<span class="w"> </span><span class="nv">List</span>,<span class="w"> </span><span class="nv">Set</span>,<span class="w"> </span><span class="nv">ZSet</span><span class="ss">)</span><span class="w">      </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>•<span class="w"> </span>영속성<span class="w"> </span>옵션<span class="w"> </span><span class="ss">(</span><span class="nv">RDB</span>,<span class="w"> </span><span class="nv">AOF</span><span class="ss">)</span><span class="w">                                  </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>•<span class="w"> </span>복제<span class="w"> </span>및<span class="w"> </span>클러스터<span class="w"> </span>지원<span class="w">                                   </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>•<span class="w"> </span><span class="nv">Pub</span><span class="o">/</span><span class="nv">Sub</span>,<span class="w"> </span><span class="nv">Lua</span><span class="w"> </span>스크립트<span class="w">                                   </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>•<span class="w"> </span>트랜잭션<span class="w"> </span><span class="ss">(</span><span class="nv">MULTI</span><span class="o">/</span><span class="k">EXEC</span><span class="ss">)</span><span class="w">                                   </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>•<span class="w"> </span>단일<span class="w"> </span>스레드<span class="w"> </span><span class="ss">(</span>이벤트<span class="w"> </span>루프<span class="ss">)</span><span class="w">                               </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">                                                            </span>│<span class="w"> </span>│
+│<span class="w">  </span>└────────────────────────────────────────────────────────────┘<span class="w"> </span>│
+│<span class="w">                                                                  </span>│
+│<span class="w">  </span><span class="nv">Memcached</span>:<span class="w">                                                     </span>│
+│<span class="w">  </span>┌────────────────────────────────────────────────────────────┐<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">                                                            </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>•<span class="w"> </span>단순<span class="w"> </span>키<span class="o">-</span>값<span class="w"> </span>저장<span class="w"> </span><span class="ss">(</span><span class="nv">String</span>만<span class="ss">)</span><span class="w">                              </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>•<span class="w"> </span>영속성<span class="w"> </span>없음<span class="w"> </span><span class="ss">(</span>순수<span class="w"> </span>캐시<span class="ss">)</span><span class="w">                                 </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>•<span class="w"> </span>멀티스레드<span class="w"> </span><span class="ss">(</span>멀티코어<span class="w"> </span>활용<span class="ss">)</span><span class="w">                              </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>•<span class="w"> </span>단순하고<span class="w"> </span>가벼움<span class="w">                                         </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>•<span class="w"> </span><span class="nv">LRU</span><span class="w"> </span>캐시<span class="w"> </span>정책<span class="w">                                           </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span>•<span class="w"> </span>슬랩<span class="w"> </span>할당자<span class="w"> </span><span class="ss">(</span>메모리<span class="w"> </span>효율<span class="ss">)</span><span class="w">                               </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">                                                            </span>│<span class="w"> </span>│
+│<span class="w">  </span>└────────────────────────────────────────────────────────────┘<span class="w"> </span>│
+│<span class="w">                                                                  </span>│
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="42">4.2 비교 표<a class="header-link" href="#42" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>Redis</th>
+<th>Memcached</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>데이터 구조</td>
+<td>다양함</td>
+<td>String만</td>
+</tr>
+<tr>
+<td>영속성</td>
+<td>RDB, AOF</td>
+<td>없음</td>
+</tr>
+<tr>
+<td>복제</td>
+<td>지원</td>
+<td>없음</td>
+</tr>
+<tr>
+<td>클러스터</td>
+<td>지원</td>
+<td>클라이언트 샤딩</td>
+</tr>
+<tr>
+<td>스레딩</td>
+<td>싱글 (6.0+ 멀티)</td>
+<td>멀티</td>
+</tr>
+<tr>
+<td>메모리 효율</td>
+<td>좋음</td>
+<td>매우 좋음</td>
+</tr>
+<tr>
+<td>최대 값 크기</td>
+<td>512MB</td>
+<td>1MB</td>
+</tr>
+<tr>
+<td>사용 사례</td>
+<td>범용, 세션, 큐</td>
+<td>단순 캐시</td>
+</tr>
+</tbody>
+</table>
+<h3 id="43">4.3 선택 기준<a class="header-link" href="#43" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                     선택 가이드                                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Redis를 선택할 때:                                             │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ • 복잡한 데이터 구조 필요 (List, Set, Sorted Set)          │ │
+│  │ • 데이터 영속성 필요                                       │ │
+│  │ • Pub/Sub, 메시지 큐 기능 필요                             │ │
+│  │ • 복제 및 고가용성 필요                                    │ │
+│  │ • 세션 저장소                                              │ │
+│  │ • 리더보드, Rate Limiting                                  │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  Memcached를 선택할 때:                                         │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ • 단순 키-값 캐시만 필요                                   │ │
+│  │ • 멀티코어 활용 중요                                       │ │
+│  │ • 메모리 효율이 중요                                       │ │
+│  │ • 영속성 불필요                                            │ │
+│  │ • 매우 높은 처리량 필요                                    │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  대부분의 경우 Redis 권장 (기능 다양성, 생태계)                 │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 일관성 해싱<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="51">5.1 기존 해싱의 문제<a class="header-link" href="#51" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                   기존 해싱 문제                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Modular 해싱: hash(key) % N                                    │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  3개 서버:                                                 │ │
+│  │  hash(&quot;user:1&quot;) % 3 = 1 → Server 1                         │ │
+│  │  hash(&quot;user:2&quot;) % 3 = 2 → Server 2                         │ │
+│  │  hash(&quot;user:3&quot;) % 3 = 0 → Server 0                         │ │
+│  │                                                            │ │
+│  │  서버 1개 추가 (4개):                                      │ │
+│  │  hash(&quot;user:1&quot;) % 4 = 0 → Server 0  (변경!)                │ │
+│  │  hash(&quot;user:2&quot;) % 4 = 2 → Server 2                         │ │
+│  │  hash(&quot;user:3&quot;) % 4 = 3 → Server 3  (변경!)                │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  문제: 서버 추가/제거 시 대부분의 키가 재배치됨!                │
+│        → 캐시 미스 폭증 → 데이터베이스 부하                     │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  N개 서버 → N+1개 서버: N/(N+1) 키가 재배치                │ │
+│  │  예: 100 → 101개 서버: 약 99%의 키 재배치!                 │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="52">5.2 일관성 해싱 원리<a class="header-link" href="#52" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    일관성 해싱                                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  &quot;서버 추가/제거 시 최소한의 키만 재배치&quot;                       │
+│                                                                  │
+│  해시 링 (Hash Ring):                                           │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │                         0                                  │ │
+│  │                         │                                  │ │
+│  │                    ┌────┴────┐                             │ │
+│  │                    │         │                             │ │
+│  │           Node A ──●         ●── key1                      │ │
+│  │                   /           \                            │ │
+│  │                  /             \                           │ │
+│  │       key2 ●───●                 ●─── Node B               │ │
+│  │              Node C               \                        │ │
+│  │                  \                 \                       │ │
+│  │                   \                 ●── key3               │ │
+│  │                    \               /                       │ │
+│  │                     ●─────────────●                        │ │
+│  │                                                            │ │
+│  │  키 → 시계 방향으로 첫 번째 노드에 할당                    │ │
+│  │                                                            │ │
+│  │  key1 → Node B                                             │ │
+│  │  key2 → Node C                                             │ │
+│  │  key3 → Node A                                             │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  노드 추가 시:                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │           Node A ──●                                       │ │
+│  │                   /                                        │ │
+│  │       key2 ●───●                    ●── Node D (새로 추가) │ │
+│  │              Node C                 │                      │ │
+│  │                                     ●── key1 (Node D로 이동)│ │
+│  │                                     │                      │ │
+│  │                    ●─────────────●──┘                      │ │
+│  │                         Node B                             │ │
+│  │                                                            │ │
+│  │  key1만 Node B → Node D로 이동                             │ │
+│  │  나머지는 그대로!                                          │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  이론: K/N 키만 재배치 (K=전체 키, N=노드 수)                   │
+│  예: 100개 노드 → 101개: 약 1%만 재배치!                        │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="53-virtual-nodes">5.3 가상 노드 (Virtual Nodes)<a class="header-link" href="#53-virtual-nodes" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    가상 노드                                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  문제: 노드가 적으면 불균등 분배                                │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  2개 노드만 있을 때:                                       │ │
+│  │                                                            │ │
+│  │           Node A ──●                                       │ │
+│  │                   /   \                                    │ │
+│  │                  /     \                                   │ │
+│  │                 /       \                                  │ │
+│  │                /    많은 키가                              │ │
+│  │               /     Node B에                               │ │
+│  │              ●───── Node B                                 │ │
+│  │                                                            │ │
+│  │  → 불균등!                                                 │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  해결: 가상 노드 사용                                           │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  각 물리 노드를 여러 가상 노드로 표현                      │ │
+│  │                                                            │ │
+│  │  Node A → A-1, A-2, A-3, A-4, ...                          │ │
+│  │  Node B → B-1, B-2, B-3, B-4, ...                          │ │
+│  │                                                            │ │
+│  │            A-1 ●                                           │ │
+│  │               /  B-2 ●                                     │ │
+│  │              /       / A-3 ●                               │ │
+│  │         B-1 ●       /     /                                │ │
+│  │                    /     /                                 │ │
+│  │              A-2 ●─────●── B-3                             │ │
+│  │                                                            │ │
+│  │  → 더 균등한 분배!                                         │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  가상 노드 수:                                                  │
+│  • 많을수록 균등하지만 메모리 사용 증가                         │
+│  • 일반적으로 노드당 100-200개                                  │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 연습 문제<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="1-redis">문제 1: Redis 데이터 구조 선택<a class="header-link" href="#1-redis" title="Permanent link">&para;</a></h3>
+<p>다음 요구사항에 적합한 Redis 데이터 구조를 선택하세요.</p>
+<p>a) 사용자 세션 저장 (ID, 이름, 권한 등 포함)
+b) 실시간 게임 리더보드
+c) 최근 본 상품 10개 저장
+d) 사용자가 좋아요한 게시글 목록
+e) 채팅방 메시지 큐</p>
+<h3 id="2-sentinel-vs-cluster">문제 2: Sentinel vs Cluster<a class="header-link" href="#2-sentinel-vs-cluster" title="Permanent link">&para;</a></h3>
+<p>다음 시나리오에 Sentinel과 Cluster 중 무엇이 적합한지 선택하세요.</p>
+<p>a) 10GB 데이터, 고가용성 필요
+b) 1TB 데이터, 수평 확장 필요
+c) 복잡한 트랜잭션이 많은 서비스
+d) 단순 캐시, 초당 100만 요청</p>
+<h3 id="3">문제 3: 일관성 해싱<a class="header-link" href="#3" title="Permanent link">&para;</a></h3>
+<p>4개의 캐시 서버가 있고, 1개를 추가할 때:
+a) 기존 해싱에서 몇 %의 키가 재배치되나요?
+b) 일관성 해싱에서 몇 %의 키가 재배치되나요?</p>
+<h3 id="4-redis">문제 4: Redis 설계<a class="header-link" href="#4-redis" title="Permanent link">&para;</a></h3>
+<p>소셜 미디어 팔로우 기능을 Redis로 설계하세요.</p>
+<p>요구사항:
+- 사용자 A가 B를 팔로우
+- A의 팔로잉 목록 조회
+- B의 팔로워 목록 조회
+- A와 B의 공통 팔로잉 찾기</p>
+<hr />
+<h2 id="_4">정답<a class="header-link" href="#_4" title="Permanent link">&para;</a></h2>
+<h3 id="1_1">문제 1 정답<a class="header-link" href="#1_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>a) 사용자 세션: Hash
+   HSET session:abc123 user_id 123 name &quot;John&quot; role &quot;admin&quot;
+
+b) 리더보드: Sorted Set
+   ZADD leaderboard 1000 &quot;user:123&quot; 950 &quot;user:456&quot;
+
+c) 최근 본 상품: List (크기 제한)
+   LPUSH user:123:recent &quot;product:789&quot;
+   LTRIM user:123:recent 0 9  # 10개만 유지
+
+d) 좋아요 게시글: Set
+   SADD user:123:likes &quot;post:456&quot; &quot;post:789&quot;
+
+e) 채팅 메시지 큐: List
+   RPUSH chat:room1 &quot;{message...}&quot;
+   BLPOP chat:room1 0  # 소비자가 대기
+</code></pre></div>
+
+<h3 id="2">문제 2 정답<a class="header-link" href="#2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>a) 10GB, 고가용성: Sentinel
+   - 데이터 크기가 단일 서버에 적합
+   - Sentinel로 고가용성 확보
+   - 구성이 간단
+
+b) 1TB, 수평 확장: Cluster
+   - 대용량으로 분산 저장 필요
+   - 수평 확장으로 처리량 증가
+
+c) 복잡한 트랜잭션: Sentinel
+   - Cluster는 멀티 키 트랜잭션 제약
+   - 단일 Master로 트랜잭션 용이
+
+d) 단순 캐시, 고처리량: Cluster 또는 Memcached
+   - Cluster로 부하 분산
+   - 단순 캐시면 Memcached도 고려
+</code></pre></div>
+
+<h3 id="3_1">문제 3 정답<a class="header-link" href="#3_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>a) 기존 해싱: 약 80%
+   N/(N+1) = 4/5 = 80%의 키 재배치
+
+b) 일관성 해싱: 약 20%
+   K/N = 1/5 = 20%의 키만 재배치
+   (새 노드가 담당할 범위의 키만)
+</code></pre></div>
+
+<h3 id="4">문제 4 정답<a class="header-link" href="#4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code># 팔로우 설정
+# A가 B를 팔로우
+SADD user:A:following &quot;B&quot;
+SADD user:B:followers &quot;A&quot;
+
+# A의 팔로잉 목록
+SMEMBERS user:A:following
+
+# B의 팔로워 목록
+SMEMBERS user:B:followers
+
+# A와 B의 공통 팔로잉
+SINTER user:A:following user:B:following
+
+# 팔로워 수
+SCARD user:B:followers
+
+# 팔로우 여부 확인
+SISMEMBER user:A:following &quot;B&quot;
+
+# 언팔로우
+SREM user:A:following &quot;B&quot;
+SREM user:B:followers &quot;A&quot;
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 다음 단계<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<p>분산 캐시를 이해했다면, 데이터베이스 확장을 학습하세요.</p>
+<h3 id="_5">다음 레슨<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="./08_Database_Scaling.md">08_Database_Scaling.md</a></li>
+</ul>
+<h3 id="_6">관련 레슨<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="./06_Caching_Strategies.md">06_Caching_Strategies.md</a> - 캐싱 패턴</li>
+<li><a href="./09_Database_Replication.md">09_Database_Replication.md</a> - 복제 전략</li>
+</ul>
+<h3 id="_7">추천 실습<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Redis 설치 및 데이터 구조 실습</li>
+<li>Redis Sentinel 구성해보기</li>
+<li>일관성 해싱 직접 구현해보기</li>
+</ol>
+<hr />
+<h2 id="8">8. 참고 자료<a class="header-link" href="#8" title="Permanent link">&para;</a></h2>
+<h3 id="_8">공식 문서<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="https://redis.io/documentation">Redis Documentation</a></li>
+<li><a href="https://github.com/memcached/memcached/wiki">Memcached Wiki</a></li>
+</ul>
+<h3 id="_9">도구<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="https://github.com/joeferner/redis-commander">Redis Commander</a> - GUI</li>
+<li><a href="https://redis.com/redis-enterprise/redis-insight/">RedisInsight</a> - 공식 GUI</li>
+</ul>
+<h3 id="_10">논문<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<ul>
+<li>"Consistent Hashing and Random Trees" - Karger et al.</li>
+</ul>
+<hr />
+<p><strong>문서 정보</strong>
+- 최종 수정: 2024년
+- 난이도: ⭐⭐⭐
+- 예상 학습 시간: 2-3시간</p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/System_Design/06_Caching_Strategies.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">캐싱 전략</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/System_Design/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/System_Design/08_Database_Scaling.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">데이터베이스 확장</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

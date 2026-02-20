@@ -1,0 +1,1206 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>디버깅과 메모리 분석 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/C_Programming/">C Programming</a>
+    <span class="separator">/</span>
+    <span class="current">디버깅과 메모리 분석</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>디버깅과 메모리 분석</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/C_Programming/17_Project_Serial_Communication.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">프로젝트 16: 시리얼 통신</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/C_Programming/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/C_Programming/19_Advanced_Embedded_Protocols.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">고급 임베디드 프로토콜</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_2">개요</a></li>
+<li><a href="#_3">목차</a></li>
+<li><a href="#_4">디버깅 기초</a><ul>
+<li><a href="#_5">디버그 빌드</a></li>
+<li><a href="#printf">printf 디버깅</a></li>
+<li><a href="#assert">assert 매크로</a></li>
+</ul>
+</li>
+<li><a href="#gdb">GDB 디버거</a><ul>
+<li><a href="#gdb_1">GDB 시작</a></li>
+<li><a href="#_6">기본 명령어</a></li>
+<li><a href="#_7">브레이크포인트</a></li>
+<li><a href="#_8">변수 검사</a></li>
+<li><a href="#_9">메모리 검사</a></li>
+<li><a href="#_10">스택 추적</a></li>
+<li><a href="#_11">워치포인트</a></li>
+<li><a href="#gdb_2">GDB 실전 예제</a></li>
+<li><a href="#gdb-tui">GDB TUI 모드</a></li>
+</ul>
+</li>
+<li><a href="#valgrind">Valgrind 메모리 분석</a><ul>
+<li><a href="#valgrind_1">Valgrind 설치</a></li>
+<li><a href="#_12">기본 사용법</a></li>
+<li><a href="#memcheck">Memcheck 도구</a></li>
+<li><a href="#_13">메모리 누수 예제</a></li>
+<li><a href="#_14">누수 종류</a></li>
+<li><a href="#_15">잘못된 메모리 접근</a></li>
+</ul>
+</li>
+<li><a href="#addresssanitizer">AddressSanitizer</a><ul>
+<li><a href="#asan">ASan 사용법</a></li>
+<li><a href="#asan_1">ASan 장점</a></li>
+<li><a href="#asan_2">ASan 예제</a></li>
+<li><a href="#sanitizer">기타 Sanitizer</a></li>
+<li><a href="#ubsan">UBSan 예제</a></li>
+</ul>
+</li>
+<li><a href="#_16">일반적인 메모리 버그</a><ul>
+<li><a href="#1">1. 버퍼 오버플로우</a></li>
+<li><a href="#2-use-after-free">2. Use After Free</a></li>
+<li><a href="#3">3. 이중 해제</a></li>
+<li><a href="#4">4. 메모리 누수</a></li>
+<li><a href="#5">5. 초기화되지 않은 메모리</a></li>
+<li><a href="#6">6. 스택 오버플로우</a></li>
+</ul>
+</li>
+<li><a href="#_17">디버깅 전략</a><ul>
+<li><a href="#1_1">1. 재현 가능하게 만들기</a></li>
+<li><a href="#2">2. 이진 탐색으로 버그 위치 찾기</a></li>
+<li><a href="#3_1">3. 방어적 프로그래밍</a></li>
+<li><a href="#4_1">4. 로깅 레벨</a></li>
+</ul>
+</li>
+<li><a href="#_18">연습 문제</a><ul>
+<li><a href="#1_2">문제 1: 메모리 누수 찾기</a></li>
+<li><a href="#2-gdb">문제 2: GDB 사용</a></li>
+</ul>
+</li>
+<li><a href="#_19">다음 단계</a></li>
+<li><a href="#_20">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="_1">디버깅과 메모리 분석<a class="header-link" href="#_1" title="Permanent link">&para;</a></h1>
+<h2 id="_2">개요<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<p>효과적인 디버깅은 프로그래머의 핵심 역량입니다. 이 장에서는 GDB 디버거, Valgrind 메모리 분석 도구, 그리고 AddressSanitizer를 사용하여 버그를 찾고 메모리 문제를 해결하는 방법을 학습합니다.</p>
+<p><strong>난이도</strong>: ⭐⭐⭐⭐</p>
+<p><strong>선수 지식</strong>: 포인터, 동적 메모리 할당</p>
+<hr />
+<h2 id="_3">목차<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#디버깅-기초">디버깅 기초</a></li>
+<li><a href="#gdb-디버거">GDB 디버거</a></li>
+<li><a href="#valgrind-메모리-분석">Valgrind 메모리 분석</a></li>
+<li><a href="#addresssanitizer">AddressSanitizer</a></li>
+<li><a href="#일반적인-메모리-버그">일반적인 메모리 버그</a></li>
+<li><a href="#디버깅-전략">디버깅 전략</a></li>
+</ol>
+<hr />
+<h2 id="_4">디버깅 기초<a class="header-link" href="#_4" title="Permanent link">&para;</a></h2>
+<h3 id="_5">디버그 빌드<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<p>디버깅을 위해서는 <code>-g</code> 플래그로 컴파일해야 합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 디버그 심볼 포함</span>
+gcc<span class="w"> </span>-g<span class="w"> </span>-Wall<span class="w"> </span>-Wextra<span class="w"> </span>program.c<span class="w"> </span>-o<span class="w"> </span>program
+
+<span class="c1"># 최적화 없이 (디버깅 용이)</span>
+gcc<span class="w"> </span>-g<span class="w"> </span>-O0<span class="w"> </span>-Wall<span class="w"> </span>-Wextra<span class="w"> </span>program.c<span class="w"> </span>-o<span class="w"> </span>program
+
+<span class="c1"># 디버그 + 최적화 (릴리스 버그 추적)</span>
+gcc<span class="w"> </span>-g<span class="w"> </span>-O2<span class="w"> </span>-Wall<span class="w"> </span>-Wextra<span class="w"> </span>program.c<span class="w"> </span>-o<span class="w"> </span>program
+</code></pre></div>
+
+<h3 id="printf">printf 디버깅<a class="header-link" href="#printf" title="Permanent link">&para;</a></h3>
+<p>가장 기본적인 디버깅 방법입니다.</p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="cp">#define DEBUG 1</span>
+
+<span class="cp">#if DEBUG</span>
+<span class="w">    </span><span class="cp">#define DEBUG_PRINT(fmt, ...) \</span>
+<span class="cp">        fprintf(stderr, &quot;[DEBUG] %s:%d: &quot; fmt &quot;\n&quot;, \</span>
+<span class="cp">                __FILE__, __LINE__, ##__VA_ARGS__)</span>
+<span class="cp">#else</span>
+<span class="w">    </span><span class="cp">#define DEBUG_PRINT(fmt, ...) ((void)0)</span>
+<span class="cp">#endif</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">calculate</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">DEBUG_PRINT</span><span class="p">(</span><span class="s">&quot;calculate called: a=%d, b=%d&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">a</span><span class="p">;</span>
+<span class="w">    </span><span class="n">DEBUG_PRINT</span><span class="p">(</span><span class="s">&quot;result=%d&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">result</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">result</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">calculate</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">);</span>
+<span class="w">    </span><span class="n">DEBUG_PRINT</span><span class="p">(</span><span class="s">&quot;main: x=%d&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">x</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="assert">assert 매크로<a class="header-link" href="#assert" title="Permanent link">&para;</a></h3>
+<p>전제 조건 검증에 사용합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;assert.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">divide</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">assert</span><span class="p">(</span><span class="n">b</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="s">&quot;Division by zero!&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">b</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">process_array</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">arr</span><span class="p">,</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">assert</span><span class="p">(</span><span class="n">arr</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="nb">NULL</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="s">&quot;Array is NULL!&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="n">assert</span><span class="p">(</span><span class="n">size</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="s">&quot;Size must be positive!&quot;</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">size</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">*=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<blockquote>
+<p><strong>참고</strong>: 릴리스 빌드에서 assert를 비활성화하려면 <code>-DNDEBUG</code> 플래그 사용</p>
+</blockquote>
+<hr />
+<h2 id="gdb">GDB 디버거<a class="header-link" href="#gdb" title="Permanent link">&para;</a></h2>
+<h3 id="gdb_1">GDB 시작<a class="header-link" href="#gdb_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 프로그램 로드</span>
+gdb<span class="w"> </span>./program
+
+<span class="c1"># 인자와 함께</span>
+gdb<span class="w"> </span>--args<span class="w"> </span>./program<span class="w"> </span>arg1<span class="w"> </span>arg2
+
+<span class="c1"># 실행 중인 프로세스 연결</span>
+gdb<span class="w"> </span>-p<span class="w"> </span>&lt;pid&gt;
+
+<span class="c1"># 코어 덤프 분석</span>
+gdb<span class="w"> </span>./program<span class="w"> </span>core
+</code></pre></div>
+
+<h3 id="_6">기본 명령어<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>명령어</th>
+<th>단축키</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>run</code></td>
+<td><code>r</code></td>
+<td>프로그램 실행</td>
+</tr>
+<tr>
+<td><code>continue</code></td>
+<td><code>c</code></td>
+<td>실행 계속</td>
+</tr>
+<tr>
+<td><code>next</code></td>
+<td><code>n</code></td>
+<td>다음 줄 (함수 안으로 들어가지 않음)</td>
+</tr>
+<tr>
+<td><code>step</code></td>
+<td><code>s</code></td>
+<td>다음 줄 (함수 안으로 들어감)</td>
+</tr>
+<tr>
+<td><code>finish</code></td>
+<td><code>fin</code></td>
+<td>현재 함수 끝까지 실행</td>
+</tr>
+<tr>
+<td><code>quit</code></td>
+<td><code>q</code></td>
+<td>GDB 종료</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_7">브레이크포인트<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 줄 번호에 설정</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span><span class="k">break</span><span class="w"> </span>main.c:15
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>b<span class="w"> </span><span class="m">15</span>
+
+<span class="c1"># 함수에 설정</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span><span class="k">break</span><span class="w"> </span>main
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span><span class="k">break</span><span class="w"> </span>calculate
+
+<span class="c1"># 조건부 브레이크포인트</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span><span class="k">break</span><span class="w"> </span><span class="m">20</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nv">i</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="m">5</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span><span class="k">break</span><span class="w"> </span>process<span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nv">ptr</span><span class="w"> </span><span class="o">==</span><span class="w"> </span>NULL
+
+<span class="c1"># 브레이크포인트 목록</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>info<span class="w"> </span>breakpoints
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>info<span class="w"> </span>b
+
+<span class="c1"># 브레이크포인트 삭제</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>delete<span class="w"> </span><span class="m">1</span><span class="w">        </span><span class="c1"># 1번 삭제</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>delete<span class="w">          </span><span class="c1"># 모두 삭제</span>
+
+<span class="c1"># 브레이크포인트 비활성화/활성화</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>disable<span class="w"> </span><span class="m">2</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span><span class="nb">enable</span><span class="w"> </span><span class="m">2</span>
+</code></pre></div>
+
+<h3 id="_8">변수 검사<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 변수 출력</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>print<span class="w"> </span>x
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>p<span class="w"> </span>x
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>p<span class="w"> </span>arr<span class="o">[</span><span class="m">0</span><span class="o">]</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>p<span class="w"> </span>*ptr
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>p<span class="w"> </span>ptr-&gt;field
+
+<span class="c1"># 표현식</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>p<span class="w"> </span>x<span class="w"> </span>+<span class="w"> </span>y
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>p<span class="w"> </span>sizeof<span class="o">(</span>struct<span class="w"> </span>data<span class="o">)</span>
+
+<span class="c1"># 배열 출력</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>p<span class="w"> </span>*arr@10<span class="w">        </span><span class="c1"># 10개 요소</span>
+
+<span class="c1"># 형식 지정</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>p/x<span class="w"> </span>value<span class="w">        </span><span class="c1"># 16진수</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>p/t<span class="w"> </span>value<span class="w">        </span><span class="c1"># 2진수</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>p/d<span class="w"> </span>value<span class="w">        </span><span class="c1"># 10진수</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>p/c<span class="w"> </span>value<span class="w">        </span><span class="c1"># 문자</span>
+
+<span class="c1"># 지역 변수 모두 출력</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>info<span class="w"> </span>locals
+
+<span class="c1"># 전역 변수</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>info<span class="w"> </span>variables
+</code></pre></div>
+
+<h3 id="_9">메모리 검사<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 메모리 내용 확인</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>x/10xb<span class="w"> </span>ptr<span class="w">       </span><span class="c1"># 10바이트, 16진수</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>x/10dw<span class="w"> </span>ptr<span class="w">       </span><span class="c1"># 10워드, 10진수</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>x/s<span class="w"> </span>str<span class="w">          </span><span class="c1"># 문자열</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>x/10i<span class="w"> </span>func<span class="w">       </span><span class="c1"># 10개 명령어 (역어셈블)</span>
+
+<span class="c1"># 형식: x/[개수][형식][크기]</span>
+<span class="c1"># 형식: x(16진수), d(10진수), s(문자열), i(명령어)</span>
+<span class="c1"># 크기: b(바이트), h(2바이트), w(4바이트), g(8바이트)</span>
+</code></pre></div>
+
+<h3 id="_10">스택 추적<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 백트레이스 (호출 스택)</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>backtrace
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>bt
+
+<span class="c1"># 특정 프레임 선택</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>frame<span class="w"> </span><span class="m">2</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>f<span class="w"> </span><span class="m">2</span>
+
+<span class="c1"># 프레임 정보</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>info<span class="w"> </span>frame
+
+<span class="c1"># 상위/하위 프레임 이동</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>up
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>down
+</code></pre></div>
+
+<h3 id="_11">워치포인트<a class="header-link" href="#_11" title="Permanent link">&para;</a></h3>
+<p>변수가 변경될 때 멈춥니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 쓰기 워치포인트</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>watch<span class="w"> </span>x
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>watch<span class="w"> </span>arr<span class="o">[</span><span class="m">5</span><span class="o">]</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>watch<span class="w"> </span>*ptr
+
+<span class="c1"># 읽기 워치포인트</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>rwatch<span class="w"> </span>x
+
+<span class="c1"># 읽기/쓰기 워치포인트</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>awatch<span class="w"> </span>x
+
+<span class="c1"># 워치포인트 목록</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>info<span class="w"> </span>watchpoints
+</code></pre></div>
+
+<h3 id="gdb_2">GDB 실전 예제<a class="header-link" href="#gdb_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// buggy.c - 버그가 있는 코드</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">sum_array</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">arr</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">sum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="n">size</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">  </span><span class="c1">// 버그: &lt;= 대신 &lt; 사용해야 함</span>
+<span class="w">        </span><span class="n">sum</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">arr</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">sum</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">numbers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">numbers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">total</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sum_array</span><span class="p">(</span><span class="n">numbers</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">);</span>
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Total: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">total</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">free</span><span class="p">(</span><span class="n">numbers</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>gcc<span class="w"> </span>-g<span class="w"> </span>-O0<span class="w"> </span>buggy.c<span class="w"> </span>-o<span class="w"> </span>buggy
+$<span class="w"> </span>gdb<span class="w"> </span>./buggy
+
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span><span class="k">break</span><span class="w"> </span>sum_array
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>run
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>print<span class="w"> </span>size
+<span class="nv">$1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">5</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>print<span class="w"> </span>arr<span class="o">[</span><span class="m">0</span><span class="o">]</span>
+<span class="nv">$2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>next
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>print<span class="w"> </span>i
+<span class="nv">$3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>watch<span class="w"> </span>sum
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span><span class="k">continue</span>
+<span class="c1"># sum이 변경될 때마다 멈춤</span>
+</code></pre></div>
+
+<h3 id="gdb-tui">GDB TUI 모드<a class="header-link" href="#gdb-tui" title="Permanent link">&para;</a></h3>
+<p>텍스트 사용자 인터페이스로 소스 코드를 보면서 디버깅합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># TUI 모드 시작</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>tui<span class="w"> </span><span class="nb">enable</span>
+<span class="c1"># 또는 시작 시</span>
+$<span class="w"> </span>gdb<span class="w"> </span>-tui<span class="w"> </span>./program
+
+<span class="c1"># 레이아웃 변경</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>layout<span class="w"> </span>src<span class="w">       </span><span class="c1"># 소스 코드</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>layout<span class="w"> </span>asm<span class="w">       </span><span class="c1"># 어셈블리</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>layout<span class="w"> </span>split<span class="w">     </span><span class="c1"># 소스 + 어셈블리</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>layout<span class="w"> </span>regs<span class="w">      </span><span class="c1"># 레지스터</span>
+
+<span class="c1"># TUI 모드 종료</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>tui<span class="w"> </span>disable
+</code></pre></div>
+
+<hr />
+<h2 id="valgrind">Valgrind 메모리 분석<a class="header-link" href="#valgrind" title="Permanent link">&para;</a></h2>
+<h3 id="valgrind_1">Valgrind 설치<a class="header-link" href="#valgrind_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Ubuntu/Debian</span>
+sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>valgrind
+
+<span class="c1"># macOS (Intel만 지원)</span>
+brew<span class="w"> </span>install<span class="w"> </span>valgrind
+
+<span class="c1"># CentOS/RHEL</span>
+sudo<span class="w"> </span>yum<span class="w"> </span>install<span class="w"> </span>valgrind
+</code></pre></div>
+
+<h3 id="_12">기본 사용법<a class="header-link" href="#_12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 메모리 검사 실행</span>
+valgrind<span class="w"> </span>./program
+
+<span class="c1"># 상세 출력</span>
+valgrind<span class="w"> </span>--leak-check<span class="o">=</span>full<span class="w"> </span>./program
+
+<span class="c1"># 더 자세한 정보</span>
+valgrind<span class="w"> </span>--leak-check<span class="o">=</span>full<span class="w"> </span>--show-leak-kinds<span class="o">=</span>all<span class="w"> </span>./program
+
+<span class="c1"># 로그 파일로 저장</span>
+valgrind<span class="w"> </span>--log-file<span class="o">=</span>valgrind.log<span class="w"> </span>./program
+</code></pre></div>
+
+<h3 id="memcheck">Memcheck 도구<a class="header-link" href="#memcheck" title="Permanent link">&para;</a></h3>
+<p>가장 많이 사용되는 Valgrind 도구입니다.</p>
+<div class="highlight"><pre><span></span><code>valgrind<span class="w"> </span>--tool<span class="o">=</span>memcheck<span class="w"> </span>--leak-check<span class="o">=</span>full<span class="w"> </span><span class="se">\</span>
+<span class="w">         </span>--track-origins<span class="o">=</span>yes<span class="w"> </span>./program
+</code></pre></div>
+
+<table>
+<thead>
+<tr>
+<th>옵션</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--leak-check=full</code></td>
+<td>상세 누수 정보</td>
+</tr>
+<tr>
+<td><code>--show-leak-kinds=all</code></td>
+<td>모든 종류의 누수 표시</td>
+</tr>
+<tr>
+<td><code>--track-origins=yes</code></td>
+<td>초기화되지 않은 값의 출처 추적</td>
+</tr>
+<tr>
+<td><code>--verbose</code></td>
+<td>상세 출력</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_13">메모리 누수 예제<a class="header-link" href="#_13" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// leak.c</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;string.h&gt;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">create_leak</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="w">    </span><span class="n">ptr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// free(ptr); 누락!</span>
+<span class="p">}</span>
+
+<span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="nf">duplicate_string</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">str</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">copy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="n">strlen</span><span class="p">(</span><span class="n">str</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">    </span><span class="n">strcpy</span><span class="p">(</span><span class="n">copy</span><span class="p">,</span><span class="w"> </span><span class="n">str</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">copy</span><span class="p">;</span><span class="w">  </span><span class="c1">// 호출자가 free해야 함</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">create_leak</span><span class="p">();</span>
+
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">str</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">duplicate_string</span><span class="p">(</span><span class="s">&quot;Hello&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="c1">// free(str); 누락!</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>gcc<span class="w"> </span>-g<span class="w"> </span>leak.c<span class="w"> </span>-o<span class="w"> </span>leak
+$<span class="w"> </span>valgrind<span class="w"> </span>--leak-check<span class="o">=</span>full<span class="w"> </span>./leak
+
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w"> </span>HEAP<span class="w"> </span>SUMMARY:
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w">     </span><span class="k">in</span><span class="w"> </span>use<span class="w"> </span>at<span class="w"> </span>exit:<span class="w"> </span><span class="m">406</span><span class="w"> </span>bytes<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="nv">blocks</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w">   </span>total<span class="w"> </span>heap<span class="w"> </span>usage:<span class="w"> </span><span class="m">2</span><span class="w"> </span>allocs,<span class="w"> </span><span class="m">0</span><span class="w"> </span>frees,<span class="w"> </span><span class="m">406</span><span class="w"> </span>bytes<span class="w"> </span><span class="nv">allocated</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w"> </span><span class="m">6</span><span class="w"> </span>bytes<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="w"> </span>blocks<span class="w"> </span>are<span class="w"> </span>definitely<span class="w"> </span>lost<span class="w"> </span><span class="k">in</span><span class="w"> </span>loss<span class="w"> </span>record<span class="w"> </span><span class="m">1</span><span class="w"> </span>of<span class="w"> </span><span class="nv">2</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w">    </span>at<span class="w"> </span>0x4C2FB0F:<span class="w"> </span>malloc<span class="w"> </span><span class="o">(</span>vg_replace_malloc.c:299<span class="o">)</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w">    </span>by<span class="w"> </span>0x10871B:<span class="w"> </span>duplicate_string<span class="w"> </span><span class="o">(</span>leak.c:11<span class="o">)</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w">    </span>by<span class="w"> </span>0x108751:<span class="w"> </span>main<span class="w"> </span><span class="o">(</span>leak.c:18<span class="o">)</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w"> </span><span class="m">400</span><span class="w"> </span>bytes<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="w"> </span>blocks<span class="w"> </span>are<span class="w"> </span>definitely<span class="w"> </span>lost<span class="w"> </span><span class="k">in</span><span class="w"> </span>loss<span class="w"> </span>record<span class="w"> </span><span class="m">2</span><span class="w"> </span>of<span class="w"> </span><span class="nv">2</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w">    </span>at<span class="w"> </span>0x4C2FB0F:<span class="w"> </span>malloc<span class="w"> </span><span class="o">(</span>vg_replace_malloc.c:299<span class="o">)</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w">    </span>by<span class="w"> </span>0x1086E2:<span class="w"> </span>create_leak<span class="w"> </span><span class="o">(</span>leak.c:5<span class="o">)</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w">    </span>by<span class="w"> </span>0x108745:<span class="w"> </span>main<span class="w"> </span><span class="o">(</span>leak.c:16<span class="o">)</span>
+</code></pre></div>
+
+<h3 id="_14">누수 종류<a class="header-link" href="#_14" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>종류</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>definitely lost</td>
+<td>확실히 누수 (포인터 손실)</td>
+</tr>
+<tr>
+<td>indirectly lost</td>
+<td>간접 누수 (다른 블록을 통해 접근 가능했음)</td>
+</tr>
+<tr>
+<td>possibly lost</td>
+<td>가능한 누수 (포인터가 블록 중간을 가리킴)</td>
+</tr>
+<tr>
+<td>still reachable</td>
+<td>프로그램 종료 시 아직 접근 가능</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_15">잘못된 메모리 접근<a class="header-link" href="#_15" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// invalid.c</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">arr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+
+<span class="w">    </span><span class="c1">// 초기화되지 않은 값 읽기</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+
+<span class="w">    </span><span class="c1">// 경계 초과 쓰기</span>
+<span class="w">    </span><span class="n">arr</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 경계 초과 읽기</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arr</span><span class="p">[</span><span class="mi">10</span><span class="p">];</span>
+
+<span class="w">    </span><span class="n">free</span><span class="p">(</span><span class="n">arr</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 해제 후 사용 (Use After Free)</span>
+<span class="w">    </span><span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// 이중 해제</span>
+<span class="w">    </span><span class="n">free</span><span class="p">(</span><span class="n">arr</span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">y</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>valgrind<span class="w"> </span>--track-origins<span class="o">=</span>yes<span class="w"> </span>./invalid
+
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w"> </span>Conditional<span class="w"> </span>jump<span class="w"> </span>or<span class="w"> </span>move<span class="w"> </span>depends<span class="w"> </span>on<span class="w"> </span>uninitialised<span class="w"> </span>value<span class="o">(</span>s<span class="o">)</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w">    </span>at<span class="w"> </span>0x108691:<span class="w"> </span>main<span class="w"> </span><span class="o">(</span>invalid.c:8<span class="o">)</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w">  </span>Uninitialised<span class="w"> </span>value<span class="w"> </span>was<span class="w"> </span>created<span class="w"> </span>by<span class="w"> </span>a<span class="w"> </span>heap<span class="w"> </span><span class="nv">allocation</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w">    </span>at<span class="w"> </span>0x4C2FB0F:<span class="w"> </span>malloc<span class="w"> </span><span class="o">(</span>vg_replace_malloc.c:299<span class="o">)</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w">    </span>by<span class="w"> </span>0x108671:<span class="w"> </span>main<span class="w"> </span><span class="o">(</span>invalid.c:5<span class="o">)</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w"> </span>Invalid<span class="w"> </span>write<span class="w"> </span>of<span class="w"> </span>size<span class="w"> </span><span class="nv">4</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w">    </span>at<span class="w"> </span>0x1086A1:<span class="w"> </span>main<span class="w"> </span><span class="o">(</span>invalid.c:11<span class="o">)</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span><span class="w">  </span>Address<span class="w"> </span>0x522d054<span class="w"> </span>is<span class="w"> </span><span class="m">0</span><span class="w"> </span>bytes<span class="w"> </span>after<span class="w"> </span>a<span class="w"> </span>block<span class="w"> </span>of<span class="w"> </span>size<span class="w"> </span><span class="m">20</span><span class="w"> </span>alloc<span class="err">&#39;</span>d
+</code></pre></div>
+
+<hr />
+<h2 id="addresssanitizer">AddressSanitizer<a class="header-link" href="#addresssanitizer" title="Permanent link">&para;</a></h2>
+<h3 id="asan">ASan 사용법<a class="header-link" href="#asan" title="Permanent link">&para;</a></h3>
+<p>컴파일 시 플래그를 추가합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># GCC</span>
+gcc<span class="w"> </span>-fsanitize<span class="o">=</span>address<span class="w"> </span>-g<span class="w"> </span>program.c<span class="w"> </span>-o<span class="w"> </span>program
+
+<span class="c1"># Clang</span>
+clang<span class="w"> </span>-fsanitize<span class="o">=</span>address<span class="w"> </span>-g<span class="w"> </span>program.c<span class="w"> </span>-o<span class="w"> </span>program
+
+<span class="c1"># 추가 옵션</span>
+gcc<span class="w"> </span>-fsanitize<span class="o">=</span>address<span class="w"> </span>-fno-omit-frame-pointer<span class="w"> </span>-g<span class="w"> </span>program.c<span class="w"> </span>-o<span class="w"> </span>program
+</code></pre></div>
+
+<h3 id="asan_1">ASan 장점<a class="header-link" href="#asan_1" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>특징</th>
+<th>Valgrind</th>
+<th>ASan</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>속도</td>
+<td>10-50배 느림</td>
+<td>2배 느림</td>
+</tr>
+<tr>
+<td>메모리 사용</td>
+<td>2배</td>
+<td>3배</td>
+</tr>
+<tr>
+<td>스택 오버플로우</td>
+<td>X</td>
+<td>O</td>
+</tr>
+<tr>
+<td>전역 변수 오버플로우</td>
+<td>X</td>
+<td>O</td>
+</tr>
+<tr>
+<td>재컴파일 필요</td>
+<td>X</td>
+<td>O</td>
+</tr>
+</tbody>
+</table>
+<h3 id="asan_2">ASan 예제<a class="header-link" href="#asan_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// asan_test.c</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">arr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="mi">10</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+
+<span class="w">    </span><span class="c1">// 힙 버퍼 오버플로우</span>
+<span class="w">    </span><span class="n">arr</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">free</span><span class="p">(</span><span class="n">arr</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// Use After Free</span>
+<span class="w">    </span><span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>gcc<span class="w"> </span>-fsanitize<span class="o">=</span>address<span class="w"> </span>-g<span class="w"> </span>asan_test.c<span class="w"> </span>-o<span class="w"> </span>asan_test
+$<span class="w"> </span>./asan_test
+
+<span class="o">=================================================================</span>
+<span class="o">==</span><span class="nv">12345</span><span class="o">==</span>ERROR:<span class="w"> </span>AddressSanitizer:<span class="w"> </span>heap-buffer-overflow<span class="w"> </span>on<span class="w"> </span>address<span class="w"> </span>0x604000000028
+WRITE<span class="w"> </span>of<span class="w"> </span>size<span class="w"> </span><span class="m">4</span><span class="w"> </span>at<span class="w"> </span>0x604000000028<span class="w"> </span>thread<span class="w"> </span>T0
+<span class="w">    </span><span class="c1">#0 0x4011a3 in main asan_test.c:8</span>
+<span class="w">    </span><span class="c1">#1 0x7f123456789a in __libc_start_main</span>
+
+0x604000000028<span class="w"> </span>is<span class="w"> </span>located<span class="w"> </span><span class="m">0</span><span class="w"> </span>bytes<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span>right<span class="w"> </span>of<span class="w"> </span><span class="m">40</span>-byte<span class="w"> </span>region
+allocated<span class="w"> </span>by<span class="w"> </span>thread<span class="w"> </span>T0<span class="w"> </span>here:
+<span class="w">    </span><span class="c1">#0 0x7f1234567890 in malloc</span>
+<span class="w">    </span><span class="c1">#1 0x401157 in main asan_test.c:5</span>
+</code></pre></div>
+
+<h3 id="sanitizer">기타 Sanitizer<a class="header-link" href="#sanitizer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 정의되지 않은 동작 검사</span>
+gcc<span class="w"> </span>-fsanitize<span class="o">=</span>undefined<span class="w"> </span>-g<span class="w"> </span>program.c<span class="w"> </span>-o<span class="w"> </span>program
+
+<span class="c1"># 스레드 오류 검사</span>
+gcc<span class="w"> </span>-fsanitize<span class="o">=</span>thread<span class="w"> </span>-g<span class="w"> </span>program.c<span class="w"> </span>-o<span class="w"> </span>program<span class="w"> </span>-pthread
+
+<span class="c1"># 여러 sanitizer 조합</span>
+gcc<span class="w"> </span>-fsanitize<span class="o">=</span>address,undefined<span class="w"> </span>-g<span class="w"> </span>program.c<span class="w"> </span>-o<span class="w"> </span>program
+</code></pre></div>
+
+<h3 id="ubsan">UBSan 예제<a class="header-link" href="#ubsan" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// ubsan_test.c</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;limits.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">INT_MAX</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">  </span><span class="c1">// 정수 오버플로우 (정의되지 않은 동작)</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">arr</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">};</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">z</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arr</span><span class="p">[</span><span class="mi">10</span><span class="p">];</span><span class="w">  </span><span class="c1">// 배열 경계 초과</span>
+
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// *ptr = 42;  // NULL 역참조</span>
+
+<span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">z</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>gcc<span class="w"> </span>-fsanitize<span class="o">=</span>undefined<span class="w"> </span>-g<span class="w"> </span>ubsan_test.c<span class="w"> </span>-o<span class="w"> </span>ubsan_test
+$<span class="w"> </span>./ubsan_test
+
+ubsan_test.c:7:15:<span class="w"> </span>runtime<span class="w"> </span>error:<span class="w"> </span>signed<span class="w"> </span>integer<span class="w"> </span>overflow:
+<span class="m">2147483647</span><span class="w"> </span>+<span class="w"> </span><span class="m">1</span><span class="w"> </span>cannot<span class="w"> </span>be<span class="w"> </span>represented<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="nb">type</span><span class="w"> </span><span class="s1">&#39;int&#39;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_16">일반적인 메모리 버그<a class="header-link" href="#_16" title="Permanent link">&para;</a></h2>
+<h3 id="1">1. 버퍼 오버플로우<a class="header-link" href="#1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// 문제</span>
+<span class="kt">char</span><span class="w"> </span><span class="n">buffer</span><span class="p">[</span><span class="mi">10</span><span class="p">];</span>
+<span class="n">strcpy</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;This is too long!&quot;</span><span class="p">);</span><span class="w">  </span><span class="c1">// 오버플로우</span>
+
+<span class="c1">// 해결</span>
+<span class="kt">char</span><span class="w"> </span><span class="n">buffer</span><span class="p">[</span><span class="mi">10</span><span class="p">];</span>
+<span class="n">strncpy</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;This is too long!&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="n">buffer</span><span class="p">[</span><span class="k">sizeof</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="sc">&#39;\0&#39;</span><span class="p">;</span>
+
+<span class="c1">// 또는 snprintf 사용</span>
+<span class="n">snprintf</span><span class="p">(</span><span class="n">buffer</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="n">buffer</span><span class="p">),</span><span class="w"> </span><span class="s">&quot;%s&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;This is too long!&quot;</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="2-use-after-free">2. Use After Free<a class="header-link" href="#2-use-after-free" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// 문제</span>
+<span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="o">*</span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span>
+<span class="n">free</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span>
+<span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="p">);</span><span class="w">  </span><span class="c1">// 해제된 메모리 접근</span>
+
+<span class="c1">// 해결</span>
+<span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="o">*</span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span>
+<span class="n">free</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span>
+<span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span><span class="w">  </span><span class="c1">// 해제 후 NULL 설정</span>
+</code></pre></div>
+
+<h3 id="3">3. 이중 해제<a class="header-link" href="#3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// 문제</span>
+<span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="n">free</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span>
+<span class="n">free</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span><span class="w">  </span><span class="c1">// 이중 해제</span>
+
+<span class="c1">// 해결</span>
+<span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="n">free</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span>
+<span class="n">ptr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span><span class="w">  </span><span class="c1">// free(NULL)은 안전함</span>
+<span class="n">free</span><span class="p">(</span><span class="n">ptr</span><span class="p">);</span><span class="w">   </span><span class="c1">// OK</span>
+</code></pre></div>
+
+<h3 id="4">4. 메모리 누수<a class="header-link" href="#4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// 문제</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">process</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="mi">100</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">error_condition</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="p">;</span><span class="w">  </span><span class="c1">// 누수!</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="w">    </span><span class="n">free</span><span class="p">(</span><span class="n">data</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="c1">// 해결 1: goto 사용</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">process</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="mi">100</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">error_condition</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">goto</span><span class="w"> </span><span class="n">cleanup</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="nl">cleanup</span><span class="p">:</span>
+<span class="w">    </span><span class="n">free</span><span class="p">(</span><span class="n">data</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="c1">// 해결 2: 구조화</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">process</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="mi">100</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">error_condition</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 정상 처리</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">free</span><span class="p">(</span><span class="n">data</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="5">5. 초기화되지 않은 메모리<a class="header-link" href="#5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// 문제</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">;</span>
+<span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">x</span><span class="p">);</span><span class="w">  </span><span class="c1">// 쓰레기 값</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">arr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="mi">10</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span><span class="w">  </span><span class="c1">// 쓰레기 값</span>
+
+<span class="c1">// 해결</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">arr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">calloc</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span><span class="w">  </span><span class="c1">// 0으로 초기화</span>
+<span class="c1">// 또는</span>
+<span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">arr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="mi">10</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="n">memset</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+</code></pre></div>
+
+<h3 id="6">6. 스택 오버플로우<a class="header-link" href="#6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// 문제: 무한 재귀</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">infinite</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">infinite</span><span class="p">();</span><span class="w">  </span><span class="c1">// 스택 오버플로우</span>
+<span class="p">}</span>
+
+<span class="c1">// 문제: 큰 지역 변수</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">big_local</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">huge_array</span><span class="p">[</span><span class="mi">1000000</span><span class="p">];</span><span class="w">  </span><span class="c1">// 스택 오버플로우 가능</span>
+<span class="p">}</span>
+
+<span class="c1">// 해결: 동적 할당</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">use_heap</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">array</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="mi">1000000</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="w">    </span><span class="n">free</span><span class="p">(</span><span class="n">array</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_17">디버깅 전략<a class="header-link" href="#_17" title="Permanent link">&para;</a></h2>
+<h3 id="1_1">1. 재현 가능하게 만들기<a class="header-link" href="#1_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// 랜덤 시드 고정</span>
+<span class="n">srand</span><span class="p">(</span><span class="mi">12345</span><span class="p">);</span><span class="w">  </span><span class="c1">// 항상 같은 결과</span>
+
+<span class="c1">// 입력 기록</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">log_input</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">input</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">FILE</span><span class="w"> </span><span class="o">*</span><span class="n">f</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">fopen</span><span class="p">(</span><span class="s">&quot;input.log&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;a&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="n">fprintf</span><span class="p">(</span><span class="n">f</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">input</span><span class="p">);</span>
+<span class="w">    </span><span class="n">fclose</span><span class="p">(</span><span class="n">f</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="2">2. 이진 탐색으로 버그 위치 찾기<a class="header-link" href="#2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// 코드 절반을 주석 처리하고 버그 발생 확인</span>
+<span class="c1">// 버그 있는 절반을 다시 반으로 나누어 반복</span>
+
+<span class="c1">// git bisect 사용</span>
+<span class="c1">// $ git bisect start</span>
+<span class="c1">// $ git bisect bad HEAD</span>
+<span class="c1">// $ git bisect good v1.0</span>
+</code></pre></div>
+
+<h3 id="3_1">3. 방어적 프로그래밍<a class="header-link" href="#3_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// 함수 시작 시 검증</span>
+<span class="kt">int</span><span class="w"> </span><span class="nf">process_data</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="kt">size_t</span><span class="w"> </span><span class="n">size</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 전제 조건 검사</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">NULL</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Error: data is NULL</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">-1</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">size</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Error: size is 0</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="mi">-1</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="c1">// 처리 로직...</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="4_1">4. 로깅 레벨<a class="header-link" href="#4_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">LOG_ERROR</span><span class="p">,</span>
+<span class="w">    </span><span class="n">LOG_WARNING</span><span class="p">,</span>
+<span class="w">    </span><span class="n">LOG_INFO</span><span class="p">,</span>
+<span class="w">    </span><span class="n">LOG_DEBUG</span>
+<span class="p">}</span><span class="w"> </span><span class="n">LogLevel</span><span class="p">;</span>
+
+<span class="n">LogLevel</span><span class="w"> </span><span class="n">current_level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">LOG_INFO</span><span class="p">;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">log_message</span><span class="p">(</span><span class="n">LogLevel</span><span class="w"> </span><span class="n">level</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">fmt</span><span class="p">,</span><span class="w"> </span><span class="p">...)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">level</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">current_level</span><span class="p">)</span><span class="w"> </span><span class="k">return</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">level_str</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="s">&quot;ERROR&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;WARN&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INFO&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;DEBUG&quot;</span><span class="p">};</span>
+
+<span class="w">    </span><span class="kt">va_list</span><span class="w"> </span><span class="n">args</span><span class="p">;</span>
+<span class="w">    </span><span class="n">va_start</span><span class="p">(</span><span class="n">args</span><span class="p">,</span><span class="w"> </span><span class="n">fmt</span><span class="p">);</span>
+<span class="w">    </span><span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;[%s] &quot;</span><span class="p">,</span><span class="w"> </span><span class="n">level_str</span><span class="p">[</span><span class="n">level</span><span class="p">]);</span>
+<span class="w">    </span><span class="n">vfprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span><span class="w"> </span><span class="n">fmt</span><span class="p">,</span><span class="w"> </span><span class="n">args</span><span class="p">);</span>
+<span class="w">    </span><span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="n">va_end</span><span class="p">(</span><span class="n">args</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="c1">// 사용</span>
+<span class="n">log_message</span><span class="p">(</span><span class="n">LOG_DEBUG</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Processing item %d&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">);</span>
+<span class="n">log_message</span><span class="p">(</span><span class="n">LOG_ERROR</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Failed to open file: %s&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">filename</span><span class="p">);</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_18">연습 문제<a class="header-link" href="#_18" title="Permanent link">&para;</a></h2>
+<h3 id="1_2">문제 1: 메모리 누수 찾기<a class="header-link" href="#1_2" title="Permanent link">&para;</a></h3>
+<p>다음 코드에서 모든 메모리 누수를 찾아 수정하세요.</p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;string.h&gt;</span>
+
+<span class="k">typedef</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">name</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">scores</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">num_scores</span><span class="p">;</span>
+<span class="p">}</span><span class="w"> </span><span class="n">Student</span><span class="p">;</span>
+
+<span class="n">Student</span><span class="w"> </span><span class="o">*</span><span class="nf">create_student</span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">num_scores</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Student</span><span class="w"> </span><span class="o">*</span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="n">Student</span><span class="p">));</span>
+<span class="w">    </span><span class="n">s</span><span class="o">-&gt;</span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="n">strlen</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">    </span><span class="n">strcpy</span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">);</span>
+<span class="w">    </span><span class="n">s</span><span class="o">-&gt;</span><span class="n">scores</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="n">num_scores</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="kt">int</span><span class="p">));</span>
+<span class="w">    </span><span class="n">s</span><span class="o">-&gt;</span><span class="n">num_scores</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">num_scores</span><span class="p">;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">s</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">process_students</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Student</span><span class="w"> </span><span class="o">*</span><span class="n">students</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span>
+
+<span class="w">    </span><span class="n">students</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">create_student</span><span class="p">(</span><span class="s">&quot;Alice&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">);</span>
+<span class="w">    </span><span class="n">students</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">create_student</span><span class="p">(</span><span class="s">&quot;Bob&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">);</span>
+<span class="w">    </span><span class="n">students</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">create_student</span><span class="p">(</span><span class="s">&quot;Charlie&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 처리 후 정리 없음!</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">process_students</span><span class="p">();</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<details>
+<summary>정답 보기</summary>
+
+
+<div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="nf">free_student</span><span class="p">(</span><span class="n">Student</span><span class="w"> </span><span class="o">*</span><span class="n">s</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">free</span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">);</span>
+<span class="w">        </span><span class="n">free</span><span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">scores</span><span class="p">);</span>
+<span class="w">        </span><span class="n">free</span><span class="p">(</span><span class="n">s</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">process_students</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Student</span><span class="w"> </span><span class="o">*</span><span class="n">students</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span>
+
+<span class="w">    </span><span class="n">students</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">create_student</span><span class="p">(</span><span class="s">&quot;Alice&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">);</span>
+<span class="w">    </span><span class="n">students</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">create_student</span><span class="p">(</span><span class="s">&quot;Bob&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">);</span>
+<span class="w">    </span><span class="n">students</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">create_student</span><span class="p">(</span><span class="s">&quot;Charlie&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// 정리</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">free_student</span><span class="p">(</span><span class="n">students</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+
+</details>
+
+<h3 id="2-gdb">문제 2: GDB 사용<a class="header-link" href="#2-gdb" title="Permanent link">&para;</a></h3>
+<p>세그멘테이션 폴트가 발생하는 다음 코드를 GDB로 디버깅하세요.</p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">recursive</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">arr</span><span class="p">[</span><span class="mi">1000</span><span class="p">];</span>
+<span class="w">    </span><span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">n</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">recursive</span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">recursive</span><span class="p">(</span><span class="mi">10000</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<details>
+<summary>해결 방법</summary>
+
+
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>gcc<span class="w"> </span>-g<span class="w"> </span>-O0<span class="w"> </span>program.c<span class="w"> </span>-o<span class="w"> </span>program
+$<span class="w"> </span>gdb<span class="w"> </span>./program
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>run
+<span class="c1"># Segmentation fault 발생</span>
+<span class="o">(</span>gdb<span class="o">)</span><span class="w"> </span>bt
+<span class="c1"># 스택 오버플로우 확인 - recursive 함수가 너무 많이 호출됨</span>
+
+<span class="c1"># 해결: 재귀 깊이 줄이기 또는 반복문 사용</span>
+</code></pre></div>
+
+
+
+</details>
+
+<hr />
+<h2 id="_19">다음 단계<a class="header-link" href="#_19" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./19_Advanced_Embedded_Protocols.md">19_Advanced_Embedded_Protocols.md</a> - PWM, I2C, SPI</li>
+</ul>
+<hr />
+<h2 id="_20">참고 자료<a class="header-link" href="#_20" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://www.gnu.org/software/gdb/documentation/">GDB 공식 문서</a></li>
+<li><a href="https://valgrind.org/docs/manual/">Valgrind 공식 문서</a></li>
+<li><a href="https://github.com/google/sanitizers/wiki/AddressSanitizer">AddressSanitizer Wiki</a></li>
+<li><a href="https://sourceware.org/gdb/current/onlinedocs/gdb/">Debugging with GDB (책)</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/C_Programming/17_Project_Serial_Communication.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">프로젝트 16: 시리얼 통신</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/C_Programming/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/C_Programming/19_Advanced_Embedded_Protocols.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">고급 임베디드 프로토콜</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

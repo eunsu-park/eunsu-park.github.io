@@ -1,0 +1,992 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SELinux and AppArmor - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/en/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/en/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/en/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" selected>
+                        English
+                    </option>
+                    
+                    <option value="ko" >
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/en/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/en/Linux/">Linux</a>
+    <span class="separator">/</span>
+    <span class="current">SELinux and AppArmor</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>SELinux and AppArmor</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/Linux/16_Storage_Management.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">16. Storage Management</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/Linux/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/Linux/18_Log_Management.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">Log Management</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#learning-objectives">Learning Objectives</a></li>
+<li><a href="#table-of-contents">Table of Contents</a></li>
+<li><a href="#1-mandatory-access-control-overview">1. Mandatory Access Control Overview</a><ul>
+<li><a href="#dac-vs-mac">DAC vs MAC</a></li>
+<li><a href="#security-module-comparison">Security Module Comparison</a></li>
+</ul>
+</li>
+<li><a href="#2-selinux-basics">2. SELinux Basics</a><ul>
+<li><a href="#selinux-modes">SELinux Modes</a></li>
+<li><a href="#permanent-mode-change">Permanent Mode Change</a></li>
+<li><a href="#selinux-context">SELinux Context</a></li>
+<li><a href="#common-types">Common Types</a></li>
+</ul>
+</li>
+<li><a href="#3-selinux-policy-management">3. SELinux Policy Management</a><ul>
+<li><a href="#changing-file-context">Changing File Context</a></li>
+<li><a href="#permanent-context-settings">Permanent Context Settings</a></li>
+<li><a href="#selinux-booleans">SELinux Booleans</a></li>
+<li><a href="#common-boolean-examples">Common Boolean Examples</a></li>
+<li><a href="#port-context">Port Context</a></li>
+</ul>
+</li>
+<li><a href="#4-selinux-troubleshooting">4. SELinux Troubleshooting</a><ul>
+<li><a href="#checking-audit-logs">Checking Audit Logs</a></li>
+<li><a href="#using-audit2why">Using audit2why</a></li>
+<li><a href="#generating-policy-with-audit2allow">Generating Policy with audit2allow</a></li>
+<li><a href="#using-sealert-guidetailed-analysis">Using sealert (GUI/Detailed Analysis)</a></li>
+<li><a href="#common-problem-resolution">Common Problem Resolution</a></li>
+</ul>
+</li>
+<li><a href="#5-apparmor-basics">5. AppArmor Basics</a><ul>
+<li><a href="#checking-apparmor-status">Checking AppArmor Status</a></li>
+<li><a href="#apparmor-modes">AppArmor Modes</a></li>
+<li><a href="#profile-locations">Profile Locations</a></li>
+</ul>
+</li>
+<li><a href="#6-apparmor-profiles">6. AppArmor Profiles</a><ul>
+<li><a href="#profile-structure">Profile Structure</a></li>
+<li><a href="#permission-flags">Permission Flags</a></li>
+<li><a href="#profile-writing-example">Profile Writing Example</a></li>
+<li><a href="#automatic-profile-generation">Automatic Profile Generation</a></li>
+<li><a href="#using-abstractions">Using Abstractions</a></li>
+</ul>
+</li>
+<li><a href="#7-practical-scenarios">7. Practical Scenarios</a><ul>
+<li><a href="#scenario-1-web-server-custom-directory-selinux">Scenario 1: Web Server Custom Directory (SELinux)</a></li>
+<li><a href="#scenario-2-php-application-db-connection-selinux">Scenario 2: PHP Application DB Connection (SELinux)</a></li>
+<li><a href="#scenario-3-nginx-custom-port-apparmor">Scenario 3: Nginx Custom Port (AppArmor)</a></li>
+<li><a href="#scenario-4-docker-and-selinux">Scenario 4: Docker and SELinux</a></li>
+<li><a href="#scenario-5-creating-new-service-profile-apparmor">Scenario 5: Creating New Service Profile (AppArmor)</a></li>
+</ul>
+</li>
+<li><a href="#practice-problems">Practice Problems</a><ul>
+<li><a href="#problem-1-selinux-context">Problem 1: SELinux Context</a></li>
+<li><a href="#problem-2-apparmor-profile">Problem 2: AppArmor Profile</a></li>
+<li><a href="#problem-3-troubleshooting">Problem 3: Troubleshooting</a></li>
+</ul>
+</li>
+<li><a href="#answers">Answers</a><ul>
+<li><a href="#problem-1-answer">Problem 1 Answer</a></li>
+<li><a href="#problem-2-answer">Problem 2 Answer</a></li>
+<li><a href="#problem-3-answer">Problem 3 Answer</a></li>
+</ul>
+</li>
+<li><a href="#next-steps">Next Steps</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="selinux-and-apparmor">SELinux and AppArmor<a class="header-link" href="#selinux-and-apparmor" title="Permanent link">&para;</a></h1>
+<h2 id="learning-objectives">Learning Objectives<a class="header-link" href="#learning-objectives" title="Permanent link">&para;</a></h2>
+<p>Through this document, you will learn:</p>
+<ul>
+<li>Concepts and necessity of Mandatory Access Control (MAC)</li>
+<li>SELinux modes and policy management</li>
+<li>AppArmor profile creation and management</li>
+<li>Security module troubleshooting</li>
+</ul>
+<p><strong>Difficulty</strong>: Advanced</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents<a class="header-link" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-mandatory-access-control-overview">Mandatory Access Control Overview</a></li>
+<li><a href="#2-selinux-basics">SELinux Basics</a></li>
+<li><a href="#3-selinux-policy-management">SELinux Policy Management</a></li>
+<li><a href="#4-selinux-troubleshooting">SELinux Troubleshooting</a></li>
+<li><a href="#5-apparmor-basics">AppArmor Basics</a></li>
+<li><a href="#6-apparmor-profiles">AppArmor Profiles</a></li>
+<li><a href="#7-practical-scenarios">Practical Scenarios</a></li>
+</ol>
+<hr />
+<h2 id="1-mandatory-access-control-overview">1. Mandatory Access Control Overview<a class="header-link" href="#1-mandatory-access-control-overview" title="Permanent link">&para;</a></h2>
+<h3 id="dac-vs-mac">DAC vs MAC<a class="header-link" href="#dac-vs-mac" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                   Access Control Comparison                  │
+├─────────────────────────────────────────────────────────────┤
+│  DAC (Discretionary Access Control)                         │
+│  - Traditional Unix permission model                        │
+│  - File owner determines permissions                        │
+│  - Managed with chmod, chown                                │
+│  - root can bypass all restrictions                         │
+├─────────────────────────────────────────────────────────────┤
+│  MAC (Mandatory Access Control)                             │
+│  - System policy determines access                          │
+│  - Users cannot change policies                             │
+│  - Implemented with SELinux, AppArmor                       │
+│  - Even root is restricted by policy                        │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="security-module-comparison">Security Module Comparison<a class="header-link" href="#security-module-comparison" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>SELinux</th>
+<th>AppArmor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Base Distribution</td>
+<td>RHEL/CentOS/Fedora</td>
+<td>Ubuntu/Debian/SUSE</td>
+</tr>
+<tr>
+<td>Approach</td>
+<td>Label-based</td>
+<td>Path-based</td>
+</tr>
+<tr>
+<td>Complexity</td>
+<td>High</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>Granularity</td>
+<td>Very fine</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Learning Curve</td>
+<td>Steep</td>
+<td>Gentle</td>
+</tr>
+<tr>
+<td>Default Policy</td>
+<td>Comprehensive</td>
+<td>Limited</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-selinux-basics">2. SELinux Basics<a class="header-link" href="#2-selinux-basics" title="Permanent link">&para;</a></h2>
+<h3 id="selinux-modes">SELinux Modes<a class="header-link" href="#selinux-modes" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check current mode</span>
+getenforce
+<span class="c1"># Enforcing, Permissive, or Disabled</span>
+
+<span class="c1"># Check detailed status</span>
+sestatus
+
+<span class="c1"># Temporary mode change (restored on reboot)</span>
+sudo<span class="w"> </span>setenforce<span class="w"> </span><span class="m">0</span><span class="w">  </span><span class="c1"># Permissive</span>
+sudo<span class="w"> </span>setenforce<span class="w"> </span><span class="m">1</span><span class="w">  </span><span class="c1"># Enforcing</span>
+</code></pre></div>
+
+<h3 id="permanent-mode-change">Permanent Mode Change<a class="header-link" href="#permanent-mode-change" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Edit /etc/selinux/config</span>
+<span class="c1"># RHEL/CentOS</span>
+sudo<span class="w"> </span>vi<span class="w"> </span>/etc/selinux/config
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/selinux/config</span>
+<span class="na">SELINUX</span><span class="o">=</span><span class="s">enforcing</span><span class="w">     </span><span class="c1"># enforcing, permissive, disabled</span>
+<span class="na">SELINUXTYPE</span><span class="o">=</span><span class="s">targeted</span><span class="w">  </span><span class="c1"># targeted, minimum, mls</span>
+</code></pre></div>
+
+<h3 id="selinux-context">SELinux Context<a class="header-link" href="#selinux-context" title="Permanent link">&para;</a></h3>
+<p>Every file, process, and port is assigned a security context:</p>
+<div class="highlight"><pre><span></span><code><span class="n">user</span><span class="o">:</span><span class="n">role</span><span class="o">:</span><span class="n">type</span><span class="o">:</span><span class="n">level</span>
+<span class="n">user_u</span><span class="o">:</span><span class="n">role_r</span><span class="o">:</span><span class="n">type_t</span><span class="o">:</span><span class="n">s0</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># Check file context</span>
+ls<span class="w"> </span>-Z<span class="w"> </span>/var/www/html/
+<span class="c1"># -rw-r--r--. root root unconfined_u:object_r:httpd_sys_content_t:s0 index.html</span>
+
+<span class="c1"># Check process context</span>
+ps<span class="w"> </span>-eZ<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>httpd
+<span class="c1"># system_u:system_r:httpd_t:s0    12345 ?  00:00:01 httpd</span>
+
+<span class="c1"># Check user context</span>
+id<span class="w"> </span>-Z
+<span class="c1"># unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023</span>
+</code></pre></div>
+
+<h3 id="common-types">Common Types<a class="header-link" href="#common-types" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>httpd_t</code></td>
+<td>Apache web server process</td>
+</tr>
+<tr>
+<td><code>httpd_sys_content_t</code></td>
+<td>Web content files</td>
+</tr>
+<tr>
+<td><code>mysqld_t</code></td>
+<td>MySQL process</td>
+</tr>
+<tr>
+<td><code>sshd_t</code></td>
+<td>SSH daemon</td>
+</tr>
+<tr>
+<td><code>user_home_t</code></td>
+<td>User home directory</td>
+</tr>
+<tr>
+<td><code>tmp_t</code></td>
+<td>Temporary files</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-selinux-policy-management">3. SELinux Policy Management<a class="header-link" href="#3-selinux-policy-management" title="Permanent link">&para;</a></h2>
+<h3 id="changing-file-context">Changing File Context<a class="header-link" href="#changing-file-context" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Temporary change (restored on relabeling)</span>
+chcon<span class="w"> </span>-t<span class="w"> </span>httpd_sys_content_t<span class="w"> </span>/var/www/custom/index.html
+
+<span class="c1"># Recursive directory change</span>
+chcon<span class="w"> </span>-R<span class="w"> </span>-t<span class="w"> </span>httpd_sys_content_t<span class="w"> </span>/var/www/custom/
+
+<span class="c1"># Copy context from another file</span>
+chcon<span class="w"> </span>--reference<span class="o">=</span>/var/www/html/index.html<span class="w"> </span>/var/www/custom/index.html
+</code></pre></div>
+
+<h3 id="permanent-context-settings">Permanent Context Settings<a class="header-link" href="#permanent-context-settings" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Add context rule to policy</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>fcontext<span class="w"> </span>-a<span class="w"> </span>-t<span class="w"> </span>httpd_sys_content_t<span class="w"> </span><span class="s2">&quot;/srv/www(/.*)?&quot;</span>
+
+<span class="c1"># Apply policy</span>
+sudo<span class="w"> </span>restorecon<span class="w"> </span>-Rv<span class="w"> </span>/srv/www
+
+<span class="c1"># List context rules</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>fcontext<span class="w"> </span>-l<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>httpd
+
+<span class="c1"># Delete rule</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>fcontext<span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;/srv/www(/.*)?&quot;</span>
+</code></pre></div>
+
+<h3 id="selinux-booleans">SELinux Booleans<a class="header-link" href="#selinux-booleans" title="Permanent link">&para;</a></h3>
+<p>Booleans are switches that turn specific features of SELinux policy on or off:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># List all booleans</span>
+getsebool<span class="w"> </span>-a
+
+<span class="c1"># Check specific boolean</span>
+getsebool<span class="w"> </span>httpd_can_network_connect
+
+<span class="c1"># Temporary change</span>
+sudo<span class="w"> </span>setsebool<span class="w"> </span>httpd_can_network_connect<span class="w"> </span>on
+
+<span class="c1"># Permanent change (-P option)</span>
+sudo<span class="w"> </span>setsebool<span class="w"> </span>-P<span class="w"> </span>httpd_can_network_connect<span class="w"> </span>on
+
+<span class="c1"># Search booleans</span>
+getsebool<span class="w"> </span>-a<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>httpd
+</code></pre></div>
+
+<h3 id="common-boolean-examples">Common Boolean Examples<a class="header-link" href="#common-boolean-examples" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Web server related</span>
+httpd_can_network_connect<span class="w">      </span><span class="c1"># Allow external network connections</span>
+httpd_can_network_connect_db<span class="w">   </span><span class="c1"># Allow DB connections</span>
+httpd_can_sendmail<span class="w">            </span><span class="c1"># Allow sending mail</span>
+httpd_enable_homedirs<span class="w">         </span><span class="c1"># Allow access to user home directories</span>
+
+<span class="c1"># FTP related</span>
+ftpd_anon_write<span class="w">              </span><span class="c1"># Allow anonymous write</span>
+ftpd_full_access<span class="w">             </span><span class="c1"># Full filesystem access</span>
+
+<span class="c1"># Others</span>
+samba_enable_home_dirs<span class="w">       </span><span class="c1"># Samba home directory sharing</span>
+</code></pre></div>
+
+<h3 id="port-context">Port Context<a class="header-link" href="#port-context" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check port labels</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>port<span class="w"> </span>-l<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>http
+<span class="c1"># http_port_t                    tcp      80, 81, 443, 488, 8008, 8009, 8443, 9000</span>
+
+<span class="c1"># Add new port</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>port<span class="w"> </span>-a<span class="w"> </span>-t<span class="w"> </span>http_port_t<span class="w"> </span>-p<span class="w"> </span>tcp<span class="w"> </span><span class="m">8080</span>
+
+<span class="c1"># Delete port</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>port<span class="w"> </span>-d<span class="w"> </span>-t<span class="w"> </span>http_port_t<span class="w"> </span>-p<span class="w"> </span>tcp<span class="w"> </span><span class="m">8080</span>
+
+<span class="c1"># Modify port</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>port<span class="w"> </span>-m<span class="w"> </span>-t<span class="w"> </span>http_port_t<span class="w"> </span>-p<span class="w"> </span>tcp<span class="w"> </span><span class="m">8888</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-selinux-troubleshooting">4. SELinux Troubleshooting<a class="header-link" href="#4-selinux-troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="checking-audit-logs">Checking Audit Logs<a class="header-link" href="#checking-audit-logs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check SELinux denial logs</span>
+sudo<span class="w"> </span>ausearch<span class="w"> </span>-m<span class="w"> </span>avc<span class="w"> </span>-ts<span class="w"> </span>recent
+
+<span class="c1"># Logs related to specific service</span>
+sudo<span class="w"> </span>ausearch<span class="w"> </span>-m<span class="w"> </span>avc<span class="w"> </span>-c<span class="w"> </span>httpd
+
+<span class="c1"># Convert to readable format</span>
+sudo<span class="w"> </span>ausearch<span class="w"> </span>-m<span class="w"> </span>avc<span class="w"> </span>-ts<span class="w"> </span>recent<span class="w"> </span><span class="p">|</span><span class="w"> </span>audit2why
+</code></pre></div>
+
+<h3 id="using-audit2why">Using audit2why<a class="header-link" href="#using-audit2why" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Analyze denial reasons</span>
+sudo<span class="w"> </span>cat<span class="w"> </span>/var/log/audit/audit.log<span class="w"> </span><span class="p">|</span><span class="w"> </span>audit2why
+
+<span class="c1"># Example output:</span>
+<span class="c1"># type=AVC msg=audit(...): avc:  denied  { read } for  pid=1234</span>
+<span class="c1"># comm=&quot;httpd&quot; name=&quot;index.html&quot; dev=&quot;sda1&quot; ino=12345</span>
+<span class="c1"># scontext=system_u:system_r:httpd_t:s0</span>
+<span class="c1"># tcontext=unconfined_u:object_r:user_home_t:s0 tclass=file</span>
+<span class="c1">#</span>
+<span class="c1"># Was caused by:</span>
+<span class="c1">#   Missing type enforcement (TE) allow rule.</span>
+</code></pre></div>
+
+<h3 id="generating-policy-with-audit2allow">Generating Policy with audit2allow<a class="header-link" href="#generating-policy-with-audit2allow" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Generate allow rules (review only)</span>
+sudo<span class="w"> </span>ausearch<span class="w"> </span>-m<span class="w"> </span>avc<span class="w"> </span>-ts<span class="w"> </span>recent<span class="w"> </span><span class="p">|</span><span class="w"> </span>audit2allow
+
+<span class="c1"># Compile as local module</span>
+sudo<span class="w"> </span>ausearch<span class="w"> </span>-m<span class="w"> </span>avc<span class="w"> </span>-ts<span class="w"> </span>recent<span class="w"> </span><span class="p">|</span><span class="w"> </span>audit2allow<span class="w"> </span>-M<span class="w"> </span>mypolicy
+
+<span class="c1"># Install module</span>
+sudo<span class="w"> </span>semodule<span class="w"> </span>-i<span class="w"> </span>mypolicy.pp
+
+<span class="c1"># Check installed modules</span>
+sudo<span class="w"> </span>semodule<span class="w"> </span>-l<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>mypolicy
+
+<span class="c1"># Remove module</span>
+sudo<span class="w"> </span>semodule<span class="w"> </span>-r<span class="w"> </span>mypolicy
+</code></pre></div>
+
+<h3 id="using-sealert-guidetailed-analysis">Using sealert (GUI/Detailed Analysis)<a class="header-link" href="#using-sealert-guidetailed-analysis" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Requires setroubleshoot package</span>
+sudo<span class="w"> </span>yum<span class="w"> </span>install<span class="w"> </span>setroubleshoot-server
+
+<span class="c1"># Run analysis</span>
+sudo<span class="w"> </span>sealert<span class="w"> </span>-a<span class="w"> </span>/var/log/audit/audit.log
+
+<span class="c1"># Check real-time alerts</span>
+sudo<span class="w"> </span>sealert<span class="w"> </span>-l<span class="w"> </span><span class="s2">&quot;*&quot;</span>
+</code></pre></div>
+
+<h3 id="common-problem-resolution">Common Problem Resolution<a class="header-link" href="#common-problem-resolution" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Problem: Web server cannot read files</span>
+<span class="c1"># 1. Check context</span>
+ls<span class="w"> </span>-Z<span class="w"> </span>/var/www/html/problem_file
+
+<span class="c1"># 2. Fix context</span>
+sudo<span class="w"> </span>restorecon<span class="w"> </span>-v<span class="w"> </span>/var/www/html/problem_file
+
+<span class="c1"># Problem: Cannot use custom port</span>
+<span class="c1"># 1. Check current port label</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>port<span class="w"> </span>-l<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="m">8080</span>
+
+<span class="c1"># 2. Add port</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>port<span class="w"> </span>-a<span class="w"> </span>-t<span class="w"> </span>http_port_t<span class="w"> </span>-p<span class="w"> </span>tcp<span class="w"> </span><span class="m">8080</span>
+
+<span class="c1"># Problem: Network connection denied</span>
+<span class="c1"># 1. Check related boolean</span>
+getsebool<span class="w"> </span>-a<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>httpd_can_network
+
+<span class="c1"># 2. Enable boolean</span>
+sudo<span class="w"> </span>setsebool<span class="w"> </span>-P<span class="w"> </span>httpd_can_network_connect<span class="w"> </span>on
+</code></pre></div>
+
+<hr />
+<h2 id="5-apparmor-basics">5. AppArmor Basics<a class="header-link" href="#5-apparmor-basics" title="Permanent link">&para;</a></h2>
+<h3 id="checking-apparmor-status">Checking AppArmor Status<a class="header-link" href="#checking-apparmor-status" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Ubuntu/Debian</span>
+sudo<span class="w"> </span>aa-status
+
+<span class="c1"># or</span>
+sudo<span class="w"> </span>apparmor_status
+</code></pre></div>
+
+<p>Example output:</p>
+<div class="highlight"><pre><span></span><code><span class="n">apparmor</span><span class="w"> </span><span class="n">module</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">loaded</span><span class="o">.</span>
+<span class="mi">38</span><span class="w"> </span><span class="n">profiles</span><span class="w"> </span><span class="n">are</span><span class="w"> </span><span class="n">loaded</span><span class="o">.</span>
+<span class="mi">36</span><span class="w"> </span><span class="n">profiles</span><span class="w"> </span><span class="n">are</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">enforce</span><span class="w"> </span><span class="n">mode</span><span class="o">.</span>
+<span class="w">   </span><span class="o">/</span><span class="n">snap</span><span class="o">/</span><span class="n">snapd</span><span class="o">/</span><span class="mi">19457</span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">snapd</span><span class="o">/</span><span class="n">snap</span><span class="o">-</span><span class="n">confine</span>
+<span class="w">   </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">evince</span>
+<span class="w">   </span><span class="o">...</span>
+<span class="mi">2</span><span class="w"> </span><span class="n">profiles</span><span class="w"> </span><span class="n">are</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">complain</span><span class="w"> </span><span class="n">mode</span><span class="o">.</span>
+<span class="w">   </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">sbin</span><span class="o">/</span><span class="n">cups</span><span class="o">-</span><span class="n">browsed</span>
+<span class="w">   </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">sbin</span><span class="o">/</span><span class="n">cupsd</span>
+</code></pre></div>
+
+<h3 id="apparmor-modes">AppArmor Modes<a class="header-link" href="#apparmor-modes" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Enforce mode: Block policy violations</span>
+sudo<span class="w"> </span>aa-enforce<span class="w"> </span>/etc/apparmor.d/usr.sbin.nginx
+
+<span class="c1"># Complain mode: Only log violations (no blocking)</span>
+sudo<span class="w"> </span>aa-complain<span class="w"> </span>/etc/apparmor.d/usr.sbin.nginx
+
+<span class="c1"># Disable profile</span>
+sudo<span class="w"> </span>aa-disable<span class="w"> </span>/etc/apparmor.d/usr.sbin.nginx
+
+<span class="c1"># Reload profile</span>
+sudo<span class="w"> </span>apparmor_parser<span class="w"> </span>-r<span class="w"> </span>/etc/apparmor.d/usr.sbin.nginx
+</code></pre></div>
+
+<h3 id="profile-locations">Profile Locations<a class="header-link" href="#profile-locations" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># System profiles</span>
+ls<span class="w"> </span>/etc/apparmor.d/
+
+<span class="c1"># Main files</span>
+/etc/apparmor.d/usr.sbin.nginx<span class="w">    </span><span class="c1"># Nginx profile</span>
+/etc/apparmor.d/usr.sbin.mysqld<span class="w">   </span><span class="c1"># MySQL profile</span>
+/etc/apparmor.d/abstractions/<span class="w">     </span><span class="c1"># Shared rules</span>
+/etc/apparmor.d/tunables/<span class="w">         </span><span class="c1"># Variable definitions</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-apparmor-profiles">6. AppArmor Profiles<a class="header-link" href="#6-apparmor-profiles" title="Permanent link">&para;</a></h2>
+<h3 id="profile-structure">Profile Structure<a class="header-link" href="#profile-structure" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">#include &lt;tunables/global&gt;</span>
+
+<span class="o">/</span><span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">program</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="c1">#include &lt;abstractions/base&gt;</span>
+
+<span class="w">  </span><span class="c1"># File access rules</span>
+<span class="w">  </span><span class="o">/</span><span class="n">etc</span><span class="o">/</span><span class="n">myapp</span><span class="o">.</span><span class="n">conf</span><span class="w"> </span><span class="n">r</span><span class="p">,</span>
+<span class="w">  </span><span class="o">/</span><span class="k">var</span><span class="o">/</span><span class="nb">log</span><span class="o">/</span><span class="n">myapp</span><span class="o">.</span><span class="n">log</span><span class="w"> </span><span class="n">w</span><span class="p">,</span>
+<span class="w">  </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">myapp</span><span class="o">/**</span><span class="w"> </span><span class="n">r</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1"># Network rules</span>
+<span class="w">  </span><span class="n">network</span><span class="w"> </span><span class="n">inet</span><span class="w"> </span><span class="n">stream</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1"># Execution rules</span>
+<span class="w">  </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">helper</span><span class="w"> </span><span class="n">ix</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="permission-flags">Permission Flags<a class="header-link" href="#permission-flags" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>r</code></td>
+<td>Read</td>
+</tr>
+<tr>
+<td><code>w</code></td>
+<td>Write</td>
+</tr>
+<tr>
+<td><code>a</code></td>
+<td>Append</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>File lock</td>
+</tr>
+<tr>
+<td><code>l</code></td>
+<td>Link</td>
+</tr>
+<tr>
+<td><code>m</code></td>
+<td>Memory map execute</td>
+</tr>
+<tr>
+<td><code>x</code></td>
+<td>Execute</td>
+</tr>
+<tr>
+<td><code>ix</code></td>
+<td>Execute with same profile</td>
+</tr>
+<tr>
+<td><code>px</code></td>
+<td>Execute with different profile</td>
+</tr>
+<tr>
+<td><code>ux</code></td>
+<td>Execute unconfined</td>
+</tr>
+<tr>
+<td><code>Px</code></td>
+<td>px + environment scrubbing</td>
+</tr>
+<tr>
+<td><code>Ux</code></td>
+<td>ux + environment scrubbing</td>
+</tr>
+</tbody>
+</table>
+<h3 id="profile-writing-example">Profile Writing Example<a class="header-link" href="#profile-writing-example" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/apparmor.d/usr.local.bin.myapp</span>
+<span class="c1">#include &lt;tunables/global&gt;</span>
+
+/usr/local/bin/myapp<span class="w"> </span><span class="o">{</span>
+<span class="w">  </span><span class="c1">#include &lt;abstractions/base&gt;</span>
+<span class="w">  </span><span class="c1">#include &lt;abstractions/nameservice&gt;</span>
+
+<span class="w">  </span><span class="c1"># Read config files</span>
+<span class="w">  </span>/etc/myapp/**<span class="w"> </span>r,
+
+<span class="w">  </span><span class="c1"># Data directory</span>
+<span class="w">  </span>/var/lib/myapp/<span class="w"> </span>r,
+<span class="w">  </span>/var/lib/myapp/**<span class="w"> </span>rw,
+
+<span class="w">  </span><span class="c1"># Log files</span>
+<span class="w">  </span>/var/log/myapp/<span class="w"> </span>r,
+<span class="w">  </span>/var/log/myapp/**<span class="w"> </span>rw,
+<span class="w">  </span>owner<span class="w"> </span>/var/log/myapp/*.log<span class="w"> </span>w,
+
+<span class="w">  </span><span class="c1"># Runtime files</span>
+<span class="w">  </span>/run/myapp.pid<span class="w"> </span>rw,
+<span class="w">  </span>/run/myapp.sock<span class="w"> </span>rw,
+
+<span class="w">  </span><span class="c1"># Libraries</span>
+<span class="w">  </span>/usr/lib/myapp/**<span class="w"> </span>rm,
+
+<span class="w">  </span><span class="c1"># Network access</span>
+<span class="w">  </span>network<span class="w"> </span>inet<span class="w"> </span>tcp,
+<span class="w">  </span>network<span class="w"> </span>inet<span class="w"> </span>udp,
+
+<span class="w">  </span><span class="c1"># System call restrictions</span>
+<span class="w">  </span>deny<span class="w"> </span>@<span class="o">{</span>PROC<span class="o">}</span>/**<span class="w"> </span>w,
+<span class="w">  </span>deny<span class="w"> </span>/sys/**<span class="w"> </span>w,
+
+<span class="w">  </span><span class="c1"># Child processes</span>
+<span class="w">  </span>/usr/bin/logger<span class="w"> </span>Px,
+<span class="o">}</span>
+</code></pre></div>
+
+<h3 id="automatic-profile-generation">Automatic Profile Generation<a class="header-link" href="#automatic-profile-generation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Generate profile with aa-genprof</span>
+sudo<span class="w"> </span>aa-genprof<span class="w"> </span>/usr/local/bin/myapp
+
+<span class="c1"># Run the program and perform typical operations</span>
+<span class="c1"># aa-genprof monitors access and creates profile</span>
+
+<span class="c1"># Update existing profile with aa-logprof</span>
+sudo<span class="w"> </span>aa-logprof
+</code></pre></div>
+
+<h3 id="using-abstractions">Using Abstractions<a class="header-link" href="#using-abstractions" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Common rules in /etc/apparmor.d/abstractions/</span>
+<span class="c1"># base          - Basic system access</span>
+<span class="c1"># nameservice   - DNS, NSS, etc.</span>
+<span class="c1"># authentication - PAM, shadow, etc.</span>
+<span class="c1"># apache2-common - Apache common rules</span>
+<span class="c1"># mysql         - MySQL client access</span>
+<span class="c1"># php           - PHP related access</span>
+</code></pre></div>
+
+<p>Using in profiles:</p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;abstractions/base&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;abstractions/nameservice&gt;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7-practical-scenarios">7. Practical Scenarios<a class="header-link" href="#7-practical-scenarios" title="Permanent link">&para;</a></h2>
+<h3 id="scenario-1-web-server-custom-directory-selinux">Scenario 1: Web Server Custom Directory (SELinux)<a class="header-link" href="#scenario-1-web-server-custom-directory-selinux" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Problem: 403 error when serving web content from /data/www</span>
+
+<span class="c1"># 1. Check current context</span>
+ls<span class="w"> </span>-Zd<span class="w"> </span>/data/www
+<span class="c1"># drwxr-xr-x. root root unconfined_u:object_r:default_t:s0 /data/www</span>
+
+<span class="c1"># 2. Set correct context</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>fcontext<span class="w"> </span>-a<span class="w"> </span>-t<span class="w"> </span>httpd_sys_content_t<span class="w"> </span><span class="s2">&quot;/data/www(/.*)?&quot;</span>
+sudo<span class="w"> </span>restorecon<span class="w"> </span>-Rv<span class="w"> </span>/data/www
+
+<span class="c1"># 3. Verify</span>
+ls<span class="w"> </span>-Zd<span class="w"> </span>/data/www
+<span class="c1"># drwxr-xr-x. root root unconfined_u:object_r:httpd_sys_content_t:s0 /data/www</span>
+</code></pre></div>
+
+<h3 id="scenario-2-php-application-db-connection-selinux">Scenario 2: PHP Application DB Connection (SELinux)<a class="header-link" href="#scenario-2-php-application-db-connection-selinux" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Problem: PHP cannot connect to remote MySQL</span>
+
+<span class="c1"># 1. Check logs</span>
+sudo<span class="w"> </span>ausearch<span class="w"> </span>-m<span class="w"> </span>avc<span class="w"> </span>-c<span class="w"> </span>httpd<span class="w"> </span><span class="p">|</span><span class="w"> </span>audit2why
+
+<span class="c1"># 2. Check boolean</span>
+getsebool<span class="w"> </span>httpd_can_network_connect_db
+<span class="c1"># httpd_can_network_connect_db --&gt; off</span>
+
+<span class="c1"># 3. Enable boolean</span>
+sudo<span class="w"> </span>setsebool<span class="w"> </span>-P<span class="w"> </span>httpd_can_network_connect_db<span class="w"> </span>on
+</code></pre></div>
+
+<h3 id="scenario-3-nginx-custom-port-apparmor">Scenario 3: Nginx Custom Port (AppArmor)<a class="header-link" href="#scenario-3-nginx-custom-port-apparmor" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/apparmor.d/local/nginx</span>
+<span class="c1"># File for local customization</span>
+
+<span class="c1"># Allow additional port</span>
+network<span class="w"> </span>inet<span class="w"> </span>stream,
+
+<span class="c1"># Allow additional paths</span>
+/data/nginx/**<span class="w"> </span>r,
+/var/log/nginx-custom/<span class="w"> </span>rw,
+/var/log/nginx-custom/**<span class="w"> </span>rw,
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># Reload profile</span>
+sudo<span class="w"> </span>apparmor_parser<span class="w"> </span>-r<span class="w"> </span>/etc/apparmor.d/usr.sbin.nginx
+</code></pre></div>
+
+<h3 id="scenario-4-docker-and-selinux">Scenario 4: Docker and SELinux<a class="header-link" href="#scenario-4-docker-and-selinux" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Mounting host volume in Docker container</span>
+
+<span class="c1"># Method 1: z option (shared label)</span>
+docker<span class="w"> </span>run<span class="w"> </span>-v<span class="w"> </span>/data:/data:z<span class="w"> </span>myimage
+
+<span class="c1"># Method 2: Z option (private label)</span>
+docker<span class="w"> </span>run<span class="w"> </span>-v<span class="w"> </span>/data:/data:Z<span class="w"> </span>myimage
+
+<span class="c1"># Method 3: Manual label assignment</span>
+sudo<span class="w"> </span>chcon<span class="w"> </span>-Rt<span class="w"> </span>svirt_sandbox_file_t<span class="w"> </span>/data
+docker<span class="w"> </span>run<span class="w"> </span>-v<span class="w"> </span>/data:/data<span class="w"> </span>myimage
+</code></pre></div>
+
+<h3 id="scenario-5-creating-new-service-profile-apparmor">Scenario 5: Creating New Service Profile (AppArmor)<a class="header-link" href="#scenario-5-creating-new-service-profile-apparmor" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. Start in complain mode</span>
+sudo<span class="w"> </span>aa-complain<span class="w"> </span>/usr/local/bin/newservice
+
+<span class="c1"># 2. Run service and test all features</span>
+
+<span class="c1"># 3. Update profile from logs</span>
+sudo<span class="w"> </span>aa-logprof
+
+<span class="c1"># 4. Switch to enforce mode</span>
+sudo<span class="w"> </span>aa-enforce<span class="w"> </span>/usr/local/bin/newservice
+
+<span class="c1"># 5. Test</span>
+</code></pre></div>
+
+<hr />
+<h2 id="practice-problems">Practice Problems<a class="header-link" href="#practice-problems" title="Permanent link">&para;</a></h2>
+<h3 id="problem-1-selinux-context">Problem 1: SELinux Context<a class="header-link" href="#problem-1-selinux-context" title="Permanent link">&para;</a></h3>
+<p>What commands should you use in the following situations?
+- Permanently set <code>/opt/webapp</code> directory as web server content
+- Allow Apache to use port 8443
+- Allow httpd to access user home directories</p>
+<h3 id="problem-2-apparmor-profile">Problem 2: AppArmor Profile<a class="header-link" href="#problem-2-apparmor-profile" title="Permanent link">&para;</a></h3>
+<p>The <code>/usr/local/bin/backup.sh</code> script performs the following tasks:
+- Read <code>/etc/</code>
+- Write to <code>/var/backup/</code>
+- Execute <code>rsync</code>
+- Network access to TCP port 22</p>
+<p>Write an AppArmor profile for this script.</p>
+<h3 id="problem-3-troubleshooting">Problem 3: Troubleshooting<a class="header-link" href="#problem-3-troubleshooting" title="Permanent link">&para;</a></h3>
+<p>A web application is not working in SELinux Enforcing mode:
+1. List the steps to diagnose the problem
+2. What tools should you use?</p>
+<hr />
+<h2 id="answers">Answers<a class="header-link" href="#answers" title="Permanent link">&para;</a></h2>
+<h3 id="problem-1-answer">Problem 1 Answer<a class="header-link" href="#problem-1-answer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Web content setup</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>fcontext<span class="w"> </span>-a<span class="w"> </span>-t<span class="w"> </span>httpd_sys_content_t<span class="w"> </span><span class="s2">&quot;/opt/webapp(/.*)?&quot;</span>
+sudo<span class="w"> </span>restorecon<span class="w"> </span>-Rv<span class="w"> </span>/opt/webapp
+
+<span class="c1"># Add port</span>
+sudo<span class="w"> </span>semanage<span class="w"> </span>port<span class="w"> </span>-a<span class="w"> </span>-t<span class="w"> </span>http_port_t<span class="w"> </span>-p<span class="w"> </span>tcp<span class="w"> </span><span class="m">8443</span>
+
+<span class="c1"># Allow home directory access</span>
+sudo<span class="w"> </span>setsebool<span class="w"> </span>-P<span class="w"> </span>httpd_enable_homedirs<span class="w"> </span>on
+</code></pre></div>
+
+<h3 id="problem-2-answer">Problem 2 Answer<a class="header-link" href="#problem-2-answer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">#include &lt;tunables/global&gt;</span>
+
+<span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">local</span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">backup</span><span class="o">.</span><span class="n">sh</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="c1">#include &lt;abstractions/base&gt;</span>
+<span class="w">  </span><span class="c1">#include &lt;abstractions/bash&gt;</span>
+
+<span class="w">  </span><span class="c1"># Read config</span>
+<span class="w">  </span><span class="o">/</span><span class="n">etc</span><span class="o">/**</span><span class="w"> </span><span class="n">r</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1"># Backup directory</span>
+<span class="w">  </span><span class="o">/</span><span class="k">var</span><span class="o">/</span><span class="n">backup</span><span class="o">/</span><span class="w"> </span><span class="n">r</span><span class="p">,</span>
+<span class="w">  </span><span class="o">/</span><span class="k">var</span><span class="o">/</span><span class="n">backup</span><span class="o">/**</span><span class="w"> </span><span class="n">rw</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1"># Execute rsync</span>
+<span class="w">  </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">bin</span><span class="o">/</span><span class="n">rsync</span><span class="w"> </span><span class="n">Px</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1"># SSH network</span>
+<span class="w">  </span><span class="n">network</span><span class="w"> </span><span class="n">inet</span><span class="w"> </span><span class="n">stream</span><span class="p">,</span>
+<span class="w">  </span><span class="n">network</span><span class="w"> </span><span class="n">inet6</span><span class="w"> </span><span class="n">stream</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="problem-3-answer">Problem 3 Answer<a class="header-link" href="#problem-3-answer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. Check SELinux logs</span>
+sudo<span class="w"> </span>ausearch<span class="w"> </span>-m<span class="w"> </span>avc<span class="w"> </span>-ts<span class="w"> </span>recent
+
+<span class="c1"># 2. Analyze cause</span>
+sudo<span class="w"> </span>ausearch<span class="w"> </span>-m<span class="w"> </span>avc<span class="w"> </span>-ts<span class="w"> </span>recent<span class="w"> </span><span class="p">|</span><span class="w"> </span>audit2why
+
+<span class="c1"># 3. Detailed analysis (if setroubleshoot installed)</span>
+sudo<span class="w"> </span>sealert<span class="w"> </span>-a<span class="w"> </span>/var/log/audit/audit.log
+
+<span class="c1"># 4. Apply solution</span>
+<span class="c1"># - Context issue: restorecon, semanage fcontext</span>
+<span class="c1"># - Boolean issue: setsebool</span>
+<span class="c1"># - Port issue: semanage port</span>
+<span class="c1"># - Policy needed: Create custom module with audit2allow</span>
+</code></pre></div>
+
+<hr />
+<h2 id="next-steps">Next Steps<a class="header-link" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./18_Log_Management.md">18_Log_Management.md</a> - Learn journald, rsyslog, logrotate</li>
+</ul>
+<hr />
+<h2 id="references">References<a class="header-link" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/using_selinux/index">SELinux User Guide (Red Hat)</a></li>
+<li><a href="https://gitlab.com/apparmor/apparmor/-/wikis/home">AppArmor Wiki</a></li>
+<li><a href="https://selinuxproject.org/page/Main_Page">SELinux Project Wiki</a></li>
+<li><code>man semanage</code>, <code>man restorecon</code>, <code>man audit2why</code></li>
+<li><code>man apparmor</code>, <code>man aa-status</code>, <code>man apparmor.d</code></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/Linux/16_Storage_Management.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">16. Storage Management</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/Linux/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/Linux/18_Log_Management.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">Log Management</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'en';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

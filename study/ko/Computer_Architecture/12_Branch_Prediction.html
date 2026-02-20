@@ -1,0 +1,740 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>분기 예측 (Branch Prediction) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Computer_Architecture/">Computer Architecture</a>
+    <span class="separator">/</span>
+    <span class="current">분기 예측 (Branch Prediction)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>분기 예측 (Branch Prediction)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Computer_Architecture/11_Pipelining.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">파이프라이닝 (Pipelining)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Computer_Architecture/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Computer_Architecture/13_Superscalar_Out_of_Order.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">슈퍼스칼라와 비순차 실행</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">개요</a></li>
+<li><a href="#_2">목차</a></li>
+<li><a href="#1">1. 제어 해저드와 분기 문제</a><ul>
+<li><a href="#_3">분기로 인한 파이프라인 버블</a></li>
+<li><a href="#_4">분기 페널티</a></li>
+<li><a href="#_5">분기 예측의 필요성</a></li>
+</ul>
+</li>
+<li><a href="#2">2. 정적 분기 예측</a><ul>
+<li><a href="#21-not-taken">2.1 항상 Not Taken</a></li>
+<li><a href="#22-taken">2.2 항상 Taken</a></li>
+<li><a href="#23-btfn-backward-taken-forward-not-taken">2.3 BTFN (Backward Taken, Forward Not Taken)</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 동적 분기 예측</a><ul>
+<li><a href="#31-1">3.1 1비트 예측기</a></li>
+<li><a href="#1_1">1비트 예측기의 한계</a></li>
+<li><a href="#32-2">3.2 2비트 예측기</a></li>
+<li><a href="#2_1">2비트 예측기 동작 예시</a></li>
+<li><a href="#33-bht">3.3 분기 히스토리 테이블 (BHT)</a></li>
+<li><a href="#34-correlating-predictor">3.4 상관 예측기 (Correlating Predictor)</a></li>
+<li><a href="#35">3.5 토너먼트 예측기</a></li>
+</ul>
+</li>
+<li><a href="#4">4. 분기 타겟 버퍼</a><ul>
+<li><a href="#btb-branch-target-buffer">BTB (Branch Target Buffer)</a></li>
+<li><a href="#btb">BTB 동작 흐름</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 투기적 실행</a><ul>
+<li><a href="#_6">개념</a></li>
+<li><a href="#_7">예측 실패 복구</a></li>
+<li><a href="#misprediction-rate">Misprediction Rate의 영향</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 연습 문제</a><ul>
+<li><a href="#_8">기초 문제</a></li>
+<li><a href="#_9">분석 문제</a></li>
+<li><a href="#_10">심화 문제</a></li>
+</ul>
+</li>
+<li><a href="#_11">다음 단계</a></li>
+<li><a href="#_12">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="branch-prediction">분기 예측 (Branch Prediction)<a class="header-link" href="#branch-prediction" title="Permanent link">&para;</a></h1>
+<h2 id="_1">개요<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<p>분기 예측은 조건 분기 명령어의 결과를 미리 예측하여 파이프라인 성능을 높이는 기술입니다. 현대 프로세서는 90% 이상의 예측 정확도를 달성합니다.</p>
+<hr />
+<h2 id="_2">목차<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-제어-해저드와-분기-문제">제어 해저드와 분기 문제</a></li>
+<li><a href="#2-정적-분기-예측">정적 분기 예측</a></li>
+<li><a href="#3-동적-분기-예측">동적 분기 예측</a></li>
+<li><a href="#4-분기-타겟-버퍼">분기 타겟 버퍼</a></li>
+<li><a href="#5-투기적-실행">투기적 실행</a></li>
+<li><a href="#6-연습-문제">연습 문제</a></li>
+</ol>
+<hr />
+<h2 id="1">1. 제어 해저드와 분기 문제<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="_3">분기로 인한 파이프라인 버블<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">beq</span><span class="w"> </span><span class="err">$</span><span class="n">t0</span><span class="p">,</span><span class="w"> </span><span class="err">$</span><span class="n">t1</span><span class="p">,</span><span class="w"> </span><span class="n">target</span>
+<span class="k">add</span><span class="w"> </span><span class="err">$</span><span class="n">s0</span><span class="p">,</span><span class="w"> </span><span class="err">$</span><span class="n">s1</span><span class="p">,</span><span class="w"> </span><span class="err">$</span><span class="n">s2</span><span class="w">     </span><span class="err">#</span><span class="w"> </span><span class="n">실행해야</span><span class="w"> </span><span class="n">하나</span><span class="vm">?</span>
+<span class="n">sub</span><span class="w"> </span><span class="err">$</span><span class="n">s3</span><span class="p">,</span><span class="w"> </span><span class="err">$</span><span class="n">s4</span><span class="p">,</span><span class="w"> </span><span class="err">$</span><span class="n">s5</span><span class="w">     </span><span class="err">#</span><span class="w"> </span><span class="n">실행해야</span><span class="w"> </span><span class="n">하나</span><span class="vm">?</span>
+<span class="p">...</span>
+<span class="nl">target</span><span class="p">:</span>
+<span class="ow">or</span><span class="w">  </span><span class="err">$</span><span class="n">s6</span><span class="p">,</span><span class="w"> </span><span class="err">$</span><span class="n">s7</span><span class="p">,</span><span class="w"> </span><span class="err">$</span><span class="n">s8</span>
+
+<span class="nl">시간</span><span class="p">:</span><span class="w">    </span><span class="mi">1</span><span class="w">    </span><span class="mi">2</span><span class="w">    </span><span class="mi">3</span><span class="w">    </span><span class="mi">4</span><span class="w">    </span><span class="mi">5</span><span class="w">    </span><span class="mi">6</span><span class="w">    </span><span class="mi">7</span>
+<span class="nl">beq</span><span class="p">:</span><span class="w">    </span><span class="k">IF</span><span class="w">   </span><span class="n">ID</span><span class="w">  </span><span class="o">[</span><span class="n">EX</span><span class="o">]</span><span class="w">  </span><span class="n">MEM</span><span class="w">  </span><span class="n">WB</span>
+<span class="w">                  </span><span class="err">↑</span>
+<span class="w">             </span><span class="n">분기</span><span class="w"> </span><span class="n">결정</span>
+<span class="k">add</span><span class="err">:</span><span class="w">         </span><span class="k">IF</span><span class="w">   </span><span class="n">ID</span><span class="w">   </span><span class="err">←</span><span class="w"> </span><span class="n">flush</span><span class="w"> </span><span class="n">필요할</span><span class="w"> </span><span class="n">수도</span>
+<span class="nl">sub</span><span class="p">:</span><span class="w">              </span><span class="k">IF</span><span class="w">   </span><span class="err">←</span><span class="w"> </span><span class="n">flush</span><span class="w"> </span><span class="n">필요할</span><span class="w"> </span><span class="n">수도</span>
+</code></pre></div>
+
+<h3 id="_4">분기 페널티<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>분기 결정 시점에 따른 페널티:
+
+┌──────────────────┬────────────────┬───────────┐
+│   결정 시점      │   페널티       │   설명    │
+├──────────────────┼────────────────┼───────────┤
+│   ID 단계        │   1 사이클     │   초기 MIPS │
+│   EX 단계        │   2 사이클     │   일반적   │
+│   MEM 단계       │   3 사이클     │   복잡한 조건 │
+└──────────────────┴────────────────┴───────────┘
+
+현대 프로세서: 10-20 사이클 파이프라인
+→ 분기 예측 필수!
+</code></pre></div>
+
+<h3 id="_5">분기 예측의 필요성<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>분기 빈도: 약 20% (5개 명령어당 1개)
+
+예측 없이 항상 스톨:
+CPI = 1 + 0.2 × 3 = 1.6  (3 사이클 페널티 가정)
+
+90% 정확도 예측:
+CPI = 1 + 0.2 × 0.1 × 3 = 1.06
+
+성능 향상: 1.6/1.06 = 1.5배
+</code></pre></div>
+
+<hr />
+<h2 id="2">2. 정적 분기 예측<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="21-not-taken">2.1 항상 Not Taken<a class="header-link" href="#21-not-taken" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">전략</span><span class="o">:</span><span class="w"> </span><span class="err">모든</span><span class="w"> </span><span class="err">분기가</span><span class="w"> </span><span class="err">일어나지</span><span class="w"> </span><span class="err">않는다고</span><span class="w"> </span><span class="err">예측</span>
+
+<span class="err">장점</span><span class="o">:</span><span class="w"> </span><span class="err">구현</span><span class="w"> </span><span class="err">간단</span>
+<span class="err">단점</span><span class="o">:</span><span class="w"> </span><span class="err">루프에서</span><span class="w"> </span><span class="err">성능</span><span class="w"> </span><span class="err">저하</span>
+
+<span class="k">for</span><span class="w"> </span><span class="o">(</span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="o">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">100</span><span class="o">;</span><span class="w"> </span><span class="n">i</span><span class="o">++)</span><span class="w">  </span><span class="c1">// 99번 taken, 1번 not taken</span>
+<span class="w">                           </span><span class="c1">// 예측 정확도: 1%</span>
+</code></pre></div>
+
+<h3 id="22-taken">2.2 항상 Taken<a class="header-link" href="#22-taken" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">전략</span><span class="o">:</span><span class="w"> </span><span class="err">모든</span><span class="w"> </span><span class="err">분기가</span><span class="w"> </span><span class="err">일어난다고</span><span class="w"> </span><span class="err">예측</span>
+
+<span class="err">장점</span><span class="o">:</span><span class="w"> </span><span class="err">루프에</span><span class="w"> </span><span class="err">유리</span>
+<span class="err">단점</span><span class="o">:</span><span class="w"> </span><span class="err">분기</span><span class="w"> </span><span class="err">타겟</span><span class="w"> </span><span class="err">주소</span><span class="w"> </span><span class="err">계산</span><span class="w"> </span><span class="err">필요</span>
+
+<span class="k">for</span><span class="w"> </span><span class="o">(</span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="o">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">100</span><span class="o">;</span><span class="w"> </span><span class="n">i</span><span class="o">++)</span><span class="w">  </span><span class="c1">// 예측 정확도: 99%</span>
+</code></pre></div>
+
+<h3 id="23-btfn-backward-taken-forward-not-taken">2.3 BTFN (Backward Taken, Forward Not Taken)<a class="header-link" href="#23-btfn-backward-taken-forward-not-taken" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>전략:
+- 뒤로 가는 분기 (루프): Taken 예측
+- 앞으로 가는 분기 (if문): Not Taken 예측
+
+┌─────────────────────────────────────────┐
+│     분기 방향에 따른 예측                │
+│                                         │
+│  PC=100:  beq label    (label=80)       │
+│           ↑                             │
+│           뒤로 분기 → Taken 예측        │
+│                                         │
+│  PC=100:  beq label    (label=120)      │
+│           ↑                             │
+│           앞으로 분기 → Not Taken 예측   │
+└─────────────────────────────────────────┘
+
+루프의 끝에서 처음으로 돌아가는 것: 뒤로 분기
+if문에서 else로 건너뛰는 것: 앞으로 분기
+</code></pre></div>
+
+<hr />
+<h2 id="3">3. 동적 분기 예측<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="31-1">3.1 1비트 예측기<a class="header-link" href="#31-1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────┐
+│           1-bit Predictor               │
+├─────────────────────────────────────────┤
+│  상태: Taken(1) 또는 Not Taken(0)       │
+│                                         │
+│  동작:                                  │
+│  - 현재 상태로 예측                      │
+│  - 틀리면 상태 반전                      │
+└─────────────────────────────────────────┘
+
+상태 전이:
+     틀림         틀림
+  ┌────────┐   ┌────────┐
+  │        │   │        │
+  ▼        │   ▼        │
+┌────┐     │ ┌────┐     │
+│ NT │◀────┴─│ T  │◀────┘
+└────┘  맞음  └────┘  맞음
+
+문제: 루프 시작과 끝에서 항상 2번 틀림
+</code></pre></div>
+
+<h3 id="1_1">1비트 예측기의 한계<a class="header-link" href="#1_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>루프 100회 반복:
+T T T ... T T N  (99번 T, 1번 N)
+                 ↑ 루프 종료
+
+예측:   T T T ... T T T N
+실제:   T T T ... T T N ←
+                      ↑ 틀림 (예측 T, 실제 N)
+
+다음 루프 시작:
+예측:   N ← 틀림 (예측 N, 실제 T)
+
+100회 반복마다 2번 틀림 → 98% 정확도
+</code></pre></div>
+
+<h3 id="32-2">3.2 2비트 예측기<a class="header-link" href="#32-2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────┐
+│              2-bit Saturating Counter           │
+├─────────────────────────────────────────────────┤
+│  4가지 상태:                                    │
+│  - 00: Strongly Not Taken                       │
+│  - 01: Weakly Not Taken                         │
+│  - 10: Weakly Taken                             │
+│  - 11: Strongly Taken                           │
+└─────────────────────────────────────────────────┘
+
+상태 전이도:
+        N              N              N
+   ┌────────┐     ┌────────┐     ┌────────┐
+   │        ▼     │        ▼     │        ▼
+┌──┴──┐  ┌──┴──┐  ┌──┴──┐  ┌──┴──┐
+│ SNT │  │ WNT │  │ WT  │  │ ST  │
+│ 00  │  │ 01  │  │ 10  │  │ 11  │
+└──┬──┘  └──┬──┘  └──┬──┘  └──┬──┘
+   │        ▲     │        ▲     │        ▲
+   └────────┘     └────────┘     └────────┘
+        T              T              T
+
+예측: 상위 비트가 1이면 Taken, 0이면 Not Taken
+</code></pre></div>
+
+<h3 id="2_1">2비트 예측기 동작 예시<a class="header-link" href="#2_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>루프 100회:
+실제:   T T T ... T T N T T T ... (다음 루프)
+
+상태:  ST ST ST ... ST WT ST ST ST ...
+예측:   T  T  T ...  T  T  T  T  T ...
+정답:   ✓  ✓  ✓ ... ✓  ✗  ✓  ✓  ✓ ...
+
+1번만 틀림! 루프당 1번 실패
+99% 이상 정확도
+</code></pre></div>
+
+<h3 id="33-bht">3.3 분기 히스토리 테이블 (BHT)<a class="header-link" href="#33-bht" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────┐
+│         Branch History Table (BHT)              │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│   PC[9:2] ───▶ ┌─────────┐                     │
+│                │ Index   │                     │
+│                │  256    │                     │
+│                │ entries │                     │
+│                └────┬────┘                     │
+│                     │                          │
+│                     ▼                          │
+│              2-bit counter                     │
+│                                                │
+└─────────────────────────────────────────────────┘
+
+PC의 일부 비트를 인덱스로 사용
+- 각 엔트리에 2비트 카운터 저장
+- 같은 인덱스에 여러 분기가 매핑될 수 있음 (aliasing)
+</code></pre></div>
+
+<h3 id="34-correlating-predictor">3.4 상관 예측기 (Correlating Predictor)<a class="header-link" href="#34-correlating-predictor" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">아이디어</span><span class="o">:</span><span class="w"> </span><span class="err">다른</span><span class="w"> </span><span class="err">분기의</span><span class="w"> </span><span class="err">결과가</span><span class="w"> </span><span class="err">현재</span><span class="w"> </span><span class="err">분기에</span><span class="w"> </span><span class="err">영향</span>
+
+<span class="err">예시</span><span class="w"> </span><span class="err">코드</span><span class="o">:</span>
+<span class="k">if</span><span class="w"> </span><span class="o">(</span><span class="n">a</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">2</span><span class="o">)</span><span class="w">     </span><span class="c1">// B1</span>
+<span class="w">    </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="o">;</span>
+<span class="k">if</span><span class="w"> </span><span class="o">(</span><span class="n">b</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">2</span><span class="o">)</span><span class="w">     </span><span class="c1">// B2</span>
+<span class="w">    </span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="o">;</span>
+<span class="k">if</span><span class="w"> </span><span class="o">(</span><span class="n">a</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">b</span><span class="o">)</span><span class="w">     </span><span class="c1">// B3: B1, B2 결과와 상관관계!</span>
+<span class="w">    </span><span class="o">...</span>
+
+<span class="o">(</span><span class="n">m</span><span class="o">,</span><span class="w"> </span><span class="n">n</span><span class="o">)</span><span class="w"> </span><span class="err">예측기</span><span class="o">:</span>
+<span class="o">-</span><span class="w"> </span><span class="n">m</span><span class="o">:</span><span class="w"> </span><span class="err">최근</span><span class="w"> </span><span class="n">m개</span><span class="w"> </span><span class="err">분기의</span><span class="w"> </span><span class="err">결과를</span><span class="w"> </span><span class="err">기록</span><span class="w"> </span><span class="o">(</span><span class="n">Global</span><span class="w"> </span><span class="n">History</span><span class="o">)</span>
+<span class="o">-</span><span class="w"> </span><span class="n">n</span><span class="o">:</span><span class="w"> </span><span class="n">n비트</span><span class="w"> </span><span class="err">카운터</span>
+
+<span class="err">┌──────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">         </span><span class="o">(</span><span class="mi">2</span><span class="o">,</span><span class="w"> </span><span class="mi">2</span><span class="o">)</span><span class="w"> </span><span class="n">Correlating</span><span class="w"> </span><span class="n">Predictor</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Global</span><span class="w"> </span><span class="n">History</span><span class="o">:</span><span class="w"> </span><span class="mi">2</span><span class="err">비트</span><span class="w"> </span><span class="o">(</span><span class="mi">00</span><span class="o">,</span><span class="w"> </span><span class="mi">01</span><span class="o">,</span><span class="w"> </span><span class="mi">10</span><span class="o">,</span><span class="w"> </span><span class="mi">11</span><span class="o">)</span><span class="w">  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">각</span><span class="w"> </span><span class="err">히스토리당</span><span class="o">:</span><span class="w"> </span><span class="mi">2</span><span class="err">비트</span><span class="w"> </span><span class="err">카운터</span><span class="w">             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">총</span><span class="w"> </span><span class="mi">4</span><span class="err">개의</span><span class="w"> </span><span class="mi">2</span><span class="err">비트</span><span class="w"> </span><span class="err">카운터</span><span class="w">                    </span><span class="err">│</span>
+<span class="err">└──────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="35">3.5 토너먼트 예측기<a class="header-link" href="#35" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌────────────────────────────────────────────────┐
+│           Tournament Predictor                  │
+│                                                 │
+│         ┌─────────────┐                        │
+│  PC ───▶│  Selector   │ (2비트 카운터)         │
+│         └──────┬──────┘                        │
+│                │                               │
+│         ┌──────┴──────┐                        │
+│         ▼             ▼                        │
+│  ┌────────────┐ ┌────────────┐                 │
+│  │   Local    │ │   Global   │                 │
+│  │ Predictor  │ │ Predictor  │                 │
+│  └──────┬─────┘ └─────┬──────┘                 │
+│         │             │                        │
+│         └──────┬──────┘                        │
+│                ▼                               │
+│           MUX (선택)                           │
+│                │                               │
+│                ▼                               │
+│            예측 결과                            │
+└────────────────────────────────────────────────┘
+
+- Local: 개별 분기의 히스토리 사용
+- Global: 전체 분기 히스토리 사용
+- Selector: 어느 예측기가 더 정확한지 학습
+</code></pre></div>
+
+<hr />
+<h2 id="4">4. 분기 타겟 버퍼<a class="header-link" href="#4" title="Permanent link">&para;</a></h2>
+<h3 id="btb-branch-target-buffer">BTB (Branch Target Buffer)<a class="header-link" href="#btb-branch-target-buffer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>분기<span class="w"> </span>명령어인지<span class="w"> </span><span class="o">+</span><span class="w"> </span>타겟<span class="w"> </span>주소를<span class="w"> </span>미리<span class="w"> </span>저장
+
+┌─────────────────────────────────────────────────┐
+│<span class="w">              </span><span class="nv">Branch</span><span class="w"> </span><span class="nv">Target</span><span class="w"> </span><span class="nv">Buffer</span><span class="w">               </span>│
+├───────────┬──────────┬─────────────────────────┤
+│<span class="w">    </span><span class="nv">Tag</span><span class="w">    </span>│<span class="w">  </span><span class="nv">Target</span><span class="w">  </span>│<span class="w">  </span><span class="nv">Prediction</span><span class="w"> </span><span class="ss">(</span><span class="nv">optional</span><span class="ss">)</span><span class="w">  </span>│
+├───────────┼──────────┼─────────────────────────┤
+│<span class="w"> </span><span class="mi">0</span><span class="nv">x1000</span>...<span class="w"> </span>│<span class="w">  </span><span class="mi">0</span><span class="nv">x2000</span><span class="w">  </span>│<span class="w">        </span><span class="nv">ST</span><span class="w">               </span>│
+│<span class="w"> </span><span class="mi">0</span><span class="nv">x1100</span>...<span class="w"> </span>│<span class="w">  </span><span class="mi">0</span><span class="nv">x1500</span><span class="w">  </span>│<span class="w">        </span><span class="nv">WT</span><span class="w">               </span>│
+│<span class="w"> </span><span class="mi">0</span><span class="nv">x2000</span>...<span class="w"> </span>│<span class="w">  </span><span class="mi">0</span><span class="nv">x1800</span><span class="w">  </span>│<span class="w">        </span><span class="nv">SNT</span><span class="w">              </span>│
+│<span class="w">    </span>...<span class="w">    </span>│<span class="w">   </span>...<span class="w">    </span>│<span class="w">        </span>...<span class="w">              </span>│
+└───────────┴──────────┴─────────────────────────┘
+
+<span class="k">IF</span><span class="w"> </span>단계에서<span class="w"> </span><span class="nv">BTB</span><span class="w"> </span>조회:
+<span class="o">-</span><span class="w"> </span><span class="nv">Hit</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nv">Taken</span><span class="w"> </span>예측:<span class="w"> </span>타겟<span class="w"> </span>주소로<span class="w"> </span>즉시<span class="w"> </span>점프
+<span class="o">-</span><span class="w"> </span><span class="nv">Miss</span>:<span class="w"> </span>일반<span class="w"> </span>실행,<span class="w"> </span>나중에<span class="w"> </span><span class="nv">BTB</span><span class="w"> </span>업데이트
+</code></pre></div>
+
+<h3 id="btb">BTB 동작 흐름<a class="header-link" href="#btb" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────┐
+│<span class="w">                </span><span class="k">IF</span><span class="w"> </span>단계<span class="w">                          </span>│
+│<span class="w">                                                 </span>│
+│<span class="w">   </span><span class="nv">PC</span><span class="w"> </span>───▶<span class="w"> </span><span class="nv">BTB</span><span class="w"> </span>조회<span class="w">                             </span>│
+│<span class="w">              </span>│<span class="w">                                  </span>│
+│<span class="w">              </span>▼<span class="w">                                  </span>│
+│<span class="w">         </span>┌────────┐<span class="w">                             </span>│
+│<span class="w">         </span>│<span class="w">  </span><span class="nv">Hit</span>?<span class="w">  </span>│<span class="w">                             </span>│
+│<span class="w">         </span>└────┬───┘<span class="w">                             </span>│
+│<span class="w">              </span>│<span class="w">                                  </span>│
+│<span class="w">      </span><span class="nv">No</span><span class="w">      </span>│<span class="w">      </span><span class="nv">Yes</span><span class="w">                        </span>│
+│<span class="w">      </span>▼<span class="w">       </span>│<span class="w">       </span>▼<span class="w">                         </span>│
+│<span class="w">   </span><span class="nv">PC</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">4</span><span class="w">     </span>│<span class="w">   </span><span class="nv">Taken</span><span class="w"> </span>예측?<span class="w">                   </span>│
+│<span class="w">              </span>│<span class="w">       </span>│<span class="w">                          </span>│
+│<span class="w">              </span>│<span class="w">   </span><span class="nv">Yes</span><span class="w"> </span>│<span class="w">  </span><span class="nv">No</span><span class="w">                     </span>│
+│<span class="w">              </span>│<span class="w">    </span>▼<span class="w">  </span>│<span class="w">   </span>▼<span class="w">                     </span>│
+│<span class="w">              </span>│<span class="w">  </span><span class="nv">Target</span><span class="w">  </span><span class="nv">PC</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">4</span><span class="w">                 </span>│
+│<span class="w">              </span>│<span class="w">   </span>주소<span class="w">                          </span>│
+└─────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 투기적 실행<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="_6">개념<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>분기 결과 확정 전에 예측된 경로의 명령어 실행
+
+┌─────────────────────────────────────────────────┐
+│           Speculative Execution                 │
+│                                                 │
+│   beq 예측: Taken                              │
+│      │                                          │
+│      ▼                                          │
+│   타겟 명령어들을 미리 실행 (투기적)            │
+│      │                                          │
+│      ▼                                          │
+│   분기 결과 확정                                │
+│      │                                          │
+│   ┌──┴──┐                                      │
+│   │     │                                      │
+│ 예측   예측                                     │
+│ 성공   실패                                     │
+│   │     │                                      │
+│   ▼     ▼                                      │
+│ 결과   결과 폐기                                │
+│ 커밋   (flush)                                 │
+└─────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_7">예측 실패 복구<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>예측 실패 시:
+1. 파이프라인 플러시 (투기적 명령어 제거)
+2. 레지스터 상태 복구
+3. 올바른 경로로 재실행
+
+복구 비용:
+- 파이프라인 깊이에 비례
+- 현대 프로세서: 10-20 사이클 페널티
+</code></pre></div>
+
+<h3 id="misprediction-rate">Misprediction Rate의 영향<a class="header-link" href="#misprediction-rate" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>CPI = CPI_base + (분기 비율) × (예측 실패율) × (페널티)
+
+예시:
+<span class="k">-</span> CPI_base = 1
+<span class="k">-</span> 분기 비율 = 20%
+<span class="k">-</span> 페널티 = 15 사이클
+
+┌────────────────┬──────────────────┐
+│ 예측 실패율    │      CPI         │
+├────────────────┼──────────────────┤
+│     10%        │ 1 + 0.2×0.1×15   │
+│                │ = 1.30           │
+├────────────────┼──────────────────┤
+│      5%        │ 1 + 0.2×0.05×15  │
+│                │ = 1.15           │
+├────────────────┼──────────────────┤
+│      2%        │ 1 + 0.2×0.02×15  │
+│                │ = 1.06           │
+├────────────────┼──────────────────┤
+│      1%        │ 1 + 0.2×0.01×15  │
+│                │ = 1.03           │
+└────────────────┴──────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 연습 문제<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="_8">기초 문제<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p>정적 분기 예측 3가지 방식은?</p>
+</li>
+<li>
+<p>2비트 예측기의 4가지 상태는?</p>
+</li>
+<li>
+<p>다음 시퀀스에서 1비트 예측기(초기 T)의 예측 결과:
+   <code>T T N T T N T T</code></p>
+</li>
+</ol>
+<h3 id="_9">분석 문제<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<ol>
+<li>아래 루프에서 2비트 예측기(초기 ST)의 동작:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// 루프 본문</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<ol>
+<li>분기 비율 25%, 페널티 10 사이클, 예측 정확도 95%일 때 CPI는?</li>
+</ol>
+<h3 id="_10">심화 문제<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p>토너먼트 예측기가 단일 예측기보다 좋은 이유를 설명하시오.</p>
+</li>
+<li>
+<p>BTB가 없을 때와 있을 때의 분기 처리 차이를 비교하시오.</p>
+</li>
+</ol>
+<details>
+<summary>정답</summary>
+
+1. Always Not Taken, Always Taken, BTFN (Backward Taken, Forward Not Taken)
+
+2. Strongly Not Taken (00), Weakly Not Taken (01), Weakly Taken (10), Strongly Taken (11)
+
+3.
+
+<div class="highlight"><pre><span></span><code><span class="err">실제</span><span class="o">:</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">T</span>
+<span class="err">예측</span><span class="o">:</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="n">T</span>
+<span class="err">상태</span><span class="o">:</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">T</span>
+<span class="err">정답</span><span class="o">:</span><span class="w"> </span><span class="err">✓</span><span class="w"> </span><span class="err">✓</span><span class="w"> </span><span class="err">✗</span><span class="w"> </span><span class="err">✗</span><span class="w"> </span><span class="err">✓</span><span class="w"> </span><span class="err">✗</span><span class="w"> </span><span class="err">✗</span><span class="w"> </span><span class="err">✓</span><span class="w">  </span><span class="o">(</span><span class="mi">4</span><span class="o">/</span><span class="mi">8</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">50</span><span class="o">%)</span>
+</code></pre></div>
+
+
+
+4.
+
+<div class="highlight"><pre><span></span><code><span class="err">반복</span><span class="o">:</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="n">N</span><span class="w"> </span><span class="o">(</span><span class="mi">4</span><span class="err">회</span><span class="w"> </span><span class="err">반복</span><span class="o">)</span>
+<span class="err">상태</span><span class="o">:</span><span class="w"> </span><span class="n">ST</span><span class="w"> </span><span class="n">ST</span><span class="w"> </span><span class="n">ST</span><span class="w"> </span><span class="n">WT</span><span class="w"> </span><span class="n">WT</span>
+<span class="err">예측</span><span class="o">:</span><span class="w"> </span><span class="n">T</span><span class="w">  </span><span class="n">T</span><span class="w">  </span><span class="n">T</span><span class="w">  </span><span class="n">T</span><span class="w">  </span><span class="n">T</span>
+<span class="err">정답</span><span class="o">:</span><span class="w"> </span><span class="err">✓</span><span class="w">  </span><span class="err">✓</span><span class="w">  </span><span class="err">✓</span><span class="w">  </span><span class="err">✗</span>
+</code></pre></div>
+
+
+4회 중 1회 실패 = 75% 정확도
+
+5. CPI = 1 + 0.25 × 0.05 × 10 = 1.125
+
+6. 토너먼트 예측기는 Local과 Global 예측기를 모두 사용하고, 각 분기에 대해 더 정확한 예측기를 선택적으로 사용. 어떤 분기는 지역적 패턴이 중요하고, 어떤 분기는 전역적 상관관계가 중요하기 때문.
+
+7.
+- BTB 없음: ID 또는 EX 단계에서야 분기 여부와 타겟 파악, 페널티 발생
+- BTB 있음: IF 단계에서 BTB hit 시 즉시 타겟으로 점프 가능, 페널티 최소화
+
+</details>
+
+<hr />
+<h2 id="_11">다음 단계<a class="header-link" href="#_11" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./13_Superscalar_Out_of_Order.md">13_Superscalar_Out_of_Order.md</a> - ILP와 비순차 실행</li>
+</ul>
+<hr />
+<h2 id="_12">참고 자료<a class="header-link" href="#_12" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Computer Architecture: A Quantitative Approach, Chapter 3 (Hennessy &amp; Patterson)</li>
+<li><a href="https://www.jilp.org/cbp2016/">Branch Prediction Competition</a></li>
+<li><a href="https://www.agner.org/optimize/">Agner Fog's Microarchitecture Guide</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Computer_Architecture/11_Pipelining.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">파이프라이닝 (Pipelining)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Computer_Architecture/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Computer_Architecture/13_Superscalar_Out_of_Order.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">슈퍼스칼라와 비순차 실행</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

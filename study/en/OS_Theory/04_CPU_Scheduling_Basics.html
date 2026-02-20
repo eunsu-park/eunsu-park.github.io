@@ -1,0 +1,1008 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPU Scheduling Basics - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/en/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/en/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/en/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" selected>
+                        English
+                    </option>
+                    
+                    <option value="ko" >
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/en/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/en/OS_Theory/">OS Theory</a>
+    <span class="separator">/</span>
+    <span class="current">CPU Scheduling Basics</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>CPU Scheduling Basics</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/OS_Theory/03_Threads_and_Multithreading.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">Threads and Multithreading</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/OS_Theory/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/OS_Theory/05_Scheduling_Algorithms.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">Scheduling Algorithms</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#table-of-contents">Table of Contents</a></li>
+<li><a href="#1-what-is-cpu-scheduling">1. What is CPU Scheduling?</a><ul>
+<li><a href="#definition">Definition</a></li>
+<li><a href="#why-scheduling-is-needed">Why Scheduling is Needed</a></li>
+</ul>
+</li>
+<li><a href="#2-cpu-burst-and-io-burst">2. CPU Burst and I/O Burst</a><ul>
+<li><a href="#what-is-a-burst">What is a Burst?</a></li>
+<li><a href="#cpu-bound-vs-io-bound-processes">CPU-bound vs I/O-bound Processes</a></li>
+<li><a href="#cpu-burst-distribution">CPU Burst Distribution</a></li>
+</ul>
+</li>
+<li><a href="#3-scheduling-goals">3. Scheduling Goals</a><ul>
+<li><a href="#key-performance-metrics">Key Performance Metrics</a></li>
+<li><a href="#time-concept-visualization">Time Concept Visualization</a></li>
+<li><a href="#trade-offs-between-goals">Trade-offs Between Goals</a></li>
+</ul>
+</li>
+<li><a href="#4-preemptive-vs-non-preemptive-scheduling">4. Preemptive vs Non-preemptive Scheduling</a><ul>
+<li><a href="#non-preemptive-scheduling">Non-preemptive Scheduling</a></li>
+<li><a href="#preemptive-scheduling">Preemptive Scheduling</a></li>
+<li><a href="#comparison">Comparison</a></li>
+<li><a href="#scheduling-decision-points">Scheduling Decision Points</a></li>
+</ul>
+</li>
+<li><a href="#5-types-of-schedulers">5. Types of Schedulers</a><ul>
+<li><a href="#three-level-scheduler-structure">Three-Level Scheduler Structure</a></li>
+<li><a href="#long-term-scheduler-job-scheduler">Long-term Scheduler (Job Scheduler)</a></li>
+<li><a href="#short-term-scheduler-cpu-scheduler">Short-term Scheduler (CPU Scheduler)</a></li>
+<li><a href="#medium-term-scheduler-swapper">Medium-term Scheduler (Swapper)</a></li>
+<li><a href="#scheduler-comparison">Scheduler Comparison</a></li>
+</ul>
+</li>
+<li><a href="#6-dispatcher">6. Dispatcher</a><ul>
+<li><a href="#what-is-a-dispatcher">What is a Dispatcher?</a></li>
+<li><a href="#dispatcher-tasks">Dispatcher Tasks</a></li>
+<li><a href="#dispatch-latency">Dispatch Latency</a></li>
+</ul>
+</li>
+<li><a href="#7-practice-problems">7. Practice Problems</a><ul>
+<li><a href="#problem-1-basic-concepts">Problem 1: Basic Concepts</a></li>
+<li><a href="#problem-2-time-calculation">Problem 2: Time Calculation</a></li>
+<li><a href="#problem-3-scheduler-identification">Problem 3: Scheduler Identification</a></li>
+<li><a href="#problem-4-preemptive-vs-non-preemptive">Problem 4: Preemptive vs Non-preemptive</a></li>
+<li><a href="#problem-5-dispatcher">Problem 5: Dispatcher</a></li>
+</ul>
+</li>
+<li><a href="#next-steps">Next Steps</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="cpu-scheduling-basics">CPU Scheduling Basics<a class="header-link" href="#cpu-scheduling-basics" title="Permanent link">&para;</a></h1>
+<h2 id="overview">Overview<a class="header-link" href="#overview" title="Permanent link">&para;</a></h2>
+<p>CPU scheduling is the process of determining which of the ready processes should be allocated the CPU. This lesson covers CPU burst and I/O burst, scheduling goals, preemptive/non-preemptive scheduling, and the roles of various schedulers.</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents<a class="header-link" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-what-is-cpu-scheduling">What is CPU Scheduling?</a></li>
+<li><a href="#2-cpu-burst-and-io-burst">CPU Burst and I/O Burst</a></li>
+<li><a href="#3-scheduling-goals">Scheduling Goals</a></li>
+<li><a href="#4-preemptive-vs-non-preemptive-scheduling">Preemptive vs Non-preemptive Scheduling</a></li>
+<li><a href="#5-types-of-schedulers">Types of Schedulers</a></li>
+<li><a href="#6-dispatcher">Dispatcher</a></li>
+<li><a href="#7-practice-problems">Practice Problems</a></li>
+</ol>
+<hr />
+<h2 id="1-what-is-cpu-scheduling">1. What is CPU Scheduling?<a class="header-link" href="#1-what-is-cpu-scheduling" title="Permanent link">&para;</a></h2>
+<h3 id="definition">Definition<a class="header-link" href="#definition" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nv">CPU</span><span class="w"> </span><span class="nv">Scheduling</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">Selecting</span><span class="w"> </span><span class="nv">which</span><span class="w"> </span><span class="nv">process</span><span class="w"> </span><span class="nv">in</span><span class="w"> </span><span class="nv">the</span><span class="w"> </span><span class="nv">Ready</span><span class="w"> </span><span class="nv">queue</span>
+<span class="w">                </span><span class="nv">should</span><span class="w"> </span><span class="nv">be</span><span class="w"> </span><span class="nv">allocated</span><span class="w"> </span><span class="nv">the</span><span class="w"> </span><span class="nv">CPU</span>
+
+┌─────────────────────────────────────────────────────────┐
+│<span class="w">                   </span><span class="nv">CPU</span><span class="w"> </span><span class="nv">Scheduling</span><span class="w"> </span><span class="nv">Location</span><span class="w">                </span>│
+├─────────────────────────────────────────────────────────┤
+│<span class="w">                                                         </span>│
+│<span class="w">  </span>┌────────┐<span class="w">    </span>┌─────────────────────────────────────┐<span class="w">  </span>│
+│<span class="w">  </span>│<span class="w"> </span><span class="nv">New</span><span class="w">    </span>│───▶│<span class="w">          </span><span class="nv">Ready</span><span class="w"> </span><span class="nv">Queue</span><span class="w">               </span>│<span class="w">  </span>│
+│<span class="w">  </span>│<span class="nv">Process</span><span class="w"> </span>│<span class="w">    </span>│<span class="w">  </span><span class="nv">P1</span><span class="w"> </span>→<span class="w"> </span><span class="nv">P2</span><span class="w"> </span>→<span class="w"> </span><span class="nv">P3</span><span class="w"> </span>→<span class="w"> </span><span class="nv">P4</span><span class="w"> </span>→<span class="w"> </span>...<span class="w">          </span>│<span class="w">  </span>│
+│<span class="w">  </span>└────────┘<span class="w">    </span>└─────────────┬───────────────────────┘<span class="w">  </span>│
+│<span class="w">                              </span>│<span class="w">                          </span>│
+│<span class="w">                              </span>│<span class="w"> </span><span class="nv">CPU</span><span class="w"> </span><span class="nv">Scheduler</span><span class="w"> </span><span class="nv">selects</span><span class="w">    </span>│
+│<span class="w">                              </span>▼<span class="w">                          </span>│
+│<span class="w">                       </span>┌───────────┐<span class="w">                     </span>│
+│<span class="w">                       </span>│<span class="w">    </span><span class="nv">CPU</span><span class="w">    </span>│<span class="w">                     </span>│
+│<span class="w">                       </span>│<span class="w"> </span><span class="ss">(</span><span class="nv">Running</span><span class="ss">)</span><span class="w"> </span>│<span class="w">                     </span>│
+│<span class="w">                       </span>└─────┬─────┘<span class="w">                     </span>│
+│<span class="w">                             </span>│<span class="w">                           </span>│
+│<span class="w">            </span>┌────────────────┼────────────────┐<span class="w">          </span>│
+│<span class="w">            </span>▼<span class="w">                </span>▼<span class="w">                </span>▼<span class="w">          </span>│
+│<span class="w">       </span>┌─────────┐<span class="w">    </span>┌───────────┐<span class="w">    </span>┌─────────┐<span class="w">      </span>│
+│<span class="w">       </span>│<span class="nv">Terminate</span>│<span class="w">    </span>│<span class="w"> </span><span class="nv">I</span><span class="o">/</span><span class="nv">O</span><span class="w"> </span><span class="k">Wait</span><span class="w">  </span>│<span class="w">    </span>│<span class="w"> </span><span class="k">Return</span><span class="w">  </span>│<span class="w">      </span>│
+│<span class="w">       </span>│<span class="w">         </span>│<span class="w">    </span>│<span class="w">  </span><span class="ss">(</span><span class="k">Wait</span><span class="ss">)</span><span class="w">   </span>│<span class="w">    </span>│<span class="nv">to</span><span class="w"> </span><span class="nv">Ready</span><span class="w"> </span>│<span class="w">      </span>│
+│<span class="w">       </span>└─────────┘<span class="w">    </span>└───────────┘<span class="w">    </span>└─────────┘<span class="w">      </span>│
+│<span class="w">                                                         </span>│
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="why-scheduling-is-needed">Why Scheduling is Needed<a class="header-link" href="#why-scheduling-is-needed" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="mf">1.</span><span class="w"> </span><span class="n">Maximize</span><span class="w"> </span><span class="n">CPU</span><span class="w"> </span><span class="n">utilization</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Always</span><span class="w"> </span><span class="n">have</span><span class="w"> </span><span class="n">processes</span><span class="w"> </span><span class="kr">read</span><span class="n">y</span><span class="w"> </span><span class="kr">to</span><span class="w"> </span><span class="n">execute</span><span class="w"> </span><span class="n">so</span><span class="w"> </span><span class="n">CPU</span><span class="w"> </span><span class="n">doesn</span><span class="err">&#39;</span><span class="n">t</span><span class="w"> </span><span class="n">idle</span>
+
+<span class="mf">2.</span><span class="w"> </span><span class="n">Fair</span><span class="w"> </span><span class="n">resource</span><span class="w"> </span><span class="n">distribution</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Provide</span><span class="w"> </span><span class="n">appropriate</span><span class="w"> </span><span class="n">CPU</span><span class="w"> </span><span class="n">time</span><span class="w"> </span><span class="kr">to</span><span class="w"> </span><span class="n">all</span><span class="w"> </span><span class="n">processes</span>
+
+<span class="mf">3.</span><span class="w"> </span><span class="n">Optimize</span><span class="w"> </span><span class="kr">sys</span><span class="n">tem</span><span class="w"> </span><span class="n">performance</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Increase</span><span class="w"> </span><span class="n">throughput</span><span class="p">,</span><span class="w"> </span><span class="n">decrease</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="n">time</span>
+
+<span class="mf">4.</span><span class="w"> </span><span class="n">Support</span><span class="w"> </span><span class="n">multitasking</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Make</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="n">appear</span><span class="w"> </span><span class="n">that</span><span class="w"> </span><span class="n">multiple</span><span class="w"> </span><span class="n">processes</span><span class="w"> </span><span class="kr">run</span><span class="w"> </span><span class="n">simultaneously</span>
+
+<span class="err">┌──────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">             </span><span class="n">Without</span><span class="w"> </span><span class="n">Scheduling</span><span class="w"> </span><span class="n">vs</span><span class="w"> </span><span class="n">With</span><span class="w"> </span><span class="n">Scheduling</span><span class="w">         </span><span class="err">│</span>
+<span class="err">├──────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Without</span><span class="w"> </span><span class="n">Scheduling</span><span class="w"> </span><span class="p">(</span><span class="n">Sequential</span><span class="p">):</span><span class="w">                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">P1</span><span class="w"> </span><span class="p">(</span><span class="n">I</span><span class="o">/</span><span class="n">O</span><span class="w"> </span><span class="kr">wait</span><span class="p">)</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">P2</span><span class="w"> </span><span class="p">(</span><span class="n">I</span><span class="o">/</span><span class="n">O</span><span class="w"> </span><span class="kr">wait</span><span class="p">)</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="n">P3</span><span class="w"> </span><span class="p">(</span><span class="n">I</span><span class="o">/</span><span class="n">O</span><span class="w"> </span><span class="kr">wait</span><span class="p">)</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└─────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Time</span><span class="p">:</span><span class="w"> </span><span class="err">████░░░░░░░████░░░░░░░████░░░░</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">               </span><span class="n">Lots</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">CPU</span><span class="w"> </span><span class="n">idle</span><span class="w"> </span><span class="n">time</span><span class="w">                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">With</span><span class="w"> </span><span class="n">Scheduling</span><span class="p">:</span><span class="w">                                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">P1</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">P2</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">P3</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">P1</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">P2</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">P3</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="mf">...</span><span class="w">                  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└─────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Time</span><span class="p">:</span><span class="w"> </span><span class="err">██████████████████████████</span><span class="w">                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">               </span><span class="n">Minimal</span><span class="w"> </span><span class="n">CPU</span><span class="w"> </span><span class="n">idle</span><span class="w"> </span><span class="n">time</span><span class="w">                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                          </span><span class="err">│</span>
+<span class="err">└──────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<hr />
+<h2 id="2-cpu-burst-and-io-burst">2. CPU Burst and I/O Burst<a class="header-link" href="#2-cpu-burst-and-io-burst" title="Permanent link">&para;</a></h2>
+<h3 id="what-is-a-burst">What is a Burst?<a class="header-link" href="#what-is-a-burst" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">Proc</span><span class="nv">ess</span><span class="w"> </span><span class="nv">Execution</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">Alternation</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">CPU</span><span class="w"> </span><span class="nv">Burst</span><span class="w"> </span><span class="nv">and</span><span class="w"> </span><span class="nv">I</span><span class="o">/</span><span class="nv">O</span><span class="w"> </span><span class="nv">Burst</span>
+
+<span class="err">┌─────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                    </span><span class="k">Proc</span><span class="nv">ess</span><span class="w"> </span><span class="nv">Execution</span><span class="w"> </span><span class="nv">Cycle</span><span class="w">               </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nf">Start</span><span class="w"> </span><span class="err">──▶</span><span class="w"> </span><span class="nv">CPU</span><span class="w"> </span><span class="nv">Burst</span><span class="w"> </span><span class="err">──▶</span><span class="w"> </span><span class="nv">I</span><span class="o">/</span><span class="nv">O</span><span class="w"> </span><span class="nv">Burst</span><span class="w"> </span><span class="err">──▶</span><span class="w"> </span><span class="nv">CPU</span><span class="w"> </span><span class="nv">Burst</span><span class="w"> </span><span class="err">──▶</span><span class="w"> </span><span class="nv">...</span><span class="err">│</span>
+<span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">             </span><span class="err">▼</span><span class="w">            </span><span class="err">▼</span><span class="w">            </span><span class="err">▼</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">          </span><span class="nf">Computation</span><span class="w">    </span><span class="nv">I</span><span class="o">/</span><span class="nv">O</span><span class="w"> </span><span class="nv">Wait</span><span class="w">   </span><span class="nv">Computation</span><span class="w">         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">          </span><span class="err">(</span><span class="nf">Running</span><span class="p">)</span><span class="w">     </span><span class="p">(</span><span class="nv">Waiting</span><span class="p">)</span><span class="w">   </span><span class="p">(</span><span class="nv">Running</span><span class="p">)</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────┘</span>
+
+<span class="nf">Timeline</span><span class="w"> </span><span class="nv">Example</span><span class="p">:</span>
+
+<span class="k">Proc</span><span class="nv">ess</span><span class="w"> </span><span class="nv">P1</span><span class="p">:</span>
+<span class="err">┌──────┬──────────┬───────┬──────────┬──────┬──────┐</span>
+<span class="err">│</span><span class="w"> </span><span class="k">CPU</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nv">I</span><span class="o">/</span><span class="nv">O</span><span class="w">     </span><span class="err">│</span><span class="w">  </span><span class="nv">CPU</span><span class="w">  </span><span class="err">│</span><span class="w">   </span><span class="nv">I</span><span class="o">/</span><span class="nv">O</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="nv">CPU</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nv">Exit</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="err">10</span><span class="nf">ms</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="mi">50</span><span class="nv">ms</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="mi">5</span><span class="nv">ms</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="mi">30</span><span class="nv">ms</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="mi">8</span><span class="nv">ms</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="err">│</span>
+<span class="err">└──────┴──────────┴───────┴──────────┴──────┴──────┘</span>
+</code></pre></div>
+
+<h3 id="cpu-bound-vs-io-bound-processes">CPU-bound vs I/O-bound Processes<a class="header-link" href="#cpu-bound-vs-io-bound-processes" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌──────────────────────────────────────────────────────────┐
+│              Burst Patterns by Process Type              │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  CPU-bound Process (Computation intensive):              │
+│  ┌────────────────────┬──┬────────────────────┬──┐       │
+│  │   Long CPU burst   │IO│   Long CPU burst   │IO│       │
+│  └────────────────────┴──┴────────────────────┴──┘       │
+│  Examples: Scientific computation, video encoding,        │
+│            compilers                                     │
+│                                                          │
+│  I/O-bound Process (I/O intensive):                      │
+│  ┌──┬─────┬──┬─────┬──┬─────┬──┬─────┐                   │
+│  │CP│ I/O │CP│ I/O │CP│ I/O │CP│ I/O │                   │
+│  └──┴─────┴──┴─────┴──┴─────┴──┴─────┘                   │
+│  Examples: Text editors, web browsers,                   │
+│            interactive programs                          │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+
+┌─────────────────┬────────────────┬────────────────────────┐
+│      Feature     │  CPU-bound    │      I/O-bound        │
+├─────────────────┼────────────────┼────────────────────────┤
+│ CPU burst length│ Long           │ Short                  │
+│ I/O burst freq  │ Low            │ High                   │
+│ Scheduling need │ Long time slice│ Fast response time     │
+│ Examples        │ Numerical comp │ Web server, database   │
+└─────────────────┴────────────────┴────────────────────────┘
+</code></pre></div>
+
+<h3 id="cpu-burst-distribution">CPU Burst Distribution<a class="header-link" href="#cpu-burst-distribution" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nv">Frequency</span>
+<span class="w"> </span>↑
+<span class="w"> </span>│<span class="w">  </span>██
+<span class="w"> </span>│<span class="w">  </span>██
+<span class="w"> </span>│<span class="w">  </span>████
+<span class="w"> </span>│<span class="w">  </span>██████
+<span class="w"> </span>│<span class="w">  </span>████████
+<span class="w"> </span>│<span class="w">  </span>██████████
+<span class="w"> </span>│<span class="w">  </span>████████████
+<span class="w"> </span>│<span class="w">  </span>██████████████
+<span class="w"> </span>│<span class="w">  </span>████████████████
+<span class="w"> </span>│<span class="w">  </span>██████████████████
+<span class="w"> </span>└────────────────────────────────▶<span class="w"> </span><span class="nv">CPU</span><span class="w"> </span><span class="nv">Burst</span><span class="w"> </span><span class="nv">Length</span>
+
+<span class="nv">Most</span><span class="w"> </span><span class="nv">processes</span><span class="w"> </span><span class="nv">have</span><span class="w"> </span><span class="nv">short</span><span class="w"> </span><span class="nv">CPU</span><span class="w"> </span><span class="nv">bursts</span>
+→<span class="w"> </span><span class="nv">Many</span><span class="w"> </span><span class="nv">I</span><span class="o">/</span><span class="nv">O</span><span class="o">-</span><span class="nv">bound</span><span class="w"> </span><span class="nv">processes</span>
+→<span class="w"> </span><span class="nv">Processing</span><span class="w"> </span><span class="nv">short</span><span class="w"> </span><span class="nv">processes</span><span class="w"> </span><span class="nv">first</span><span class="w"> </span><span class="nv">reduces</span><span class="w"> </span><span class="nv">average</span><span class="w"> </span><span class="k">wait</span><span class="w"> </span><span class="nv">time</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-scheduling-goals">3. Scheduling Goals<a class="header-link" href="#3-scheduling-goals" title="Permanent link">&para;</a></h2>
+<h3 id="key-performance-metrics">Key Performance Metrics<a class="header-link" href="#key-performance-metrics" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│<span class="w">                    </span><span class="nv">Scheduling</span><span class="w"> </span><span class="nv">Metrics</span><span class="w">                    </span>│
+├───────────────────┬─────────────────────────────────────┤
+│<span class="w"> </span><span class="nv">CPU</span><span class="w"> </span><span class="nv">Utilization</span><span class="w">   </span>│<span class="w"> </span><span class="nv">Percentage</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">time</span><span class="w"> </span><span class="nv">CPU</span><span class="w"> </span><span class="nv">is</span><span class="w"> </span><span class="nv">working</span><span class="w">   </span>│
+│<span class="w">                   </span>│<span class="w"> </span><span class="nv">Goal</span>:<span class="w"> </span><span class="nv">Maximize</span><span class="w"> </span><span class="ss">(</span><span class="mi">40</span><span class="o">%~</span><span class="mi">90</span><span class="o">%</span><span class="ss">)</span><span class="w">            </span>│
+├───────────────────┼─────────────────────────────────────┤
+│<span class="w"> </span><span class="nv">Throughput</span><span class="w">        </span>│<span class="w"> </span><span class="nv">Number</span><span class="w"> </span><span class="nv">of</span><span class="w"> </span><span class="nv">processes</span><span class="w"> </span><span class="nv">completed</span><span class="w"> </span><span class="nv">per</span><span class="w">   </span>│
+│<span class="w">                   </span>│<span class="w"> </span><span class="nv">unit</span><span class="w"> </span><span class="nv">time</span>.<span class="w"> </span><span class="nv">Goal</span>:<span class="w"> </span><span class="nv">Maximize</span><span class="w">           </span>│
+├───────────────────┼─────────────────────────────────────┤
+│<span class="w"> </span><span class="nv">Turnaround</span><span class="w"> </span><span class="nv">Time</span><span class="w">   </span>│<span class="w"> </span><span class="nv">Time</span><span class="w"> </span><span class="nv">from</span><span class="w"> </span><span class="nv">submission</span><span class="w"> </span><span class="nv">to</span><span class="w"> </span><span class="nv">completion</span><span class="w">  </span>│
+│<span class="w">                   </span>│<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">Wait</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nv">Execution</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nv">I</span><span class="o">/</span><span class="nv">O</span><span class="w"> </span><span class="nv">time</span><span class="w">       </span>│
+│<span class="w">                   </span>│<span class="w"> </span><span class="nv">Goal</span>:<span class="w"> </span><span class="nv">Minimize</span><span class="w">                      </span>│
+├───────────────────┼─────────────────────────────────────┤
+│<span class="w"> </span><span class="nv">Waiting</span><span class="w"> </span><span class="nv">Time</span><span class="w">      </span>│<span class="w"> </span><span class="nv">Total</span><span class="w"> </span><span class="nv">time</span><span class="w"> </span><span class="nv">spent</span><span class="w"> </span><span class="nv">in</span><span class="w"> </span><span class="nv">Ready</span><span class="w"> </span><span class="nv">queue</span><span class="w">     </span>│
+│<span class="w">                   </span>│<span class="w"> </span><span class="nv">Goal</span>:<span class="w"> </span><span class="nv">Minimize</span><span class="w">                      </span>│
+├───────────────────┼─────────────────────────────────────┤
+│<span class="w"> </span><span class="nv">Response</span><span class="w"> </span><span class="nv">Time</span><span class="w">     </span>│<span class="w"> </span><span class="nv">Time</span><span class="w"> </span><span class="nv">from</span><span class="w"> </span><span class="nv">submission</span><span class="w"> </span><span class="nv">to</span><span class="w"> </span><span class="nv">first</span><span class="w">       </span>│
+│<span class="w">                   </span>│<span class="w"> </span><span class="nv">response</span>.<span class="w"> </span><span class="nv">Important</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nv">interactive</span><span class="w"> </span>│
+│<span class="w">                   </span>│<span class="w"> </span><span class="nv">systems</span>.<span class="w"> </span><span class="nv">Goal</span>:<span class="w"> </span><span class="nv">Minimize</span><span class="w">             </span>│
+└───────────────────┴─────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="time-concept-visualization">Time Concept Visualization<a class="header-link" href="#time-concept-visualization" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">Proc</span><span class="nv">ess</span><span class="w"> </span><span class="nv">P</span><span class="w"> </span><span class="nv">Timeline</span><span class="p">:</span>
+
+<span class="nf">Arrival</span><span class="w">                 </span><span class="nv">Completion</span>
+<span class="w">  </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="w">  </span><span class="err">▼</span><span class="w">                   </span><span class="err">▼</span>
+<span class="err">──┬─────────────────────┬─────────────────────┬──▶</span><span class="w"> </span><span class="nf">Time</span>
+<span class="w">  </span><span class="err">│</span><span class="w">                     </span><span class="err">│</span><span class="w">                     </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│◀──</span><span class="w"> </span><span class="no">Turnaround</span><span class="w"> </span><span class="kd">Time</span><span class="w"> </span><span class="err">────────────────────▶│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">                                           </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nf">Wait</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nv">Execute</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="nv">Wait</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="nv">Execute</span><span class="w">        </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│◀</span><span class="nf">Wait</span><span class="w"> </span><span class="err">▶│</span><span class="w">         </span><span class="err">│◀</span><span class="nv">Wait</span><span class="err">▶│</span><span class="w">                </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="w">                                           </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│◀─▶</span><span class="nf">First</span><span class="w"> </span><span class="nv">Response</span><span class="w">                         </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="nf">Response</span><span class="w">                                   </span><span class="err">│</span>
+<span class="w">  </span><span class="err">│</span><span class="nf">Time</span><span class="w">                                       </span><span class="err">│</span>
+
+
+<span class="nf">Calculation</span><span class="w"> </span><span class="nv">Example</span><span class="p">:</span>
+<span class="err">┌─────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w"> </span><span class="k">Proc</span><span class="nv">ess</span><span class="w"> </span><span class="nv">P</span><span class="p">:</span><span class="w">                                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="no">Arrival</span><span class="w"> </span><span class="kd">time</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w">                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="no">Execution</span><span class="w"> </span><span class="kd">time</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="nv">ms</span><span class="w"> </span><span class="p">(</span><span class="nv">total</span><span class="w"> </span><span class="nv">CPU</span><span class="w"> </span><span class="nv">usage</span><span class="w"> </span><span class="nv">time</span><span class="p">)</span><span class="w">          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="no">Completion</span><span class="w"> </span><span class="kd">time</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">25</span><span class="nv">ms</span><span class="w">                                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="no">Turnaround</span><span class="w"> </span><span class="kd">Time</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">Completion</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nv">Arrival</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">25</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">25</span><span class="nv">ms</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="no">Waiting</span><span class="w"> </span><span class="kd">Time</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">Turnaround</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nv">Execution</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">25</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">15</span><span class="nv">ms</span><span class="w"> </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="trade-offs-between-goals">Trade-offs Between Goals<a class="header-link" href="#trade-offs-between-goals" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                   </span><span class="nx">Scheduling</span><span class="w"> </span><span class="nx">Goal</span><span class="w"> </span><span class="nx">Trade</span><span class="o">-</span><span class="nx">offs</span><span class="w">             </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">CPU</span><span class="w"> </span><span class="nx">Utilization</span><span class="w"> </span><span class="err">←─────────────────────▶</span><span class="w"> </span><span class="nx">Response</span><span class="w"> </span><span class="nx">Time</span><span class="w">  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="p">(</span><span class="nx">Maximize</span><span class="p">)</span><span class="w">          </span><span class="nx">Conflicting</span><span class="w">         </span><span class="p">(</span><span class="nx">Minimize</span><span class="p">)</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">Throughput</span><span class="w"> </span><span class="err">←───────────────────────▶</span><span class="w"> </span><span class="nx">Fairness</span><span class="w">         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="p">(</span><span class="nx">Maximize</span><span class="p">)</span><span class="w">        </span><span class="nx">Conflicting</span><span class="w">        </span><span class="p">(</span><span class="nx">Equal</span><span class="w"> </span><span class="nx">dist</span><span class="p">)</span><span class="w">      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">Priorities</span><span class="w"> </span><span class="nx">differ</span><span class="w"> </span><span class="nx">by</span><span class="w"> </span><span class="nx">system</span><span class="w"> </span><span class="k">type</span><span class="p">:</span><span class="w">                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────┬───────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">Batch</span><span class="w"> </span><span class="nx">System</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="nx">Throughput</span><span class="p">,</span><span class="w"> </span><span class="nx">CPU</span><span class="w"> </span><span class="nx">utilization</span><span class="w"> </span><span class="nx">first</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">├────────────────┼───────────────────────────────────┤</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">Interactive</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="nx">Response</span><span class="w"> </span><span class="nx">time</span><span class="w"> </span><span class="nx">first</span><span class="w">               </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">├────────────────┼───────────────────────────────────┤</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">Real</span><span class="o">-</span><span class="nx">time</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="nx">Meeting</span><span class="w"> </span><span class="nx">deadlines</span><span class="w"> </span><span class="nx">first</span><span class="w">           </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────┴───────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-preemptive-vs-non-preemptive-scheduling">4. Preemptive vs Non-preemptive Scheduling<a class="header-link" href="#4-preemptive-vs-non-preemptive-scheduling" title="Permanent link">&para;</a></h2>
+<h3 id="non-preemptive-scheduling">Non-preemptive Scheduling<a class="header-link" href="#non-preemptive-scheduling" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">              </span><span class="nx">Non</span><span class="o">-</span><span class="nx">preemptive</span><span class="w"> </span><span class="nx">Scheduling</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="nx">Process</span><span class="w"> </span><span class="nx">runs</span><span class="w"> </span><span class="nx">until</span><span class="w"> </span><span class="nx">it</span><span class="w"> </span><span class="nx">voluntarily</span><span class="w"> </span><span class="nx">releases</span><span class="w"> </span><span class="nx">CPU</span><span class="w">       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="nx">CPU</span><span class="w"> </span><span class="nx">cannot</span><span class="w"> </span><span class="nx">be</span><span class="w"> </span><span class="nx">forcibly</span><span class="w"> </span><span class="nx">taken</span><span class="w"> </span><span class="nx">away</span><span class="w">                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">CPU</span><span class="w"> </span><span class="nx">Release</span><span class="w"> </span><span class="nx">Points</span><span class="p">:</span><span class="w">                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mi">1</span><span class="p">.</span><span class="w"> </span><span class="nx">Process</span><span class="w"> </span><span class="nx">terminates</span><span class="w">                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mi">2</span><span class="p">.</span><span class="w"> </span><span class="nx">Transitions</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="nx">waiting</span><span class="w"> </span><span class="nx">state</span><span class="w"> </span><span class="p">(</span><span class="nx">I</span><span class="o">/</span><span class="nx">O</span><span class="w"> </span><span class="nx">request</span><span class="p">)</span><span class="w">          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mi">3</span><span class="p">.</span><span class="w"> </span><span class="nx">Voluntary</span><span class="w"> </span><span class="nx">yield</span><span class="w"> </span><span class="p">(</span><span class="nx">yield</span><span class="p">())</span><span class="w">                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">Timeline</span><span class="p">:</span><span class="w">                                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌──────────────────────────────────────────────────┐</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">P1</span><span class="w"> </span><span class="p">(</span><span class="mi">10</span><span class="nx">ms</span><span class="p">)</span><span class="w">              </span><span class="err">│</span><span class="w"> </span><span class="nx">P2</span><span class="w"> </span><span class="p">(</span><span class="mi">5</span><span class="nx">ms</span><span class="p">)</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="nx">P3</span><span class="w"> </span><span class="p">(</span><span class="mi">3</span><span class="nx">ms</span><span class="p">)</span><span class="w"> </span><span class="err">│</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└──────────────────────────────────────────────────┘</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">P2</span><span class="p">,</span><span class="w"> </span><span class="nx">P3</span><span class="w"> </span><span class="nx">wait</span><span class="w"> </span><span class="nx">even</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nx">they</span><span class="w"> </span><span class="nx">arrive</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="nx">P1</span><span class="w"> </span><span class="nx">runs</span><span class="w">          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">Advantages</span><span class="p">:</span><span class="w"> </span><span class="nx">Simple</span><span class="w"> </span><span class="nx">implementation</span><span class="p">,</span><span class="w"> </span><span class="nx">low</span><span class="w"> </span><span class="nx">context</span><span class="w">         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">              </span><span class="nx">switch</span><span class="w"> </span><span class="nx">overhead</span><span class="w">                            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">Disadvantages</span><span class="p">:</span><span class="w"> </span><span class="nx">Long</span><span class="w"> </span><span class="nx">response</span><span class="w"> </span><span class="nx">time</span><span class="p">,</span><span class="w"> </span><span class="nx">long</span><span class="w"> </span><span class="nx">process</span><span class="w"> </span><span class="nx">can</span><span class="w">    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                 </span><span class="nx">monopolize</span><span class="w"> </span><span class="nx">CPU</span><span class="w">                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">Example</span><span class="w"> </span><span class="nx">Algorithms</span><span class="p">:</span><span class="w"> </span><span class="nx">FCFS</span><span class="p">,</span><span class="w"> </span><span class="nx">SJF</span><span class="w"> </span><span class="p">(</span><span class="nx">non</span><span class="o">-</span><span class="nx">preemptive</span><span class="p">)</span><span class="w">        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="preemptive-scheduling">Preemptive Scheduling<a class="header-link" href="#preemptive-scheduling" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│                Preemptive Scheduling                     │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  • Scheduler can forcibly take away CPU from process    │
+│  • Can immediately allocate CPU to more important       │
+│    process when it arrives                              │
+│                                                         │
+│  CPU Preemption Points:                                 │
+│  1. Time slice (Time Quantum) expires                   │
+│  2. Higher priority process arrives                     │
+│  3. Process transitions to Ready after I/O completion   │
+│                                                         │
+│  Timeline (Round Robin example):                        │
+│  ┌──────┬──────┬──────┬──────┬──────┬──────┐           │
+│  │  P1  │  P2  │  P3  │  P1  │  P2  │  P1  │           │
+│  └──────┴──────┴──────┴──────┴──────┴──────┘           │
+│  Process switches every time slice                      │
+│                                                         │
+│  Advantages: Better response time, prevents CPU         │
+│              monopolization                             │
+│  Disadvantages: Context switch overhead,                │
+│                 complex synchronization issues          │
+│                                                         │
+│  Example Algorithms: RR, SRTF, Priority (preemptive)   │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="comparison">Comparison<a class="header-link" href="#comparison" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────┬─────────────────┬─────────────────────┐
+│<span class="w">      </span><span class="nv">Feature</span><span class="w">     </span>│<span class="w">  </span><span class="nv">Non</span><span class="o">-</span><span class="nv">preemptive</span><span class="w"> </span>│<span class="w">     </span><span class="nv">Preemptive</span><span class="w">      </span>│
+├─────────────────┼─────────────────┼─────────────────────┤
+│<span class="w"> </span><span class="nv">CPU</span><span class="w"> </span><span class="nv">preemption</span><span class="w">  </span>│<span class="w"> </span><span class="nv">Not</span><span class="w"> </span><span class="nv">possible</span><span class="w">    </span>│<span class="w"> </span><span class="nv">Possible</span><span class="w">            </span>│
+├─────────────────┼─────────────────┼─────────────────────┤
+│<span class="w"> </span><span class="nv">Response</span><span class="w"> </span><span class="nv">time</span><span class="w">   </span>│<span class="w"> </span><span class="nv">Can</span><span class="w"> </span><span class="nv">be</span><span class="w"> </span><span class="nv">long</span><span class="w">     </span>│<span class="w"> </span><span class="nv">Short</span><span class="w">               </span>│
+├─────────────────┼─────────────────┼─────────────────────┤
+│<span class="w"> </span><span class="nv">Context</span><span class="w"> </span><span class="nv">switches</span>│<span class="w"> </span><span class="nv">Few</span><span class="w">             </span>│<span class="w"> </span><span class="nv">Many</span><span class="w">                </span>│
+├─────────────────┼─────────────────┼─────────────────────┤
+│<span class="w"> </span><span class="nv">Implementation</span><span class="w">  </span>│<span class="w"> </span><span class="nv">Low</span><span class="w"> </span><span class="nv">complexity</span><span class="w">  </span>│<span class="w"> </span><span class="nv">High</span><span class="w"> </span><span class="nv">complexity</span><span class="w">     </span>│
+├─────────────────┼─────────────────┼─────────────────────┤
+│<span class="w"> </span><span class="nv">Sync</span><span class="w"> </span><span class="nv">issues</span><span class="w">     </span>│<span class="w"> </span><span class="nv">Few</span><span class="w">             </span>│<span class="w"> </span><span class="nv">Need</span><span class="w"> </span><span class="nv">race</span><span class="w"> </span><span class="nv">condition</span><span class="w"> </span>│
+│<span class="w">                 </span>│<span class="w">                 </span>│<span class="w"> </span><span class="nv">handling</span><span class="w">            </span>│
+├─────────────────┼─────────────────┼─────────────────────┤
+│<span class="w"> </span><span class="nv">Suitable</span><span class="w"> </span><span class="k">for</span><span class="w">    </span>│<span class="w"> </span><span class="nv">Batch</span><span class="w"> </span><span class="nv">systems</span><span class="w">   </span>│<span class="w"> </span><span class="nv">Interactive</span><span class="o">/</span><span class="nv">RT</span><span class="w">      </span>│
+└─────────────────┴─────────────────┴─────────────────────┘
+</code></pre></div>
+
+<h3 id="scheduling-decision-points">Scheduling Decision Points<a class="header-link" href="#scheduling-decision-points" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                </span><span class="n">CPU</span><span class="w"> </span><span class="n">Scheduling</span><span class="w"> </span><span class="n">Decision</span><span class="w"> </span><span class="n">Points</span><span class="w">            </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">1.</span><span class="w"> </span><span class="n">Running</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Waiting</span><span class="w"> </span><span class="p">(</span><span class="n">I</span><span class="o">/</span><span class="n">O</span><span class="w"> </span><span class="n">request</span><span class="p">)</span><span class="w">      </span><span class="p">[</span><span class="n">Non</span><span class="o">-</span><span class="n">preemptive</span><span class="p">]</span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">•</span><span class="w"> </span><span class="n">Process</span><span class="w"> </span><span class="n">voluntarily</span><span class="w"> </span><span class="n">releases</span><span class="w"> </span><span class="n">CPU</span><span class="w">                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">2.</span><span class="w"> </span><span class="n">Running</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Ready</span><span class="w"> </span><span class="p">(</span><span class="n">interrupt</span><span class="p">,</span><span class="w"> </span><span class="n">timeout</span><span class="p">)</span><span class="w"> </span><span class="p">[</span><span class="n">Preemptive</span><span class="p">]</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">•</span><span class="w"> </span><span class="n">Time</span><span class="w"> </span><span class="n">slice</span><span class="w"> </span><span class="n">expired</span><span class="w">                                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">•</span><span class="w"> </span><span class="n">Higher</span><span class="w"> </span><span class="n">priority</span><span class="w"> </span><span class="n">process</span><span class="w"> </span><span class="n">arrived</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">3.</span><span class="w"> </span><span class="n">Waiting</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Ready</span><span class="w"> </span><span class="p">(</span><span class="n">I</span><span class="o">/</span><span class="n">O</span><span class="w"> </span><span class="n">complete</span><span class="p">)</span><span class="w">       </span><span class="p">[</span><span class="n">Can</span><span class="w"> </span><span class="n">preempt</span><span class="p">]</span><span class="w">  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">•</span><span class="w"> </span><span class="n">Can</span><span class="w"> </span><span class="n">preempt</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">completed</span><span class="w"> </span><span class="n">I</span><span class="o">/</span><span class="n">O</span><span class="w"> </span><span class="n">process</span><span class="w"> </span><span class="n">has</span><span class="w">          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">       </span><span class="n">higher</span><span class="w"> </span><span class="n">priority</span><span class="w"> </span><span class="n">than</span><span class="w"> </span><span class="n">current</span><span class="w">                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">4.</span><span class="w"> </span><span class="n">Running</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Terminated</span><span class="w"> </span><span class="p">(</span><span class="n">exit</span><span class="p">)</span><span class="w">          </span><span class="p">[</span><span class="n">Non</span><span class="o">-</span><span class="n">preemptive</span><span class="p">]</span><span class="err">│</span>
+<span class="err">│</span><span class="w">     </span><span class="err">•</span><span class="w"> </span><span class="n">Process</span><span class="w"> </span><span class="n">terminates</span><span class="p">,</span><span class="w"> </span><span class="n">need</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">select</span><span class="w"> </span><span class="n">next</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Only</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="o">:</span><span class="w"> </span><span class="n">Non</span><span class="o">-</span><span class="n">preemptive</span><span class="w"> </span><span class="n">scheduling</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">All</span><span class="w"> </span><span class="mi">1</span><span class="o">~</span><span class="mi">4</span><span class="o">:</span><span class="w"> </span><span class="n">Preemptive</span><span class="w"> </span><span class="n">scheduling</span><span class="w">                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-types-of-schedulers">5. Types of Schedulers<a class="header-link" href="#5-types-of-schedulers" title="Permanent link">&para;</a></h2>
+<h3 id="three-level-scheduler-structure">Three-Level Scheduler Structure<a class="header-link" href="#three-level-scheduler-structure" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                     3-Level Scheduler Structure              │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │                   Job Queue                         │    │
+│  │     All processes on disk                           │    │
+│  │     ┌───┐ ┌───┐ ┌───┐ ┌───┐ ┌───┐                  │    │
+│  │     │P1 │ │P2 │ │P3 │ │P4 │ │...│                  │    │
+│  │     └───┘ └───┘ └───┘ └───┘ └───┘                  │    │
+│  └───────────────────────┬─────────────────────────────┘    │
+│                          │                                  │
+│                    Long-term Scheduler                      │
+│                   (Long-term Scheduler)                     │
+│                    • Job admission                          │
+│                    • Control degree of multiprogramming     │
+│                    • Execution frequency: seconds~minutes   │
+│                          │                                  │
+│                          ▼                                  │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │                   Ready Queue                       │    │
+│  │     Processes in memory waiting to execute          │    │
+│  │     ┌───┐ ┌───┐ ┌───┐                              │    │
+│  │     │P1 │→│P2 │→│P3 │                              │    │
+│  │     └───┘ └───┘ └───┘                              │    │
+│  └──────────────┬────────────────────────┬─────────────┘    │
+│                 │                        │                  │
+│           Short-term            Medium-term                 │
+│           Scheduler              Scheduler                  │
+│         (Short-term Scheduler) (Medium-term Scheduler)      │
+│          • CPU allocation         • Swapping               │
+│          • Runs every ms          • Memory management      │
+│          • Most frequent          • Adjust multiprogramming │
+│                 │                        │                  │
+│                 ▼                        ▼                  │
+│            ┌─────────┐           ┌───────────────┐          │
+│            │   CPU   │           │   Suspended   │          │
+│            │(Running)│           │    Queue      │          │
+│            └─────────┘           └───────────────┘          │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="long-term-scheduler-job-scheduler">Long-term Scheduler (Job Scheduler)<a class="header-link" href="#long-term-scheduler-job-scheduler" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">               </span><span class="n">Long</span><span class="o">-</span><span class="n">term</span><span class="w"> </span><span class="n">Scheduler</span><span class="w"> </span><span class="p">(</span><span class="n">Job</span><span class="w"> </span><span class="n">Scheduler</span><span class="p">)</span><span class="w">        </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="k">Role</span><span class="err">:</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="k">Disk</span><span class="w"> </span><span class="n">jobs</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Memory</span><span class="w"> </span><span class="p">(</span><span class="n">Ready</span><span class="w"> </span><span class="n">Queue</span><span class="p">)</span><span class="w">                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">Decides</span><span class="w"> </span><span class="n">which</span><span class="w"> </span><span class="n">processes</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">admit</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="k">system</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">Controls</span><span class="w"> </span><span class="n">degree</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="n">multiprogramming</span><span class="w">                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Decision</span><span class="w"> </span><span class="nl">Criteria</span><span class="p">:</span><span class="w">                                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="k">System</span><span class="w"> </span><span class="n">resource</span><span class="w"> </span><span class="p">(</span><span class="n">memory</span><span class="p">,</span><span class="w"> </span><span class="n">CPU</span><span class="p">)</span><span class="w"> </span><span class="n">status</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">Appropriate</span><span class="w"> </span><span class="n">mix</span><span class="w"> </span><span class="k">of</span><span class="w"> </span><span class="n">CPU</span><span class="o">-</span><span class="n">bound</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">I</span><span class="o">/</span><span class="n">O</span><span class="o">-</span><span class="n">bound</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Execution</span><span class="w"> </span><span class="nl">Frequency</span><span class="p">:</span><span class="w"> </span><span class="n">Rarely</span><span class="w"> </span><span class="p">(</span><span class="n">seconds</span><span class="o">~</span><span class="n">minutes</span><span class="p">)</span><span class="w">          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Modern</span><span class="w"> </span><span class="nl">Systems</span><span class="p">:</span><span class="w">                                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">Rarely</span><span class="w"> </span><span class="n">used</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nc">time</span><span class="o">-</span><span class="n">sharing</span><span class="w"> </span><span class="n">systems</span><span class="w">                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="ow">All</span><span class="w"> </span><span class="n">processes</span><span class="w"> </span><span class="k">go</span><span class="w"> </span><span class="n">directly</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">Ready</span><span class="w"> </span><span class="n">Queue</span><span class="w">             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">Virtual</span><span class="w"> </span><span class="n">memory</span><span class="w"> </span><span class="n">handles</span><span class="w"> </span><span class="n">memory</span><span class="w"> </span><span class="n">management</span><span class="w">             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                         </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="short-term-scheduler-cpu-scheduler">Short-term Scheduler (CPU Scheduler)<a class="header-link" href="#short-term-scheduler-cpu-scheduler" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│               Short-term Scheduler (CPU Scheduler)       │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  Role:                                                  │
+│  • Ready Queue → CPU (Running)                         │
+│  • Decides which process gets CPU allocation            │
+│                                                         │
+│  Execution Frequency: Very frequently (milliseconds)    │
+│  → Fast algorithm essential                             │
+│                                                         │
+│  Invocation Points:                                     │
+│  • Time slice expiration                                │
+│  • Process blocking (I/O request)                       │
+│  • Process termination                                  │
+│  • Interrupt occurrence                                 │
+│                                                         │
+│  Algorithms Used:                                       │
+│  • FCFS, SJF, Priority, Round Robin, MLFQ, etc.        │
+│                                                         │
+│  Note: Scheduler itself uses CPU time                   │
+│        → Need to minimize scheduler overhead            │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="medium-term-scheduler-swapper">Medium-term Scheduler (Swapper)<a class="header-link" href="#medium-term-scheduler-swapper" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│              Medium-term Scheduler (Swapper)             │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  Role:                                                  │
+│  • Manage swapping                                      │
+│  • Move processes between memory ↔ disk                 │
+│  • Dynamically adjust degree of multiprogramming        │
+│                                                         │
+│  Operation:                                             │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │    Memory (Ready/Blocked)                       │    │
+│  │    ┌───┐ ┌───┐ ┌───┐                           │    │
+│  │    │P1 │ │P2 │ │P3 │  ← When memory low,       │    │
+│  │    └───┘ └───┘ └───┘       swap out P3         │    │
+│  └─────────────────────────────────────────────────┘    │
+│              │ swap out          ▲ swap in             │
+│              ▼                   │                     │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │    Disk (Suspended)                             │    │
+│  │    ┌───┐ ┌───┐                                 │    │
+│  │    │P4 │ │P5 │  → Swap in when memory available│    │
+│  │    └───┘ └───┘                                 │    │
+│  └─────────────────────────────────────────────────┘    │
+│                                                         │
+│  Swap Out Criteria:                                     │
+│  • Long-waiting processes                               │
+│  • Low priority processes                               │
+│  • Memory-intensive processes                           │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="scheduler-comparison">Scheduler Comparison<a class="header-link" href="#scheduler-comparison" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌────────────────────┬────────────────┬────────────────┬────────────────┐
+│       Feature       │   Long-term    │  Short-term    │  Medium-term   │
+├────────────────────┼────────────────┼────────────────┼────────────────┤
+│ Other name         │ Job Scheduler  │ CPU Scheduler  │ Swapper       │
+├────────────────────┼────────────────┼────────────────┼────────────────┤
+│ Transition         │ Disk→Memory    │ Ready→Running  │ Memory↔Disk   │
+├────────────────────┼────────────────┼────────────────┼────────────────┤
+│ Execution freq     │ Rarely         │ Very often     │ Sometimes     │
+├────────────────────┼────────────────┼────────────────┼────────────────┤
+│ Speed requirement  │ Can be slow    │ Must be fast   │ Medium        │
+├────────────────────┼────────────────┼────────────────┼────────────────┤
+│ Multiprogramming   │ Control total  │ No effect      │ Dynamic adjust│
+├────────────────────┼────────────────┼────────────────┼────────────────┤
+│ Modern systems     │ Rarely used    │ Core usage     │ Replaced by VM│
+└────────────────────┴────────────────┴────────────────┴────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="6-dispatcher">6. Dispatcher<a class="header-link" href="#6-dispatcher" title="Permanent link">&para;</a></h2>
+<h3 id="what-is-a-dispatcher">What is a Dispatcher?<a class="header-link" href="#what-is-a-dispatcher" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│                    Dispatcher                            │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  Dispatcher = Module that actually gives CPU control    │
+│              to the process selected by scheduler       │
+│                                                         │
+│  Scheduler and Dispatcher Relationship:                 │
+│  ┌───────────────┐          ┌───────────────┐           │
+│  │   Scheduler    │ ─decide─▶│   Dispatcher  │ ─execute─▶│
+│  │ &quot;Run P3&quot;      │          │ Perform CPU   │           │
+│  │               │          │ allocation    │           │
+│  └───────────────┘          └───────────────┘           │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="dispatcher-tasks">Dispatcher Tasks<a class="header-link" href="#dispatcher-tasks" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│<span class="w">                  </span><span class="nv">Dispatcher</span><span class="w"> </span><span class="nv">Tasks</span><span class="w">                        </span>│
+├─────────────────────────────────────────────────────────┤
+│<span class="w">                                                         </span>│
+│<span class="w">  </span><span class="mi">1</span>.<span class="w"> </span><span class="nv">Context</span><span class="w"> </span><span class="nv">Switch</span><span class="w">                                      </span>│
+│<span class="w">     </span>•<span class="w"> </span><span class="nv">Save</span><span class="w"> </span><span class="nv">current</span><span class="w"> </span><span class="nv">process</span><span class="w"> </span><span class="nv">state</span><span class="w"> </span><span class="nv">to</span><span class="w"> </span><span class="nv">PCB</span><span class="w">                 </span>│
+│<span class="w">     </span>•<span class="w"> </span><span class="nv">Restore</span><span class="w"> </span><span class="nv">new</span><span class="w"> </span><span class="nv">process</span><span class="w"> </span><span class="nv">state</span><span class="w"> </span><span class="nv">from</span><span class="w"> </span><span class="nv">PCB</span><span class="w">                </span>│
+│<span class="w">                                                         </span>│
+│<span class="w">  </span><span class="mi">2</span>.<span class="w"> </span><span class="nv">Switch</span><span class="w"> </span><span class="nv">to</span><span class="w"> </span><span class="nv">User</span><span class="w"> </span><span class="nv">Mode</span><span class="w">                                 </span>│
+│<span class="w">     </span>•<span class="w"> </span><span class="nv">Kernel</span><span class="w"> </span><span class="nv">mode</span><span class="w"> </span>→<span class="w"> </span><span class="nv">User</span><span class="w"> </span><span class="nv">mode</span><span class="w">                           </span>│
+│<span class="w">                                                         </span>│
+│<span class="w">  </span><span class="mi">3</span>.<span class="w"> </span><span class="nv">Restart</span><span class="w"> </span><span class="nv">Program</span><span class="w">                                     </span>│
+│<span class="w">     </span>•<span class="w"> </span><span class="nv">Jump</span><span class="w"> </span><span class="nv">to</span><span class="w"> </span><span class="nv">appropriate</span><span class="w"> </span><span class="nv">location</span><span class="w"> </span><span class="nv">in</span><span class="w"> </span><span class="nv">new</span><span class="w"> </span><span class="nv">process</span><span class="w">       </span>│
+│<span class="w">     </span>•<span class="w"> </span><span class="nv">Set</span><span class="w"> </span><span class="nv">PC</span><span class="w"> </span><span class="ss">(</span><span class="nv">Program</span><span class="w"> </span><span class="nv">Counter</span><span class="ss">)</span><span class="w">                          </span>│
+│<span class="w">                                                         </span>│
+│<span class="w">  </span><span class="nv">Timeline</span>:<span class="w">                                              </span>│
+│<span class="w">  </span>┌────────┬──────────────────┬────────────────────┐<span class="w">     </span>│
+│<span class="w">  </span>│<span class="w"> </span><span class="nv">P1</span><span class="w"> </span><span class="k">exec</span>│<span class="w">  </span><span class="nv">Dispatcher</span><span class="w"> </span><span class="k">exec</span><span class="w">  </span>│<span class="w">      </span><span class="nv">P2</span><span class="w"> </span><span class="k">exec</span><span class="w">       </span>│<span class="w">     </span>│
+│<span class="w">  </span>│<span class="w">        </span>│<span class="ss">(</span><span class="nv">Dispatch</span><span class="w"> </span><span class="nv">latency</span><span class="ss">)</span><span class="w"> </span>│<span class="w">                   </span>│<span class="w">     </span>│
+│<span class="w">  </span>└────────┴──────────────────┴────────────────────┘<span class="w">     </span>│
+│<span class="w">           </span>↑<span class="w">                                             </span>│
+│<span class="w">      </span><span class="nv">Dispatch</span><span class="w"> </span><span class="nv">Latency</span><span class="w"> </span><span class="ss">(</span><span class="nv">should</span><span class="w"> </span><span class="nv">be</span><span class="w"> </span><span class="nv">as</span><span class="w"> </span><span class="nv">short</span><span class="w"> </span><span class="nv">as</span><span class="w"> </span><span class="nv">possible</span><span class="ss">)</span><span class="w">  </span>│
+│<span class="w">                                                         </span>│
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="dispatch-latency">Dispatch Latency<a class="header-link" href="#dispatch-latency" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Dispatch Latency = Time from stopping current process
+                  to starting new process execution
+
+Components:
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│  1. Interrupt handling time                             │
+│  2. Save current process state                          │
+│  3. Execute scheduling algorithm                        │
+│  4. Restore new process state                           │
+│  5. Cache/TLB related costs                             │
+│                                                         │
+│  Typically: 1~10 microseconds                           │
+│                                                         │
+│  Minimization Methods:                                  │
+│  • Efficient scheduling algorithm                       │
+│  • Optimized context switch code                        │
+│  • Use hardware support                                 │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="7-practice-problems">7. Practice Problems<a class="header-link" href="#7-practice-problems" title="Permanent link">&para;</a></h2>
+<h3 id="problem-1-basic-concepts">Problem 1: Basic Concepts<a class="header-link" href="#problem-1-basic-concepts" title="Permanent link">&para;</a></h3>
+<p>Define the following terms.</p>
+<ol>
+<li>CPU Burst</li>
+<li>Throughput</li>
+<li>Turnaround Time</li>
+<li>Preemptive Scheduling</li>
+</ol>
+<details>
+<summary>Show Answer</summary>
+
+1. **CPU Burst**: The time period during which a process continuously uses the CPU. The interval of performing only computation without I/O requests.
+
+2. **Throughput**: The number of processes completed per unit time. An indicator of system efficiency.
+
+3. **Turnaround Time**: Total time from when a process is submitted to the system until it completes. Waiting time + Execution time + I/O time.
+
+4. **Preemptive Scheduling**: A scheduling method where the scheduler can forcibly take away CPU from a running process. Occurs at points such as time slice expiration or higher priority process arrival.
+
+</details>
+
+<h3 id="problem-2-time-calculation">Problem 2: Time Calculation<a class="header-link" href="#problem-2-time-calculation" title="Permanent link">&para;</a></h3>
+<p>Calculate the average waiting time and average turnaround time for the following processes.
+(FCFS scheduling, all processes arrive at time 0)</p>
+<table>
+<thead>
+<tr>
+<th>Process</th>
+<th>Execution Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P1</td>
+<td>24</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>3</td>
+</tr>
+<tr>
+<td>P3</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+<details>
+<summary>Show Answer</summary>
+
+**Gantt Chart:**
+
+<div class="highlight"><pre><span></span><code>┌────────────────────────┬───┬───┐
+│          P1            │P2 │P3 │
+└────────────────────────┴───┴───┘
+0                       24  27  30
+</code></pre></div>
+
+
+
+**Waiting Time:**
+- P1: 0
+- P2: 24
+- P3: 27
+- Average Waiting Time = (0 + 24 + 27) / 3 = 17
+
+**Turnaround Time:**
+- P1: 24 - 0 = 24
+- P2: 27 - 0 = 27
+- P3: 30 - 0 = 30
+- Average Turnaround Time = (24 + 27 + 30) / 3 = 27
+
+</details>
+
+<h3 id="problem-3-scheduler-identification">Problem 3: Scheduler Identification<a class="header-link" href="#problem-3-scheduler-identification" title="Permanent link">&para;</a></h3>
+<p>Choose the matching scheduler for each description.</p>
+<p>A. Long-term Scheduler
+B. Short-term Scheduler
+C. Medium-term Scheduler</p>
+<ol>
+<li>( ) Must execute very frequently, every millisecond.</li>
+<li>( ) Selects an appropriate mix of CPU-bound and I/O-bound processes.</li>
+<li>( ) Swaps processes to disk when memory is low.</li>
+<li>( ) Decides which process gets CPU allocation.</li>
+</ol>
+<details>
+<summary>Show Answer</summary>
+
+1. (B) Short-term Scheduler - Executes very frequently, needs fast algorithm
+2. (A) Long-term Scheduler - Considers process mix for system balance
+3. (C) Medium-term Scheduler - Responsible for swapping
+4. (B) Short-term Scheduler - Responsible for CPU scheduling
+
+</details>
+
+<h3 id="problem-4-preemptive-vs-non-preemptive">Problem 4: Preemptive vs Non-preemptive<a class="header-link" href="#problem-4-preemptive-vs-non-preemptive" title="Permanent link">&para;</a></h3>
+<p>Identify whether each situation is preemptive or non-preemptive.</p>
+<ol>
+<li>Process calls exit() and terminates</li>
+<li>Time slice expires and switches to another process</li>
+<li>Process requests I/O and transitions to waiting state</li>
+<li>High priority process arrives in Ready queue and interrupts current process</li>
+</ol>
+<details>
+<summary>Show Answer</summary>
+
+1. **Non-preemptive** - Process voluntarily terminates
+2. **Preemptive** - Scheduler forcibly takes away CPU
+3. **Non-preemptive** - Process voluntarily releases CPU
+4. **Preemptive** - Scheduler forcibly takes away CPU
+
+</details>
+
+<h3 id="problem-5-dispatcher">Problem 5: Dispatcher<a class="header-link" href="#problem-5-dispatcher" title="Permanent link">&para;</a></h3>
+<p>Describe three main tasks performed by the dispatcher, and explain the impact on the system if dispatch latency is long.</p>
+<details>
+<summary>Show Answer</summary>
+
+**Main Dispatcher Tasks:**
+1. **Context Switch**: Save current process's state (registers, PC, etc.) to PCB and restore new process's state from PCB
+2. **Mode Switch**: Transition from kernel mode to user mode
+3. **Jump**: Transfer control to the appropriate location (address pointed to by PC) in new process
+
+**Impact of Long Dispatch Latency:**
+- Decreased CPU utilization (reduced percentage of time used for actual work)
+- Increased response time (slower reaction to user requests)
+- Decreased throughput (fewer processes completed per unit time)
+- Increased system overhead
+
+</details>
+
+<hr />
+<h2 id="next-steps">Next Steps<a class="header-link" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./05_Scheduling_Algorithms.md">05_Scheduling_Algorithms.md</a> - FCFS, SJF, Priority, RR algorithms</li>
+</ul>
+<hr />
+<h2 id="references">References<a class="header-link" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://pages.cs.wisc.edu/~remzi/OSTEP/cpu-sched.pdf">OSTEP - CPU Scheduling</a></li>
+<li><a href="https://www.os-book.com/">Operating System Concepts - Chapter 5</a></li>
+<li><a href="https://www.kernel.org/doc/html/latest/scheduler/">Linux Scheduler Documentation</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/OS_Theory/03_Threads_and_Multithreading.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">Threads and Multithreading</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/OS_Theory/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/OS_Theory/05_Scheduling_Algorithms.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">Scheduling Algorithms</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'en';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

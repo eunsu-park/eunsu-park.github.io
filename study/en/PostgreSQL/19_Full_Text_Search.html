@@ -1,0 +1,915 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>19. Full-Text Search - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/en/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/en/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/en/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" selected>
+                        English
+                    </option>
+                    
+                    <option value="ko" >
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/en/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/en/PostgreSQL/">PostgreSQL</a>
+    <span class="separator">/</span>
+    <span class="current">19. Full-Text Search</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>19. Full-Text Search</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/PostgreSQL/18_Table_Partitioning.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">18. Table Partitioning</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/PostgreSQL/20_Security_Access_Control.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">20. Security and Access Control</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#learning-objectives">Learning Objectives</a></li>
+<li><a href="#table-of-contents">Table of Contents</a></li>
+<li><a href="#1-full-text-search-overview">1. Full-Text Search Overview</a><ul>
+<li><a href="#11-why-full-text-search">1.1 Why Full-Text Search?</a></li>
+<li><a href="#12-architecture-overview">1.2 Architecture Overview</a></li>
+</ul>
+</li>
+<li><a href="#2-tsvector-and-tsquery">2. tsvector and tsquery</a><ul>
+<li><a href="#21-tsvector-document-representation">2.1 tsvector — Document Representation</a></li>
+<li><a href="#22-tsquery-query-representation">2.2 tsquery — Query Representation</a></li>
+<li><a href="#23-the-match-operator">2.3 The Match Operator (@@)</a></li>
+<li><a href="#24-stored-tsvector-column">2.4 Stored tsvector Column</a></li>
+</ul>
+</li>
+<li><a href="#3-search-configuration">3. Search Configuration</a><ul>
+<li><a href="#31-text-search-configurations">3.1 Text Search Configurations</a></li>
+<li><a href="#32-dictionaries-and-stop-words">3.2 Dictionaries and Stop Words</a></li>
+<li><a href="#33-custom-configuration">3.3 Custom Configuration</a></li>
+</ul>
+</li>
+<li><a href="#4-gin-and-gist-indexes">4. GIN and GiST Indexes</a><ul>
+<li><a href="#41-gin-index-for-full-text-search">4.1 GIN Index for Full-Text Search</a></li>
+<li><a href="#42-gin-vs-gist-comparison">4.2 GIN vs GiST Comparison</a></li>
+<li><a href="#43-index-maintenance">4.3 Index Maintenance</a></li>
+</ul>
+</li>
+<li><a href="#5-ranking-and-weights">5. Ranking and Weights</a><ul>
+<li><a href="#51-ts_rank">5.1 ts_rank</a></li>
+<li><a href="#52-ts_rank_cd-cover-density">5.2 ts_rank_cd (Cover Density)</a></li>
+<li><a href="#53-weighted-search">5.3 Weighted Search</a></li>
+<li><a href="#54-highlighting-search-results">5.4 Highlighting Search Results</a></li>
+</ul>
+</li>
+<li><a href="#6-advanced-search-techniques">6. Advanced Search Techniques</a><ul>
+<li><a href="#61-multi-column-search">6.1 Multi-Column Search</a></li>
+<li><a href="#62-phrase-search">6.2 Phrase Search</a></li>
+<li><a href="#63-search-with-filters">6.3 Search with Filters</a></li>
+<li><a href="#64-auto-complete-prefix-search">6.4 Auto-Complete / Prefix Search</a></li>
+<li><a href="#65-search-statistics">6.5 Search Statistics</a></li>
+</ul>
+</li>
+<li><a href="#7-pg_trgm-for-fuzzy-matching">7. pg_trgm for Fuzzy Matching</a><ul>
+<li><a href="#71-trigram-basics">7.1 Trigram Basics</a></li>
+<li><a href="#72-trigram-indexes">7.2 Trigram Indexes</a></li>
+<li><a href="#73-likeilike-with-trigram-index">7.3 LIKE/ILIKE with Trigram Index</a></li>
+<li><a href="#74-combining-fts-and-pg_trgm">7.4 Combining FTS and pg_trgm</a></li>
+</ul>
+</li>
+<li><a href="#8-practice-problems">8. Practice Problems</a><ul>
+<li><a href="#exercise-1-product-search">Exercise 1: Product Search</a></li>
+<li><a href="#exercise-2-search-with-highlighting">Exercise 2: Search with Highlighting</a></li>
+<li><a href="#exercise-3-multilingual-search">Exercise 3: Multilingual Search</a></li>
+</ul>
+</li>
+<li><a href="#next-steps">Next Steps</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="19-full-text-search">19. Full-Text Search<a class="header-link" href="#19-full-text-search" title="Permanent link">&para;</a></h1>
+<h2 id="learning-objectives">Learning Objectives<a class="header-link" href="#learning-objectives" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Understand PostgreSQL full-text search architecture</li>
+<li>Use tsvector and tsquery data types effectively</li>
+<li>Create GIN indexes for fast text search</li>
+<li>Implement weighted search with ranking</li>
+<li>Configure multilingual search support</li>
+<li>Utilize pg_trgm for fuzzy matching</li>
+</ul>
+<h2 id="table-of-contents">Table of Contents<a class="header-link" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-full-text-search-overview">Full-Text Search Overview</a></li>
+<li><a href="#2-tsvector-and-tsquery">tsvector and tsquery</a></li>
+<li><a href="#3-search-configuration">Search Configuration</a></li>
+<li><a href="#4-gin-and-gist-indexes">GIN and GiST Indexes</a></li>
+<li><a href="#5-ranking-and-weights">Ranking and Weights</a></li>
+<li><a href="#6-advanced-search-techniques">Advanced Search Techniques</a></li>
+<li><a href="#7-pg_trgm-for-fuzzy-matching">pg_trgm for Fuzzy Matching</a></li>
+<li><a href="#8-practice-problems">Practice Problems</a></li>
+</ol>
+<hr />
+<h2 id="1-full-text-search-overview">1. Full-Text Search Overview<a class="header-link" href="#1-full-text-search-overview" title="Permanent link">&para;</a></h2>
+<h3 id="11-why-full-text-search">1.1 Why Full-Text Search?<a class="header-link" href="#11-why-full-text-search" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">              </span><span class="nt">LIKE</span><span class="w"> </span><span class="nt">vs</span><span class="w"> </span><span class="nt">Full-Text</span><span class="w"> </span><span class="nt">Search</span><span class="w">                            </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nt">LIKE</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nt">ILIKE</span><span class="o">:</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌──────────────────────────────────────────┐</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nt">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nt">FROM</span><span class="w"> </span><span class="nt">articles</span><span class="w">                   </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nt">WHERE</span><span class="w"> </span><span class="nt">body</span><span class="w"> </span><span class="nt">ILIKE</span><span class="w"> </span><span class="s1">&#39;%database%&#39;</span><span class="o">;</span><span class="w">           </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                          </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">✗</span><span class="w"> </span><span class="nt">No</span><span class="w"> </span><span class="nt">index</span><span class="w"> </span><span class="nt">usage</span><span class="w"> </span><span class="o">(</span><span class="nt">sequential</span><span class="w"> </span><span class="nt">scan</span><span class="o">)</span><span class="w">       </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">✗</span><span class="w"> </span><span class="nt">No</span><span class="w"> </span><span class="nt">linguistic</span><span class="w"> </span><span class="nt">awareness</span><span class="w">                </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">✗</span><span class="w"> </span><span class="nt">No</span><span class="w"> </span><span class="nt">ranking</span><span class="w"> </span><span class="nt">capability</span><span class="w">                  </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">✗</span><span class="w"> </span><span class="s2">&quot;databases&quot;</span><span class="w"> </span><span class="nt">won</span><span class="s1">&#39;t match &quot;database&quot;     │                   │</span>
+<span class="s1">│  └──────────────────────────────────────────┘                   │</span>
+<span class="s1">│                                                                 │</span>
+<span class="s1">│  Full-Text Search:                                              │</span>
+<span class="s1">│  ┌──────────────────────────────────────────┐                   │</span>
+<span class="s1">│  │ SELECT * FROM articles                   │                   │</span>
+<span class="s1">│  │ WHERE to_tsvector(body)                  │                   │</span>
+<span class="s1">│  │       @@ to_tsquery(&#39;</span><span class="nt">database</span><span class="err">&#39;</span><span class="o">);</span><span class="w">          </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                          </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">✓</span><span class="w"> </span><span class="nt">GIN</span><span class="w"> </span><span class="nt">index</span><span class="w"> </span><span class="nt">support</span><span class="w"> </span><span class="o">(</span><span class="nt">fast</span><span class="o">)</span><span class="w">               </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">✓</span><span class="w"> </span><span class="nt">Stemming</span><span class="w"> </span><span class="o">(</span><span class="nt">databases</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nt">database</span><span class="o">)</span><span class="w">        </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">✓</span><span class="w"> </span><span class="nt">Ranking</span><span class="w"> </span><span class="nt">by</span><span class="w"> </span><span class="nt">relevance</span><span class="w">                   </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">✓</span><span class="w"> </span><span class="nt">Boolean</span><span class="w"> </span><span class="nt">operators</span><span class="w"> </span><span class="o">(</span><span class="nt">AND</span><span class="o">,</span><span class="w"> </span><span class="nt">OR</span><span class="o">,</span><span class="w"> </span><span class="nt">NOT</span><span class="o">)</span><span class="w">       </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└──────────────────────────────────────────┘</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="12-architecture-overview">1.2 Architecture Overview<a class="header-link" href="#12-architecture-overview" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│              Full-Text Search Pipeline                           │
+│                                                                 │
+│  Document Text                                                  │
+│       │                                                         │
+│       ▼                                                         │
+│  ┌─────────────────┐                                            │
+│  │   Parser         │──▶ Tokenize into words                   │
+│  └─────────────────┘                                            │
+│       │                                                         │
+│       ▼                                                         │
+│  ┌─────────────────┐                                            │
+│  │  Dictionaries    │──▶ Normalize (stop words, stems)         │
+│  └─────────────────┘                                            │
+│       │                                                         │
+│       ▼                                                         │
+│  ┌─────────────────┐                                            │
+│  │   tsvector       │──▶ Sorted list of lexemes + positions    │
+│  └─────────────────┘                                            │
+│       │                                                         │
+│       ▼                                                         │
+│  ┌─────────────────┐                                            │
+│  │  GIN Index       │──▶ Fast lookup by lexeme                 │
+│  └─────────────────┘                                            │
+│                                                                 │
+│  Query Text ──▶ tsquery ──▶ Match against tsvector             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="2-tsvector-and-tsquery">2. tsvector and tsquery<a class="header-link" href="#2-tsvector-and-tsquery" title="Permanent link">&para;</a></h2>
+<h3 id="21-tsvector-document-representation">2.1 tsvector — Document Representation<a class="header-link" href="#21-tsvector-document-representation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Basic conversion</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;The quick brown foxes jumped over the lazy dogs&#39;</span><span class="p">);</span>
+<span class="c1">-- Result: &#39;brown&#39;:3 &#39;dog&#39;:9 &#39;fox&#39;:4 &#39;jump&#39;:5 &#39;lazi&#39;:8 &#39;quick&#39;:2</span>
+
+<span class="c1">-- Notice: stop words removed (&quot;the&quot;, &quot;over&quot;), words stemmed (&quot;foxes&quot; → &quot;fox&quot;)</span>
+
+<span class="c1">-- tsvector stores lexemes with positions</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;A fat cat sat on a mat. A fat cat ate a fat rat.&#39;</span><span class="p">);</span>
+<span class="c1">-- Result: &#39;ate&#39;:10 &#39;cat&#39;:3,8 &#39;fat&#39;:2,7,11 &#39;mat&#39;:6 &#39;rat&#39;:12 &#39;sat&#39;:4</span>
+</code></pre></div>
+
+<h3 id="22-tsquery-query-representation">2.2 tsquery — Query Representation<a class="header-link" href="#22-tsquery-query-representation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Basic query</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cats &amp; dogs&#39;</span><span class="p">);</span>
+<span class="c1">-- Result: &#39;cat&#39; &amp; &#39;dog&#39;</span>
+
+<span class="c1">-- Boolean operators</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cat | dog&#39;</span><span class="p">);</span><span class="w">        </span><span class="c1">-- OR</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cat &amp; !dog&#39;</span><span class="p">);</span><span class="w">       </span><span class="c1">-- AND NOT</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cat &lt;-&gt; dog&#39;</span><span class="p">);</span><span class="w">      </span><span class="c1">-- FOLLOWED BY (phrase)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cat &lt;2&gt; dog&#39;</span><span class="p">);</span><span class="w">      </span><span class="c1">-- within 2 words</span>
+
+<span class="c1">-- plainto_tsquery: simpler syntax (implicit AND)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">plainto_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;fat cats&#39;</span><span class="p">);</span>
+<span class="c1">-- Result: &#39;fat&#39; &amp; &#39;cat&#39;</span>
+
+<span class="c1">-- phraseto_tsquery: exact phrase matching</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">phraseto_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;fat cats&#39;</span><span class="p">);</span>
+<span class="c1">-- Result: &#39;fat&#39; &lt;-&gt; &#39;cat&#39;</span>
+
+<span class="c1">-- websearch_to_tsquery: web-style syntax (PostgreSQL 11+)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&quot;fat cats&quot; -dogs&#39;</span><span class="p">);</span>
+<span class="c1">-- Result: &#39;fat&#39; &lt;-&gt; &#39;cat&#39; &amp; !&#39;dog&#39;</span>
+
+<span class="k">SELECT</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cats or dogs&#39;</span><span class="p">);</span>
+<span class="c1">-- Result: &#39;cat&#39; | &#39;dog&#39;</span>
+</code></pre></div>
+
+<h3 id="23-the-match-operator">2.3 The Match Operator (@@)<a class="header-link" href="#23-the-match-operator" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- tsvector @@ tsquery</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;The fat cats sat on the mat&#39;</span><span class="p">)</span>
+<span class="w">       </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cat &amp; mat&#39;</span><span class="p">);</span>
+<span class="c1">-- Result: true</span>
+
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;The fat cats sat on the mat&#39;</span><span class="p">)</span>
+<span class="w">       </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cat &amp; dog&#39;</span><span class="p">);</span>
+<span class="c1">-- Result: false</span>
+
+<span class="c1">-- Practical example</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">title</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">body</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="n">NOW</span><span class="p">()</span>
+<span class="p">);</span>
+
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="p">(</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">body</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span>
+<span class="p">(</span><span class="s1">&#39;PostgreSQL Full-Text Search&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;PostgreSQL provides powerful full-text search capabilities using tsvector and tsquery.&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;Database Indexing Guide&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Indexes are crucial for database performance. B-tree, GIN, and GiST are common index types.&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;Introduction to SQL&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;SQL is a standard language for managing relational databases. SELECT, INSERT, UPDATE, DELETE.&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;Advanced Query Optimization&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Query optimization involves analyzing execution plans and choosing efficient access paths.&#39;</span><span class="p">);</span>
+
+<span class="c1">-- Search articles</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">ts_rank</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">body</span><span class="p">),</span><span class="w"> </span><span class="n">query</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rank</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="p">,</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database &amp; index&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">query</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">body</span><span class="p">)</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">query</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rank</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="24-stored-tsvector-column">2.4 Stored tsvector Column<a class="header-link" href="#24-stored-tsvector-column" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Add a generated tsvector column for better performance</span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="n">tsvector</span>
+<span class="w">    </span><span class="k">GENERATED</span><span class="w"> </span><span class="n">ALWAYS</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;A&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">body</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;B&#39;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="n">STORED</span><span class="p">;</span>
+
+<span class="c1">-- Now queries use the pre-computed column</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">);</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-search-configuration">3. Search Configuration<a class="header-link" href="#3-search-configuration" title="Permanent link">&para;</a></h2>
+<h3 id="31-text-search-configurations">3.1 Text Search Configurations<a class="header-link" href="#31-text-search-configurations" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- List available configurations</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">cfgname</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">pg_ts_config</span><span class="p">;</span>
+
+<span class="c1">-- Common configurations:</span>
+<span class="c1">-- &#39;simple&#39;    — no stemming, no stop words</span>
+<span class="c1">-- &#39;english&#39;   — English stemming and stop words</span>
+<span class="c1">-- &#39;german&#39;    — German stemming</span>
+<span class="c1">-- &#39;spanish&#39;   — Spanish stemming</span>
+
+<span class="c1">-- Show current default</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">default_text_search_config</span><span class="p">;</span>
+
+<span class="c1">-- Set default</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">default_text_search_config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;english&#39;</span><span class="p">;</span>
+
+<span class="c1">-- Compare configurations</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;simple&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;The running dogs are quickly jumping&#39;</span><span class="p">);</span>
+<span class="c1">-- Result: &#39;are&#39;:4 &#39;dogs&#39;:3 &#39;jumping&#39;:6 &#39;quickly&#39;:5 &#39;running&#39;:2 &#39;the&#39;:1</span>
+
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;The running dogs are quickly jumping&#39;</span><span class="p">);</span>
+<span class="c1">-- Result: &#39;dog&#39;:3 &#39;jump&#39;:6 &#39;quick&#39;:5 &#39;run&#39;:2</span>
+</code></pre></div>
+
+<h3 id="32-dictionaries-and-stop-words">3.2 Dictionaries and Stop Words<a class="header-link" href="#32-dictionaries-and-stop-words" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Show dictionaries for a configuration</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">ts_debug</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;The quick brown foxes are jumping&#39;</span><span class="p">);</span>
+
+<span class="c1">-- Output shows token → dictionary → lexeme mapping</span>
+<span class="c1">-- Token     | Dictionary   | Lexemes</span>
+<span class="c1">-- ----------|-------------|--------</span>
+<span class="c1">-- The       | english_stem | {stop word}</span>
+<span class="c1">-- quick     | english_stem | {quick}</span>
+<span class="c1">-- brown     | english_stem | {brown}</span>
+<span class="c1">-- foxes     | english_stem | {fox}</span>
+<span class="c1">-- are       | english_stem | {stop word}</span>
+<span class="c1">-- jumping   | english_stem | {jump}</span>
+</code></pre></div>
+
+<h3 id="33-custom-configuration">3.3 Custom Configuration<a class="header-link" href="#33-custom-configuration" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Create custom configuration based on English</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">SEARCH</span><span class="w"> </span><span class="n">CONFIGURATION</span><span class="w"> </span><span class="n">my_english</span><span class="w"> </span><span class="p">(</span><span class="k">COPY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">english</span><span class="p">);</span>
+
+<span class="c1">-- Add synonym dictionary</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">SEARCH</span><span class="w"> </span><span class="k">DICTIONARY</span><span class="w"> </span><span class="n">my_synonyms</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">TEMPLATE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">synonym</span><span class="p">,</span>
+<span class="w">    </span><span class="n">SYNONYMS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">my_synonyms</span><span class="w">  </span><span class="c1">-- references $SHAREDIR/tsearch_data/my_synonyms.syn</span>
+<span class="p">);</span>
+
+<span class="c1">-- Add to configuration</span>
+<span class="k">ALTER</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">SEARCH</span><span class="w"> </span><span class="n">CONFIGURATION</span><span class="w"> </span><span class="n">my_english</span>
+<span class="w">    </span><span class="k">ALTER</span><span class="w"> </span><span class="n">MAPPING</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="n">asciiword</span>
+<span class="w">    </span><span class="k">WITH</span><span class="w"> </span><span class="n">my_synonyms</span><span class="p">,</span><span class="w"> </span><span class="n">english_stem</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-gin-and-gist-indexes">4. GIN and GiST Indexes<a class="header-link" href="#4-gin-and-gist-indexes" title="Permanent link">&para;</a></h2>
+<h3 id="41-gin-index-for-full-text-search">4.1 GIN Index for Full-Text Search<a class="header-link" href="#41-gin-index-for-full-text-search" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Create GIN index on tsvector column</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_search</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">search_vector</span><span class="p">);</span>
+
+<span class="c1">-- Or on expression (slower to build, no stored column needed)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_body_gin</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">articles</span>
+<span class="w">    </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">body</span><span class="p">));</span>
+
+<span class="c1">-- Query uses the index automatically</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="k">ANALYZE</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">);</span>
+<span class="c1">-- Bitmap Index Scan on idx_articles_search</span>
+</code></pre></div>
+
+<h3 id="42-gin-vs-gist-comparison">4.2 GIN vs GiST Comparison<a class="header-link" href="#42-gin-vs-gist-comparison" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│<span class="w">              </span><span class="nv">GIN</span><span class="w"> </span><span class="nv">vs</span><span class="w"> </span><span class="nv">GiST</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nv">Full</span><span class="o">-</span><span class="nv">Text</span><span class="w"> </span><span class="nv">Search</span><span class="w">                   </span>│
+├────────────────┬──────────────────┬──────────────────────────────┤
+│<span class="w">                </span>│<span class="w"> </span><span class="nv">GIN</span><span class="w">              </span>│<span class="w"> </span><span class="nv">GiST</span><span class="w">                         </span>│
+├────────────────┼──────────────────┼──────────────────────────────┤
+│<span class="w"> </span><span class="nv">Build</span><span class="w"> </span><span class="nv">speed</span><span class="w">    </span>│<span class="w"> </span><span class="nv">Slower</span><span class="w">           </span>│<span class="w"> </span><span class="nv">Faster</span><span class="w">                       </span>│
+│<span class="w"> </span><span class="nv">Search</span><span class="w"> </span><span class="nv">speed</span><span class="w">   </span>│<span class="w"> </span><span class="nv">Faster</span><span class="w"> </span><span class="ss">(</span><span class="mi">3</span><span class="nv">x</span><span class="ss">)</span><span class="w">      </span>│<span class="w"> </span><span class="nv">Slower</span><span class="w">                       </span>│
+│<span class="w"> </span><span class="nv">Index</span><span class="w"> </span><span class="nv">size</span><span class="w">     </span>│<span class="w"> </span><span class="nv">Larger</span><span class="w">           </span>│<span class="w"> </span><span class="nv">Smaller</span><span class="w">                      </span>│
+│<span class="w"> </span><span class="nv">Update</span><span class="w"> </span><span class="nv">cost</span><span class="w">    </span>│<span class="w"> </span><span class="nv">Higher</span><span class="w">           </span>│<span class="w"> </span><span class="nv">Lower</span><span class="w">                        </span>│
+│<span class="w"> </span><span class="nv">Exact</span><span class="w"> </span><span class="nv">results</span><span class="w">  </span>│<span class="w"> </span><span class="nv">Yes</span><span class="w">              </span>│<span class="w"> </span><span class="nv">May</span><span class="w"> </span><span class="nv">have</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="nv">positives</span><span class="w">      </span>│
+│<span class="w"> </span><span class="nv">Best</span><span class="w"> </span><span class="k">for</span><span class="w">       </span>│<span class="w"> </span><span class="nv">Static</span><span class="w"> </span><span class="nv">data</span>,<span class="w">     </span>│<span class="w"> </span><span class="nv">Frequently</span><span class="w"> </span><span class="nv">updated</span><span class="w"> </span><span class="nv">data</span>,<span class="w">     </span>│
+│<span class="w">                </span>│<span class="w"> </span><span class="nv">read</span><span class="o">-</span><span class="nv">heavy</span><span class="w">       </span>│<span class="w"> </span><span class="nv">write</span><span class="o">-</span><span class="nv">heavy</span><span class="w">                  </span>│
+└────────────────┴──────────────────┴──────────────────────────────┘
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1">-- GiST index (alternative)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_search_gist</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GiST</span><span class="w"> </span><span class="p">(</span><span class="n">search_vector</span><span class="p">);</span>
+
+<span class="c1">-- GIN with fastupdate (default on, good for batch inserts)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_search_gin</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">articles</span>
+<span class="w">    </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">search_vector</span><span class="p">)</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="p">(</span><span class="n">fastupdate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">on</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="43-index-maintenance">4.3 Index Maintenance<a class="header-link" href="#43-index-maintenance" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Check index size</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="s1">&#39;idx_articles_search&#39;</span><span class="p">));</span>
+
+<span class="c1">-- Reindex if needed</span>
+<span class="k">REINDEX</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_search</span><span class="p">;</span>
+
+<span class="c1">-- Analyze for query planner</span>
+<span class="k">ANALYZE</span><span class="w"> </span><span class="n">articles</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-ranking-and-weights">5. Ranking and Weights<a class="header-link" href="#5-ranking-and-weights" title="Permanent link">&para;</a></h2>
+<h3 id="51-ts_rank">5.1 ts_rank<a class="header-link" href="#51-ts_rank" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Basic ranking</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">title</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ts_rank</span><span class="p">(</span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rank</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">)</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rank</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+
+<span class="c1">-- Normalization options (bitmask)</span>
+<span class="c1">-- 0  = default (document length ignored)</span>
+<span class="c1">-- 1  = divide by 1 + log(document length)</span>
+<span class="c1">-- 2  = divide by document length</span>
+<span class="c1">-- 4  = divide by mean harmonic distance between extents</span>
+<span class="c1">-- 8  = divide by number of unique words</span>
+<span class="c1">-- 16 = divide by 1 + log(unique words)</span>
+<span class="c1">-- 32 = divide by itself + 1</span>
+
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">title</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ts_rank</span><span class="p">(</span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rank_normalized</span><span class="w">  </span><span class="c1">-- normalize by length</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="p">,</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">query</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">query</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rank_normalized</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="52-ts_rank_cd-cover-density">5.2 ts_rank_cd (Cover Density)<a class="header-link" href="#52-ts_rank_cd-cover-density" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Cover density ranking considers proximity of matching terms</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">title</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ts_rank_cd</span><span class="p">(</span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database &amp; index&#39;</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rank_cd</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database &amp; index&#39;</span><span class="p">)</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rank_cd</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="53-weighted-search">5.3 Weighted Search<a class="header-link" href="#53-weighted-search" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Weights: A (1.0), B (0.4), C (0.2), D (0.1)</span>
+<span class="c1">-- Custom weights array: {D, C, B, A}</span>
+
+<span class="c1">-- Apply custom weights</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">title</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ts_rank</span><span class="p">(</span><span class="s1">&#39;{0.1, 0.2, 0.4, 1.0}&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">weighted_rank</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="p">,</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">query</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">query</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">weighted_rank</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+
+<span class="c1">-- Build weighted tsvector</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;PostgreSQL Guide&#39;</span><span class="p">),</span><span class="w"> </span><span class="s1">&#39;A&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
+<span class="w">    </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;A comprehensive database tutorial&#39;</span><span class="p">),</span><span class="w"> </span><span class="s1">&#39;B&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
+<span class="w">    </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Learn SQL queries and optimization&#39;</span><span class="p">),</span><span class="w"> </span><span class="s1">&#39;C&#39;</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="54-highlighting-search-results">5.4 Highlighting Search Results<a class="header-link" href="#54-highlighting-search-results" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- ts_headline highlights matching terms</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">title</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ts_headline</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">body</span><span class="p">,</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">),</span>
+<span class="w">        </span><span class="s1">&#39;StartSel=&lt;b&gt;, StopSel=&lt;/b&gt;, MaxWords=35, MinWords=15&#39;</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">highlighted</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">);</span>
+
+<span class="c1">-- Options:</span>
+<span class="c1">-- StartSel / StopSel — highlight markers</span>
+<span class="c1">-- MaxWords / MinWords — context window size</span>
+<span class="c1">-- ShortWord — minimum word length to show</span>
+<span class="c1">-- MaxFragments — number of fragments (0 = whole document)</span>
+<span class="c1">-- FragmentDelimiter — separator between fragments</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-advanced-search-techniques">6. Advanced Search Techniques<a class="header-link" href="#6-advanced-search-techniques" title="Permanent link">&para;</a></h2>
+<h3 id="61-multi-column-search">6.1 Multi-Column Search<a class="header-link" href="#61-multi-column-search" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Search across multiple columns with different weights</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">blog_posts</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">title</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">summary</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">body</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">tags</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">[],</span>
+<span class="w">    </span><span class="n">search_vector</span><span class="w"> </span><span class="n">tsvector</span><span class="w"> </span><span class="k">GENERATED</span><span class="w"> </span><span class="n">ALWAYS</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;A&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;B&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">body</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;C&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">array_to_string</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39; &#39;</span><span class="p">),</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;A&#39;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="n">STORED</span>
+<span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_blog_search</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">blog_posts</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">search_vector</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="62-phrase-search">6.2 Phrase Search<a class="header-link" href="#62-phrase-search" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Exact phrase: &quot;full text search&quot;</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">phraseto_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;full text search&#39;</span><span class="p">);</span>
+
+<span class="c1">-- Proximity: words within N positions</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;full &lt;3&gt; search&#39;</span><span class="p">);</span>
+<span class="c1">-- &quot;full&quot; and &quot;search&quot; within 3 words of each other</span>
+</code></pre></div>
+
+<h3 id="63-search-with-filters">6.3 Search with Filters<a class="header-link" href="#63-search-with-filters" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Combine full-text search with regular WHERE clauses</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">ts_rank</span><span class="p">(</span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rank</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="p">,</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">query</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">query</span>
+<span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">NOW</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">INTERVAL</span><span class="w"> </span><span class="s1">&#39;30 days&#39;</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rank</span><span class="w"> </span><span class="k">DESC</span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+
+<span class="c1">-- Composite index for combined search</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_date_search</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">articles</span>
+<span class="w">    </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">search_vector</span><span class="p">)</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="64-auto-complete-prefix-search">6.4 Auto-Complete / Prefix Search<a class="header-link" href="#64-auto-complete-prefix-search" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Prefix matching with :*</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;dat:*&#39;</span><span class="p">);</span>
+<span class="c1">-- Matches: database, data, date, etc.</span>
+
+<span class="c1">-- Practical autocomplete function</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">FUNCTION</span><span class="w"> </span><span class="n">search_autocomplete</span><span class="p">(</span><span class="n">search_term</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span><span class="w"> </span><span class="n">max_results</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">10</span><span class="p">)</span>
+<span class="k">RETURNS</span><span class="w"> </span><span class="k">TABLE</span><span class="p">(</span><span class="n">title</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span><span class="w"> </span><span class="n">rank</span><span class="w"> </span><span class="nb">REAL</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">$$</span>
+<span class="k">BEGIN</span>
+<span class="w">    </span><span class="k">RETURN</span><span class="w"> </span><span class="n">QUERY</span>
+<span class="w">    </span><span class="k">SELECT</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">ts_rank</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rank</span>
+<span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">search_term</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;:*&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">query</span>
+<span class="w">    </span><span class="k">WHERE</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">query</span>
+<span class="w">    </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rank</span><span class="w"> </span><span class="k">DESC</span>
+<span class="w">    </span><span class="k">LIMIT</span><span class="w"> </span><span class="n">max_results</span><span class="p">;</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="err">$$</span><span class="w"> </span><span class="k">LANGUAGE</span><span class="w"> </span><span class="n">plpgsql</span><span class="p">;</span>
+
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">search_autocomplete</span><span class="p">(</span><span class="s1">&#39;post&#39;</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="65-search-statistics">6.5 Search Statistics<a class="header-link" href="#65-search-statistics" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Most common words in a corpus</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">word</span><span class="p">,</span><span class="w"> </span><span class="n">ndoc</span><span class="p">,</span><span class="w"> </span><span class="n">nentry</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">ts_stat</span><span class="p">(</span><span class="s1">&#39;SELECT search_vector FROM articles&#39;</span><span class="p">)</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">nentry</span><span class="w"> </span><span class="k">DESC</span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">20</span><span class="p">;</span>
+
+<span class="c1">-- Word frequency for specific query</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">word</span><span class="p">,</span><span class="w"> </span><span class="n">ndoc</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">ts_stat</span><span class="p">(</span><span class="s1">&#39;SELECT search_vector FROM articles&#39;</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">word</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="s1">&#39;data%&#39;</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">ndoc</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7-pg_trgm-for-fuzzy-matching">7. pg_trgm for Fuzzy Matching<a class="header-link" href="#7-pg_trgm-for-fuzzy-matching" title="Permanent link">&para;</a></h2>
+<h3 id="71-trigram-basics">7.1 Trigram Basics<a class="header-link" href="#71-trigram-basics" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Enable extension</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="n">EXTENSION</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="n">pg_trgm</span><span class="p">;</span>
+
+<span class="c1">-- Show trigrams</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">show_trgm</span><span class="p">(</span><span class="s1">&#39;PostgreSQL&#39;</span><span class="p">);</span>
+<span class="c1">-- Result: {&quot;  p&quot;,&quot; po&quot;,&quot;gre&quot;,&quot;osq&quot;,&quot;pos&quot;,&quot;ostg&quot;,&quot;pgr&quot;,&quot;ql &quot;,&quot;res&quot;,&quot;sql&quot;,&quot;stg&quot;,&quot;tgr&quot;}</span>
+
+<span class="c1">-- Similarity score (0 to 1)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">similarity</span><span class="p">(</span><span class="s1">&#39;PostgreSQL&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Postgresql&#39;</span><span class="p">);</span><span class="w">  </span><span class="c1">-- ~0.75</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">similarity</span><span class="p">(</span><span class="s1">&#39;PostgreSQL&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;MySQL&#39;</span><span class="p">);</span><span class="w">       </span><span class="c1">-- ~0.09</span>
+</code></pre></div>
+
+<h3 id="72-trigram-indexes">7.2 Trigram Indexes<a class="header-link" href="#72-trigram-indexes" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- GIN trigram index</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_title_trgm</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">title</span><span class="w"> </span><span class="n">gin_trgm_ops</span><span class="p">);</span>
+
+<span class="c1">-- GiST trigram index (supports distance operator)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_title_trgm_gist</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GiST</span><span class="w"> </span><span class="p">(</span><span class="n">title</span><span class="w"> </span><span class="n">gist_trgm_ops</span><span class="p">);</span>
+
+<span class="c1">-- Similarity search</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">similarity</span><span class="p">(</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Postgre&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">sim</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="s1">&#39;Postgre&#39;</span><span class="w">  </span><span class="c1">-- % operator uses similarity threshold</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sim</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+
+<span class="c1">-- Set similarity threshold (default 0.3)</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">pg_trgm</span><span class="p">.</span><span class="n">similarity_threshold</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">2</span><span class="p">;</span>
+
+<span class="c1">-- Distance operator (GiST only)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="o">&lt;-&gt;</span><span class="w"> </span><span class="s1">&#39;Postgre&#39;</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">distance</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="o">&lt;-&gt;</span><span class="w"> </span><span class="s1">&#39;Postgre&#39;</span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="73-likeilike-with-trigram-index">7.3 LIKE/ILIKE with Trigram Index<a class="header-link" href="#73-likeilike-with-trigram-index" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Trigram index accelerates LIKE queries too</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_body_trgm</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">body</span><span class="w"> </span><span class="n">gin_trgm_ops</span><span class="p">);</span>
+
+<span class="c1">-- These queries now use the index</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">body</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="s1">&#39;%database%&#39;</span><span class="p">;</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">body</span><span class="w"> </span><span class="k">ILIKE</span><span class="w"> </span><span class="s1">&#39;%DATABASE%&#39;</span><span class="p">;</span>
+
+<span class="c1">-- Regular expression queries also benefit</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">body</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="s1">&#39;data(base|set)&#39;</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="74-combining-fts-and-pg_trgm">7.4 Combining FTS and pg_trgm<a class="header-link" href="#74-combining-fts-and-pg_trgm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Best of both: full-text search for relevance, trigrams for typo tolerance</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">FUNCTION</span><span class="w"> </span><span class="n">smart_search</span><span class="p">(</span><span class="n">search_term</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span><span class="w"> </span><span class="n">max_results</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">10</span><span class="p">)</span>
+<span class="k">RETURNS</span><span class="w"> </span><span class="k">TABLE</span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span><span class="w"> </span><span class="n">score</span><span class="w"> </span><span class="nb">REAL</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">$$</span>
+<span class="k">BEGIN</span>
+<span class="w">    </span><span class="c1">-- Try exact full-text search first</span>
+<span class="w">    </span><span class="k">RETURN</span><span class="w"> </span><span class="n">QUERY</span>
+<span class="w">    </span><span class="k">SELECT</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">title</span><span class="p">,</span>
+<span class="w">           </span><span class="n">ts_rank</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">search_term</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">score</span>
+<span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="n">a</span>
+<span class="w">    </span><span class="k">WHERE</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">search_term</span><span class="p">)</span>
+<span class="w">    </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">score</span><span class="w"> </span><span class="k">DESC</span>
+<span class="w">    </span><span class="k">LIMIT</span><span class="w"> </span><span class="n">max_results</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">-- If no results, fall back to fuzzy matching</span>
+<span class="w">    </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">FOUND</span><span class="w"> </span><span class="k">THEN</span>
+<span class="w">        </span><span class="k">RETURN</span><span class="w"> </span><span class="n">QUERY</span>
+<span class="w">        </span><span class="k">SELECT</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">similarity</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">search_term</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">score</span>
+<span class="w">        </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="n">a</span>
+<span class="w">        </span><span class="k">WHERE</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">title</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">search_term</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">body</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">search_term</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">score</span><span class="w"> </span><span class="k">DESC</span>
+<span class="w">        </span><span class="k">LIMIT</span><span class="w"> </span><span class="n">max_results</span><span class="p">;</span>
+<span class="w">    </span><span class="k">END</span><span class="w"> </span><span class="k">IF</span><span class="p">;</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="err">$$</span><span class="w"> </span><span class="k">LANGUAGE</span><span class="w"> </span><span class="n">plpgsql</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="8-practice-problems">8. Practice Problems<a class="header-link" href="#8-practice-problems" title="Permanent link">&para;</a></h2>
+<h3 id="exercise-1-product-search">Exercise 1: Product Search<a class="header-link" href="#exercise-1-product-search" title="Permanent link">&para;</a></h3>
+<p>Build a full-text search system for an e-commerce product catalog.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Example answer</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">name</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">description</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">category</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">price</span><span class="w"> </span><span class="nb">NUMERIC</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">    </span><span class="n">search_vector</span><span class="w"> </span><span class="n">tsvector</span><span class="w"> </span><span class="k">GENERATED</span><span class="w"> </span><span class="n">ALWAYS</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;A&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">description</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;B&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">category</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="n">STORED</span>
+<span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_products_search</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">search_vector</span><span class="p">);</span>
+
+<span class="c1">-- Search function with category filter</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">FUNCTION</span><span class="w"> </span><span class="n">search_products</span><span class="p">(</span>
+<span class="w">    </span><span class="n">search_term</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">category_filter</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">max_results</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">20</span>
+<span class="p">)</span>
+<span class="k">RETURNS</span><span class="w"> </span><span class="k">TABLE</span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="nb">NUMERIC</span><span class="p">,</span><span class="w"> </span><span class="n">rank</span><span class="w"> </span><span class="nb">REAL</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">$$</span>
+<span class="k">BEGIN</span>
+<span class="w">    </span><span class="k">RETURN</span><span class="w"> </span><span class="n">QUERY</span>
+<span class="w">    </span><span class="k">SELECT</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">price</span><span class="p">,</span>
+<span class="w">           </span><span class="n">ts_rank</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">search_term</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rank</span>
+<span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="n">p</span>
+<span class="w">    </span><span class="k">WHERE</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">search_term</span><span class="p">)</span>
+<span class="w">      </span><span class="k">AND</span><span class="w"> </span><span class="p">(</span><span class="n">category_filter</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">category</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">category_filter</span><span class="p">)</span>
+<span class="w">    </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rank</span><span class="w"> </span><span class="k">DESC</span>
+<span class="w">    </span><span class="k">LIMIT</span><span class="w"> </span><span class="n">max_results</span><span class="p">;</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="err">$$</span><span class="w"> </span><span class="k">LANGUAGE</span><span class="w"> </span><span class="n">plpgsql</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="exercise-2-search-with-highlighting">Exercise 2: Search with Highlighting<a class="header-link" href="#exercise-2-search-with-highlighting" title="Permanent link">&para;</a></h3>
+<p>Create a search result with highlighted matches.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Example answer</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">id</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ts_headline</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="p">,</span>
+<span class="w">        </span><span class="s1">&#39;StartSel=&lt;mark&gt;, StopSel=&lt;/mark&gt;&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">highlighted_name</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ts_headline</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">description</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="p">,</span>
+<span class="w">        </span><span class="s1">&#39;StartSel=&lt;mark&gt;, StopSel=&lt;/mark&gt;, MaxFragments=2, FragmentDelimiter= ... &#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">highlighted_desc</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ts_rank</span><span class="p">(</span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">relevance</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="p">,</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;wireless bluetooth&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">query</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">query</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">relevance</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="exercise-3-multilingual-search">Exercise 3: Multilingual Search<a class="header-link" href="#exercise-3-multilingual-search" title="Permanent link">&para;</a></h3>
+<p>Design a search system that handles both English and simple (no stemming) text.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Example answer</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">multilingual_docs</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">content_en</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">content_raw</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">search_en</span><span class="w"> </span><span class="n">tsvector</span><span class="w"> </span><span class="k">GENERATED</span><span class="w"> </span><span class="n">ALWAYS</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">content_en</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">))</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="n">STORED</span><span class="p">,</span>
+<span class="w">    </span><span class="n">search_simple</span><span class="w"> </span><span class="n">tsvector</span><span class="w"> </span><span class="k">GENERATED</span><span class="w"> </span><span class="n">ALWAYS</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;simple&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">content_raw</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">))</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="n">STORED</span>
+<span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_ml_en</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">multilingual_docs</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">search_en</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_ml_simple</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">multilingual_docs</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">search_simple</span><span class="p">);</span>
+
+<span class="c1">-- Search across both</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">content_en</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">multilingual_docs</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_en</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;search term&#39;</span><span class="p">)</span>
+<span class="w">   </span><span class="k">OR</span><span class="w"> </span><span class="n">search_simple</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;simple&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;search term&#39;</span><span class="p">);</span>
+</code></pre></div>
+
+<hr />
+<h2 id="next-steps">Next Steps<a class="header-link" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./20_Security_Access_Control.md">20. Security and Access Control</a></li>
+<li><a href="./15_Query_Optimization.md">15. Query Optimization</a></li>
+</ul>
+<h2 id="references">References<a class="header-link" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://www.postgresql.org/docs/current/textsearch.html">PostgreSQL Full-Text Search</a></li>
+<li><a href="https://www.postgresql.org/docs/current/pgtrgm.html">pg_trgm Module</a></li>
+<li><a href="https://www.postgresql.org/docs/current/functions-textsearch.html">Text Search Functions</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/PostgreSQL/18_Table_Partitioning.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">18. Table Partitioning</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/PostgreSQL/20_Security_Access_Control.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">20. Security and Access Control</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'en';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

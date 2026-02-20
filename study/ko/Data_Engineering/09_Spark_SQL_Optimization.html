@@ -1,0 +1,820 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spark SQL 최적화 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Data_Engineering/">Data Engineering</a>
+    <span class="separator">/</span>
+    <span class="current">Spark SQL 최적화</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>Spark SQL 최적화</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Data_Engineering/08_PySpark_DataFrames.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">PySpark DataFrame</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Data_Engineering/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Data_Engineering/10_Kafka_Streaming.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">Kafka 스트리밍</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">개요</a></li>
+<li><a href="#1-catalyst-optimizer">1. Catalyst Optimizer</a><ul>
+<li><a href="#11">1.1 실행 계획 이해</a></li>
+<li><a href="#12-catalyst">1.2 Catalyst 최적화 단계</a></li>
+<li><a href="#13">1.3 주요 최적화 기법</a></li>
+</ul>
+</li>
+<li><a href="#2">2. 파티셔닝</a><ul>
+<li><a href="#21">2.1 파티션 개념</a></li>
+<li><a href="#22">2.2 파티션 전략</a></li>
+<li><a href="#23">2.3 파티션 저장</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 캐싱</a><ul>
+<li><a href="#31">3.1 캐시 기본</a></li>
+<li><a href="#32">3.2 캐시 전략</a></li>
+<li><a href="#33">3.3 캐시 모니터링</a></li>
+</ul>
+</li>
+<li><a href="#4">4. 조인 전략</a><ul>
+<li><a href="#41">4.1 조인 유형별 특성</a></li>
+<li><a href="#42-broadcast-join">4.2 Broadcast Join 강제</a></li>
+<li><a href="#43">4.3 조인 최적화 팁</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 성능 튜닝</a><ul>
+<li><a href="#51">5.1 설정 최적화</a></li>
+<li><a href="#52">5.2 데이터 형식 최적화</a></li>
+<li><a href="#53">5.3 셔플 최적화</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 성능 모니터링</a><ul>
+<li><a href="#61-spark-ui">6.1 Spark UI 활용</a></li>
+<li><a href="#62">6.2 프로그래밍 방식 모니터링</a></li>
+<li><a href="#63">6.3 메트릭 수집</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 일반적인 성능 문제와 해결</a><ul>
+<li><a href="#71-skew">7.1 데이터 스큐 (Skew)</a></li>
+<li><a href="#72-oom-out-of-memory">7.2 OOM (Out of Memory)</a></li>
+<li><a href="#73">7.3 셔플 과다</a></li>
+</ul>
+</li>
+<li><a href="#_2">연습 문제</a><ul>
+<li><a href="#1">문제 1: 실행 계획 분석</a></li>
+<li><a href="#2_1">문제 2: 조인 최적화</a></li>
+<li><a href="#3_1">문제 3: 스큐 처리</a></li>
+</ul>
+</li>
+<li><a href="#_3">요약</a></li>
+<li><a href="#_4">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="spark-sql">Spark SQL 최적화<a class="header-link" href="#spark-sql" title="Permanent link">&para;</a></h1>
+<h2 id="_1">개요<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<p>Spark SQL의 성능을 최적화하기 위해서는 Catalyst 옵티마이저의 동작 원리를 이해하고, 파티셔닝, 캐싱, 조인 전략 등을 적절히 활용해야 합니다.</p>
+<hr />
+<h2 id="1-catalyst-optimizer">1. Catalyst Optimizer<a class="header-link" href="#1-catalyst-optimizer" title="Permanent link">&para;</a></h2>
+<h3 id="11">1.1 실행 계획 이해<a class="header-link" href="#11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql</span><span class="w"> </span><span class="kn">import</span> <span class="n">SparkSession</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql.functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">col</span>
+
+<span class="n">spark</span> <span class="o">=</span> <span class="n">SparkSession</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">appName</span><span class="p">(</span><span class="s2">&quot;Optimization&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">getOrCreate</span><span class="p">()</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="s2">&quot;sales.parquet&quot;</span><span class="p">)</span>
+
+<span class="c1"># 실행 계획 확인</span>
+<span class="n">query</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;amount&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">)</span> \
+          <span class="o">.</span><span class="n">groupBy</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span> \
+          <span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">&quot;amount&quot;</span><span class="p">)</span>
+
+<span class="c1"># 논리적 계획</span>
+<span class="n">query</span><span class="o">.</span><span class="n">explain</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;simple&quot;</span><span class="p">)</span>
+
+<span class="c1"># 전체 계획 (논리적 + 물리적)</span>
+<span class="n">query</span><span class="o">.</span><span class="n">explain</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;extended&quot;</span><span class="p">)</span>
+
+<span class="c1"># 비용 기반 계획</span>
+<span class="n">query</span><span class="o">.</span><span class="n">explain</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;cost&quot;</span><span class="p">)</span>
+
+<span class="c1"># 형식화된 출력</span>
+<span class="n">query</span><span class="o">.</span><span class="n">explain</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;formatted&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="12-catalyst">1.2 Catalyst 최적화 단계<a class="header-link" href="#12-catalyst" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                   Catalyst Optimizer 단계                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   1. Analysis (분석)                                            │
+│      - 컬럼/테이블 이름 확인                                     │
+│      - 타입 검증                                                │
+│      ↓                                                          │
+│   2. Logical Optimization (논리적 최적화)                        │
+│      - Predicate Pushdown (조건절 푸시다운)                      │
+│      - Column Pruning (컬럼 가지치기)                            │
+│      - Constant Folding (상수 폴딩)                             │
+│      ↓                                                          │
+│   3. Physical Planning (물리적 계획)                             │
+│      - 조인 전략 선택                                           │
+│      - 집계 전략 선택                                           │
+│      ↓                                                          │
+│   4. Code Generation (코드 생성)                                │
+│      - Whole-Stage Code Generation                              │
+│      - JIT 컴파일                                               │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="13">1.3 주요 최적화 기법<a class="header-link" href="#13" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. Predicate Pushdown (조건절 푸시다운)</span>
+<span class="c1"># 필터를 데이터 소스 레벨로 푸시</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="s2">&quot;data.parquet&quot;</span><span class="p">)</span>
+<span class="n">filtered</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;date&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;2024-01-01&quot;</span><span class="p">)</span>  <span class="c1"># Parquet에서 직접 필터링</span>
+
+<span class="c1"># 2. Column Pruning (컬럼 가지치기)</span>
+<span class="c1"># 필요한 컬럼만 읽기</span>
+<span class="n">df</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;amount&quot;</span><span class="p">)</span>  <span class="c1"># 다른 컬럼은 읽지 않음</span>
+
+<span class="c1"># 3. Projection Pushdown</span>
+<span class="c1"># SELECT를 데이터 소스로 푸시</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s2">&quot;jdbc&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;pushDownPredicate&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">load</span><span class="p">()</span>
+
+<span class="c1"># 4. Constant Folding</span>
+<span class="c1"># 상수 표현식 미리 계산</span>
+<span class="n">df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;value&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># &gt; 3으로 변환</span>
+</code></pre></div>
+
+<hr />
+<h2 id="2">2. 파티셔닝<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="21">2.1 파티션 개념<a class="header-link" href="#21" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 파티션 수 확인</span>
+<span class="n">df</span><span class="o">.</span><span class="n">rdd</span><span class="o">.</span><span class="n">getNumPartitions</span><span class="p">()</span>
+
+<span class="c1"># 파티션 재분배</span>
+<span class="n">df</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>                      <span class="c1"># 100개 파티션으로</span>
+<span class="n">df</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="s2">&quot;date&quot;</span><span class="p">)</span>                   <span class="c1"># 컬럼 기준 파티셔닝</span>
+<span class="n">df</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="s2">&quot;category&quot;</span><span class="p">)</span>  <span class="c1"># 컬럼 + 수 지정</span>
+
+<span class="c1"># 파티션 줄이기 (셔플 없이)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">coalesce</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>  <span class="c1"># 셔플 없이 파티션 축소</span>
+
+<span class="c1"># 파티션 정보 확인</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">print_partition_info</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Partitions: </span><span class="si">{</span><span class="n">df</span><span class="o">.</span><span class="n">rdd</span><span class="o">.</span><span class="n">getNumPartitions</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">partition</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">rdd</span><span class="o">.</span><span class="n">glom</span><span class="p">()</span><span class="o">.</span><span class="n">collect</span><span class="p">()):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Partition </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">partition</span><span class="p">)</span><span class="si">}</span><span class="s2"> rows&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="22">2.2 파티션 전략<a class="header-link" href="#22" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 적절한 파티션 수 계산</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">권장 공식:</span>
+<span class="sd">- 파티션 수 = 데이터 크기(MB) / 128MB</span>
+<span class="sd">- 또는: 클러스터 코어 수 * 2~4</span>
+
+<span class="sd">예시:</span>
+<span class="sd">- 10GB 데이터 → 10,000MB / 128MB ≈ 80 파티션</span>
+<span class="sd">- 100 코어 클러스터 → 200~400 파티션</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># 파티션 수 설정</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.shuffle.partitions&quot;</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+
+<span class="c1"># 범위 파티셔닝 (정렬된 파티션)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">repartitionByRange</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;date&quot;</span><span class="p">)</span>
+
+<span class="c1"># 해시 파티셔닝</span>
+<span class="n">df</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">)</span>  <span class="c1"># user_id 기준 해시</span>
+</code></pre></div>
+
+<h3 id="23">2.3 파티션 저장<a class="header-link" href="#23" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 파티션별 저장</span>
+<span class="n">df</span><span class="o">.</span><span class="n">write</span> \
+    <span class="o">.</span><span class="n">partitionBy</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">,</span> <span class="s2">&quot;month&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="s2">&quot;output/partitioned_data&quot;</span><span class="p">)</span>
+
+<span class="c1"># 결과 디렉토리 구조:</span>
+<span class="c1"># output/partitioned_data/</span>
+<span class="c1">#   year=2024/</span>
+<span class="c1">#     month=01/</span>
+<span class="c1">#       part-00000.parquet</span>
+<span class="c1">#     month=02/</span>
+<span class="c1">#       part-00000.parquet</span>
+
+<span class="c1"># 파티션 데이터 읽기 (프루닝)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="s2">&quot;output/partitioned_data&quot;</span><span class="p">)</span>
+<span class="c1"># year=2024, month=01 파티션만 읽음</span>
+<span class="n">df</span><span class="o">.</span><span class="n">filter</span><span class="p">((</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2024</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;month&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">))</span>
+
+<span class="c1"># 버킷팅 (조인 최적화)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">write</span> \
+    <span class="o">.</span><span class="n">bucketBy</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">sortBy</span><span class="p">(</span><span class="s2">&quot;timestamp&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">saveAsTable</span><span class="p">(</span><span class="s2">&quot;bucketed_table&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3">3. 캐싱<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="31">3.1 캐시 기본<a class="header-link" href="#31" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># DataFrame 캐시</span>
+<span class="n">df</span><span class="o">.</span><span class="n">cache</span><span class="p">()</span>           <span class="c1"># MEMORY_AND_DISK 기본</span>
+<span class="n">df</span><span class="o">.</span><span class="n">persist</span><span class="p">()</span>         <span class="c1"># 동일</span>
+
+<span class="c1"># 캐시 레벨 지정</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyspark</span><span class="w"> </span><span class="kn">import</span> <span class="n">StorageLevel</span>
+
+<span class="n">df</span><span class="o">.</span><span class="n">persist</span><span class="p">(</span><span class="n">StorageLevel</span><span class="o">.</span><span class="n">MEMORY_ONLY</span><span class="p">)</span>           <span class="c1"># 메모리만</span>
+<span class="n">df</span><span class="o">.</span><span class="n">persist</span><span class="p">(</span><span class="n">StorageLevel</span><span class="o">.</span><span class="n">MEMORY_AND_DISK</span><span class="p">)</span>       <span class="c1"># 메모리 + 디스크</span>
+<span class="n">df</span><span class="o">.</span><span class="n">persist</span><span class="p">(</span><span class="n">StorageLevel</span><span class="o">.</span><span class="n">MEMORY_ONLY_SER</span><span class="p">)</span>       <span class="c1"># 직렬화 (메모리 절약)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">persist</span><span class="p">(</span><span class="n">StorageLevel</span><span class="o">.</span><span class="n">DISK_ONLY</span><span class="p">)</span>             <span class="c1"># 디스크만</span>
+<span class="n">df</span><span class="o">.</span><span class="n">persist</span><span class="p">(</span><span class="n">StorageLevel</span><span class="o">.</span><span class="n">MEMORY_AND_DISK_SER</span><span class="p">)</span>   <span class="c1"># 직렬화 + 디스크</span>
+
+<span class="c1"># 캐시 해제</span>
+<span class="n">df</span><span class="o">.</span><span class="n">unpersist</span><span class="p">()</span>
+
+<span class="c1"># 캐시 상태 확인</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">catalog</span><span class="o">.</span><span class="n">isCached</span><span class="p">(</span><span class="s2">&quot;table_name&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="32">3.2 캐시 전략<a class="header-link" href="#32" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 캐시가 효과적인 경우:</span>
+<span class="c1"># 1. 동일 DataFrame을 여러 번 사용</span>
+<span class="c1"># 2. 비싼 변환 후 재사용</span>
+<span class="c1"># 3. 반복 알고리즘</span>
+
+<span class="c1"># 예시: 여러 집계에서 재사용</span>
+<span class="n">expensive_df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="s2">&quot;large_data.parquet&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;active&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">other_df</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+
+<span class="n">expensive_df</span><span class="o">.</span><span class="n">cache</span><span class="p">()</span>
+
+<span class="c1"># 여러 작업에서 재사용</span>
+<span class="n">result1</span> <span class="o">=</span> <span class="n">expensive_df</span><span class="o">.</span><span class="n">groupBy</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+<span class="n">result2</span> <span class="o">=</span> <span class="n">expensive_df</span><span class="o">.</span><span class="n">groupBy</span><span class="p">(</span><span class="s2">&quot;region&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">&quot;amount&quot;</span><span class="p">)</span>
+<span class="n">result3</span> <span class="o">=</span> <span class="n">expensive_df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;amount&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1000</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+
+<span class="c1"># 작업 완료 후 해제</span>
+<span class="n">expensive_df</span><span class="o">.</span><span class="n">unpersist</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="33">3.3 캐시 모니터링<a class="header-link" href="#33" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Spark UI에서 확인 (http://localhost:4040/storage)</span>
+
+<span class="c1"># 프로그래밍 방식 확인</span>
+<span class="n">sc</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">sparkContext</span>
+
+<span class="c1"># 캐시된 RDD 목록</span>
+<span class="k">for</span> <span class="n">rdd_id</span><span class="p">,</span> <span class="n">rdd_info</span> <span class="ow">in</span> <span class="n">sc</span><span class="o">.</span><span class="n">_jsc</span><span class="o">.</span><span class="n">sc</span><span class="p">()</span><span class="o">.</span><span class="n">getRDDStorageInfo</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;RDD </span><span class="si">{</span><span class="n">rdd_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">rdd_info</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># 전체 캐시 클리어</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">catalog</span><span class="o">.</span><span class="n">clearCache</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4">4. 조인 전략<a class="header-link" href="#4" title="Permanent link">&para;</a></h2>
+<h3 id="41">4.1 조인 유형별 특성<a class="header-link" href="#41" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Spark 조인 전략:</span>
+<span class="n">join_strategies</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Broadcast Hash Join&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;condition&quot;</span><span class="p">:</span> <span class="s2">&quot;작은 테이블 (&lt; 10MB 기본)&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;performance&quot;</span><span class="p">:</span> <span class="s2">&quot;가장 빠름&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;shuffle&quot;</span><span class="p">:</span> <span class="s2">&quot;없음 (작은 테이블 브로드캐스트)&quot;</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;Sort Merge Join&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;condition&quot;</span><span class="p">:</span> <span class="s2">&quot;큰 테이블 간 조인&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;performance&quot;</span><span class="p">:</span> <span class="s2">&quot;안정적&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;shuffle&quot;</span><span class="p">:</span> <span class="s2">&quot;양쪽 테이블 셔플 + 정렬&quot;</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;Shuffle Hash Join&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;condition&quot;</span><span class="p">:</span> <span class="s2">&quot;한쪽이 작을 때&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;performance&quot;</span><span class="p">:</span> <span class="s2">&quot;중간&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;shuffle&quot;</span><span class="p">:</span> <span class="s2">&quot;양쪽 셔플&quot;</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;Broadcast Nested Loop Join&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;condition&quot;</span><span class="p">:</span> <span class="s2">&quot;조인 조건 없음 (Cross)&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;performance&quot;</span><span class="p">:</span> <span class="s2">&quot;느림&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;shuffle&quot;</span><span class="p">:</span> <span class="s2">&quot;없음 (브로드캐스트)&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="42-broadcast-join">4.2 Broadcast Join 강제<a class="header-link" href="#42-broadcast-join" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql.functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">broadcast</span>
+
+<span class="c1"># 작은 테이블 브로드캐스트 힌트</span>
+<span class="n">large_df</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">broadcast</span><span class="p">(</span><span class="n">small_df</span><span class="p">),</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+
+<span class="c1"># 설정으로 임계값 조정</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.autoBroadcastJoinThreshold&quot;</span><span class="p">,</span> <span class="mi">100</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span>  <span class="c1"># 100MB</span>
+
+<span class="c1"># 브로드캐스트 비활성화</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.autoBroadcastJoinThreshold&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># SQL 힌트</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">sql</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    SELECT /*+ BROADCAST(small_table) */</span>
+<span class="s2">        large_table.*, small_table.name</span>
+<span class="s2">    FROM large_table</span>
+<span class="s2">    JOIN small_table ON large_table.id = small_table.id</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="43">4.3 조인 최적화 팁<a class="header-link" href="#43" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. 조인 전 필터링</span>
+<span class="c1"># 나쁜 예</span>
+<span class="n">df1</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">df2</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;active&quot;</span><span class="p">)</span>
+
+<span class="c1"># 좋은 예</span>
+<span class="n">df1</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;active&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">df2</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+
+
+<span class="c1"># 2. 조인 키 데이터 타입 일치</span>
+<span class="c1"># 나쁜 예 (타입 불일치로 암시적 캐스팅)</span>
+<span class="n">df1</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">df2</span><span class="p">,</span> <span class="n">df1</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">df2</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>  <span class="c1"># id가 string vs int</span>
+
+<span class="c1"># 좋은 예</span>
+<span class="n">df1</span> <span class="o">=</span> <span class="n">df1</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">col</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="s2">&quot;int&quot;</span><span class="p">))</span>
+<span class="n">df1</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">df2</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">)</span>
+
+
+<span class="c1"># 3. 스큐 데이터 처리 (Skew Join)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.skewJoin.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.skewJoin.skewedPartitionFactor&quot;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.skewJoin.skewedPartitionThresholdInBytes&quot;</span><span class="p">,</span> <span class="s2">&quot;256MB&quot;</span><span class="p">)</span>
+
+
+<span class="c1"># 4. 버킷팅으로 조인 최적화</span>
+<span class="c1"># 테이블 생성 시 버킷팅</span>
+<span class="n">df</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">bucketBy</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">saveAsTable</span><span class="p">(</span><span class="s2">&quot;users_bucketed&quot;</span><span class="p">)</span>
+<span class="n">other_df</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">bucketBy</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">saveAsTable</span><span class="p">(</span><span class="s2">&quot;orders_bucketed&quot;</span><span class="p">)</span>
+
+<span class="c1"># 버킷팅된 테이블 조인 (셔플 없음)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">table</span><span class="p">(</span><span class="s2">&quot;users_bucketed&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spark</span><span class="o">.</span><span class="n">table</span><span class="p">(</span><span class="s2">&quot;orders_bucketed&quot;</span><span class="p">),</span> <span class="s2">&quot;user_id&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 성능 튜닝<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="51">5.1 설정 최적화<a class="header-link" href="#51" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 메모리 설정</span>
+<span class="n">spark</span> <span class="o">=</span> <span class="n">SparkSession</span><span class="o">.</span><span class="n">builder</span> \
+    <span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="s2">&quot;spark.executor.memory&quot;</span><span class="p">,</span> <span class="s2">&quot;8g&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="s2">&quot;spark.executor.memoryOverhead&quot;</span><span class="p">,</span> <span class="s2">&quot;2g&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="s2">&quot;spark.driver.memory&quot;</span><span class="p">,</span> <span class="s2">&quot;4g&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="s2">&quot;spark.memory.fraction&quot;</span><span class="p">,</span> <span class="s2">&quot;0.8&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="s2">&quot;spark.memory.storageFraction&quot;</span><span class="p">,</span> <span class="s2">&quot;0.3&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">getOrCreate</span><span class="p">()</span>
+
+<span class="c1"># 병렬성 설정</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.default.parallelism&quot;</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.shuffle.partitions&quot;</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+
+<span class="c1"># Adaptive Query Execution (AQE) - Spark 3.0+</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.coalescePartitions.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.skewJoin.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.localShuffleReader.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># 직렬화</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.serializer&quot;</span><span class="p">,</span> <span class="s2">&quot;org.apache.spark.serializer.KryoSerializer&quot;</span><span class="p">)</span>
+
+<span class="c1"># 동적 할당</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.dynamicAllocation.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.dynamicAllocation.minExecutors&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.dynamicAllocation.maxExecutors&quot;</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="52">5.2 데이터 형식 최적화<a class="header-link" href="#52" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Parquet 설정</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.parquet.compression.codec&quot;</span><span class="p">,</span> <span class="s2">&quot;snappy&quot;</span><span class="p">)</span>  <span class="c1"># 또는 zstd</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.parquet.filterPushdown&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># 파일 크기 최적화</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.files.maxPartitionBytes&quot;</span><span class="p">,</span> <span class="s2">&quot;128MB&quot;</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.files.openCostInBytes&quot;</span><span class="p">,</span> <span class="s2">&quot;4MB&quot;</span><span class="p">)</span>
+
+<span class="c1"># 작은 파일 병합</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.coalescePartitions.parallelismFirst&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.advisoryPartitionSizeInBytes&quot;</span><span class="p">,</span> <span class="s2">&quot;128MB&quot;</span><span class="p">)</span>
+
+<span class="c1"># 컬럼 프루닝 확인</span>
+<span class="n">df</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="s2">&quot;needed_column1&quot;</span><span class="p">,</span> <span class="s2">&quot;needed_column2&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">explain</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="53">5.3 셔플 최적화<a class="header-link" href="#53" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 셔플 파티션 수 최적화</span>
+<span class="c1"># AQE로 자동 조정 권장</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># 수동 설정 시</span>
+<span class="n">data_size_gb</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">partition_size_mb</span> <span class="o">=</span> <span class="mi">128</span>
+<span class="n">optimal_partitions</span> <span class="o">=</span> <span class="p">(</span><span class="n">data_size_gb</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span> <span class="o">//</span> <span class="n">partition_size_mb</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.shuffle.partitions&quot;</span><span class="p">,</span> <span class="n">optimal_partitions</span><span class="p">)</span>
+
+<span class="c1"># 셔플 압축</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.shuffle.compress&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># 셔플 스필 최소화</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.shuffle.spill.compress&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># 셔플 서비스 (외부)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.shuffle.service.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 성능 모니터링<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="61-spark-ui">6.1 Spark UI 활용<a class="header-link" href="#61-spark-ui" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Spark UI 접근: http://&lt;driver-host&gt;:4040</span>
+
+<span class="c1"># UI 탭별 정보:</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Jobs: Job 실행 현황, 시간</span>
+<span class="sd">Stages: Stage별 상세 (셔플, 데이터 크기)</span>
+<span class="sd">Storage: 캐시된 RDD/DataFrame</span>
+<span class="sd">Environment: 설정 값</span>
+<span class="sd">Executors: Executor 상태, 메모리</span>
+<span class="sd">SQL: SQL 쿼리 계획</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># 이력 서버 (완료된 작업)</span>
+<span class="c1"># spark.eventLog.enabled=true</span>
+<span class="c1"># spark.history.fs.logDirectory=hdfs:///spark-history</span>
+</code></pre></div>
+
+<h3 id="62">6.2 프로그래밍 방식 모니터링<a class="header-link" href="#62" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 실행 시간 측정</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupBy</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+<span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Execution time: </span><span class="si">{</span><span class="n">end</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+<span class="c1"># 실행 계획에서 셔플 확인</span>
+<span class="n">df</span><span class="o">.</span><span class="n">explain</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;formatted&quot;</span><span class="p">)</span>
+
+<span class="c1"># 물리적 계획에서 조인 전략 확인</span>
+<span class="c1"># Exchange = 셔플 발생</span>
+<span class="c1"># BroadcastHashJoin = 브로드캐스트 조인</span>
+<span class="c1"># SortMergeJoin = 소트 머지 조인</span>
+</code></pre></div>
+
+<h3 id="63">6.3 메트릭 수집<a class="header-link" href="#63" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># DataFrame 크기 추정</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">estimate_size</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;DataFrame 크기 추정 (바이트)&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">_jdf</span><span class="o">.</span><span class="n">queryExecution</span><span class="p">()</span><span class="o">.</span><span class="n">optimizedPlan</span><span class="p">()</span><span class="o">.</span><span class="n">stats</span><span class="p">()</span><span class="o">.</span><span class="n">sizeInBytes</span><span class="p">()</span>
+
+<span class="c1"># 파티션별 레코드 수</span>
+<span class="n">partition_counts</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">rdd</span><span class="o">.</span><span class="n">mapPartitions</span><span class="p">(</span>
+    <span class="k">lambda</span> <span class="n">it</span><span class="p">:</span> <span class="p">[</span><span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">it</span><span class="p">)]</span>
+<span class="p">)</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Min: </span><span class="si">{</span><span class="nb">min</span><span class="p">(</span><span class="n">partition_counts</span><span class="p">)</span><span class="si">}</span><span class="s2">, Max: </span><span class="si">{</span><span class="nb">max</span><span class="p">(</span><span class="n">partition_counts</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Skew ratio: </span><span class="si">{</span><span class="nb">max</span><span class="p">(</span><span class="n">partition_counts</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">partition_counts</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">partition_counts</span><span class="p">))</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 일반적인 성능 문제와 해결<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="71-skew">7.1 데이터 스큐 (Skew)<a class="header-link" href="#71-skew" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 문제: 특정 키에 데이터 집중</span>
+<span class="c1"># 증상: 일부 Task만 오래 걸림</span>
+
+<span class="c1"># 해결 1: AQE 스큐 조인</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.skewJoin.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># 해결 2: 솔트 키 추가</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql.functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">rand</span><span class="p">,</span> <span class="n">floor</span>
+
+<span class="n">num_salts</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">df_salted</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span><span class="s2">&quot;salt&quot;</span><span class="p">,</span> <span class="n">floor</span><span class="p">(</span><span class="n">rand</span><span class="p">()</span> <span class="o">*</span> <span class="n">num_salts</span><span class="p">))</span>
+
+<span class="c1"># 솔트 조인</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">df_salted</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+    <span class="n">other_df</span><span class="o">.</span><span class="n">crossJoin</span><span class="p">(</span>
+        <span class="n">spark</span><span class="o">.</span><span class="n">range</span><span class="p">(</span><span class="n">num_salts</span><span class="p">)</span><span class="o">.</span><span class="n">withColumnRenamed</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;salt&quot;</span><span class="p">)</span>
+    <span class="p">),</span>
+    <span class="p">[</span><span class="s2">&quot;key&quot;</span><span class="p">,</span> <span class="s2">&quot;salt&quot;</span><span class="p">]</span>
+<span class="p">)</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;salt&quot;</span><span class="p">)</span>
+
+<span class="c1"># 해결 3: 브로드캐스트 (가능한 경우)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">broadcast</span><span class="p">(</span><span class="n">small_df</span><span class="p">),</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="72-oom-out-of-memory">7.2 OOM (Out of Memory)<a class="header-link" href="#72-oom-out-of-memory" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 문제: 메모리 부족</span>
+<span class="c1"># 증상: OutOfMemoryError</span>
+
+<span class="c1"># 해결 1: Executor 메모리 증가</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.executor.memory&quot;</span><span class="p">,</span> <span class="s2">&quot;8g&quot;</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.executor.memoryOverhead&quot;</span><span class="p">,</span> <span class="s2">&quot;2g&quot;</span><span class="p">)</span>
+
+<span class="c1"># 해결 2: 파티션 수 증가 (데이터 분산)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="mi">500</span><span class="p">)</span>
+
+<span class="c1"># 해결 3: 불필요한 캐시 해제</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">catalog</span><span class="o">.</span><span class="n">clearCache</span><span class="p">()</span>
+
+<span class="c1"># 해결 4: 브로드캐스트 임계값 감소</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.autoBroadcastJoinThreshold&quot;</span><span class="p">,</span> <span class="s2">&quot;10MB&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="73">7.3 셔플 과다<a class="header-link" href="#73" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 문제: 셔플로 인한 네트워크/디스크 I/O</span>
+<span class="c1"># 증상: Stage 간 대기 시간 증가</span>
+
+<span class="c1"># 해결 1: 셔플 전 필터링</span>
+<span class="n">df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;active&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">groupBy</span><span class="p">(</span><span class="s2">&quot;key&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+
+<span class="c1"># 해결 2: 파티셔닝 전략 변경</span>
+<span class="c1"># 같은 키로 파티셔닝된 데이터는 셔플 없이 조인</span>
+<span class="n">df1</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">df2</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">),</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+
+<span class="c1"># 해결 3: 버킷팅 사용</span>
+<span class="n">df</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">bucketBy</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">saveAsTable</span><span class="p">(</span><span class="s2">&quot;bucketed_table&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_2">연습 문제<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<h3 id="1">문제 1: 실행 계획 분석<a class="header-link" href="#1" title="Permanent link">&para;</a></h3>
+<p>주어진 쿼리의 실행 계획을 분석하고 최적화 포인트를 찾으세요.</p>
+<h3 id="2_1">문제 2: 조인 최적화<a class="header-link" href="#2_1" title="Permanent link">&para;</a></h3>
+<p>1억 건의 트랜잭션 테이블과 100만 건의 고객 테이블을 조인하는 최적의 방법을 설계하세요.</p>
+<h3 id="3_1">문제 3: 스큐 처리<a class="header-link" href="#3_1" title="Permanent link">&para;</a></h3>
+<p>특정 카테고리에 데이터가 집중된 상황에서 집계 성능을 개선하세요.</p>
+<hr />
+<h2 id="_3">요약<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>최적화 영역</th>
+<th>기법</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Catalyst</strong></td>
+<td>Predicate Pushdown, Column Pruning</td>
+</tr>
+<tr>
+<td><strong>파티셔닝</strong></td>
+<td>repartition, coalesce, partitionBy</td>
+</tr>
+<tr>
+<td><strong>캐싱</strong></td>
+<td>cache, persist, StorageLevel</td>
+</tr>
+<tr>
+<td><strong>조인</strong></td>
+<td>Broadcast, Sort Merge, 버킷팅</td>
+</tr>
+<tr>
+<td><strong>AQE</strong></td>
+<td>자동 파티션 병합, 스큐 처리</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_4">참고 자료<a class="header-link" href="#_4" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://spark.apache.org/docs/latest/sql-performance-tuning.html">Spark SQL Tuning</a></li>
+<li><a href="https://spark.apache.org/docs/latest/configuration.html">Spark Configuration</a></li>
+<li><a href="https://spark.apache.org/docs/latest/sql-performance-tuning.html#adaptive-query-execution">Adaptive Query Execution</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Data_Engineering/08_PySpark_DataFrames.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">PySpark DataFrame</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Data_Engineering/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Data_Engineering/10_Kafka_Streaming.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">Kafka 스트리밍</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

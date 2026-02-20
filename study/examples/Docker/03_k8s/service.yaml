@@ -1,0 +1,137 @@
+# Kubernetes Service definitions for Flask application
+# Services provide stable networking and load balancing for pods
+
+---
+# ClusterIP Service (internal access only)
+# This is the default service type for internal communication
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-app
+  labels:
+    app: flask-app
+  annotations:
+    description: "Internal service for Flask application"
+spec:
+  type: ClusterIP
+
+  # Session affinity (optional): route same client to same pod
+  # sessionAffinity: ClientIP
+  # sessionAffinityConfig:
+  #   clientIP:
+  #     timeoutSeconds: 10800
+
+  ports:
+  - port: 80          # Service port
+    targetPort: 5000  # Container port
+    protocol: TCP
+    name: http
+
+  selector:
+    app: flask-app    # Match pods with this label
+
+  # IP allocation (optional)
+  # clusterIP: 10.96.0.100
+
+---
+# NodePort Service (external access via node IP)
+# Useful for development or when LoadBalancer is not available
+# Uncomment to use:
+#
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: flask-app-nodeport
+#   labels:
+#     app: flask-app
+# spec:
+#   type: NodePort
+#   ports:
+#   - port: 80
+#     targetPort: 5000
+#     nodePort: 30080  # Port on each node (30000-32767)
+#     protocol: TCP
+#     name: http
+#   selector:
+#     app: flask-app
+
+---
+# LoadBalancer Service (external access with cloud LB)
+# This creates a cloud provider load balancer (AWS ELB, GCP LB, etc.)
+# Uncomment to use:
+#
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: flask-app-lb
+#   labels:
+#     app: flask-app
+#   annotations:
+#     # AWS specific annotations
+#     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+#     service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+#     service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+#     service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:region:account-id:certificate/cert-id"
+#
+#     # GCP specific annotations
+#     # cloud.google.com/load-balancer-type: "Internal"
+#
+#     # Azure specific annotations
+#     # service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+# spec:
+#   type: LoadBalancer
+#   ports:
+#   - port: 80
+#     targetPort: 5000
+#     protocol: TCP
+#     name: http
+#   - port: 443
+#     targetPort: 5000
+#     protocol: TCP
+#     name: https
+#   selector:
+#     app: flask-app
+#   # External traffic policy
+#   # externalTrafficPolicy: Local  # Preserves client IP but may cause imbalance
+
+---
+# Headless Service (for direct pod access)
+# Returns pod IPs directly instead of load balancing
+# Useful for StatefulSets or service discovery
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-app-headless
+  labels:
+    app: flask-app
+spec:
+  clusterIP: None  # Makes it headless
+  ports:
+  - port: 5000
+    targetPort: 5000
+    protocol: TCP
+    name: http
+  selector:
+    app: flask-app
+
+---
+# Usage Examples:
+#
+# 1. Get service details:
+#    kubectl get svc flask-app
+#    kubectl describe svc flask-app
+#
+# 2. Test internal connectivity:
+#    kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
+#      curl http://flask-app/health
+#
+# 3. Port forward for local testing:
+#    kubectl port-forward svc/flask-app 8080:80
+#    curl http://localhost:8080
+#
+# 4. Get service endpoints (actual pod IPs):
+#    kubectl get endpoints flask-app
+#
+# 5. DNS resolution inside cluster:
+#    - Same namespace: flask-app
+#    - Other namespace: flask-app.default.svc.cluster.local

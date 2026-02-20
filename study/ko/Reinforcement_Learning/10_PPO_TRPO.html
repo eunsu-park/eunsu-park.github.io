@@ -1,0 +1,792 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10. PPO와 TRPO - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Reinforcement_Learning/">Reinforcement Learning</a>
+    <span class="separator">/</span>
+    <span class="current">10. PPO와 TRPO</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>10. PPO와 TRPO</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Reinforcement_Learning/09_Actor_Critic.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">09. Actor-Critic 방법론</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Reinforcement_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Reinforcement_Learning/11_Multi_Agent_RL.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">11. 다중 에이전트 강화학습 (Multi-Agent RL)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#1">1. 정책 최적화의 문제</a><ul>
+<li><a href="#11">1.1 큰 업데이트의 위험성</a></li>
+<li><a href="#12">1.2 해결 방향</a></li>
+</ul>
+</li>
+<li><a href="#2-trpo-trust-region-policy-optimization">2. TRPO (Trust Region Policy Optimization)</a><ul>
+<li><a href="#21">2.1 목표 함수</a></li>
+<li><a href="#22-kl-divergence">2.2 KL Divergence 제약</a></li>
+<li><a href="#23-trpo">2.3 TRPO의 문제점</a></li>
+</ul>
+</li>
+<li><a href="#3-ppo-proximal-policy-optimization">3. PPO (Proximal Policy Optimization)</a><ul>
+<li><a href="#31">3.1 핵심 아이디어</a></li>
+<li><a href="#32-clipped">3.2 Clipped 목표 함수</a></li>
+<li><a href="#33-clipping">3.3 Clipping 직관</a></li>
+</ul>
+</li>
+<li><a href="#4-ppo">4. PPO 전체 구현</a><ul>
+<li><a href="#41-ppo">4.1 PPO 에이전트</a></li>
+<li><a href="#42-ppo">4.2 PPO 학습 루프</a></li>
+</ul>
+</li>
+<li><a href="#5-ppo">5. PPO 변형들</a><ul>
+<li><a href="#51-ppo-clip">5.1 PPO-Clip (기본)</a></li>
+<li><a href="#52-ppo-penalty">5.2 PPO-Penalty</a></li>
+<li><a href="#53-clipped-value-loss">5.3 Clipped Value Loss</a></li>
+</ul>
+</li>
+<li><a href="#6-ppo">6. 연속 행동 공간 PPO</a></li>
+<li><a href="#7">7. 하이퍼파라미터 가이드</a><ul>
+<li><a href="#71">7.1 일반적인 설정</a></li>
+<li><a href="#72">7.2 환경별 튜닝</a></li>
+</ul>
+</li>
+<li><a href="#8-ppo-vs">8. PPO vs 다른 알고리즘</a></li>
+<li><a href="#_2">요약</a></li>
+<li><a href="#_3">다음 단계</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="10-ppo-trpo">10. PPO와 TRPO<a class="header-link" href="#10-ppo-trpo" title="Permanent link">&para;</a></h1>
+<p><strong>난이도: ⭐⭐⭐⭐ (고급)</strong></p>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>정책 업데이트의 안정성 문제 이해</li>
+<li>TRPO의 신뢰 영역 개념 학습</li>
+<li>PPO의 클리핑 메커니즘 이해</li>
+<li>PyTorch로 PPO 구현</li>
+</ul>
+<hr />
+<h2 id="1">1. 정책 최적화의 문제<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="11">1.1 큰 업데이트의 위험성<a class="header-link" href="#11" title="Permanent link">&para;</a></h3>
+<p>정책 경사에서 너무 큰 업데이트는 성능을 급격히 저하시킬 수 있습니다.</p>
+<div class="highlight"><pre><span></span><code>θ_new = θ_old + α∇J(θ)
+
+문제: α가 크면 정책이 급격히 변해 학습 불안정
+해결: 정책 변화를 제한
+</code></pre></div>
+
+<h3 id="12">1.2 해결 방향<a class="header-link" href="#12" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>TRPO</strong>: KL divergence로 신뢰 영역 제한 (복잡)</li>
+<li><strong>PPO</strong>: Clipping으로 간단하게 제한</li>
+</ul>
+<hr />
+<h2 id="2-trpo-trust-region-policy-optimization">2. TRPO (Trust Region Policy Optimization)<a class="header-link" href="#2-trpo-trust-region-policy-optimization" title="Permanent link">&para;</a></h2>
+<h3 id="21">2.1 목표 함수<a class="header-link" href="#21" title="Permanent link">&para;</a></h3>
+<p>새 정책과 이전 정책의 비율을 사용:</p>
+<p>$$L^{CPI}(\theta) = \mathbb{E}\left[\frac{\pi_\theta(a|s)}{\pi_{\theta_{old}}(a|s)} A^{\pi_{old}}(s, a)\right]$$</p>
+<h3 id="22-kl-divergence">2.2 KL Divergence 제약<a class="header-link" href="#22-kl-divergence" title="Permanent link">&para;</a></h3>
+<p>$$\text{maximize}_\theta \quad L^{CPI}(\theta)$$
+$$\text{subject to} \quad \mathbb{E}[D_{KL}(\pi_{\theta_{old}} || \pi_\theta)] \leq \delta$$</p>
+<h3 id="23-trpo">2.3 TRPO의 문제점<a class="header-link" href="#23-trpo" title="Permanent link">&para;</a></h3>
+<ul>
+<li>2차 미분(Hessian) 계산 필요</li>
+<li>Conjugate gradient 알고리즘 필요</li>
+<li>구현이 복잡하고 계산 비용이 높음</li>
+</ul>
+<hr />
+<h2 id="3-ppo-proximal-policy-optimization">3. PPO (Proximal Policy Optimization)<a class="header-link" href="#3-ppo-proximal-policy-optimization" title="Permanent link">&para;</a></h2>
+<h3 id="31">3.1 핵심 아이디어<a class="header-link" href="#31" title="Permanent link">&para;</a></h3>
+<p>Clipping을 사용하여 정책 비율을 제한합니다.</p>
+<p>$$r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}$$</p>
+<h3 id="32-clipped">3.2 Clipped 목표 함수<a class="header-link" href="#32-clipped" title="Permanent link">&para;</a></h3>
+<p>$$L^{CLIP}(\theta) = \mathbb{E}\left[\min(r_t(\theta) A_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) A_t)\right]$$</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">compute_ppo_loss</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span> <span class="n">advantage</span><span class="p">,</span> <span class="n">clip_epsilon</span><span class="o">=</span><span class="mf">0.2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;PPO Clipped 손실&quot;&quot;&quot;</span>
+    <span class="c1"># 클리핑된 비율</span>
+    <span class="n">clipped_ratio</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">clip_epsilon</span><span class="p">,</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">clip_epsilon</span><span class="p">)</span>
+
+    <span class="c1"># 두 항 중 작은 값 선택</span>
+    <span class="n">loss1</span> <span class="o">=</span> <span class="n">ratio</span> <span class="o">*</span> <span class="n">advantage</span>
+    <span class="n">loss2</span> <span class="o">=</span> <span class="n">clipped_ratio</span> <span class="o">*</span> <span class="n">advantage</span>
+
+    <span class="k">return</span> <span class="o">-</span><span class="n">torch</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">loss1</span><span class="p">,</span> <span class="n">loss2</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="33-clipping">3.3 Clipping 직관<a class="header-link" href="#33-clipping" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Advantage &gt; 0 (좋은 행동):
+- ratio 증가 → 확률 증가
+- 단, ratio &gt; 1+ε 이상은 무시 (급격한 증가 방지)
+
+Advantage &lt; 0 (나쁜 행동):
+- ratio 감소 → 확률 감소
+- 단, ratio &lt; 1-ε 이하는 무시 (급격한 감소 방지)
+</code></pre></div>
+
+<hr />
+<h2 id="4-ppo">4. PPO 전체 구현<a class="header-link" href="#4-ppo" title="Permanent link">&para;</a></h2>
+<h3 id="41-ppo">4.1 PPO 에이전트<a class="header-link" href="#41-ppo" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn.functional</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">F</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">PPONetwork</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="o">=</span><span class="mi">64</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="c1"># Actor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">state_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Tanh</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Tanh</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Softmax</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Critic</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">critic</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">state_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Tanh</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Tanh</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="p">(</span><span class="n">state</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">critic</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">probs</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+        <span class="n">dist</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">distributions</span><span class="o">.</span><span class="n">Categorical</span><span class="p">(</span><span class="n">probs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">action</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">sample</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">action</span><span class="p">,</span> <span class="n">dist</span><span class="o">.</span><span class="n">log_prob</span><span class="p">(</span><span class="n">action</span><span class="p">),</span> <span class="n">dist</span><span class="o">.</span><span class="n">entropy</span><span class="p">(),</span> <span class="n">value</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">PPOAgent</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">state_dim</span><span class="p">,</span>
+        <span class="n">action_dim</span><span class="p">,</span>
+        <span class="n">lr</span><span class="o">=</span><span class="mf">3e-4</span><span class="p">,</span>
+        <span class="n">gamma</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span>
+        <span class="n">gae_lambda</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span>
+        <span class="n">clip_epsilon</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">value_coef</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">entropy_coef</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+        <span class="n">max_grad_norm</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">update_epochs</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">batch_size</span><span class="o">=</span><span class="mi">64</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">network</span> <span class="o">=</span> <span class="n">PPONetwork</span><span class="p">(</span><span class="n">state_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="n">gamma</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gae_lambda</span> <span class="o">=</span> <span class="n">gae_lambda</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clip_epsilon</span> <span class="o">=</span> <span class="n">clip_epsilon</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value_coef</span> <span class="o">=</span> <span class="n">value_coef</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">entropy_coef</span> <span class="o">=</span> <span class="n">entropy_coef</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_grad_norm</span> <span class="o">=</span> <span class="n">max_grad_norm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_epochs</span> <span class="o">=</span> <span class="n">update_epochs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">=</span> <span class="n">batch_size</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">collect_rollouts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;경험 수집&quot;&quot;&quot;</span>
+        <span class="n">states</span><span class="p">,</span> <span class="n">actions</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">dones</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+        <span class="n">values</span><span class="p">,</span> <span class="n">log_probs</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+
+        <span class="n">state</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_steps</span><span class="p">):</span>
+            <span class="n">state_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="n">state</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+                <span class="n">action</span><span class="p">,</span> <span class="n">log_prob</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">get_action</span><span class="p">(</span><span class="n">state_tensor</span><span class="p">)</span>
+
+            <span class="n">next_state</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">terminated</span><span class="p">,</span> <span class="n">truncated</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+            <span class="n">done</span> <span class="o">=</span> <span class="n">terminated</span> <span class="ow">or</span> <span class="n">truncated</span>
+
+            <span class="n">states</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+            <span class="n">actions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">action</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+            <span class="n">rewards</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reward</span><span class="p">)</span>
+            <span class="n">dones</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">done</span><span class="p">)</span>
+            <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+            <span class="n">log_probs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">log_prob</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+
+            <span class="n">state</span> <span class="o">=</span> <span class="n">next_state</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">done</span> <span class="k">else</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># 마지막 상태의 가치</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">last_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">get_action</span><span class="p">(</span>
+                <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="n">state</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;states&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">states</span><span class="p">),</span>
+            <span class="s1">&#39;actions&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">actions</span><span class="p">),</span>
+            <span class="s1">&#39;rewards&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">rewards</span><span class="p">),</span>
+            <span class="s1">&#39;dones&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dones</span><span class="p">),</span>
+            <span class="s1">&#39;values&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">values</span><span class="p">),</span>
+            <span class="s1">&#39;log_probs&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">log_probs</span><span class="p">),</span>
+            <span class="s1">&#39;last_value&#39;</span><span class="p">:</span> <span class="n">last_value</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_gae</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rollout</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;GAE 계산&quot;&quot;&quot;</span>
+        <span class="n">rewards</span> <span class="o">=</span> <span class="n">rollout</span><span class="p">[</span><span class="s1">&#39;rewards&#39;</span><span class="p">]</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">rollout</span><span class="p">[</span><span class="s1">&#39;values&#39;</span><span class="p">]</span>
+        <span class="n">dones</span> <span class="o">=</span> <span class="n">rollout</span><span class="p">[</span><span class="s1">&#39;dones&#39;</span><span class="p">]</span>
+        <span class="n">last_value</span> <span class="o">=</span> <span class="n">rollout</span><span class="p">[</span><span class="s1">&#39;last_value&#39;</span><span class="p">]</span>
+
+        <span class="n">advantages</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">rewards</span><span class="p">)</span>
+        <span class="n">last_gae</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">rewards</span><span class="p">))):</span>
+            <span class="k">if</span> <span class="n">t</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">rewards</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">next_value</span> <span class="o">=</span> <span class="n">last_value</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">next_value</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">t</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+
+            <span class="n">next_non_terminal</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">dones</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+            <span class="n">delta</span> <span class="o">=</span> <span class="n">rewards</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">*</span> <span class="n">next_value</span> <span class="o">*</span> <span class="n">next_non_terminal</span> <span class="o">-</span> <span class="n">values</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+            <span class="n">advantages</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">last_gae</span> <span class="o">=</span> <span class="n">delta</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">gae_lambda</span> <span class="o">*</span> <span class="n">next_non_terminal</span> <span class="o">*</span> <span class="n">last_gae</span>
+
+        <span class="n">returns</span> <span class="o">=</span> <span class="n">advantages</span> <span class="o">+</span> <span class="n">values</span>
+        <span class="k">return</span> <span class="n">advantages</span><span class="p">,</span> <span class="n">returns</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rollout</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;PPO 업데이트&quot;&quot;&quot;</span>
+        <span class="n">advantages</span><span class="p">,</span> <span class="n">returns</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_gae</span><span class="p">(</span><span class="n">rollout</span><span class="p">)</span>
+
+        <span class="c1"># 정규화</span>
+        <span class="n">advantages</span> <span class="o">=</span> <span class="p">(</span><span class="n">advantages</span> <span class="o">-</span> <span class="n">advantages</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="n">advantages</span><span class="o">.</span><span class="n">std</span><span class="p">()</span> <span class="o">+</span> <span class="mf">1e-8</span><span class="p">)</span>
+
+        <span class="c1"># 텐서 변환</span>
+        <span class="n">states</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="n">rollout</span><span class="p">[</span><span class="s1">&#39;states&#39;</span><span class="p">])</span>
+        <span class="n">actions</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">LongTensor</span><span class="p">(</span><span class="n">rollout</span><span class="p">[</span><span class="s1">&#39;actions&#39;</span><span class="p">])</span>
+        <span class="n">old_log_probs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="n">rollout</span><span class="p">[</span><span class="s1">&#39;log_probs&#39;</span><span class="p">])</span>
+        <span class="n">returns</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span>
+        <span class="n">advantages</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="n">advantages</span><span class="p">)</span>
+
+        <span class="c1"># 여러 에폭 업데이트</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">update_epochs</span><span class="p">):</span>
+            <span class="c1"># 미니배치 생성</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">states</span><span class="p">))</span>
+
+            <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">states</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">):</span>
+                <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span>
+                <span class="n">batch_indices</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+
+                <span class="n">batch_states</span> <span class="o">=</span> <span class="n">states</span><span class="p">[</span><span class="n">batch_indices</span><span class="p">]</span>
+                <span class="n">batch_actions</span> <span class="o">=</span> <span class="n">actions</span><span class="p">[</span><span class="n">batch_indices</span><span class="p">]</span>
+                <span class="n">batch_old_log_probs</span> <span class="o">=</span> <span class="n">old_log_probs</span><span class="p">[</span><span class="n">batch_indices</span><span class="p">]</span>
+                <span class="n">batch_returns</span> <span class="o">=</span> <span class="n">returns</span><span class="p">[</span><span class="n">batch_indices</span><span class="p">]</span>
+                <span class="n">batch_advantages</span> <span class="o">=</span> <span class="n">advantages</span><span class="p">[</span><span class="n">batch_indices</span><span class="p">]</span>
+
+                <span class="c1"># 현재 정책으로 평가</span>
+                <span class="n">_</span><span class="p">,</span> <span class="n">new_log_probs</span><span class="p">,</span> <span class="n">entropy</span><span class="p">,</span> <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">get_action</span><span class="p">(</span>
+                    <span class="n">batch_states</span><span class="p">,</span> <span class="n">batch_actions</span>
+                <span class="p">)</span>
+
+                <span class="c1"># 비율 계산</span>
+                <span class="n">ratio</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">new_log_probs</span> <span class="o">-</span> <span class="n">batch_old_log_probs</span><span class="p">)</span>
+
+                <span class="c1"># Clipped 손실</span>
+                <span class="n">surr1</span> <span class="o">=</span> <span class="n">ratio</span> <span class="o">*</span> <span class="n">batch_advantages</span>
+                <span class="n">surr2</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">clip_epsilon</span><span class="p">,</span> <span class="mi">1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">clip_epsilon</span><span class="p">)</span> <span class="o">*</span> <span class="n">batch_advantages</span>
+                <span class="n">actor_loss</span> <span class="o">=</span> <span class="o">-</span><span class="n">torch</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">surr1</span><span class="p">,</span> <span class="n">surr2</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+                <span class="c1"># 가치 손실</span>
+                <span class="n">critic_loss</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(),</span> <span class="n">batch_returns</span><span class="p">)</span>
+
+                <span class="c1"># 엔트로피 보너스</span>
+                <span class="n">entropy_loss</span> <span class="o">=</span> <span class="o">-</span><span class="n">entropy</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+                <span class="c1"># 총 손실</span>
+                <span class="n">loss</span> <span class="o">=</span> <span class="n">actor_loss</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">value_coef</span> <span class="o">*</span> <span class="n">critic_loss</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">entropy_coef</span> <span class="o">*</span> <span class="n">entropy_loss</span>
+
+                <span class="c1"># 업데이트</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+                <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+                <span class="n">nn</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">clip_grad_norm_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_grad_norm</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">actor_loss</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">critic_loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="42-ppo">4.2 PPO 학습 루프<a class="header-link" href="#42-ppo" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">gymnasium</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">gym</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">train_ppo</span><span class="p">(</span><span class="n">env_name</span><span class="o">=</span><span class="s1">&#39;CartPole-v1&#39;</span><span class="p">,</span> <span class="n">total_timesteps</span><span class="o">=</span><span class="mi">100000</span><span class="p">,</span> <span class="n">n_steps</span><span class="o">=</span><span class="mi">2048</span><span class="p">):</span>
+    <span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="n">env_name</span><span class="p">)</span>
+    <span class="n">state_dim</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">observation_space</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">action_dim</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">n</span>
+
+    <span class="n">agent</span> <span class="o">=</span> <span class="n">PPOAgent</span><span class="p">(</span><span class="n">state_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">)</span>
+
+    <span class="n">timesteps</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">episode_rewards</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">current_episode_reward</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">while</span> <span class="n">timesteps</span> <span class="o">&lt;</span> <span class="n">total_timesteps</span><span class="p">:</span>
+        <span class="c1"># 롤아웃 수집</span>
+        <span class="n">rollout</span> <span class="o">=</span> <span class="n">agent</span><span class="o">.</span><span class="n">collect_rollouts</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">)</span>
+        <span class="n">timesteps</span> <span class="o">+=</span> <span class="n">n_steps</span>
+
+        <span class="c1"># 에피소드 보상 추적</span>
+        <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">rollout</span><span class="p">[</span><span class="s1">&#39;rewards&#39;</span><span class="p">],</span> <span class="n">rollout</span><span class="p">[</span><span class="s1">&#39;dones&#39;</span><span class="p">]):</span>
+            <span class="n">current_episode_reward</span> <span class="o">+=</span> <span class="n">r</span>
+            <span class="k">if</span> <span class="n">d</span><span class="p">:</span>
+                <span class="n">episode_rewards</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current_episode_reward</span><span class="p">)</span>
+                <span class="n">current_episode_reward</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># PPO 업데이트</span>
+        <span class="n">actor_loss</span><span class="p">,</span> <span class="n">critic_loss</span> <span class="o">=</span> <span class="n">agent</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">rollout</span><span class="p">)</span>
+
+        <span class="c1"># 로깅</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">episode_rewards</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">timesteps</span> <span class="o">%</span> <span class="mi">10000</span> <span class="o">&lt;</span> <span class="n">n_steps</span><span class="p">:</span>
+            <span class="n">avg_reward</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">episode_rewards</span><span class="p">[</span><span class="o">-</span><span class="mi">10</span><span class="p">:])</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">episode_rewards</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">10</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">episode_rewards</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Timesteps: </span><span class="si">{</span><span class="n">timesteps</span><span class="si">}</span><span class="s2">, Avg Reward: </span><span class="si">{</span><span class="n">avg_reward</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">agent</span><span class="p">,</span> <span class="n">episode_rewards</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-ppo">5. PPO 변형들<a class="header-link" href="#5-ppo" title="Permanent link">&para;</a></h2>
+<h3 id="51-ppo-clip">5.1 PPO-Clip (기본)<a class="header-link" href="#51-ppo-clip" title="Permanent link">&para;</a></h3>
+<p>위에서 구현한 방식입니다.</p>
+<h3 id="52-ppo-penalty">5.2 PPO-Penalty<a class="header-link" href="#52-ppo-penalty" title="Permanent link">&para;</a></h3>
+<p>KL divergence를 페널티로 추가:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">ppo_penalty_loss</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span> <span class="n">advantage</span><span class="p">,</span> <span class="n">old_probs</span><span class="p">,</span> <span class="n">new_probs</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">0.01</span><span class="p">):</span>
+    <span class="n">policy_loss</span> <span class="o">=</span> <span class="p">(</span><span class="n">ratio</span> <span class="o">*</span> <span class="n">advantage</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+    <span class="n">kl_div</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">kl_div</span><span class="p">(</span><span class="n">new_probs</span><span class="o">.</span><span class="n">log</span><span class="p">(),</span> <span class="n">old_probs</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s1">&#39;batchmean&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="o">-</span><span class="n">policy_loss</span> <span class="o">+</span> <span class="n">beta</span> <span class="o">*</span> <span class="n">kl_div</span>
+</code></pre></div>
+
+<h3 id="53-clipped-value-loss">5.3 Clipped Value Loss<a class="header-link" href="#53-clipped-value-loss" title="Permanent link">&para;</a></h3>
+<p>가치 함수에도 클리핑 적용:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">clipped_value_loss</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">old_values</span><span class="p">,</span> <span class="n">returns</span><span class="p">,</span> <span class="n">clip_epsilon</span><span class="o">=</span><span class="mf">0.2</span><span class="p">):</span>
+    <span class="c1"># 클리핑된 가치</span>
+    <span class="n">clipped_values</span> <span class="o">=</span> <span class="n">old_values</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span>
+        <span class="n">values</span> <span class="o">-</span> <span class="n">old_values</span><span class="p">,</span> <span class="o">-</span><span class="n">clip_epsilon</span><span class="p">,</span> <span class="n">clip_epsilon</span>
+    <span class="p">)</span>
+
+    <span class="c1"># 두 손실 중 큰 값</span>
+    <span class="n">loss1</span> <span class="o">=</span> <span class="p">(</span><span class="n">values</span> <span class="o">-</span> <span class="n">returns</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">loss2</span> <span class="o">=</span> <span class="p">(</span><span class="n">clipped_values</span> <span class="o">-</span> <span class="n">returns</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+
+    <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">loss1</span><span class="p">,</span> <span class="n">loss2</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-ppo">6. 연속 행동 공간 PPO<a class="header-link" href="#6-ppo" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ContinuousPPONetwork</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="o">=</span><span class="mi">64</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="c1"># Actor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor_mean</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">state_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Tanh</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Tanh</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor_log_std</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">action_dim</span><span class="p">))</span>
+
+        <span class="c1"># Critic</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">critic</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">state_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Tanh</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Tanh</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">mean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor_mean</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor_log_std</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">critic</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">mean</span><span class="p">,</span> <span class="n">std</span><span class="p">,</span> <span class="n">value</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">mean</span><span class="p">,</span> <span class="n">std</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+        <span class="n">dist</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">distributions</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">std</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">action</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">sample</span><span class="p">()</span>
+
+        <span class="n">log_prob</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">log_prob</span><span class="p">(</span><span class="n">action</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">entropy</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">entropy</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">action</span><span class="p">,</span> <span class="n">log_prob</span><span class="p">,</span> <span class="n">entropy</span><span class="p">,</span> <span class="n">value</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 하이퍼파라미터 가이드<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="71">7.1 일반적인 설정<a class="header-link" href="#71" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># 학습</span>
+    <span class="s1">&#39;lr&#39;</span><span class="p">:</span> <span class="mf">3e-4</span><span class="p">,</span>                  <span class="c1"># 학습률</span>
+    <span class="s1">&#39;gamma&#39;</span><span class="p">:</span> <span class="mf">0.99</span><span class="p">,</span>               <span class="c1"># 할인율</span>
+    <span class="s1">&#39;gae_lambda&#39;</span><span class="p">:</span> <span class="mf">0.95</span><span class="p">,</span>          <span class="c1"># GAE lambda</span>
+
+    <span class="c1"># PPO 특정</span>
+    <span class="s1">&#39;clip_epsilon&#39;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>         <span class="c1"># 클리핑 범위</span>
+    <span class="s1">&#39;update_epochs&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>         <span class="c1"># 업데이트 반복</span>
+    <span class="s1">&#39;batch_size&#39;</span><span class="p">:</span> <span class="mi">64</span><span class="p">,</span>            <span class="c1"># 미니배치 크기</span>
+
+    <span class="c1"># 손실 계수</span>
+    <span class="s1">&#39;value_coef&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>           <span class="c1"># 가치 손실 계수</span>
+    <span class="s1">&#39;entropy_coef&#39;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>        <span class="c1"># 엔트로피 계수</span>
+
+    <span class="c1"># 롤아웃</span>
+    <span class="s1">&#39;n_steps&#39;</span><span class="p">:</span> <span class="mi">2048</span><span class="p">,</span>             <span class="c1"># 롤아웃 길이</span>
+    <span class="s1">&#39;n_envs&#39;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>                 <span class="c1"># 병렬 환경 수</span>
+
+    <span class="c1"># 안정화</span>
+    <span class="s1">&#39;max_grad_norm&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>        <span class="c1"># 그래디언트 클리핑</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="72">7.2 환경별 튜닝<a class="header-link" href="#72" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>환경</th>
+<th>lr</th>
+<th>n_steps</th>
+<th>clip_epsilon</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CartPole</td>
+<td>3e-4</td>
+<td>128</td>
+<td>0.2</td>
+</tr>
+<tr>
+<td>LunarLander</td>
+<td>3e-4</td>
+<td>2048</td>
+<td>0.2</td>
+</tr>
+<tr>
+<td>Atari</td>
+<td>2.5e-4</td>
+<td>128</td>
+<td>0.1</td>
+</tr>
+<tr>
+<td>MuJoCo</td>
+<td>3e-4</td>
+<td>2048</td>
+<td>0.2</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-ppo-vs">8. PPO vs 다른 알고리즘<a class="header-link" href="#8-ppo-vs" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>알고리즘</th>
+<th>복잡도</th>
+<th>샘플 효율</th>
+<th>안정성</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>REINFORCE</td>
+<td>낮음</td>
+<td>낮음</td>
+<td>낮음</td>
+</tr>
+<tr>
+<td>A2C</td>
+<td>중간</td>
+<td>중간</td>
+<td>중간</td>
+</tr>
+<tr>
+<td>TRPO</td>
+<td>높음</td>
+<td>높음</td>
+<td>높음</td>
+</tr>
+<tr>
+<td><strong>PPO</strong></td>
+<td><strong>중간</strong></td>
+<td><strong>높음</strong></td>
+<td><strong>높음</strong></td>
+</tr>
+<tr>
+<td>SAC</td>
+<td>중간</td>
+<td>높음</td>
+<td>높음</td>
+</tr>
+</tbody>
+</table>
+<p><strong>PPO의 장점:</strong>
+- TRPO 수준의 성능, 구현은 간단
+- 다양한 환경에서 안정적
+- 하이퍼파라미터 민감도 낮음</p>
+<hr />
+<h2 id="_2">요약<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<p><strong>PPO 핵심:</strong></p>
+<div class="highlight"><pre><span></span><code>L^{CLIP} = E[min(r(θ)A, clip(r(θ), 1-ε, 1+ε)A)]
+
+r(θ) = π_θ(a|s) / π_θ_old(a|s)  # 정책 비율
+</code></pre></div>
+
+<p><strong>클리핑 효과:</strong>
+- 정책 변화를 [1-ε, 1+ε] 범위로 제한
+- 급격한 업데이트 방지
+- 학습 안정성 확보</p>
+<hr />
+<h2 id="_3">다음 단계<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./11_Multi_Agent_RL.md">11_Multi_Agent_RL.md</a> - 다중 에이전트 강화학습</li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Reinforcement_Learning/09_Actor_Critic.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">09. Actor-Critic 방법론</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Reinforcement_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Reinforcement_Learning/11_Multi_Agent_RL.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">11. 다중 에이전트 강화학습 (Multi-Agent RL)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

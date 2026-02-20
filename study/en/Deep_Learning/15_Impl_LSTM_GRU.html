@@ -1,0 +1,545 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>15. LSTM / GRU - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/en/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/en/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/en/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" selected>
+                        English
+                    </option>
+                    
+                    <option value="ko" >
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/en/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/en/Deep_Learning/">Deep Learning</a>
+    <span class="separator">/</span>
+    <span class="current">15. LSTM / GRU</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>15. LSTM / GRU</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/Deep_Learning/14_LSTM_GRU.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">14. LSTM and GRU</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/Deep_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/Deep_Learning/16_Attention_Transformer.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">16. Attention and Transformer</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#mathematical-background">Mathematical Background</a><ul>
+<li><a href="#1-vanilla-rnn-problem">1. Vanilla RNN Problem</a></li>
+<li><a href="#2-lstm-equations">2. LSTM Equations</a></li>
+<li><a href="#3-gru-equations">3. GRU Equations</a></li>
+<li><a href="#4-why-gradient-is-preserved">4. Why Gradient is Preserved</a></li>
+</ul>
+</li>
+<li><a href="#architecture">Architecture</a><ul>
+<li><a href="#lstm-structure-diagram">LSTM Structure Diagram</a></li>
+<li><a href="#gru-structure-diagram">GRU Structure Diagram</a></li>
+<li><a href="#parameter-count">Parameter Count</a></li>
+</ul>
+</li>
+<li><a href="#file-structure">File Structure</a></li>
+<li><a href="#core-concepts">Core Concepts</a><ul>
+<li><a href="#1-role-of-gates">1. Role of Gates</a></li>
+<li><a href="#2-peephole-connection-optional">2. Peephole Connection (Optional)</a></li>
+<li><a href="#3-bidirectional-lstm">3. Bidirectional LSTM</a></li>
+<li><a href="#4-stacked-lstm">4. Stacked LSTM</a></li>
+</ul>
+</li>
+<li><a href="#implementation-levels">Implementation Levels</a><ul>
+<li><a href="#level-1-numpy-from-scratch-numpy">Level 1: NumPy From-Scratch (numpy/)</a></li>
+<li><a href="#level-2-pytorch-low-level-pytorch_lowlevel">Level 2: PyTorch Low-Level (pytorch_lowlevel/)</a></li>
+<li><a href="#level-3-paper-implementation-paper">Level 3: Paper Implementation (paper/)</a></li>
+</ul>
+</li>
+<li><a href="#learning-checklist">Learning Checklist</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="15-lstm-gru">15. LSTM / GRU<a class="header-link" href="#15-lstm-gru" title="Permanent link">&para;</a></h1>
+<p><a href="./14_LSTM_GRU.md">Previous: LSTM and GRU</a> | <a href="./16_Attention_Transformer.md">Next: Attention &amp; Transformer</a></p>
+<hr />
+<h2 id="overview">Overview<a class="header-link" href="#overview" title="Permanent link">&para;</a></h2>
+<p>LSTM (Long Short-Term Memory) and GRU (Gated Recurrent Unit) are Recurrent Neural Network (RNN) variants that solve the <strong>vanishing gradient problem</strong>. They effectively learn long-term dependencies through gating mechanisms.</p>
+<hr />
+<h2 id="mathematical-background">Mathematical Background<a class="header-link" href="#mathematical-background" title="Permanent link">&para;</a></h2>
+<h3 id="1-vanilla-rnn-problem">1. Vanilla RNN Problem<a class="header-link" href="#1-vanilla-rnn-problem" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Vanilla RNN:
+  h_t = tanh(W_h · h_{t-1} + W_x · x_t + b)
+
+Problem: Backpropagation Through Time (BPTT)
+
+∂L/∂h_0 = ∂L/∂h_T · ∂h_T/∂h_{T-1} · ... · ∂h_1/∂h_0
+        = ∂L/∂h_T · Π_{t=1}^{T} ∂h_t/∂h_{t-1}
+
+∂h_t/∂h_{t-1} = diag(1 - tanh²(·)) · W_h
+
+Result:
+<span class="k">-</span> |eigenvalue(W_h)| &lt; 1 → Vanishing gradient
+<span class="k">-</span> |eigenvalue(W_h)| &gt; 1 → Exploding gradient
+
+→ Cannot learn initial information in long sequences
+</code></pre></div>
+
+<h3 id="2-lstm-equations">2. LSTM Equations<a class="header-link" href="#2-lstm-equations" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">Input</span><span class="o">:</span><span class="w"> </span><span class="n">x_t</span><span class="w"> </span><span class="o">(</span><span class="n">current</span><span class="w"> </span><span class="n">input</span><span class="o">),</span><span class="w"> </span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">}</span><span class="w"> </span><span class="o">(</span><span class="n">previous</span><span class="w"> </span><span class="n">hidden</span><span class="o">),</span><span class="w"> </span><span class="n">c_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">}</span><span class="w"> </span><span class="o">(</span><span class="n">previous</span><span class="w"> </span><span class="n">cell</span><span class="o">)</span>
+<span class="n">Output</span><span class="o">:</span><span class="w"> </span><span class="n">h_t</span><span class="w"> </span><span class="o">(</span><span class="n">current</span><span class="w"> </span><span class="n">hidden</span><span class="o">),</span><span class="w"> </span><span class="n">c_t</span><span class="w"> </span><span class="o">(</span><span class="n">current</span><span class="w"> </span><span class="n">cell</span><span class="o">)</span>
+
+<span class="mi">1</span><span class="o">.</span><span class="w"> </span><span class="n">Forget</span><span class="w"> </span><span class="n">Gate</span><span class="w"> </span><span class="o">(</span><span class="n">what</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">discard</span><span class="o">?)</span>
+<span class="w">   </span><span class="n">f_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">σ</span><span class="o">(</span><span class="n">W_f</span><span class="w"> </span><span class="err">·</span><span class="w"> </span><span class="o">[</span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">},</span><span class="w"> </span><span class="n">x_t</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b_f</span><span class="o">)</span>
+
+<span class="mi">2</span><span class="o">.</span><span class="w"> </span><span class="n">Input</span><span class="w"> </span><span class="n">Gate</span><span class="w"> </span><span class="o">(</span><span class="n">what</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">store</span><span class="o">?)</span>
+<span class="w">   </span><span class="n">i_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">σ</span><span class="o">(</span><span class="n">W_i</span><span class="w"> </span><span class="err">·</span><span class="w"> </span><span class="o">[</span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">},</span><span class="w"> </span><span class="n">x_t</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b_i</span><span class="o">)</span>
+
+<span class="mi">3</span><span class="o">.</span><span class="w"> </span><span class="n">Candidate</span><span class="w"> </span><span class="n">Cell</span><span class="w"> </span><span class="o">(</span><span class="k">new</span><span class="w"> </span><span class="n">information</span><span class="o">)</span>
+<span class="w">   </span><span class="n">c</span><span class="err">̃</span><span class="n">_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tanh</span><span class="o">(</span><span class="n">W_c</span><span class="w"> </span><span class="err">·</span><span class="w"> </span><span class="o">[</span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">},</span><span class="w"> </span><span class="n">x_t</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b_c</span><span class="o">)</span>
+
+<span class="mi">4</span><span class="o">.</span><span class="w"> </span><span class="n">Cell</span><span class="w"> </span><span class="n">State</span><span class="w"> </span><span class="n">Update</span>
+<span class="w">   </span><span class="n">c_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">f_t</span><span class="w"> </span><span class="err">⊙</span><span class="w"> </span><span class="n">c_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">}</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">i_t</span><span class="w"> </span><span class="err">⊙</span><span class="w"> </span><span class="n">c</span><span class="err">̃</span><span class="n">_t</span>
+<span class="w">        </span><span class="err">↑</span><span class="w"> </span><span class="n">previous</span><span class="w"> </span><span class="n">info</span><span class="w">   </span><span class="err">↑</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">info</span>
+
+<span class="mi">5</span><span class="o">.</span><span class="w"> </span><span class="n">Output</span><span class="w"> </span><span class="n">Gate</span><span class="w"> </span><span class="o">(</span><span class="n">what</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">output</span><span class="o">?)</span>
+<span class="w">   </span><span class="n">o_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">σ</span><span class="o">(</span><span class="n">W_o</span><span class="w"> </span><span class="err">·</span><span class="w"> </span><span class="o">[</span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">},</span><span class="w"> </span><span class="n">x_t</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b_o</span><span class="o">)</span>
+
+<span class="mi">6</span><span class="o">.</span><span class="w"> </span><span class="n">Hidden</span><span class="w"> </span><span class="n">State</span>
+<span class="w">   </span><span class="n">h_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o_t</span><span class="w"> </span><span class="err">⊙</span><span class="w"> </span><span class="n">tanh</span><span class="o">(</span><span class="n">c_t</span><span class="o">)</span>
+
+<span class="err">σ</span><span class="o">:</span><span class="w"> </span><span class="n">sigmoid</span><span class="w"> </span><span class="o">(</span><span class="mi">0</span><span class="o">~</span><span class="mi">1</span><span class="o">)</span>
+<span class="err">⊙</span><span class="o">:</span><span class="w"> </span><span class="n">element</span><span class="o">-</span><span class="n">wise</span><span class="w"> </span><span class="n">multiplication</span>
+</code></pre></div>
+
+<h3 id="3-gru-equations">3. GRU Equations<a class="header-link" href="#3-gru-equations" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">GRU</span><span class="o">:</span><span class="w"> </span><span class="n">Simplified</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">LSTM</span><span class="w"> </span><span class="o">(</span><span class="n">no</span><span class="w"> </span><span class="n">cell</span><span class="w"> </span><span class="n">state</span><span class="o">)</span>
+
+<span class="mi">1</span><span class="o">.</span><span class="w"> </span><span class="n">Reset</span><span class="w"> </span><span class="n">Gate</span><span class="w"> </span><span class="o">(</span><span class="n">how</span><span class="w"> </span><span class="n">much</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">ignore</span><span class="w"> </span><span class="n">previous</span><span class="w"> </span><span class="n">info</span><span class="o">?)</span>
+<span class="w">   </span><span class="n">r_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">σ</span><span class="o">(</span><span class="n">W_r</span><span class="w"> </span><span class="err">·</span><span class="w"> </span><span class="o">[</span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">},</span><span class="w"> </span><span class="n">x_t</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b_r</span><span class="o">)</span>
+
+<span class="mi">2</span><span class="o">.</span><span class="w"> </span><span class="n">Update</span><span class="w"> </span><span class="n">Gate</span><span class="w"> </span><span class="o">(</span><span class="n">ratio</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">previous</span><span class="w"> </span><span class="n">vs</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">info</span><span class="o">)</span>
+<span class="w">   </span><span class="n">z_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">σ</span><span class="o">(</span><span class="n">W_z</span><span class="w"> </span><span class="err">·</span><span class="w"> </span><span class="o">[</span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">},</span><span class="w"> </span><span class="n">x_t</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b_z</span><span class="o">)</span>
+
+<span class="mi">3</span><span class="o">.</span><span class="w"> </span><span class="n">Candidate</span><span class="w"> </span><span class="n">Hidden</span>
+<span class="w">   </span><span class="n">h</span><span class="err">̃</span><span class="n">_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tanh</span><span class="o">(</span><span class="n">W_h</span><span class="w"> </span><span class="err">·</span><span class="w"> </span><span class="o">[</span><span class="n">r_t</span><span class="w"> </span><span class="err">⊙</span><span class="w"> </span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">},</span><span class="w"> </span><span class="n">x_t</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b_h</span><span class="o">)</span>
+
+<span class="mi">4</span><span class="o">.</span><span class="w"> </span><span class="n">Hidden</span><span class="w"> </span><span class="n">State</span>
+<span class="w">   </span><span class="n">h_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="mi">1</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">z_t</span><span class="o">)</span><span class="w"> </span><span class="err">⊙</span><span class="w"> </span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">}</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">z_t</span><span class="w"> </span><span class="err">⊙</span><span class="w"> </span><span class="n">h</span><span class="err">̃</span><span class="n">_t</span>
+<span class="w">        </span><span class="err">↑</span><span class="w"> </span><span class="n">keep</span><span class="w"> </span><span class="n">previous</span><span class="w">      </span><span class="err">↑</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">info</span>
+
+<span class="n">LSTM</span><span class="w"> </span><span class="n">vs</span><span class="w"> </span><span class="n">GRU</span><span class="o">:</span>
+<span class="o">-</span><span class="w"> </span><span class="n">GRU</span><span class="o">:</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="n">gates</span><span class="w"> </span><span class="o">(</span><span class="n">reset</span><span class="o">,</span><span class="w"> </span><span class="n">update</span><span class="o">)</span>
+<span class="o">-</span><span class="w"> </span><span class="n">LSTM</span><span class="o">:</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="n">gates</span><span class="w"> </span><span class="o">(</span><span class="n">forget</span><span class="o">,</span><span class="w"> </span><span class="n">input</span><span class="o">,</span><span class="w"> </span><span class="n">output</span><span class="o">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">cell</span><span class="w"> </span><span class="n">state</span>
+<span class="o">-</span><span class="w"> </span><span class="n">GRU</span><span class="w"> </span><span class="n">has</span><span class="w"> </span><span class="mi">25</span><span class="o">%</span><span class="w"> </span><span class="n">fewer</span><span class="w"> </span><span class="n">parameters</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Performance</span><span class="w"> </span><span class="n">similar</span><span class="w"> </span><span class="n">depending</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">task</span>
+</code></pre></div>
+
+<h3 id="4-why-gradient-is-preserved">4. Why Gradient is Preserved<a class="header-link" href="#4-why-gradient-is-preserved" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>LSTM Cell State Update:
+  c_t = f_t ⊙ c_{t-1} + i_t ⊙ c̃_t
+
+Gradient:
+  ∂c_t/∂c_{t-1} = f_t  (forget gate)
+
+If f_t ≈ 1, gradient propagates almost unchanged!
+
+This acts as a &quot;highway&quot;:
+<span class="k">-</span> Cell state can flow without transformation
+<span class="k">-</span> Gradient maintained even in long sequences
+<span class="k">-</span> Model learns f_t to decide what information to retain
+</code></pre></div>
+
+<hr />
+<h2 id="architecture">Architecture<a class="header-link" href="#architecture" title="Permanent link">&para;</a></h2>
+<h3 id="lstm-structure-diagram">LSTM Structure Diagram<a class="header-link" href="#lstm-structure-diagram" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>                      ┌─────────────────────────────────┐
+                      │           Cell State c_t         │
+c_{t-1} ─────────────►│   ⊙────────────+────────────►  c_t
+                      │   ↑ forget     ↑ input           │
+                      │   f_t        i_t ⊙ c̃_t          │
+                      │                                  │
+                      │   ┌──────────────────────┐       │
+                      │   │  σ   σ   tanh   σ   │       │
+                      │   │  f   i    c̃    o   │       │
+                      │   └──────────────────────┘       │
+                      │         ↑                        │
+                      │    [h_{t-1}, x_t]                │
+h_{t-1} ─────────────►│                                  ├───► h_t
+                      │                 ⊙ ◄── tanh(c_t)  │
+                      │                 o_t              │
+                      └─────────────────────────────────┘
+                                    ↑
+                                   x_t
+</code></pre></div>
+
+<h3 id="gru-structure-diagram">GRU Structure Diagram<a class="header-link" href="#gru-structure-diagram" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>                      ┌─────────────────────────────────┐
+                      │                                  │
+h_{t-1} ─────────────►│ ⊙────────────+────────────────►│ h_t
+                      │ (1-z)        z ⊙ h̃             │
+                      │              ↑                   │
+                      │   ┌──────────────────────┐       │
+                      │   │    σ   σ   tanh     │       │
+                      │   │    r   z    h̃      │       │
+                      │   └──────────────────────┘       │
+                      │         ↑                        │
+                      │    [h_{t-1}, x_t]                │
+                      │    [r⊙h_{t-1}, x_t]              │
+                      └─────────────────────────────────┘
+                                    ↑
+                                   x_t
+</code></pre></div>
+
+<h3 id="parameter-count">Parameter Count<a class="header-link" href="#parameter-count" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">LSTM</span><span class="o">:</span>
+<span class="w">  </span><span class="mi">4</span><span class="w"> </span><span class="n">gates</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="o">(</span><span class="n">input_size</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="n">hidden_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">hidden_size</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="n">hidden_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">hidden_size</span><span class="o">)</span>
+<span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="o">(</span><span class="n">input_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">hidden_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="o">)</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="n">hidden_size</span>
+
+<span class="n">Example</span><span class="o">:</span><span class="w"> </span><span class="n">input</span><span class="o">=</span><span class="mi">128</span><span class="o">,</span><span class="w"> </span><span class="n">hidden</span><span class="o">=</span><span class="mi">256</span>
+<span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="o">(</span><span class="mi">128</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">256</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="o">)</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="mi">256</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">394</span><span class="o">,</span><span class="mi">240</span>
+
+<span class="n">GRU</span><span class="o">:</span>
+<span class="w">  </span><span class="mi">3</span><span class="w"> </span><span class="n">gates</span>
+<span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="o">(</span><span class="n">input_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">hidden_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="o">)</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="n">hidden_size</span>
+
+<span class="n">Example</span><span class="o">:</span><span class="w"> </span><span class="n">input</span><span class="o">=</span><span class="mi">128</span><span class="o">,</span><span class="w"> </span><span class="n">hidden</span><span class="o">=</span><span class="mi">256</span>
+<span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="o">(</span><span class="mi">128</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">256</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="o">)</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="mi">256</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">295</span><span class="o">,</span><span class="mi">680</span><span class="w">  </span><span class="o">(</span><span class="mi">25</span><span class="o">%</span><span class="w"> </span><span class="n">less</span><span class="o">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="file-structure">File Structure<a class="header-link" href="#file-structure" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="mf">06</span><span class="n">_LSTM_GRU</span><span class="o">/</span>
+<span class="err">├──</span><span class="w"> </span><span class="kr">READ</span><span class="n">ME</span><span class="mf">.</span><span class="n">md</span><span class="w">                      </span><span class="err">#</span><span class="w"> </span><span class="n">This</span><span class="w"> </span><span class="n">file</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">numpy</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">lstm_numpy</span><span class="mf">.</span><span class="n">py</span><span class="w">             </span><span class="err">#</span><span class="w"> </span><span class="n">NumPy</span><span class="w"> </span><span class="n">LSTM</span><span class="w"> </span><span class="p">(</span><span class="kr">for</span><span class="n">ward</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">backward</span><span class="p">)</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">gru_numpy</span><span class="mf">.</span><span class="n">py</span><span class="w">              </span><span class="err">#</span><span class="w"> </span><span class="n">NumPy</span><span class="w"> </span><span class="n">GRU</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">pytorch_lowlevel</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">lstm_gru_lowlevel</span><span class="mf">.</span><span class="n">py</span><span class="w">      </span><span class="err">#</span><span class="w"> </span><span class="n">Using</span><span class="w"> </span><span class="n">F</span><span class="mf">.</span><span class="n">linear</span><span class="p">,</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="n">nn</span><span class="mf">.</span><span class="n">LSTM</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">paper</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">lstm_paper</span><span class="mf">.</span><span class="n">py</span><span class="w">             </span><span class="err">#</span><span class="w"> </span><span class="ow">Or</span><span class="n">iginal</span><span class="w"> </span><span class="mf">1997</span><span class="w"> </span><span class="n">paper</span><span class="w"> </span><span class="n">implementation</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">gru_paper</span><span class="mf">.</span><span class="n">py</span><span class="w">              </span><span class="err">#</span><span class="w"> </span><span class="mf">2014</span><span class="w"> </span><span class="n">paper</span><span class="w"> </span><span class="n">implementation</span>
+<span class="err">└──</span><span class="w"> </span><span class="n">exercises</span><span class="o">/</span>
+<span class="w">    </span><span class="err">├──</span><span class="w"> </span><span class="mf">01</span><span class="n">_gradient_flow</span><span class="mf">.</span><span class="n">md</span><span class="w">       </span><span class="err">#</span><span class="w"> </span><span class="n">BPTT</span><span class="w"> </span><span class="n">gradient</span><span class="w"> </span><span class="n">analysis</span>
+<span class="w">    </span><span class="err">└──</span><span class="w"> </span><span class="mf">02</span><span class="n">_sequence_tasks</span><span class="mf">.</span><span class="n">md</span><span class="w">      </span><span class="err">#</span><span class="w"> </span><span class="n">Sequence</span><span class="w"> </span><span class="n">classification</span><span class="o">/</span><span class="n">generation</span>
+</code></pre></div>
+
+<hr />
+<h2 id="core-concepts">Core Concepts<a class="header-link" href="#core-concepts" title="Permanent link">&para;</a></h2>
+<h3 id="1-role-of-gates">1. Role of Gates<a class="header-link" href="#1-role-of-gates" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Forget Gate (f):
+- Close to 1: retain previous information
+- Close to 0: discard previous information
+- Example: reset previous context when new sentence starts
+
+Input Gate (i):
+- Determines importance of new information
+- Works with Candidate (c̃)
+
+Output Gate (o):
+- What from cell state to expose as hidden
+- Example: remember internally but don&#39;t output
+</code></pre></div>
+
+<h3 id="2-peephole-connection-optional">2. Peephole Connection (Optional)<a class="header-link" href="#2-peephole-connection-optional" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Basic LSTM: gates only reference [h_{t-1}, x_t]
+Peephole: gates also reference c_{t-1}
+
+f_t = σ(W_f · [h_{t-1}, x_t] + W_{cf} · c_{t-1} + b_f)
+i_t = σ(W_i · [h_{t-1}, x_t] + W_{ci} · c_{t-1} + b_i)
+o_t = σ(W_o · [h_{t-1}, x_t] + W_{co} · c_t + b_o)
+
+Effect: directly use cell state information in gate decisions
+</code></pre></div>
+
+<h3 id="3-bidirectional-lstm">3. Bidirectional LSTM<a class="header-link" href="#3-bidirectional-lstm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">Proc</span><span class="nv">ess</span><span class="w"> </span><span class="nv">sequence</span><span class="w"> </span><span class="nv">in</span><span class="w"> </span><span class="nv">both</span><span class="w"> </span><span class="nv">directions</span><span class="p">:</span>
+
+<span class="nl">Forward:</span><span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="nf">h_1</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nv">h_2</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nv">h_3</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nv">h_4</span><span class="w"> </span><span class="err">→</span>
+<span class="nl">Backward:</span><span class="w"> </span><span class="err">←</span><span class="w"> </span><span class="nf">h_4</span><span class="w"> </span><span class="err">←</span><span class="w"> </span><span class="nv">h_3</span><span class="w"> </span><span class="err">←</span><span class="w"> </span><span class="nv">h_2</span><span class="w"> </span><span class="err">←</span><span class="w"> </span><span class="nv">h_1</span><span class="w"> </span><span class="err">←</span>
+
+<span class="nl">Output:</span><span class="w"> </span><span class="err">[</span><span class="nf">forward_h_t</span><span class="c1">; backward_h_t] (concatenate)</span>
+
+<span class="nl">Advantages:</span>
+<span class="err">-</span><span class="w"> </span><span class="nf">Use</span><span class="w"> </span><span class="nv">future</span><span class="w"> </span><span class="nv">context</span><span class="w"> </span><span class="nv">too</span>
+<span class="err">-</span><span class="w"> </span><span class="nf">Effective</span><span class="w"> </span><span class="nv">for</span><span class="w"> </span><span class="nv">NER</span><span class="p">,</span><span class="w"> </span><span class="nv">POS</span><span class="w"> </span><span class="nv">tagging</span>
+<span class="err">-</span><span class="w"> </span><span class="nf">Standard</span><span class="w"> </span><span class="nv">in</span><span class="w"> </span><span class="nv">NLP</span><span class="w"> </span><span class="nv">before</span><span class="w"> </span><span class="nv">Transformer</span>
+</code></pre></div>
+
+<h3 id="4-stacked-lstm">4. Stacked LSTM<a class="header-link" href="#4-stacked-lstm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Stack multiple LSTM layers:
+
+x_t → LSTM_1 → h_t^1 → LSTM_2 → h_t^2 → ... → output
+
+Each layer:
+<span class="k">-</span> Takes previous layer&#39;s hidden as input
+<span class="k">-</span> Learns more abstract representations
+
+Caution: harder to train as it gets deeper
+<span class="k">-</span> Dropout essential (especially between layers)
+<span class="k">-</span> Residual connections help
+</code></pre></div>
+
+<hr />
+<h2 id="implementation-levels">Implementation Levels<a class="header-link" href="#implementation-levels" title="Permanent link">&para;</a></h2>
+<h3 id="level-1-numpy-from-scratch-numpy">Level 1: NumPy From-Scratch (numpy/)<a class="header-link" href="#level-1-numpy-from-scratch-numpy" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Direct implementation of all gate operations</li>
+<li>Manual BPTT gradient computation</li>
+<li>Derive cell state gradient</li>
+</ul>
+<h3 id="level-2-pytorch-low-level-pytorch_lowlevel">Level 2: PyTorch Low-Level (pytorch_lowlevel/)<a class="header-link" href="#level-2-pytorch-low-level-pytorch_lowlevel" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Use F.linear, torch.sigmoid, torch.tanh</li>
+<li>Don't use nn.LSTM</li>
+<li>Manual parameter management</li>
+<li>Implement Bidirectional, Stacked</li>
+</ul>
+<h3 id="level-3-paper-implementation-paper">Level 3: Paper Implementation (paper/)<a class="header-link" href="#level-3-paper-implementation-paper" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Hochreiter &amp; Schmidhuber (1997) LSTM</li>
+<li>Cho et al. (2014) GRU</li>
+<li>Peephole connections</li>
+</ul>
+<hr />
+<h2 id="learning-checklist">Learning Checklist<a class="header-link" href="#learning-checklist" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] Vanilla RNN vanishing gradient problem</li>
+<li>[ ] Memorize 4 LSTM equations</li>
+<li>[ ] Memorize 3 GRU equations</li>
+<li>[ ] Why cell state preserves gradient</li>
+<li>[ ] Explain role of each gate</li>
+<li>[ ] LSTM vs GRU pros/cons</li>
+<li>[ ] BPTT implementation</li>
+<li>[ ] Bidirectional, Stacked structures</li>
+</ul>
+<hr />
+<h2 id="references">References<a class="header-link" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Hochreiter &amp; Schmidhuber (1997). "Long Short-Term Memory"</li>
+<li>Cho et al. (2014). "Learning Phrase Representations using RNN Encoder-Decoder"</li>
+<li><a href="https://colah.github.io/posts/2015-08-Understanding-LSTMs/">colah's blog: Understanding LSTM</a></li>
+<li><a href="https://d2l.ai/chapter_recurrent-modern/lstm.html">d2l.ai: LSTM</a></li>
+<li><a href="../02_MLP/README.md">../02_MLP/README.md</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/Deep_Learning/14_LSTM_GRU.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">14. LSTM and GRU</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/Deep_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/Deep_Learning/16_Attention_Transformer.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">16. Attention and Transformer</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'en';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

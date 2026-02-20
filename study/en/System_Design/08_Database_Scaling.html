@@ -1,0 +1,1207 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Scaling - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/en/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/en/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/en/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" selected>
+                        English
+                    </option>
+                    
+                    <option value="ko" >
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/en/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/en/System_Design/">System Design</a>
+    <span class="separator">/</span>
+    <span class="current">Database Scaling</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>Database Scaling</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/System_Design/07_Distributed_Cache_Systems.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">Distributed Cache Systems</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/System_Design/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/System_Design/09_Database_Replication.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">Database Replication</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#table-of-contents">Table of Contents</a></li>
+<li><a href="#1-the-need-for-database-scaling">1. The Need for Database Scaling</a><ul>
+<li><a href="#11-limitations-of-a-single-database">1.1 Limitations of a Single Database</a></li>
+<li><a href="#12-scaling-strategy-overview">1.2 Scaling Strategy Overview</a></li>
+</ul>
+</li>
+<li><a href="#2-partitioning-vs-sharding">2. Partitioning vs Sharding</a><ul>
+<li><a href="#21-partitioning">2.1 Partitioning</a></li>
+<li><a href="#22-sharding">2.2 Sharding</a></li>
+<li><a href="#23-comparison">2.3 Comparison</a></li>
+</ul>
+</li>
+<li><a href="#3-sharding-strategies">3. Sharding Strategies</a><ul>
+<li><a href="#31-range-based-sharding">3.1 Range-Based Sharding</a></li>
+<li><a href="#32-hash-based-sharding">3.2 Hash-Based Sharding</a></li>
+<li><a href="#33-directory-based-sharding">3.3 Directory-Based Sharding</a></li>
+<li><a href="#34-strategy-comparison">3.4 Strategy Comparison</a></li>
+</ul>
+</li>
+<li><a href="#4-shard-key-selection">4. Shard Key Selection</a><ul>
+<li><a href="#41-characteristics-of-a-good-shard-key">4.1 Characteristics of a Good Shard Key</a></li>
+<li><a href="#42-shard-key-examples-by-domain">4.2 Shard Key Examples by Domain</a></li>
+</ul>
+</li>
+<li><a href="#5-hotspot-prevention">5. Hotspot Prevention</a><ul>
+<li><a href="#51-the-hotspot-problem">5.1 The Hotspot Problem</a></li>
+<li><a href="#52-hotspot-prevention-strategies">5.2 Hotspot Prevention Strategies</a></li>
+</ul>
+</li>
+<li><a href="#6-rebalancing">6. Rebalancing</a><ul>
+<li><a href="#61-when-rebalancing-is-needed">6.1 When Rebalancing is Needed</a></li>
+<li><a href="#62-rebalancing-strategies">6.2 Rebalancing Strategies</a></li>
+</ul>
+</li>
+<li><a href="#7-practice-problems">7. Practice Problems</a><ul>
+<li><a href="#problem-1-choosing-a-sharding-strategy">Problem 1: Choosing a Sharding Strategy</a></li>
+<li><a href="#problem-2-shard-key-selection">Problem 2: Shard Key Selection</a></li>
+<li><a href="#problem-3-hotspot-resolution">Problem 3: Hotspot Resolution</a></li>
+<li><a href="#problem-4-rebalancing-plan">Problem 4: Rebalancing Plan</a></li>
+</ul>
+</li>
+<li><a href="#answers">Answers</a><ul>
+<li><a href="#problem-1-answer">Problem 1 Answer</a></li>
+<li><a href="#problem-2-answer">Problem 2 Answer</a></li>
+<li><a href="#problem-3-answer">Problem 3 Answer</a></li>
+<li><a href="#problem-4-answer">Problem 4 Answer</a></li>
+</ul>
+</li>
+<li><a href="#8-next-steps">8. Next Steps</a><ul>
+<li><a href="#next-lesson">Next Lesson</a></li>
+<li><a href="#related-lessons">Related Lessons</a></li>
+<li><a href="#recommended-practice">Recommended Practice</a></li>
+</ul>
+</li>
+<li><a href="#9-references">9. References</a><ul>
+<li><a href="#books">Books</a></li>
+<li><a href="#databases">Databases</a></li>
+<li><a href="#case-studies">Case Studies</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="database-scaling">Database Scaling<a class="header-link" href="#database-scaling" title="Permanent link">&para;</a></h1>
+<h2 id="overview">Overview<a class="header-link" href="#overview" title="Permanent link">&para;</a></h2>
+<p>This document covers database scaling strategies. You will learn the difference between partitioning and sharding, various sharding strategies (Range, Hash, Directory), shard key selection, hotspot prevention, and rebalancing.</p>
+<p><strong>Difficulty</strong>: ⭐⭐⭐
+<strong>Estimated Learning Time</strong>: 2-3 hours
+<strong>Prerequisites</strong>: <a href="./07_Distributed_Cache_Systems.md">07_Distributed_Cache_Systems.md</a>, <a href="../PostgreSQL/00_Overview.md">PostgreSQL Folder</a></p>
+<hr />
+<h2 id="table-of-contents">Table of Contents<a class="header-link" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-the-need-for-database-scaling">The Need for Database Scaling</a></li>
+<li><a href="#2-partitioning-vs-sharding">Partitioning vs Sharding</a></li>
+<li><a href="#3-sharding-strategies">Sharding Strategies</a></li>
+<li><a href="#4-shard-key-selection">Shard Key Selection</a></li>
+<li><a href="#5-hotspot-prevention">Hotspot Prevention</a></li>
+<li><a href="#6-rebalancing">Rebalancing</a></li>
+<li><a href="#7-practice-problems">Practice Problems</a></li>
+<li><a href="#8-next-steps">Next Steps</a></li>
+<li><a href="#9-references">References</a></li>
+</ol>
+<hr />
+<h2 id="1-the-need-for-database-scaling">1. The Need for Database Scaling<a class="header-link" href="#1-the-need-for-database-scaling" title="Permanent link">&para;</a></h2>
+<h3 id="11-limitations-of-a-single-database">1.1 Limitations of a Single Database<a class="header-link" href="#11-limitations-of-a-single-database" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│              Single Database Limitations                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Issues with Traffic/Data Growth:                               │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  1. Storage Capacity Limits                                │ │
+│  │     • Physical limits of single disk/server                │ │
+│  │     • Difficult to manage data exceeding tens of TB        │ │
+│  │                                                            │ │
+│  │  2. Throughput Limits                                      │ │
+│  │     • Single server CPU/memory limitations                 │ │
+│  │     • Limited concurrent connections                       │ │
+│  │                                                            │ │
+│  │  3. Increased Response Time                                │ │
+│  │     • Large tables → Slow queries                          │ │
+│  │     • Growing index sizes                                  │ │
+│  │                                                            │ │
+│  │  4. Single Point of Failure (SPOF)                         │ │
+│  │     • Server failure = Entire service failure              │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  Solutions:                                                      │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Vertical Scaling (Scale Up)                               │ │
+│  │    → More powerful hardware (has limits)                   │ │
+│  │                                                            │ │
+│  │  Horizontal Scaling (Scale Out)                            │ │
+│  │    → Distribute across multiple servers (partitioning/     │ │
+│  │      sharding)                                             │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="12-scaling-strategy-overview">1.2 Scaling Strategy Overview<a class="header-link" href="#12-scaling-strategy-overview" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                 </span><span class="n">Database</span><span class="w"> </span><span class="n">Scaling</span><span class="w"> </span><span class="n">Strategies</span><span class="w">                      </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="mf">1.</span><span class="w"> </span><span class="n">Read</span><span class="w"> </span><span class="n">Replica</span><span class="w">                                           </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">     </span><span class="err">•</span><span class="w"> </span><span class="n">Distribute</span><span class="w"> </span><span class="n">read</span><span class="w"> </span><span class="n">load</span><span class="w">                                 </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">     </span><span class="err">•</span><span class="w"> </span><span class="n">Covered</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">detail</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">next</span><span class="w"> </span><span class="n">lesson</span><span class="w">                     </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="mf">2.</span><span class="w"> </span><span class="n">Partitioning</span><span class="w">                                           </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">     </span><span class="err">•</span><span class="w"> </span><span class="n">Split</span><span class="w"> </span><span class="n">tables</span><span class="w"> </span><span class="n">within</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">single</span><span class="w"> </span><span class="n">DB</span><span class="w">                      </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">     </span><span class="err">•</span><span class="w"> </span><span class="n">PostgreSQL</span><span class="w"> </span><span class="n">native</span><span class="w"> </span><span class="n">partitioning</span><span class="w">                       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="mf">3.</span><span class="w"> </span><span class="n">Sharding</span><span class="w">                                               </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">     </span><span class="err">•</span><span class="w"> </span><span class="n">Distribute</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="n">across</span><span class="w"> </span><span class="n">multiple</span><span class="w"> </span><span class="n">DB</span><span class="w"> </span><span class="n">servers</span><span class="w">           </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">     </span><span class="err">•</span><span class="w"> </span><span class="n">Core</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">horizontal</span><span class="w"> </span><span class="n">scaling</span><span class="w">                           </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                    </span><span class="p">[</span><span class="n">Single</span><span class="w"> </span><span class="n">DB</span><span class="p">]</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                        </span><span class="err">│</span><span class="w">                                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">┌──────────────┼──────────────┐</span><span class="w">                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">         </span><span class="err">▼</span><span class="w">              </span><span class="err">▼</span><span class="w">              </span><span class="err">▼</span><span class="w">                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="p">[</span><span class="n">Replication</span><span class="p">]</span><span class="w">  </span><span class="p">[</span><span class="n">Partitioning</span><span class="p">]</span><span class="w">   </span><span class="p">[</span><span class="n">Sharding</span><span class="p">]</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">    </span><span class="n">Read</span><span class="w"> </span><span class="n">scaling</span><span class="w">   </span><span class="n">Single</span><span class="w"> </span><span class="n">DB</span><span class="w"> </span><span class="n">split</span><span class="w">  </span><span class="n">Multi</span><span class="o">-</span><span class="n">DB</span><span class="w"> </span><span class="n">distributed</span><span class="w">         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<hr />
+<h2 id="2-partitioning-vs-sharding">2. Partitioning vs Sharding<a class="header-link" href="#2-partitioning-vs-sharding" title="Permanent link">&para;</a></h2>
+<h3 id="21-partitioning">2.1 Partitioning<a class="header-link" href="#21-partitioning" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                        </span><span class="nt">Partitioning</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="s2">&quot;Splitting a table into multiple partitions within a single    │</span>
+<span class="s2">│   DB server&quot;</span><span class="w">                                                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">┌───────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">              </span><span class="nt">Database</span><span class="w"> </span><span class="nt">Server</span><span class="w">                          </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────────────────────────────────┐</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">              </span><span class="nt">orders</span><span class="w"> </span><span class="o">(</span><span class="nt">logical</span><span class="w"> </span><span class="nt">table</span><span class="o">)</span><span class="w">             </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">└─────────────────────────────────────────────────┘</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                        </span><span class="err">│</span><span class="w">                              </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">         </span><span class="err">┌──────────────┼──────────────┐</span><span class="w">               </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">         </span><span class="err">▼</span><span class="w">              </span><span class="err">▼</span><span class="w">              </span><span class="err">▼</span><span class="w">               </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">┌───────────┐</span><span class="w">  </span><span class="err">┌───────────┐</span><span class="w">  </span><span class="err">┌───────────┐</span><span class="w">         </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="nt">orders_2022</span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="nt">orders_2023</span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="nt">orders_2024</span><span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="o">(</span><span class="nt">partition1</span><span class="o">)</span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="o">(</span><span class="nt">partition2</span><span class="o">)</span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="o">(</span><span class="nt">partition3</span><span class="o">)</span><span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">└───────────┘</span><span class="w">  </span><span class="err">└───────────┘</span><span class="w">  </span><span class="err">└───────────┘</span><span class="w">         </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">└───────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nt">PostgreSQL</span><span class="w"> </span><span class="nt">Example</span><span class="o">:</span><span class="w">                                            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">--</span><span class="w"> </span><span class="nt">Create</span><span class="w"> </span><span class="nt">partitioned</span><span class="w"> </span><span class="nt">table</span><span class="w">                               </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">CREATE</span><span class="w"> </span><span class="nt">TABLE</span><span class="w"> </span><span class="nt">orders</span><span class="w"> </span><span class="o">(</span><span class="w">                                     </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="nt">id</span><span class="w"> </span><span class="nt">SERIAL</span><span class="o">,</span><span class="w">                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="nt">order_date</span><span class="w"> </span><span class="nt">DATE</span><span class="o">,</span><span class="w">                                      </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="nt">amount</span><span class="w"> </span><span class="nt">DECIMAL</span><span class="w">                                        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="o">)</span><span class="w"> </span><span class="nt">PARTITION</span><span class="w"> </span><span class="nt">BY</span><span class="w"> </span><span class="nt">RANGE</span><span class="w"> </span><span class="o">(</span><span class="nt">order_date</span><span class="o">);</span><span class="w">                        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">--</span><span class="w"> </span><span class="nt">Create</span><span class="w"> </span><span class="nt">partition</span><span class="w">                                       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nt">CREATE</span><span class="w"> </span><span class="nt">TABLE</span><span class="w"> </span><span class="nt">orders_2024</span><span class="w"> </span><span class="nt">PARTITION</span><span class="w"> </span><span class="nt">OF</span><span class="w"> </span><span class="nt">orders</span><span class="w">              </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="nt">FOR</span><span class="w"> </span><span class="nt">VALUES</span><span class="w"> </span><span class="nt">FROM</span><span class="w"> </span><span class="o">(</span><span class="s1">&#39;2024-01-01&#39;</span><span class="o">)</span><span class="w"> </span><span class="nt">TO</span><span class="w"> </span><span class="o">(</span><span class="s1">&#39;2025-01-01&#39;</span><span class="o">);</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nt">Advantages</span><span class="o">:</span><span class="w">                                                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="nt">Improved</span><span class="w"> </span><span class="nt">query</span><span class="w"> </span><span class="nt">performance</span><span class="w"> </span><span class="o">(</span><span class="nt">partition</span><span class="w"> </span><span class="nt">pruning</span><span class="o">)</span><span class="w">               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="nt">Easier</span><span class="w"> </span><span class="nt">data</span><span class="w"> </span><span class="nt">management</span><span class="w"> </span><span class="o">(</span><span class="nt">delete</span><span class="o">/</span><span class="nt">backup</span><span class="w"> </span><span class="nt">per</span><span class="w"> </span><span class="nt">partition</span><span class="o">)</span><span class="w">         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="nt">Reduced</span><span class="w"> </span><span class="nt">index</span><span class="w"> </span><span class="nt">size</span><span class="w">                                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nt">Limitations</span><span class="o">:</span><span class="w">                                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="nt">Still</span><span class="w"> </span><span class="nt">a</span><span class="w"> </span><span class="nt">single</span><span class="w"> </span><span class="nt">server</span><span class="w"> </span><span class="o">(</span><span class="nt">capacity</span><span class="o">,</span><span class="w"> </span><span class="nt">throughput</span><span class="w"> </span><span class="nt">limits</span><span class="o">)</span><span class="w">          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="22-sharding">2.2 Sharding<a class="header-link" href="#22-sharding" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                          </span><span class="n">Sharding</span><span class="w">                                </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="s2">&quot;Distributing data across multiple DB servers&quot;</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">         </span><span class="err">┌─────────────────────────────────────────┐</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w">           </span><span class="n">Application</span><span class="w">                   </span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">         </span><span class="err">└──────────────────┬──────────────────────┘</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                            </span><span class="err">│</span><span class="w">                               </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                   </span><span class="err">┌────────┴────────┐</span><span class="w">                      </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span><span class="w">  </span><span class="n">Shard</span><span class="w"> </span><span class="n">Router</span><span class="w">   </span><span class="err">│</span><span class="w">                      </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span><span class="w"> </span><span class="p">(</span><span class="n">Shard</span><span class="w"> </span><span class="n">Selector</span><span class="p">)</span><span class="err">│</span><span class="w">                      </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                   </span><span class="err">└────────┬────────┘</span><span class="w">                      </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                            </span><span class="err">│</span><span class="w">                               </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">         </span><span class="err">┌──────────────────┼──────────────────┐</span><span class="w">            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">         </span><span class="err">│</span><span class="w">                  </span><span class="err">│</span><span class="w">                  </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">         </span><span class="err">▼</span><span class="w">                  </span><span class="err">▼</span><span class="w">                  </span><span class="err">▼</span><span class="w">            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">┌────────────┐</span><span class="w">     </span><span class="err">┌────────────┐</span><span class="w">     </span><span class="err">┌────────────┐</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">Shard</span><span class="w"> </span><span class="mi">1</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">  </span><span class="n">Shard</span><span class="w"> </span><span class="mi">2</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">  </span><span class="n">Shard</span><span class="w"> </span><span class="mi">3</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="p">(</span><span class="n">Server</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="p">(</span><span class="n">Server</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="p">(</span><span class="n">Server</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="w"> </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">user_id</span><span class="w">    </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="n">user_id</span><span class="w">    </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="n">user_id</span><span class="w">    </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="mi">1</span><span class="o">-</span><span class="mi">1000000</span><span class="w">  </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="mi">1000001</span><span class="o">-</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="mi">2000001</span><span class="o">-</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">            </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="mi">2000000</span><span class="w">    </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="mi">3000000</span><span class="w">    </span><span class="err">│</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">└────────────┘</span><span class="w">     </span><span class="err">└────────────┘</span><span class="w">     </span><span class="err">└────────────┘</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Advantages</span><span class="p">:</span><span class="w">                                                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">Theoretically</span><span class="w"> </span><span class="n">unlimited</span><span class="w"> </span><span class="n">scaling</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">Reduced</span><span class="w"> </span><span class="nb">load</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">each</span><span class="w"> </span><span class="n">shard</span><span class="w">                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">Fault</span><span class="w"> </span><span class="n">isolation</span><span class="w">                                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Disadvantages</span><span class="p">:</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">Increased</span><span class="w"> </span><span class="n">complexity</span><span class="w">                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">Difficult</span><span class="w"> </span><span class="n">cross</span><span class="o">-</span><span class="n">shard</span><span class="w"> </span><span class="n">queries</span><span class="w">                                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">Transaction</span><span class="w"> </span><span class="n">constraints</span><span class="w">                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="n">Difficult</span><span class="w"> </span><span class="n">rebalancing</span><span class="w">                                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="23-comparison">2.3 Comparison<a class="header-link" href="#23-comparison" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Partitioning</th>
+<th>Sharding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Location</td>
+<td>Within single server</td>
+<td>Across multiple servers</td>
+</tr>
+<tr>
+<td>Scalability</td>
+<td>Limited</td>
+<td>High</td>
+</tr>
+<tr>
+<td>Complexity</td>
+<td>Low</td>
+<td>High</td>
+</tr>
+<tr>
+<td>Transactions</td>
+<td>Full support</td>
+<td>Within shard only</td>
+</tr>
+<tr>
+<td>JOIN</td>
+<td>Possible</td>
+<td>Cross-shard difficult</td>
+</tr>
+<tr>
+<td>Management</td>
+<td>DB handles automatically</td>
+<td>Application manages</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-sharding-strategies">3. Sharding Strategies<a class="header-link" href="#3-sharding-strategies" title="Permanent link">&para;</a></h2>
+<h3 id="31-range-based-sharding">3.1 Range-Based Sharding<a class="header-link" href="#31-range-based-sharding" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                    </span><span class="nx">Range</span><span class="o">-</span><span class="nx">Based</span><span class="w"> </span><span class="nx">Sharding</span><span class="w">                          </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="s">&quot;Determine shard based on value ranges&quot;</span><span class="w">                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nx">user_id</span><span class="w"> </span><span class="nx">based</span><span class="w"> </span><span class="nx">Range</span><span class="w"> </span><span class="nx">sharding</span><span class="p">:</span><span class="w">                             </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">┌─────────────┐</span><span class="w">  </span><span class="err">┌─────────────┐</span><span class="w">  </span><span class="err">┌─────────────┐</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nx">Shard</span><span class="w"> </span><span class="mi">1</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nx">Shard</span><span class="w"> </span><span class="mi">2</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nx">Shard</span><span class="w"> </span><span class="mi">3</span><span class="w">    </span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">user_id</span><span class="w">     </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">user_id</span><span class="w">     </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">user_id</span><span class="w">     </span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="mi">1</span><span class="nx">M</span><span class="w">      </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="mi">1</span><span class="nx">M</span><span class="o">+</span><span class="mi">1</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="mi">2</span><span class="nx">M</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="mi">2</span><span class="nx">M</span><span class="o">+</span><span class="mi">1</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="mi">3</span><span class="nx">M</span><span class="w">   </span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">└─────────────┘</span><span class="w">  </span><span class="err">└─────────────┘</span><span class="w">  </span><span class="err">└─────────────┘</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nx">Date</span><span class="w"> </span><span class="nx">based</span><span class="w"> </span><span class="nx">Range</span><span class="w"> </span><span class="nx">sharding</span><span class="p">:</span><span class="w">                                </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">┌─────────────┐</span><span class="w">  </span><span class="err">┌─────────────┐</span><span class="w">  </span><span class="err">┌─────────────┐</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nx">Shard</span><span class="w"> </span><span class="mi">1</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nx">Shard</span><span class="w"> </span><span class="mi">2</span><span class="w">    </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nx">Shard</span><span class="w"> </span><span class="mi">3</span><span class="w">    </span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="mi">2022</span><span class="w">        </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="mi">2023</span><span class="w">        </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="mi">2024</span><span class="w">        </span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">data</span><span class="w">        </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">data</span><span class="w">        </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">data</span><span class="w">        </span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">             </span><span class="err">│</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">└─────────────┘</span><span class="w">  </span><span class="err">└─────────────┘</span><span class="w">  </span><span class="err">└─────────────┘</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">Routing</span><span class="w"> </span><span class="nx">Logic</span><span class="p">:</span><span class="w">                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="nx">def</span><span class="w"> </span><span class="nx">get_shard</span><span class="p">(</span><span class="nx">user_id</span><span class="p">):</span><span class="w">                                   </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="nx">user_id</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">1</span><span class="nx">_000_000</span><span class="p">:</span><span class="w">                              </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">          </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;shard_1&quot;</span><span class="w">                                  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="nx">elif</span><span class="w"> </span><span class="nx">user_id</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">2</span><span class="nx">_000_000</span><span class="p">:</span><span class="w">                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">          </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;shard_2&quot;</span><span class="w">                                  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">      </span><span class="k">else</span><span class="p">:</span><span class="w">                                                 </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">          </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;shard_3&quot;</span><span class="w">                                  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">Advantages</span><span class="p">:</span><span class="w">                                                     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="nx">Efficient</span><span class="w"> </span><span class="nx">range</span><span class="w"> </span><span class="nx">queries</span><span class="w">                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="nx">Simple</span><span class="w"> </span><span class="nx">implementation</span><span class="w">                                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nx">Disadvantages</span><span class="p">:</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="nx">Possible</span><span class="w"> </span><span class="nx">hotspots</span><span class="w"> </span><span class="p">(</span><span class="nx">new</span><span class="w"> </span><span class="nx">users</span><span class="w"> </span><span class="nx">concentrated</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="nx">last</span><span class="w"> </span><span class="nx">shard</span><span class="p">)</span><span class="w">     </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">•</span><span class="w"> </span><span class="nx">Uneven</span><span class="w"> </span><span class="nx">distribution</span><span class="w"> </span><span class="nx">possible</span><span class="w">                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="32-hash-based-sharding">3.2 Hash-Based Sharding<a class="header-link" href="#32-hash-based-sharding" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                     Hash-Based Sharding                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  &quot;Determine shard by hash value of the key&quot;                     │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  shard = hash(user_id) % N                                 │ │
+│  │                                                            │ │
+│  │  user_id: 12345                                            │ │
+│  │  hash(12345) = 67890                                       │ │
+│  │  67890 % 3 = 0 → Shard 0                                   │ │
+│  │                                                            │ │
+│  │  user_id: 12346                                            │ │
+│  │  hash(12346) = 12347                                       │ │
+│  │  12347 % 3 = 1 → Shard 1                                   │ │
+│  │                                                            │ │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │ │
+│  │  │  Shard 0    │  │  Shard 1    │  │  Shard 2    │        │ │
+│  │  │             │  │             │  │             │        │ │
+│  │  │ user: 12345 │  │ user: 12346 │  │ user: 12347 │        │ │
+│  │  │ user: 12348 │  │ user: 12349 │  │ user: 12350 │        │ │
+│  │  │     ...     │  │     ...     │  │     ...     │        │ │
+│  │  │             │  │             │  │             │        │ │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘        │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  Routing Logic:                                                 │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  def get_shard(user_id, num_shards=3):                     │ │
+│  │      hash_value = hash(str(user_id))                       │ │
+│  │      shard_id = hash_value % num_shards                    │ │
+│  │      return f&quot;shard_{shard_id}&quot;                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  Advantages:                                                     │
+│  • Even distribution                                            │
+│  • Hotspot prevention                                           │
+│                                                                  │
+│  Disadvantages:                                                  │
+│  • Difficult range queries (requires querying all shards)       │
+│  • Large-scale redistribution when adding/removing shards       │
+│  • → Solved with consistent hashing                             │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="33-directory-based-sharding">3.3 Directory-Based Sharding<a class="header-link" href="#33-directory-based-sharding" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                  Directory-Based Sharding                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  &quot;Determine shard using a lookup table (directory)&quot;             │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │                   Application                              │ │
+│  │                        │                                   │ │
+│  │                        │ user_id: 12345                    │ │
+│  │                        ▼                                   │ │
+│  │              ┌──────────────────┐                          │ │
+│  │              │ Directory Service│                          │ │
+│  │              │ (Lookup Table)   │                          │ │
+│  │              │                  │                          │ │
+│  │              │ user_id │ shard  │                          │ │
+│  │              │ ────────┼─────── │                          │ │
+│  │              │ 12345   │ shard_2│                          │ │
+│  │              │ 12346   │ shard_1│                          │ │
+│  │              │ 12347   │ shard_3│                          │ │
+│  │              │   ...   │  ...   │                          │ │
+│  │              └─────────┬────────┘                          │ │
+│  │                        │                                   │ │
+│  │                        │ shard_2                           │ │
+│  │                        ▼                                   │ │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │ │
+│  │  │  Shard 1    │  │  Shard 2    │  │  Shard 3    │        │ │
+│  │  └─────────────┘  └──────┬──────┘  └─────────────┘        │ │
+│  │                          │                                 │ │
+│  │                          ▼                                 │ │
+│  │                    user: 12345                             │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  Advantages:                                                     │
+│  • Flexible data movement                                       │
+│  • Easy to resolve imbalances                                   │
+│  • Can move specific users to specific shards                   │
+│                                                                  │
+│  Disadvantages:                                                  │
+│  • Directory service is SPOF                                    │
+│  • Additional lookup overhead                                   │
+│  • Directory size growth                                        │
+│                                                                  │
+│  Solutions:                                                      │
+│  • Cache the directory (Redis)                                  │
+│  • Replicate the directory                                      │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="34-strategy-comparison">3.4 Strategy Comparison<a class="header-link" href="#34-strategy-comparison" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Even Distribution</th>
+<th>Range Queries</th>
+<th>Rebalancing</th>
+<th>Complexity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Range</td>
+<td>Low</td>
+<td>Good</td>
+<td>Difficult</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>Hash</td>
+<td>Good</td>
+<td>Difficult</td>
+<td>Difficult</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>Directory</td>
+<td>Good</td>
+<td>Possible</td>
+<td>Easy</td>
+<td>High</td>
+</tr>
+<tr>
+<td>Consistent Hash</td>
+<td>Good</td>
+<td>Difficult</td>
+<td>Easy</td>
+<td>Medium</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-shard-key-selection">4. Shard Key Selection<a class="header-link" href="#4-shard-key-selection" title="Permanent link">&para;</a></h2>
+<h3 id="41-characteristics-of-a-good-shard-key">4.1 Characteristics of a Good Shard Key<a class="header-link" href="#41-characteristics-of-a-good-shard-key" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                Good Shard Key Characteristics                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. High Cardinality                                            │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Good: user_id (millions of unique values)                 │ │
+│  │  Bad:  country (dozens)                                    │ │
+│  │  Bad:  status (few)                                        │ │
+│  │                                                            │ │
+│  │  → Many unique values enable even distribution             │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  2. Even Distribution                                           │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Good: hashed user_id                                      │ │
+│  │  Bad:  created_date (new data concentrated on one shard)   │ │
+│  │  Bad:  popular product_id (queries concentrated on certain │ │
+│  │        products)                                           │ │
+│  │                                                            │ │
+│  │  → Data and queries should be evenly distributed           │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  3. Query Pattern Alignment                                     │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Most queries: &quot;WHERE user_id = ?&quot;                         │ │
+│  │  → Use user_id as shard key!                               │ │
+│  │                                                            │ │
+│  │  Most queries: &quot;WHERE order_date BETWEEN ... AND ...&quot;      │ │
+│  │  → Use order_date as shard key!                            │ │
+│  │                                                            │ │
+│  │  → Frequent queries should be processed within a single    │ │
+│  │    shard                                                   │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  4. Immutability                                                │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Good: user_id (doesn&#39;t change)                            │ │
+│  │  Bad:  email (user can change it)                          │ │
+│  │  Bad:  status (changes)                                    │ │
+│  │                                                            │ │
+│  │  → Changing shard key = Data migration (expensive)         │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="42-shard-key-examples-by-domain">4.2 Shard Key Examples by Domain<a class="header-link" href="#42-shard-key-examples-by-domain" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                   Shard Key Examples by Domain                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Social Media (User-centric):                                   │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  • users: user_id                                          │ │
+│  │  • posts: user_id (author)                                 │ │
+│  │  • followers: user_id (the one being followed)             │ │
+│  │  • messages: conversation_id                               │ │
+│  │                                                            │ │
+│  │  → User&#39;s data stays in the same shard!                    │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  E-commerce (Tenant-centric):                                   │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  • products: merchant_id                                   │ │
+│  │  • orders: user_id or order_id                             │ │
+│  │  • reviews: product_id                                     │ │
+│  │                                                            │ │
+│  │  Note: If orders use user_id,                              │ │
+│  │        seller order queries require all shards             │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  SaaS (Tenant-centric):                                         │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  • All tables: tenant_id                                   │ │
+│  │                                                            │ │
+│  │  → Complete isolation per tenant                           │ │
+│  │  → No cross-tenant queries needed                          │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  Logs/Analytics (Time-series):                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  • logs: timestamp (Range sharding)                        │ │
+│  │  • metrics: (device_id, timestamp)                         │ │
+│  │                                                            │ │
+│  │  → Efficient for range queries                             │ │
+│  │  → Easy to delete old shards                               │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="5-hotspot-prevention">5. Hotspot Prevention<a class="header-link" href="#5-hotspot-prevention" title="Permanent link">&para;</a></h2>
+<h3 id="51-the-hotspot-problem">5.1 The Hotspot Problem<a class="header-link" href="#51-the-hotspot-problem" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                     </span><span class="n">The</span><span class="w"> </span><span class="n">Hotspot</span><span class="w"> </span><span class="n">Problem</span><span class="w">                          </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="s2">&quot;A phenomenon where traffic/data concentrates on a specific    │</span>
+<span class="err">│</span><span class="w">   </span><span class="n">shard</span><span class="s2">&quot;                                                        │</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">Normal</span><span class="p">:</span><span class="w">                                                   </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">┌───────┐</span><span class="w"> </span><span class="err">┌───────┐</span><span class="w"> </span><span class="err">┌───────┐</span><span class="w">                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="n">Shard</span><span class="w"> </span><span class="mi">1</span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="n">Shard</span><span class="w"> </span><span class="mi">2</span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="n">Shard</span><span class="w"> </span><span class="mi">3</span><span class="err">│</span><span class="w">                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="mi">33</span><span class="o">%</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="mi">33</span><span class="o">%</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="mi">33</span><span class="o">%</span><span class="w">  </span><span class="err">│</span><span class="w">                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">└───────┘</span><span class="w"> </span><span class="err">└───────┘</span><span class="w"> </span><span class="err">└───────┘</span><span class="w">                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="n">Hotspot</span><span class="p">:</span><span class="w">                                                  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">┌───────┐</span><span class="w"> </span><span class="err">┌───────┐</span><span class="w"> </span><span class="err">┌───────┐</span><span class="w">                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="n">Shard</span><span class="w"> </span><span class="mi">1</span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="n">Shard</span><span class="w"> </span><span class="mi">2</span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="n">Shard</span><span class="w"> </span><span class="mi">3</span><span class="err">│</span><span class="w">                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="mi">80</span><span class="o">%</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="mi">10</span><span class="o">%</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="mi">10</span><span class="o">%</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">Overloaded</span><span class="o">!</span><span class="w">                </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="err">└───────┘</span><span class="w"> </span><span class="err">└───────┘</span><span class="w"> </span><span class="err">└───────┘</span><span class="w">                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">Causes</span><span class="p">:</span><span class="w">                                                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌────────────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="mf">1.</span><span class="w"> </span><span class="n">Range</span><span class="w"> </span><span class="n">sharding</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">Sequential</span><span class="w"> </span><span class="n">keys</span><span class="w">                       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">     </span><span class="err">→</span><span class="w"> </span><span class="n">New</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="n">concentrated</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">last</span><span class="w"> </span><span class="n">shard</span><span class="w">                  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="mf">2.</span><span class="w"> </span><span class="n">Popular</span><span class="w"> </span><span class="n">entities</span><span class="w">                                       </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">     </span><span class="err">→</span><span class="w"> </span><span class="n">Celebrity</span><span class="w"> </span><span class="n">accounts</span><span class="p">,</span><span class="w"> </span><span class="n">popular</span><span class="w"> </span><span class="n">products</span><span class="w">                 </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">  </span><span class="mf">3.</span><span class="w"> </span><span class="n">Time</span><span class="o">-</span><span class="n">based</span><span class="w"> </span><span class="n">patterns</span><span class="w">                                    </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">     </span><span class="err">→</span><span class="w"> </span><span class="n">Specific</span><span class="w"> </span><span class="n">shard</span><span class="w"> </span><span class="n">concentration</span><span class="w"> </span><span class="n">at</span><span class="w"> </span><span class="n">certain</span><span class="w"> </span><span class="n">times</span><span class="w">        </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                                            </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└────────────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                  </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="52-hotspot-prevention-strategies">5.2 Hotspot Prevention Strategies<a class="header-link" href="#52-hotspot-prevention-strategies" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                Hotspot Prevention Strategies                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. Use Hash-Based Sharding                                     │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Use Hash instead of Range for even distribution           │ │
+│  │  user_id: 1, 2, 3 → distributed, not in same shard         │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  2. Composite Shard Key                                         │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Single key: user_id                                       │ │
+│  │  → Popular users become hotspots                           │ │
+│  │                                                            │ │
+│  │  Composite key: (user_id, post_id)                         │ │
+│  │  → Same user&#39;s posts are also distributed                  │ │
+│  │                                                            │ │
+│  │  shard = hash(user_id + &quot;_&quot; + post_id) % N                 │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  3. Salting                                                     │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Original key: celebrity_123                               │ │
+│  │  Salting:     celebrity_123_0                              │ │
+│  │               celebrity_123_1                              │ │
+│  │               celebrity_123_2                              │ │
+│  │                                                            │ │
+│  │  # Write: Add random salt                                  │ │
+│  │  salt = random(0, 10)                                      │ │
+│  │  key = f&quot;{user_id}_{salt}&quot;                                 │ │
+│  │                                                            │ │
+│  │  # Read: Query all salts and combine                       │ │
+│  │  for salt in range(10):                                    │ │
+│  │      results += query(f&quot;{user_id}_{salt}&quot;)                 │ │
+│  │                                                            │ │
+│  │  → Write distribution, increased read complexity           │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  4. Hot Entity Special Handling                                 │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  • Cache popular entities (Redis)                          │ │
+│  │  • Dedicated shard/server                                  │ │
+│  │  • Async processing (counters, etc.)                       │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="6-rebalancing">6. Rebalancing<a class="header-link" href="#6-rebalancing" title="Permanent link">&para;</a></h2>
+<h3 id="61-when-rebalancing-is-needed">6.1 When Rebalancing is Needed<a class="header-link" href="#61-when-rebalancing-is-needed" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                  When Rebalancing is Needed                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. Adding Shards (Expansion)                                   │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Before: [Shard 1] [Shard 2] [Shard 3]                     │ │
+│  │  After:  [Shard 1] [Shard 2] [Shard 3] [Shard 4]           │ │
+│  │                                                            │ │
+│  │  Move some data to new shard                               │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  2. Removing Shards (Contraction)                               │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Before: [Shard 1] [Shard 2] [Shard 3]                     │ │
+│  │  After:  [Shard 1] [Shard 2]                               │ │
+│  │                                                            │ │
+│  │  Move Shard 3 data to other shards                         │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  3. Resolving Imbalance                                         │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Before: [Shard 1: 80%] [Shard 2: 10%] [Shard 3: 10%]      │ │
+│  │  After:  [Shard 1: 33%] [Shard 2: 33%] [Shard 3: 33%]      │ │
+│  │                                                            │ │
+│  │  Move data from Shard 1 to other shards                    │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="62-rebalancing-strategies">6.2 Rebalancing Strategies<a class="header-link" href="#62-rebalancing-strategies" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                    Rebalancing Strategies                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. Consistent Hashing                                          │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Minimal data movement when adding/removing shards         │ │
+│  │  Learned in previous lesson                                │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  2. Dual Write                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  Phase 1: Add new shard, write to both                     │ │
+│  │  ┌──────┐     ┌──────┐     ┌──────┐                        │ │
+│  │  │Old S1│     │Old S2│     │New S3│                        │ │
+│  │  │ R/W  │     │ R/W  │     │  W   │                        │ │
+│  │  └──────┘     └──────┘     └──────┘                        │ │
+│  │                                                            │ │
+│  │  Phase 2: Migrate existing data (background)               │ │
+│  │                                                            │ │
+│  │  Phase 3: Read from new shard as well                      │ │
+│  │  ┌──────┐     ┌──────┐     ┌──────┐                        │ │
+│  │  │Shard1│     │Shard2│     │Shard3│                        │ │
+│  │  │ R/W  │     │ R/W  │     │ R/W  │                        │ │
+│  │  └──────┘     └──────┘     └──────┘                        │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  3. Version-Based Routing                                       │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                                                            │ │
+│  │  shard_config_v1:                                          │ │
+│  │    range 1-1M → shard_1                                    │ │
+│  │    range 1M-2M → shard_2                                   │ │
+│  │                                                            │ │
+│  │  shard_config_v2: (after migration)                        │ │
+│  │    range 1-700K → shard_1                                  │ │
+│  │    range 700K-1.4M → shard_2                               │ │
+│  │    range 1.4M-2M → shard_3                                 │ │
+│  │                                                            │ │
+│  │  # New writes use v2, existing reads use v1                │ │
+│  │  # Switch to v2 after migration complete                   │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="7-practice-problems">7. Practice Problems<a class="header-link" href="#7-practice-problems" title="Permanent link">&para;</a></h2>
+<h3 id="problem-1-choosing-a-sharding-strategy">Problem 1: Choosing a Sharding Strategy<a class="header-link" href="#problem-1-choosing-a-sharding-strategy" title="Permanent link">&para;</a></h3>
+<p>Choose the appropriate sharding strategy for the following services.</p>
+<p>a) Chat app (messages per conversation room)
+b) Log analysis system
+c) Global user service
+d) SaaS multi-tenant</p>
+<h3 id="problem-2-shard-key-selection">Problem 2: Shard Key Selection<a class="header-link" href="#problem-2-shard-key-selection" title="Permanent link">&para;</a></h3>
+<p>Choose the shard key for the following tables in an e-commerce service.</p>
+<ul>
+<li>users (id, email, name)</li>
+<li>orders (id, user_id, status, created_at)</li>
+<li>order_items (id, order_id, product_id, quantity)</li>
+<li>products (id, merchant_id, name, price)</li>
+</ul>
+<p>Requirements:
+- Frequent queries for user orders
+- Need to query products by seller
+- Orders and order items queried together</p>
+<h3 id="problem-3-hotspot-resolution">Problem 3: Hotspot Resolution<a class="header-link" href="#problem-3-hotspot-resolution" title="Permanent link">&para;</a></h3>
+<p>Comments are concentrating on popular posts, overloading that shard. Propose solutions.</p>
+<h3 id="problem-4-rebalancing-plan">Problem 4: Rebalancing Plan<a class="header-link" href="#problem-4-rebalancing-plan" title="Permanent link">&para;</a></h3>
+<p>You want to expand from 3 shards to 5 shards. Plan a zero-downtime migration.</p>
+<hr />
+<h2 id="answers">Answers<a class="header-link" href="#answers" title="Permanent link">&para;</a></h2>
+<h3 id="problem-1-answer">Problem 1 Answer<a class="header-link" href="#problem-1-answer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="n">Chat</span><span class="w"> </span><span class="nl">app</span><span class="p">:</span><span class="w"> </span><span class="n">Hash</span><span class="p">(</span><span class="n">conversation_id</span><span class="p">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Messages</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">same</span><span class="w"> </span><span class="n">conversation</span><span class="w"> </span><span class="n">room</span><span class="w"> </span><span class="k">go</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">same</span><span class="w"> </span><span class="n">shard</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Efficient</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">queries</span><span class="w"> </span><span class="k">are</span><span class="w"> </span><span class="n">per</span><span class="w"> </span><span class="n">conversation</span><span class="w"> </span><span class="n">room</span>
+
+<span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="nf">Log</span><span class="w"> </span><span class="nl">analysis</span><span class="p">:</span><span class="w"> </span><span class="k">Range</span><span class="p">(</span><span class="nc">timestamp</span><span class="p">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="nc">Time</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="n">queries</span><span class="w"> </span><span class="k">are</span><span class="w"> </span><span class="n">efficient</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Easy</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="k">delete</span><span class="w"> </span><span class="k">old</span><span class="w"> </span><span class="nf">log</span><span class="w"> </span><span class="n">shards</span>
+
+<span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="k">Global</span><span class="w"> </span><span class="nl">users</span><span class="p">:</span><span class="w"> </span><span class="n">Hash</span><span class="p">(</span><span class="nf">user_id</span><span class="p">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Even</span><span class="w"> </span><span class="n">distribution</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Efficient</span><span class="w"> </span><span class="n">per</span><span class="o">-</span><span class="k">user</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">queries</span>
+
+<span class="n">d</span><span class="p">)</span><span class="w"> </span><span class="n">SaaS</span><span class="w"> </span><span class="n">multi</span><span class="o">-</span><span class="nl">tenant</span><span class="p">:</span><span class="w"> </span><span class="n">tenant_id</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Complete</span><span class="w"> </span><span class="k">isolation</span><span class="w"> </span><span class="n">per</span><span class="w"> </span><span class="n">tenant</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="k">No</span><span class="w"> </span><span class="k">cross</span><span class="o">-</span><span class="n">tenant</span><span class="w"> </span><span class="n">queries</span><span class="w"> </span><span class="n">needed</span>
+</code></pre></div>
+
+<h3 id="problem-2-answer">Problem 2 Answer<a class="header-link" href="#problem-2-answer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">users</span><span class="o">:</span><span class="w"> </span><span class="n">Hash</span><span class="o">(</span><span class="n">user_id</span><span class="o">)</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Use</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">primary</span><span class="w"> </span><span class="n">key</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Even</span><span class="w"> </span><span class="n">distribution</span>
+
+<span class="n">orders</span><span class="o">:</span><span class="w"> </span><span class="n">Hash</span><span class="o">(</span><span class="n">user_id</span><span class="o">)</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">main</span><span class="w"> </span><span class="n">query</span><span class="w"> </span><span class="n">condition</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Efficient</span><span class="w"> </span><span class="n">user</span><span class="w"> </span><span class="n">order</span><span class="w"> </span><span class="n">queries</span>
+
+<span class="n">order_items</span><span class="o">:</span><span class="w"> </span><span class="n">Hash</span><span class="o">(</span><span class="n">order_id</span><span class="o">)</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Or</span><span class="w"> </span><span class="n">Hash</span><span class="o">(</span><span class="n">user_id</span><span class="o">)</span><span class="w"> </span><span class="o">(</span><span class="n">same</span><span class="w"> </span><span class="n">shard</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">orders</span><span class="o">)</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Using</span><span class="w"> </span><span class="n">order_id</span><span class="w"> </span><span class="n">may</span><span class="w"> </span><span class="n">put</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">different</span><span class="w"> </span><span class="n">shard</span><span class="w"> </span><span class="n">than</span><span class="w"> </span><span class="n">orders</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Recommend</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="o">(</span><span class="n">same</span><span class="w"> </span><span class="n">shard</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">orders</span><span class="o">)</span>
+
+<span class="n">products</span><span class="o">:</span><span class="w"> </span><span class="n">Hash</span><span class="o">(</span><span class="n">merchant_id</span><span class="o">)</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Query</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="n">seller</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Seller</span><span class="w"> </span><span class="n">unit</span><span class="w"> </span><span class="n">isolation</span>
+
+<span class="n">Cross</span><span class="o">-</span><span class="n">shard</span><span class="w"> </span><span class="n">considerations</span><span class="o">:</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Order</span><span class="w"> </span><span class="n">product</span><span class="w"> </span><span class="n">info</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Use</span><span class="w"> </span><span class="n">cache</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Seller</span><span class="w"> </span><span class="n">order</span><span class="w"> </span><span class="n">queries</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Separate</span><span class="w"> </span><span class="n">index</span><span class="w"> </span><span class="n">table</span>
+</code></pre></div>
+
+<h3 id="problem-3-answer">Problem 3 Answer<a class="header-link" href="#problem-3-answer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">Solutions</span><span class="o">:</span>
+
+<span class="mi">1</span><span class="o">.</span><span class="w"> </span><span class="n">Hot</span><span class="w"> </span><span class="n">post</span><span class="w"> </span><span class="n">caching</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Cache</span><span class="w"> </span><span class="n">comments</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">Redis</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Batch</span><span class="w"> </span><span class="n">save</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">DB</span><span class="w"> </span><span class="n">periodically</span>
+
+<span class="mi">2</span><span class="o">.</span><span class="w"> </span><span class="n">Apply</span><span class="w"> </span><span class="n">salting</span>
+<span class="w">   </span><span class="n">post_123_0</span><span class="o">,</span><span class="w"> </span><span class="n">post_123_1</span><span class="o">,</span><span class="w"> </span><span class="o">...</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Random</span><span class="w"> </span><span class="n">salt</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">write</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Query</span><span class="w"> </span><span class="n">all</span><span class="w"> </span><span class="n">salts</span><span class="w"> </span><span class="n">and</span><span class="w"> </span><span class="n">combine</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">read</span>
+
+<span class="mi">3</span><span class="o">.</span><span class="w"> </span><span class="n">Separate</span><span class="w"> </span><span class="n">comment</span><span class="w"> </span><span class="n">counters</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Manage</span><span class="w"> </span><span class="n">counters</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">Redis</span><span class="w"> </span><span class="n">only</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Async</span><span class="w"> </span><span class="n">DB</span><span class="w"> </span><span class="n">updates</span>
+
+<span class="mi">4</span><span class="o">.</span><span class="w"> </span><span class="n">Change</span><span class="w"> </span><span class="n">shard</span><span class="w"> </span><span class="n">key</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Use</span><span class="w"> </span><span class="o">(</span><span class="n">post_id</span><span class="o">,</span><span class="w"> </span><span class="n">comment_id</span><span class="o">)</span><span class="w"> </span><span class="n">composite</span><span class="w"> </span><span class="n">key</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Same</span><span class="w"> </span><span class="n">post</span><span class="err">&#39;</span><span class="n">s</span><span class="w"> </span><span class="n">comments</span><span class="w"> </span><span class="n">are</span><span class="w"> </span><span class="n">also</span><span class="w"> </span><span class="n">distributed</span>
+
+<span class="mi">5</span><span class="o">.</span><span class="w"> </span><span class="n">Dedicated</span><span class="w"> </span><span class="n">handling</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Detect</span><span class="w"> </span><span class="n">popular</span><span class="w"> </span><span class="n">posts</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Add</span><span class="w"> </span><span class="n">dedicated</span><span class="w"> </span><span class="n">cache</span><span class="w"> </span><span class="n">layer</span>
+</code></pre></div>
+
+<h3 id="problem-4-answer">Problem 4 Answer<a class="header-link" href="#problem-4-answer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Zero-downtime migration plan:
+
+Phase 1: Prepare new shards
+   - Prepare Shard 4, 5 servers
+   - Create schema
+
+Phase 2: Start dual write
+   - Update router
+   - New writes → Old shards + New shards (based on consistent hashing)
+
+Phase 3: Migrate existing data
+   - Background copy
+   - Determine targets by consistent hashing (about 40% moves)
+
+Phase 4: Verification
+   - Compare data counts
+   - Verify sample data
+
+Phase 5: Switch reads
+   - Activate new routing rules
+   - Gradual switch (10% → 50% → 100%)
+
+Phase 6: Stop dual write
+   - Remove old routing
+
+Phase 7: Cleanup
+   - Delete migrated data from old shards
+</code></pre></div>
+
+<hr />
+<h2 id="8-next-steps">8. Next Steps<a class="header-link" href="#8-next-steps" title="Permanent link">&para;</a></h2>
+<p>After understanding database scaling, learn about database replication.</p>
+<h3 id="next-lesson">Next Lesson<a class="header-link" href="#next-lesson" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="./09_Database_Replication.md">09_Database_Replication.md</a></li>
+</ul>
+<h3 id="related-lessons">Related Lessons<a class="header-link" href="#related-lessons" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="./07_Distributed_Cache_Systems.md">07_Distributed_Cache_Systems.md</a> - Consistent Hashing</li>
+<li><a href="../PostgreSQL/18_Table_Partitioning.md">PostgreSQL/18_Table_Partitioning.md</a></li>
+</ul>
+<h3 id="recommended-practice">Recommended Practice<a class="header-link" href="#recommended-practice" title="Permanent link">&para;</a></h3>
+<ol>
+<li>PostgreSQL partitioning hands-on</li>
+<li>Implement a sharding router</li>
+<li>Implement consistent hashing</li>
+</ol>
+<hr />
+<h2 id="9-references">9. References<a class="header-link" href="#9-references" title="Permanent link">&para;</a></h2>
+<h3 id="books">Books<a class="header-link" href="#books" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Designing Data-Intensive Applications - Ch. 6</li>
+</ul>
+<h3 id="databases">Databases<a class="header-link" href="#databases" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="https://vitess.io/">Vitess</a> - MySQL Sharding</li>
+<li><a href="https://www.citusdata.com/">Citus</a> - PostgreSQL Sharding</li>
+<li><a href="https://docs.mongodb.com/manual/sharding/">MongoDB Sharding</a></li>
+</ul>
+<h3 id="case-studies">Case Studies<a class="header-link" href="#case-studies" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="https://instagram-engineering.com/sharding-ids-at-instagram-1cf5a71e5a5c">Instagram Sharding</a></li>
+<li><a href="https://medium.com/pinterest-engineering/sharding-pinterest-how-we-scaled-our-mysql-fleet-3f341e96ca6f">Pinterest Sharding</a></li>
+</ul>
+<hr />
+<p><strong>Document Information</strong>
+- Last Updated: 2024
+- Difficulty: ⭐⭐⭐
+- Estimated Learning Time: 2-3 hours</p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/System_Design/07_Distributed_Cache_Systems.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">Distributed Cache Systems</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/System_Design/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/System_Design/09_Database_Replication.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">Database Replication</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'en';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

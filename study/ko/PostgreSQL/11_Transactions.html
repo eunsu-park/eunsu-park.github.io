@@ -1,0 +1,734 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>트랜잭션 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/PostgreSQL/">PostgreSQL</a>
+    <span class="separator">/</span>
+    <span class="current">트랜잭션</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>트랜잭션</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/PostgreSQL/10_Functions_and_Procedures.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">함수와 프로시저</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/PostgreSQL/12_Triggers.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">트리거</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#1">1. 트랜잭션 개념</a></li>
+<li><a href="#2-acid">2. ACID 속성</a></li>
+<li><a href="#3">3. 기본 트랜잭션 명령</a><ul>
+<li><a href="#begin-commit-rollback">BEGIN / COMMIT / ROLLBACK</a></li>
+<li><a href="#_2">실습 예제</a></li>
+</ul>
+</li>
+<li><a href="#4-autocommit">4. 자동 커밋 (Autocommit)</a></li>
+<li><a href="#5-savepoint">5. SAVEPOINT</a><ul>
+<li><a href="#savepoint">SAVEPOINT 관리</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 트랜잭션 격리 수준</a><ul>
+<li><a href="#_3">격리 수준 종류</a></li>
+<li><a href="#postgresql">PostgreSQL 기본값</a></li>
+<li><a href="#_4">격리 수준 설정</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 동시성 문제</a><ul>
+<li><a href="#dirty-read">Dirty Read (더티 리드)</a></li>
+<li><a href="#non-repeatable-read">Non-repeatable Read (비반복 읽기)</a></li>
+<li><a href="#phantom-read">Phantom Read (팬텀 리드)</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 격리 수준별 동작</a><ul>
+<li><a href="#read-committed">READ COMMITTED (기본)</a></li>
+<li><a href="#repeatable-read">REPEATABLE READ</a></li>
+<li><a href="#serializable">SERIALIZABLE</a></li>
+</ul>
+</li>
+<li><a href="#9-locking">9. 잠금 (Locking)</a><ul>
+<li><a href="#_5">행 수준 잠금</a></li>
+<li><a href="#_6">잠금 옵션</a></li>
+<li><a href="#_7">테이블 수준 잠금</a></li>
+</ul>
+</li>
+<li><a href="#10-deadlock">10. 교착상태 (Deadlock)</a><ul>
+<li><a href="#_8">교착상태 방지</a></li>
+</ul>
+</li>
+<li><a href="#11">11. 실습 예제</a><ul>
+<li><a href="#1_1">실습 1: 기본 트랜잭션</a></li>
+<li><a href="#2-savepoint">실습 2: SAVEPOINT 활용</a></li>
+<li><a href="#3_1">실습 3: 격리 수준 테스트</a></li>
+<li><a href="#4-for-update">실습 4: FOR UPDATE 잠금</a></li>
+</ul>
+</li>
+<li><a href="#12">12. 트랜잭션 모니터링</a></li>
+<li><a href="#_9">다음 단계</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="_1">트랜잭션<a class="header-link" href="#_1" title="Permanent link">&para;</a></h1>
+<h2 id="1">1. 트랜잭션 개념<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<p>트랜잭션은 하나의 논리적 작업 단위를 구성하는 연산들의 집합입니다.</p>
+<div class="highlight"><pre><span></span><code>┌──────────────────────────────────────────────────────────┐
+│                     계좌 이체 트랜잭션                    │
+├──────────────────────────────────────────────────────────┤
+│  1. A 계좌에서 10만원 차감                               │
+│  2. B 계좌에 10만원 추가                                 │
+│  → 둘 다 성공하거나, 둘 다 실패해야 함                  │
+└──────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="2-acid">2. ACID 속성<a class="header-link" href="#2-acid" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>속성</th>
+<th>영문</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>원자성</td>
+<td>Atomicity</td>
+<td>전부 성공 또는 전부 실패</td>
+</tr>
+<tr>
+<td>일관성</td>
+<td>Consistency</td>
+<td>트랜잭션 전후로 데이터 일관성 유지</td>
+</tr>
+<tr>
+<td>격리성</td>
+<td>Isolation</td>
+<td>동시 실행 트랜잭션 간 간섭 방지</td>
+</tr>
+<tr>
+<td>지속성</td>
+<td>Durability</td>
+<td>완료된 트랜잭션은 영구 저장</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3">3. 기본 트랜잭션 명령<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="begin-commit-rollback">BEGIN / COMMIT / ROLLBACK<a class="header-link" href="#begin-commit-rollback" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 트랜잭션 시작</span>
+<span class="k">BEGIN</span><span class="p">;</span>
+<span class="c1">-- 또는</span>
+<span class="k">START</span><span class="w"> </span><span class="k">TRANSACTION</span><span class="p">;</span>
+
+<span class="c1">-- 작업 수행</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">100000</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">100000</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+
+<span class="c1">-- 커밋 (변경사항 확정)</span>
+<span class="k">COMMIT</span><span class="p">;</span>
+
+<span class="c1">-- 또는 롤백 (변경사항 취소)</span>
+<span class="k">ROLLBACK</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="_2">실습 예제<a class="header-link" href="#_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 테이블 생성</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">name</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span>
+<span class="w">    </span><span class="n">balance</span><span class="w"> </span><span class="nb">NUMERIC</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">0</span>
+<span class="p">);</span>
+
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">balance</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span>
+<span class="p">(</span><span class="s1">&#39;김철수&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">1000000</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;이영희&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">500000</span><span class="p">);</span>
+
+<span class="c1">-- 이체 트랜잭션</span>
+<span class="k">BEGIN</span><span class="p">;</span>
+
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">100000</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;김철수&#39;</span><span class="p">;</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">100000</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;이영희&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 확인</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="p">;</span>
+
+<span class="c1">-- 확정 또는 취소</span>
+<span class="k">COMMIT</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 또는 ROLLBACK;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-autocommit">4. 자동 커밋 (Autocommit)<a class="header-link" href="#4-autocommit" title="Permanent link">&para;</a></h2>
+<p>psql은 기본적으로 자동 커밋 모드입니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 자동 커밋 모드에서 각 문장은 개별 트랜잭션</span>
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">balance</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;박민수&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">300000</span><span class="p">);</span>
+<span class="c1">-- 즉시 커밋됨</span>
+
+<span class="c1">-- 자동 커밋 비활성화</span>
+<span class="err">\</span><span class="k">set</span><span class="w"> </span><span class="n">AUTOCOMMIT</span><span class="w"> </span><span class="k">off</span>
+
+<span class="c1">-- 이제 명시적 COMMIT 필요</span>
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">balance</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;최지영&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">400000</span><span class="p">);</span>
+<span class="k">COMMIT</span><span class="p">;</span>
+
+<span class="c1">-- 자동 커밋 다시 활성화</span>
+<span class="err">\</span><span class="k">set</span><span class="w"> </span><span class="n">AUTOCOMMIT</span><span class="w"> </span><span class="k">on</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-savepoint">5. SAVEPOINT<a class="header-link" href="#5-savepoint" title="Permanent link">&para;</a></h2>
+<p>트랜잭션 내에서 부분 롤백 지점을 만듭니다.</p>
+<div class="highlight"><pre><span></span><code><span class="k">BEGIN</span><span class="p">;</span>
+
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">balance</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;신규1&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">100000</span><span class="p">);</span>
+<span class="n">SAVEPOINT</span><span class="w"> </span><span class="n">sp1</span><span class="p">;</span>
+
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">balance</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;신규2&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">200000</span><span class="p">);</span>
+<span class="n">SAVEPOINT</span><span class="w"> </span><span class="n">sp2</span><span class="p">;</span>
+
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">balance</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;신규3&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">300000</span><span class="p">);</span>
+
+<span class="c1">-- sp2로 롤백 (신규3만 취소)</span>
+<span class="k">ROLLBACK</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">SAVEPOINT</span><span class="w"> </span><span class="n">sp2</span><span class="p">;</span>
+
+<span class="c1">-- sp1으로 롤백 (신규2, 신규3 취소)</span>
+<span class="k">ROLLBACK</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">SAVEPOINT</span><span class="w"> </span><span class="n">sp1</span><span class="p">;</span>
+
+<span class="c1">-- 전체 커밋 (신규1만 저장)</span>
+<span class="k">COMMIT</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="savepoint">SAVEPOINT 관리<a class="header-link" href="#savepoint" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- SAVEPOINT 해제</span>
+<span class="n">RELEASE</span><span class="w"> </span><span class="n">SAVEPOINT</span><span class="w"> </span><span class="n">sp1</span><span class="p">;</span>
+
+<span class="c1">-- SAVEPOINT 덮어쓰기 (같은 이름으로 재생성)</span>
+<span class="n">SAVEPOINT</span><span class="w"> </span><span class="n">mypoint</span><span class="p">;</span>
+<span class="c1">-- ... 작업 ...</span>
+<span class="n">SAVEPOINT</span><span class="w"> </span><span class="n">mypoint</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 새 지점으로 대체</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 트랜잭션 격리 수준<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<p>동시에 실행되는 트랜잭션 간의 격리 정도를 결정합니다.</p>
+<h3 id="_3">격리 수준 종류<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>수준</th>
+<th>Dirty Read</th>
+<th>Non-repeatable Read</th>
+<th>Phantom Read</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>READ UNCOMMITTED</td>
+<td>가능</td>
+<td>가능</td>
+<td>가능</td>
+</tr>
+<tr>
+<td>READ COMMITTED</td>
+<td>방지</td>
+<td>가능</td>
+<td>가능</td>
+</tr>
+<tr>
+<td>REPEATABLE READ</td>
+<td>방지</td>
+<td>방지</td>
+<td>가능*</td>
+</tr>
+<tr>
+<td>SERIALIZABLE</td>
+<td>방지</td>
+<td>방지</td>
+<td>방지</td>
+</tr>
+</tbody>
+</table>
+<p>*PostgreSQL의 REPEATABLE READ는 Phantom Read도 방지</p>
+<h3 id="postgresql">PostgreSQL 기본값<a class="header-link" href="#postgresql" title="Permanent link">&para;</a></h3>
+<p>PostgreSQL의 기본 격리 수준은 <strong>READ COMMITTED</strong>입니다.</p>
+<h3 id="_4">격리 수준 설정<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 트랜잭션별 설정</span>
+<span class="k">BEGIN</span><span class="w"> </span><span class="k">TRANSACTION</span><span class="w"> </span><span class="k">ISOLATION</span><span class="w"> </span><span class="k">LEVEL</span><span class="w"> </span><span class="k">SERIALIZABLE</span><span class="p">;</span>
+<span class="c1">-- 또는</span>
+<span class="k">BEGIN</span><span class="p">;</span>
+<span class="k">SET</span><span class="w"> </span><span class="k">TRANSACTION</span><span class="w"> </span><span class="k">ISOLATION</span><span class="w"> </span><span class="k">LEVEL</span><span class="w"> </span><span class="k">REPEATABLE</span><span class="w"> </span><span class="k">READ</span><span class="p">;</span>
+
+<span class="c1">-- 세션 전체 설정</span>
+<span class="k">SET</span><span class="w"> </span><span class="k">SESSION</span><span class="w"> </span><span class="k">CHARACTERISTICS</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">TRANSACTION</span><span class="w"> </span><span class="k">ISOLATION</span><span class="w"> </span><span class="k">LEVEL</span><span class="w"> </span><span class="k">SERIALIZABLE</span><span class="p">;</span>
+
+<span class="c1">-- 현재 격리 수준 확인</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">transaction_isolation</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 동시성 문제<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="dirty-read">Dirty Read (더티 리드)<a class="header-link" href="#dirty-read" title="Permanent link">&para;</a></h3>
+<p>커밋되지 않은 데이터를 읽는 문제 → PostgreSQL에서는 발생하지 않음</p>
+<h3 id="non-repeatable-read">Non-repeatable Read (비반복 읽기)<a class="header-link" href="#non-repeatable-read" title="Permanent link">&para;</a></h3>
+<p>같은 트랜잭션 내에서 같은 데이터를 두 번 읽었을 때 다른 값이 나오는 문제</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 트랜잭션 A</span>
+<span class="k">BEGIN</span><span class="p">;</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 1000000</span>
+
+<span class="c1">-- 트랜잭션 B가 업데이트하고 커밋</span>
+<span class="c1">-- UPDATE accounts SET balance = 900000 WHERE id = 1; COMMIT;</span>
+
+<span class="k">SELECT</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 900000 (다른 값!)</span>
+<span class="k">COMMIT</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="phantom-read">Phantom Read (팬텀 리드)<a class="header-link" href="#phantom-read" title="Permanent link">&para;</a></h3>
+<p>같은 조건으로 조회했을 때 행의 개수가 달라지는 문제</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 트랜잭션 A</span>
+<span class="k">BEGIN</span><span class="p">;</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">500000</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 2개</span>
+
+<span class="c1">-- 트랜잭션 B가 새 행 삽입하고 커밋</span>
+<span class="c1">-- INSERT INTO accounts VALUES (...); COMMIT;</span>
+
+<span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">500000</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 3개 (유령 행!)</span>
+<span class="k">COMMIT</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="8">8. 격리 수준별 동작<a class="header-link" href="#8" title="Permanent link">&para;</a></h2>
+<h3 id="read-committed">READ COMMITTED (기본)<a class="header-link" href="#read-committed" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">BEGIN</span><span class="w"> </span><span class="k">TRANSACTION</span><span class="w"> </span><span class="k">ISOLATION</span><span class="w"> </span><span class="k">LEVEL</span><span class="w"> </span><span class="k">READ</span><span class="w"> </span><span class="k">COMMITTED</span><span class="p">;</span>
+
+<span class="c1">-- 다른 트랜잭션이 커밋한 변경사항을 즉시 볼 수 있음</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 최신 커밋된 데이터</span>
+
+<span class="k">COMMIT</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="repeatable-read">REPEATABLE READ<a class="header-link" href="#repeatable-read" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">BEGIN</span><span class="w"> </span><span class="k">TRANSACTION</span><span class="w"> </span><span class="k">ISOLATION</span><span class="w"> </span><span class="k">LEVEL</span><span class="w"> </span><span class="k">REPEATABLE</span><span class="w"> </span><span class="k">READ</span><span class="p">;</span>
+
+<span class="c1">-- 트랜잭션 시작 시점의 스냅샷을 봄</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="p">;</span>
+
+<span class="c1">-- 다른 트랜잭션이 커밋해도 같은 결과</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 동일</span>
+
+<span class="k">COMMIT</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="serializable">SERIALIZABLE<a class="header-link" href="#serializable" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">BEGIN</span><span class="w"> </span><span class="k">TRANSACTION</span><span class="w"> </span><span class="k">ISOLATION</span><span class="w"> </span><span class="k">LEVEL</span><span class="w"> </span><span class="k">SERIALIZABLE</span><span class="p">;</span>
+
+<span class="c1">-- 가장 엄격한 격리</span>
+<span class="c1">-- 직렬화 충돌 시 오류 발생 가능</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">500000</span><span class="p">;</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">10000</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+
+<span class="k">COMMIT</span><span class="p">;</span>
+<span class="c1">-- ERROR: could not serialize access due to concurrent update</span>
+<span class="c1">-- (다른 트랜잭션과 충돌 시)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="9-locking">9. 잠금 (Locking)<a class="header-link" href="#9-locking" title="Permanent link">&para;</a></h2>
+<h3 id="_5">행 수준 잠금<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- SELECT FOR UPDATE: 조회하면서 잠금</span>
+<span class="k">BEGIN</span><span class="p">;</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">UPDATE</span><span class="p">;</span>
+<span class="c1">-- 다른 트랜잭션은 이 행을 수정/삭제 불가</span>
+
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">100000</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="k">COMMIT</span><span class="p">;</span>
+
+<span class="c1">-- SELECT FOR SHARE: 공유 잠금 (읽기는 허용, 쓰기 불가)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">SHARE</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="_6">잠금 옵션<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 대기하지 않고 실패</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">UPDATE</span><span class="w"> </span><span class="n">NOWAIT</span><span class="p">;</span>
+
+<span class="c1">-- 지정된 시간만 대기</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">UPDATE</span><span class="w"> </span><span class="n">SKIP</span><span class="w"> </span><span class="n">LOCKED</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="_7">테이블 수준 잠금<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 명시적 테이블 잠금 (드물게 사용)</span>
+<span class="k">LOCK</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="k">EXCLUSIVE</span><span class="w"> </span><span class="k">MODE</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="10-deadlock">10. 교착상태 (Deadlock)<a class="header-link" href="#10-deadlock" title="Permanent link">&para;</a></h2>
+<p>두 트랜잭션이 서로의 잠금을 기다리는 상태</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 트랜잭션 A</span>
+<span class="k">BEGIN</span><span class="p">;</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="c1">-- id=1 잠금</span>
+
+<span class="c1">-- 트랜잭션 B</span>
+<span class="k">BEGIN</span><span class="p">;</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="c1">-- id=2 잠금</span>
+
+<span class="c1">-- 트랜잭션 A</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="c1">-- id=2 대기...</span>
+
+<span class="c1">-- 트랜잭션 B</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="c1">-- id=1 대기... → 교착상태!</span>
+
+<span class="c1">-- PostgreSQL이 자동으로 한 트랜잭션을 중단시킴</span>
+<span class="c1">-- ERROR: deadlock detected</span>
+</code></pre></div>
+
+<h3 id="_8">교착상태 방지<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 항상 같은 순서로 잠금 획득</span>
+<span class="k">BEGIN</span><span class="p">;</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 항상 작은 id 먼저</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+<span class="k">COMMIT</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="11">11. 실습 예제<a class="header-link" href="#11" title="Permanent link">&para;</a></h2>
+<h3 id="1_1">실습 1: 기본 트랜잭션<a class="header-link" href="#1_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 계좌 이체</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">PROCEDURE</span><span class="w"> </span><span class="n">transfer</span><span class="p">(</span>
+<span class="w">    </span><span class="n">from_id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="p">,</span>
+<span class="w">    </span><span class="n">to_id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="p">,</span>
+<span class="w">    </span><span class="n">amount</span><span class="w"> </span><span class="nb">NUMERIC</span>
+<span class="p">)</span>
+<span class="k">AS</span><span class="w"> </span><span class="err">$$</span>
+<span class="k">BEGIN</span>
+<span class="w">    </span><span class="c1">-- 출금</span>
+<span class="w">    </span><span class="k">UPDATE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">from_id</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">-- 잔액 확인</span>
+<span class="w">    </span><span class="k">IF</span><span class="w"> </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">from_id</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">THEN</span>
+<span class="w">        </span><span class="n">RAISE</span><span class="w"> </span><span class="k">EXCEPTION</span><span class="w"> </span><span class="s1">&#39;잔액 부족&#39;</span><span class="p">;</span>
+<span class="w">    </span><span class="k">END</span><span class="w"> </span><span class="k">IF</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">-- 입금</span>
+<span class="w">    </span><span class="k">UPDATE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">to_id</span><span class="p">;</span>
+
+<span class="w">    </span><span class="k">COMMIT</span><span class="p">;</span>
+<span class="k">EXCEPTION</span>
+<span class="w">    </span><span class="k">WHEN</span><span class="w"> </span><span class="n">OTHERS</span><span class="w"> </span><span class="k">THEN</span>
+<span class="w">        </span><span class="k">ROLLBACK</span><span class="p">;</span>
+<span class="w">        </span><span class="n">RAISE</span><span class="p">;</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="err">$$</span><span class="w"> </span><span class="k">LANGUAGE</span><span class="w"> </span><span class="n">plpgsql</span><span class="p">;</span>
+
+<span class="c1">-- 사용</span>
+<span class="k">CALL</span><span class="w"> </span><span class="n">transfer</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">100000</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="2-savepoint">실습 2: SAVEPOINT 활용<a class="header-link" href="#2-savepoint" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">BEGIN</span><span class="p">;</span>
+
+<span class="c1">-- 기본 데이터 삽입</span>
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">50000</span><span class="p">);</span>
+<span class="n">SAVEPOINT</span><span class="w"> </span><span class="n">order_created</span><span class="p">;</span>
+
+<span class="c1">-- 재고 차감 시도</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">stock</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">stock</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+
+<span class="c1">-- 재고 확인</span>
+<span class="k">IF</span><span class="w"> </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="n">stock</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">THEN</span>
+<span class="w">    </span><span class="k">ROLLBACK</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">SAVEPOINT</span><span class="w"> </span><span class="n">order_created</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">-- 주문은 유지하되 재고 차감만 취소</span>
+<span class="k">END</span><span class="w"> </span><span class="k">IF</span><span class="p">;</span>
+
+<span class="k">COMMIT</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="3_1">실습 3: 격리 수준 테스트<a class="header-link" href="#3_1" title="Permanent link">&para;</a></h3>
+<p>터미널 2개를 열어 테스트합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 터미널 1</span>
+<span class="k">BEGIN</span><span class="w"> </span><span class="k">TRANSACTION</span><span class="w"> </span><span class="k">ISOLATION</span><span class="w"> </span><span class="k">LEVEL</span><span class="w"> </span><span class="k">REPEATABLE</span><span class="w"> </span><span class="k">READ</span><span class="p">;</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="p">;</span>
+
+<span class="c1">-- 터미널 2</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">accounts</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">balance</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">50000</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="k">COMMIT</span><span class="p">;</span>
+
+<span class="c1">-- 터미널 1</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 변경 전 값 (스냅샷)</span>
+<span class="k">COMMIT</span><span class="p">;</span>
+
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">accounts</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 이제 변경된 값 보임</span>
+</code></pre></div>
+
+<h3 id="4-for-update">실습 4: FOR UPDATE 잠금<a class="header-link" href="#4-for-update" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 재고 확인 후 차감 (동시성 안전)</span>
+<span class="k">BEGIN</span><span class="p">;</span>
+
+<span class="c1">-- 잠금을 걸며 조회</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">stock</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">UPDATE</span><span class="p">;</span>
+
+<span class="c1">-- 재고 확인 및 차감</span>
+<span class="k">UPDATE</span><span class="w"> </span><span class="n">products</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">stock</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">stock</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">stock</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="k">COMMIT</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="12">12. 트랜잭션 모니터링<a class="header-link" href="#12" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 현재 실행 중인 트랜잭션 확인</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">pid</span><span class="p">,</span>
+<span class="w">    </span><span class="n">now</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">xact_start</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">duration</span><span class="p">,</span>
+<span class="w">    </span><span class="n">query</span><span class="p">,</span>
+<span class="w">    </span><span class="k">state</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_activity</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">xact_start</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span>
+
+<span class="c1">-- 잠금 대기 중인 쿼리 확인</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">blocked</span><span class="p">.</span><span class="n">pid</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">blocked_pid</span><span class="p">,</span>
+<span class="w">    </span><span class="n">blocking</span><span class="p">.</span><span class="n">pid</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">blocking_pid</span><span class="p">,</span>
+<span class="w">    </span><span class="n">blocked</span><span class="p">.</span><span class="n">query</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">blocked_query</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_activity</span><span class="w"> </span><span class="n">blocked</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">pg_stat_activity</span><span class="w"> </span><span class="n">blocking</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">blocking</span><span class="p">.</span><span class="n">pid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">ANY</span><span class="p">(</span><span class="n">pg_blocking_pids</span><span class="p">(</span><span class="n">blocked</span><span class="p">.</span><span class="n">pid</span><span class="p">));</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_9">다음 단계<a class="header-link" href="#_9" title="Permanent link">&para;</a></h2>
+<p><a href="./12_Triggers.md">12_Triggers.md</a>에서 트리거를 배워봅시다!</p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/PostgreSQL/10_Functions_and_Procedures.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">함수와 프로시저</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/PostgreSQL/12_Triggers.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">트리거</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

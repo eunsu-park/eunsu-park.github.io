@@ -1,0 +1,820 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spark SQL Optimization - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/en/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/en/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/en/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" selected>
+                        English
+                    </option>
+                    
+                    <option value="ko" >
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/en/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/en/Data_Engineering/">Data Engineering</a>
+    <span class="separator">/</span>
+    <span class="current">Spark SQL Optimization</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>Spark SQL Optimization</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/Data_Engineering/08_PySpark_DataFrames.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">PySpark DataFrame</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/Data_Engineering/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/Data_Engineering/10_Kafka_Streaming.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">Kafka Streaming</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#1-catalyst-optimizer">1. Catalyst Optimizer</a><ul>
+<li><a href="#11-understanding-execution-plans">1.1 Understanding Execution Plans</a></li>
+<li><a href="#12-catalyst-optimization-phases">1.2 Catalyst Optimization Phases</a></li>
+<li><a href="#13-key-optimization-techniques">1.3 Key Optimization Techniques</a></li>
+</ul>
+</li>
+<li><a href="#2-partitioning">2. Partitioning</a><ul>
+<li><a href="#21-partition-concepts">2.1 Partition Concepts</a></li>
+<li><a href="#22-partitioning-strategies">2.2 Partitioning Strategies</a></li>
+<li><a href="#23-partition-storage">2.3 Partition Storage</a></li>
+</ul>
+</li>
+<li><a href="#3-caching">3. Caching</a><ul>
+<li><a href="#31-cache-basics">3.1 Cache Basics</a></li>
+<li><a href="#32-caching-strategies">3.2 Caching Strategies</a></li>
+<li><a href="#33-cache-monitoring">3.3 Cache Monitoring</a></li>
+</ul>
+</li>
+<li><a href="#4-join-strategies">4. Join Strategies</a><ul>
+<li><a href="#41-join-type-characteristics">4.1 Join Type Characteristics</a></li>
+<li><a href="#42-force-broadcast-join">4.2 Force Broadcast Join</a></li>
+<li><a href="#43-join-optimization-tips">4.3 Join Optimization Tips</a></li>
+</ul>
+</li>
+<li><a href="#5-performance-tuning">5. Performance Tuning</a><ul>
+<li><a href="#51-configuration-optimization">5.1 Configuration Optimization</a></li>
+<li><a href="#52-data-format-optimization">5.2 Data Format Optimization</a></li>
+<li><a href="#53-shuffle-optimization">5.3 Shuffle Optimization</a></li>
+</ul>
+</li>
+<li><a href="#6-performance-monitoring">6. Performance Monitoring</a><ul>
+<li><a href="#61-using-spark-ui">6.1 Using Spark UI</a></li>
+<li><a href="#62-programmatic-monitoring">6.2 Programmatic Monitoring</a></li>
+<li><a href="#63-metrics-collection">6.3 Metrics Collection</a></li>
+</ul>
+</li>
+<li><a href="#7-common-performance-issues-and-solutions">7. Common Performance Issues and Solutions</a><ul>
+<li><a href="#71-data-skew">7.1 Data Skew</a></li>
+<li><a href="#72-oom-out-of-memory">7.2 OOM (Out of Memory)</a></li>
+<li><a href="#73-excessive-shuffling">7.3 Excessive Shuffling</a></li>
+</ul>
+</li>
+<li><a href="#practice-problems">Practice Problems</a><ul>
+<li><a href="#problem-1-execution-plan-analysis">Problem 1: Execution Plan Analysis</a></li>
+<li><a href="#problem-2-join-optimization">Problem 2: Join Optimization</a></li>
+<li><a href="#problem-3-skew-handling">Problem 3: Skew Handling</a></li>
+</ul>
+</li>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="spark-sql-optimization">Spark SQL Optimization<a class="header-link" href="#spark-sql-optimization" title="Permanent link">&para;</a></h1>
+<h2 id="overview">Overview<a class="header-link" href="#overview" title="Permanent link">&para;</a></h2>
+<p>To optimize Spark SQL performance, you need to understand how the Catalyst optimizer works and properly utilize partitioning, caching, join strategies, and other techniques.</p>
+<hr />
+<h2 id="1-catalyst-optimizer">1. Catalyst Optimizer<a class="header-link" href="#1-catalyst-optimizer" title="Permanent link">&para;</a></h2>
+<h3 id="11-understanding-execution-plans">1.1 Understanding Execution Plans<a class="header-link" href="#11-understanding-execution-plans" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql</span><span class="w"> </span><span class="kn">import</span> <span class="n">SparkSession</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql.functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">col</span>
+
+<span class="n">spark</span> <span class="o">=</span> <span class="n">SparkSession</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">appName</span><span class="p">(</span><span class="s2">&quot;Optimization&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">getOrCreate</span><span class="p">()</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="s2">&quot;sales.parquet&quot;</span><span class="p">)</span>
+
+<span class="c1"># Check execution plan</span>
+<span class="n">query</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;amount&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">)</span> \
+          <span class="o">.</span><span class="n">groupBy</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span> \
+          <span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">&quot;amount&quot;</span><span class="p">)</span>
+
+<span class="c1"># Logical plan</span>
+<span class="n">query</span><span class="o">.</span><span class="n">explain</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;simple&quot;</span><span class="p">)</span>
+
+<span class="c1"># Full plan (logical + physical)</span>
+<span class="n">query</span><span class="o">.</span><span class="n">explain</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;extended&quot;</span><span class="p">)</span>
+
+<span class="c1"># Cost-based plan</span>
+<span class="n">query</span><span class="o">.</span><span class="n">explain</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;cost&quot;</span><span class="p">)</span>
+
+<span class="c1"># Formatted output</span>
+<span class="n">query</span><span class="o">.</span><span class="n">explain</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;formatted&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="12-catalyst-optimization-phases">1.2 Catalyst Optimization Phases<a class="header-link" href="#12-catalyst-optimization-phases" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                   </span><span class="n">Catalyst</span><span class="w"> </span><span class="n">Optimizer</span><span class="w"> </span><span class="n">Phases</span><span class="w">                      </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="mf">1.</span><span class="w"> </span><span class="n">Analysis</span><span class="w">                                                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="o">-</span><span class="w"> </span><span class="n">Verify</span><span class="w"> </span><span class="n">column</span><span class="o">/</span><span class="k">table</span><span class="w"> </span><span class="n">names</span><span class="w">                               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="o">-</span><span class="w"> </span><span class="n">Type</span><span class="w"> </span><span class="n">validation</span><span class="w">                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="err">↓</span><span class="w">                                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="mf">2.</span><span class="w"> </span><span class="n">Logical</span><span class="w"> </span><span class="n">Optimization</span><span class="w">                                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="o">-</span><span class="w"> </span><span class="n">Predicate</span><span class="w"> </span><span class="n">Pushdown</span><span class="w">                                      </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="o">-</span><span class="w"> </span><span class="n">Column</span><span class="w"> </span><span class="n">Pruning</span><span class="w">                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="o">-</span><span class="w"> </span><span class="n">Constant</span><span class="w"> </span><span class="n">Folding</span><span class="w">                                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="err">↓</span><span class="w">                                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="mf">3.</span><span class="w"> </span><span class="n">Physical</span><span class="w"> </span><span class="n">Planning</span><span class="w">                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="o">-</span><span class="w"> </span><span class="n">Select</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">strategy</span><span class="w">                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="o">-</span><span class="w"> </span><span class="n">Select</span><span class="w"> </span><span class="n">aggregation</span><span class="w"> </span><span class="n">strategy</span><span class="w">                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="err">↓</span><span class="w">                                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">   </span><span class="mf">4.</span><span class="w"> </span><span class="n">Code</span><span class="w"> </span><span class="n">Generation</span><span class="w">                                            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="o">-</span><span class="w"> </span><span class="n">Whole</span><span class="o">-</span><span class="n">Stage</span><span class="w"> </span><span class="n">Code</span><span class="w"> </span><span class="n">Generation</span><span class="w">                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">      </span><span class="o">-</span><span class="w"> </span><span class="n">JIT</span><span class="w"> </span><span class="n">compilation</span><span class="w">                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="13-key-optimization-techniques">1.3 Key Optimization Techniques<a class="header-link" href="#13-key-optimization-techniques" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. Predicate Pushdown</span>
+<span class="c1"># Push filter to data source level</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="s2">&quot;data.parquet&quot;</span><span class="p">)</span>
+<span class="n">filtered</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;date&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;2024-01-01&quot;</span><span class="p">)</span>  <span class="c1"># Filter directly in Parquet</span>
+
+<span class="c1"># 2. Column Pruning</span>
+<span class="c1"># Read only needed columns</span>
+<span class="n">df</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;amount&quot;</span><span class="p">)</span>  <span class="c1"># Other columns not read</span>
+
+<span class="c1"># 3. Projection Pushdown</span>
+<span class="c1"># Push SELECT to data source</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s2">&quot;jdbc&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;pushDownPredicate&quot;</span><span class="p">,</span> <span class="s2">&quot;true&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">load</span><span class="p">()</span>
+
+<span class="c1"># 4. Constant Folding</span>
+<span class="c1"># Pre-compute constant expressions</span>
+<span class="n">df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;value&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># Transformed to &gt; 3</span>
+</code></pre></div>
+
+<hr />
+<h2 id="2-partitioning">2. Partitioning<a class="header-link" href="#2-partitioning" title="Permanent link">&para;</a></h2>
+<h3 id="21-partition-concepts">2.1 Partition Concepts<a class="header-link" href="#21-partition-concepts" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check number of partitions</span>
+<span class="n">df</span><span class="o">.</span><span class="n">rdd</span><span class="o">.</span><span class="n">getNumPartitions</span><span class="p">()</span>
+
+<span class="c1"># Repartition</span>
+<span class="n">df</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>                      <span class="c1"># Into 100 partitions</span>
+<span class="n">df</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="s2">&quot;date&quot;</span><span class="p">)</span>                   <span class="c1"># Partition by column</span>
+<span class="n">df</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="s2">&quot;category&quot;</span><span class="p">)</span>  <span class="c1"># Column + number specified</span>
+
+<span class="c1"># Reduce partitions (without shuffle)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">coalesce</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>  <span class="c1"># Reduce partitions without shuffle</span>
+
+<span class="c1"># Check partition information</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">print_partition_info</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Partitions: </span><span class="si">{</span><span class="n">df</span><span class="o">.</span><span class="n">rdd</span><span class="o">.</span><span class="n">getNumPartitions</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">partition</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">rdd</span><span class="o">.</span><span class="n">glom</span><span class="p">()</span><span class="o">.</span><span class="n">collect</span><span class="p">()):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Partition </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">partition</span><span class="p">)</span><span class="si">}</span><span class="s2"> rows&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="22-partitioning-strategies">2.2 Partitioning Strategies<a class="header-link" href="#22-partitioning-strategies" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Calculate appropriate number of partitions</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Recommended formula:</span>
+<span class="sd">- Number of partitions = Data size (MB) / 128MB</span>
+<span class="sd">- Or: Cluster cores * 2~4</span>
+
+<span class="sd">Examples:</span>
+<span class="sd">- 10GB data → 10,000MB / 128MB ≈ 80 partitions</span>
+<span class="sd">- 100 core cluster → 200~400 partitions</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Set number of partitions</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.shuffle.partitions&quot;</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+
+<span class="c1"># Range partitioning (sorted partitions)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">repartitionByRange</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;date&quot;</span><span class="p">)</span>
+
+<span class="c1"># Hash partitioning</span>
+<span class="n">df</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">)</span>  <span class="c1"># Hash based on user_id</span>
+</code></pre></div>
+
+<h3 id="23-partition-storage">2.3 Partition Storage<a class="header-link" href="#23-partition-storage" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Save by partition</span>
+<span class="n">df</span><span class="o">.</span><span class="n">write</span> \
+    <span class="o">.</span><span class="n">partitionBy</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">,</span> <span class="s2">&quot;month&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="s2">&quot;output/partitioned_data&quot;</span><span class="p">)</span>
+
+<span class="c1"># Resulting directory structure:</span>
+<span class="c1"># output/partitioned_data/</span>
+<span class="c1">#   year=2024/</span>
+<span class="c1">#     month=01/</span>
+<span class="c1">#       part-00000.parquet</span>
+<span class="c1">#     month=02/</span>
+<span class="c1">#       part-00000.parquet</span>
+
+<span class="c1"># Read partitioned data (pruning)</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="s2">&quot;output/partitioned_data&quot;</span><span class="p">)</span>
+<span class="c1"># Only reads year=2024, month=01 partition</span>
+<span class="n">df</span><span class="o">.</span><span class="n">filter</span><span class="p">((</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;year&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2024</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;month&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">))</span>
+
+<span class="c1"># Bucketing (join optimization)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">write</span> \
+    <span class="o">.</span><span class="n">bucketBy</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">sortBy</span><span class="p">(</span><span class="s2">&quot;timestamp&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">saveAsTable</span><span class="p">(</span><span class="s2">&quot;bucketed_table&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-caching">3. Caching<a class="header-link" href="#3-caching" title="Permanent link">&para;</a></h2>
+<h3 id="31-cache-basics">3.1 Cache Basics<a class="header-link" href="#31-cache-basics" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Cache DataFrame</span>
+<span class="n">df</span><span class="o">.</span><span class="n">cache</span><span class="p">()</span>           <span class="c1"># Default MEMORY_AND_DISK</span>
+<span class="n">df</span><span class="o">.</span><span class="n">persist</span><span class="p">()</span>         <span class="c1"># Same</span>
+
+<span class="c1"># Specify cache level</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyspark</span><span class="w"> </span><span class="kn">import</span> <span class="n">StorageLevel</span>
+
+<span class="n">df</span><span class="o">.</span><span class="n">persist</span><span class="p">(</span><span class="n">StorageLevel</span><span class="o">.</span><span class="n">MEMORY_ONLY</span><span class="p">)</span>           <span class="c1"># Memory only</span>
+<span class="n">df</span><span class="o">.</span><span class="n">persist</span><span class="p">(</span><span class="n">StorageLevel</span><span class="o">.</span><span class="n">MEMORY_AND_DISK</span><span class="p">)</span>       <span class="c1"># Memory + disk</span>
+<span class="n">df</span><span class="o">.</span><span class="n">persist</span><span class="p">(</span><span class="n">StorageLevel</span><span class="o">.</span><span class="n">MEMORY_ONLY_SER</span><span class="p">)</span>       <span class="c1"># Serialized (memory saving)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">persist</span><span class="p">(</span><span class="n">StorageLevel</span><span class="o">.</span><span class="n">DISK_ONLY</span><span class="p">)</span>             <span class="c1"># Disk only</span>
+<span class="n">df</span><span class="o">.</span><span class="n">persist</span><span class="p">(</span><span class="n">StorageLevel</span><span class="o">.</span><span class="n">MEMORY_AND_DISK_SER</span><span class="p">)</span>   <span class="c1"># Serialized + disk</span>
+
+<span class="c1"># Unpersist cache</span>
+<span class="n">df</span><span class="o">.</span><span class="n">unpersist</span><span class="p">()</span>
+
+<span class="c1"># Check cache status</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">catalog</span><span class="o">.</span><span class="n">isCached</span><span class="p">(</span><span class="s2">&quot;table_name&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="32-caching-strategies">3.2 Caching Strategies<a class="header-link" href="#32-caching-strategies" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Caching is effective when:</span>
+<span class="c1"># 1. Same DataFrame used multiple times</span>
+<span class="c1"># 2. Reuse after expensive transformations</span>
+<span class="c1"># 3. Iterative algorithms</span>
+
+<span class="c1"># Example: Reuse in multiple aggregations</span>
+<span class="n">expensive_df</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="s2">&quot;large_data.parquet&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;active&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">other_df</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+
+<span class="n">expensive_df</span><span class="o">.</span><span class="n">cache</span><span class="p">()</span>
+
+<span class="c1"># Reuse in multiple operations</span>
+<span class="n">result1</span> <span class="o">=</span> <span class="n">expensive_df</span><span class="o">.</span><span class="n">groupBy</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+<span class="n">result2</span> <span class="o">=</span> <span class="n">expensive_df</span><span class="o">.</span><span class="n">groupBy</span><span class="p">(</span><span class="s2">&quot;region&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="s2">&quot;amount&quot;</span><span class="p">)</span>
+<span class="n">result3</span> <span class="o">=</span> <span class="n">expensive_df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;amount&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1000</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+
+<span class="c1"># Release after completion</span>
+<span class="n">expensive_df</span><span class="o">.</span><span class="n">unpersist</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="33-cache-monitoring">3.3 Cache Monitoring<a class="header-link" href="#33-cache-monitoring" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Check in Spark UI (http://localhost:4040/storage)</span>
+
+<span class="c1"># Programmatic checking</span>
+<span class="n">sc</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">sparkContext</span>
+
+<span class="c1"># List cached RDDs</span>
+<span class="k">for</span> <span class="n">rdd_id</span><span class="p">,</span> <span class="n">rdd_info</span> <span class="ow">in</span> <span class="n">sc</span><span class="o">.</span><span class="n">_jsc</span><span class="o">.</span><span class="n">sc</span><span class="p">()</span><span class="o">.</span><span class="n">getRDDStorageInfo</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;RDD </span><span class="si">{</span><span class="n">rdd_id</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">rdd_info</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># Clear all caches</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">catalog</span><span class="o">.</span><span class="n">clearCache</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-join-strategies">4. Join Strategies<a class="header-link" href="#4-join-strategies" title="Permanent link">&para;</a></h2>
+<h3 id="41-join-type-characteristics">4.1 Join Type Characteristics<a class="header-link" href="#41-join-type-characteristics" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Spark join strategies:</span>
+<span class="n">join_strategies</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Broadcast Hash Join&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;condition&quot;</span><span class="p">:</span> <span class="s2">&quot;Small table (&lt; 10MB default)&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;performance&quot;</span><span class="p">:</span> <span class="s2">&quot;Fastest&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;shuffle&quot;</span><span class="p">:</span> <span class="s2">&quot;None (broadcast small table)&quot;</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;Sort Merge Join&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;condition&quot;</span><span class="p">:</span> <span class="s2">&quot;Join between large tables&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;performance&quot;</span><span class="p">:</span> <span class="s2">&quot;Stable&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;shuffle&quot;</span><span class="p">:</span> <span class="s2">&quot;Shuffle + sort both tables&quot;</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;Shuffle Hash Join&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;condition&quot;</span><span class="p">:</span> <span class="s2">&quot;When one side is smaller&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;performance&quot;</span><span class="p">:</span> <span class="s2">&quot;Medium&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;shuffle&quot;</span><span class="p">:</span> <span class="s2">&quot;Shuffle both sides&quot;</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;Broadcast Nested Loop Join&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;condition&quot;</span><span class="p">:</span> <span class="s2">&quot;No join condition (Cross)&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;performance&quot;</span><span class="p">:</span> <span class="s2">&quot;Slow&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;shuffle&quot;</span><span class="p">:</span> <span class="s2">&quot;None (broadcast)&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="42-force-broadcast-join">4.2 Force Broadcast Join<a class="header-link" href="#42-force-broadcast-join" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql.functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">broadcast</span>
+
+<span class="c1"># Broadcast hint for small table</span>
+<span class="n">large_df</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">broadcast</span><span class="p">(</span><span class="n">small_df</span><span class="p">),</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+
+<span class="c1"># Adjust threshold via configuration</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.autoBroadcastJoinThreshold&quot;</span><span class="p">,</span> <span class="mi">100</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span>  <span class="c1"># 100MB</span>
+
+<span class="c1"># Disable broadcast</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.autoBroadcastJoinThreshold&quot;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># SQL hint</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">sql</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    SELECT /*+ BROADCAST(small_table) */</span>
+<span class="s2">        large_table.*, small_table.name</span>
+<span class="s2">    FROM large_table</span>
+<span class="s2">    JOIN small_table ON large_table.id = small_table.id</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="43-join-optimization-tips">4.3 Join Optimization Tips<a class="header-link" href="#43-join-optimization-tips" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. Filter before join</span>
+<span class="c1"># Bad</span>
+<span class="n">df1</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">df2</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;active&quot;</span><span class="p">)</span>
+
+<span class="c1"># Good</span>
+<span class="n">df1</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;active&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">df2</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+
+
+<span class="c1"># 2. Match join key data types</span>
+<span class="c1"># Bad (type mismatch causes implicit casting)</span>
+<span class="n">df1</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">df2</span><span class="p">,</span> <span class="n">df1</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">df2</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>  <span class="c1"># id is string vs int</span>
+
+<span class="c1"># Good</span>
+<span class="n">df1</span> <span class="o">=</span> <span class="n">df1</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">col</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="s2">&quot;int&quot;</span><span class="p">))</span>
+<span class="n">df1</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">df2</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">)</span>
+
+
+<span class="c1"># 3. Handle skewed data (Skew Join)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.skewJoin.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.skewJoin.skewedPartitionFactor&quot;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.skewJoin.skewedPartitionThresholdInBytes&quot;</span><span class="p">,</span> <span class="s2">&quot;256MB&quot;</span><span class="p">)</span>
+
+
+<span class="c1"># 4. Optimize joins with bucketing</span>
+<span class="c1"># Bucket tables on creation</span>
+<span class="n">df</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">bucketBy</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">saveAsTable</span><span class="p">(</span><span class="s2">&quot;users_bucketed&quot;</span><span class="p">)</span>
+<span class="n">other_df</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">bucketBy</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;user_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">saveAsTable</span><span class="p">(</span><span class="s2">&quot;orders_bucketed&quot;</span><span class="p">)</span>
+
+<span class="c1"># Join bucketed tables (no shuffle)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">table</span><span class="p">(</span><span class="s2">&quot;users_bucketed&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spark</span><span class="o">.</span><span class="n">table</span><span class="p">(</span><span class="s2">&quot;orders_bucketed&quot;</span><span class="p">),</span> <span class="s2">&quot;user_id&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-performance-tuning">5. Performance Tuning<a class="header-link" href="#5-performance-tuning" title="Permanent link">&para;</a></h2>
+<h3 id="51-configuration-optimization">5.1 Configuration Optimization<a class="header-link" href="#51-configuration-optimization" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Memory settings</span>
+<span class="n">spark</span> <span class="o">=</span> <span class="n">SparkSession</span><span class="o">.</span><span class="n">builder</span> \
+    <span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="s2">&quot;spark.executor.memory&quot;</span><span class="p">,</span> <span class="s2">&quot;8g&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="s2">&quot;spark.executor.memoryOverhead&quot;</span><span class="p">,</span> <span class="s2">&quot;2g&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="s2">&quot;spark.driver.memory&quot;</span><span class="p">,</span> <span class="s2">&quot;4g&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="s2">&quot;spark.memory.fraction&quot;</span><span class="p">,</span> <span class="s2">&quot;0.8&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="s2">&quot;spark.memory.storageFraction&quot;</span><span class="p">,</span> <span class="s2">&quot;0.3&quot;</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">getOrCreate</span><span class="p">()</span>
+
+<span class="c1"># Parallelism settings</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.default.parallelism&quot;</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.shuffle.partitions&quot;</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+
+<span class="c1"># Adaptive Query Execution (AQE) - Spark 3.0+</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.coalescePartitions.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.skewJoin.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.localShuffleReader.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Serialization</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.serializer&quot;</span><span class="p">,</span> <span class="s2">&quot;org.apache.spark.serializer.KryoSerializer&quot;</span><span class="p">)</span>
+
+<span class="c1"># Dynamic allocation</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.dynamicAllocation.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.dynamicAllocation.minExecutors&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.dynamicAllocation.maxExecutors&quot;</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="52-data-format-optimization">5.2 Data Format Optimization<a class="header-link" href="#52-data-format-optimization" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Parquet settings</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.parquet.compression.codec&quot;</span><span class="p">,</span> <span class="s2">&quot;snappy&quot;</span><span class="p">)</span>  <span class="c1"># or zstd</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.parquet.filterPushdown&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># File size optimization</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.files.maxPartitionBytes&quot;</span><span class="p">,</span> <span class="s2">&quot;128MB&quot;</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.files.openCostInBytes&quot;</span><span class="p">,</span> <span class="s2">&quot;4MB&quot;</span><span class="p">)</span>
+
+<span class="c1"># Merge small files</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.coalescePartitions.parallelismFirst&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.advisoryPartitionSizeInBytes&quot;</span><span class="p">,</span> <span class="s2">&quot;128MB&quot;</span><span class="p">)</span>
+
+<span class="c1"># Verify column pruning</span>
+<span class="n">df</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="s2">&quot;needed_column1&quot;</span><span class="p">,</span> <span class="s2">&quot;needed_column2&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">explain</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="53-shuffle-optimization">5.3 Shuffle Optimization<a class="header-link" href="#53-shuffle-optimization" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Optimize shuffle partition count</span>
+<span class="c1"># Recommended: use AQE for automatic tuning</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Manual setting</span>
+<span class="n">data_size_gb</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">partition_size_mb</span> <span class="o">=</span> <span class="mi">128</span>
+<span class="n">optimal_partitions</span> <span class="o">=</span> <span class="p">(</span><span class="n">data_size_gb</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span> <span class="o">//</span> <span class="n">partition_size_mb</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.shuffle.partitions&quot;</span><span class="p">,</span> <span class="n">optimal_partitions</span><span class="p">)</span>
+
+<span class="c1"># Shuffle compression</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.shuffle.compress&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Minimize shuffle spill</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.shuffle.spill.compress&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># External shuffle service</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.shuffle.service.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-performance-monitoring">6. Performance Monitoring<a class="header-link" href="#6-performance-monitoring" title="Permanent link">&para;</a></h2>
+<h3 id="61-using-spark-ui">6.1 Using Spark UI<a class="header-link" href="#61-using-spark-ui" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Access Spark UI: http://&lt;driver-host&gt;:4040</span>
+
+<span class="c1"># Information by UI tab:</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Jobs: Job execution status, time</span>
+<span class="sd">Stages: Stage details (shuffle, data size)</span>
+<span class="sd">Storage: Cached RDD/DataFrame</span>
+<span class="sd">Environment: Configuration values</span>
+<span class="sd">Executors: Executor status, memory</span>
+<span class="sd">SQL: SQL query plans</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># History server (for completed jobs)</span>
+<span class="c1"># spark.eventLog.enabled=true</span>
+<span class="c1"># spark.history.fs.logDirectory=hdfs:///spark-history</span>
+</code></pre></div>
+
+<h3 id="62-programmatic-monitoring">6.2 Programmatic Monitoring<a class="header-link" href="#62-programmatic-monitoring" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Measure execution time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupBy</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+<span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Execution time: </span><span class="si">{</span><span class="n">end</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+
+<span class="c1"># Check shuffle in execution plan</span>
+<span class="n">df</span><span class="o">.</span><span class="n">explain</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;formatted&quot;</span><span class="p">)</span>
+
+<span class="c1"># Check join strategy in physical plan</span>
+<span class="c1"># Exchange = shuffle occurs</span>
+<span class="c1"># BroadcastHashJoin = broadcast join</span>
+<span class="c1"># SortMergeJoin = sort merge join</span>
+</code></pre></div>
+
+<h3 id="63-metrics-collection">6.3 Metrics Collection<a class="header-link" href="#63-metrics-collection" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Estimate DataFrame size</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">estimate_size</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Estimate DataFrame size (bytes)&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">_jdf</span><span class="o">.</span><span class="n">queryExecution</span><span class="p">()</span><span class="o">.</span><span class="n">optimizedPlan</span><span class="p">()</span><span class="o">.</span><span class="n">stats</span><span class="p">()</span><span class="o">.</span><span class="n">sizeInBytes</span><span class="p">()</span>
+
+<span class="c1"># Record count per partition</span>
+<span class="n">partition_counts</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">rdd</span><span class="o">.</span><span class="n">mapPartitions</span><span class="p">(</span>
+    <span class="k">lambda</span> <span class="n">it</span><span class="p">:</span> <span class="p">[</span><span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">it</span><span class="p">)]</span>
+<span class="p">)</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Min: </span><span class="si">{</span><span class="nb">min</span><span class="p">(</span><span class="n">partition_counts</span><span class="p">)</span><span class="si">}</span><span class="s2">, Max: </span><span class="si">{</span><span class="nb">max</span><span class="p">(</span><span class="n">partition_counts</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Skew ratio: </span><span class="si">{</span><span class="nb">max</span><span class="p">(</span><span class="n">partition_counts</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">partition_counts</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">partition_counts</span><span class="p">))</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7-common-performance-issues-and-solutions">7. Common Performance Issues and Solutions<a class="header-link" href="#7-common-performance-issues-and-solutions" title="Permanent link">&para;</a></h2>
+<h3 id="71-data-skew">7.1 Data Skew<a class="header-link" href="#71-data-skew" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Problem: Data concentrated in specific keys</span>
+<span class="c1"># Symptom: Some tasks take much longer</span>
+
+<span class="c1"># Solution 1: AQE skew join</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.adaptive.skewJoin.enabled&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Solution 2: Add salt key</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyspark.sql.functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">rand</span><span class="p">,</span> <span class="n">floor</span>
+
+<span class="n">num_salts</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">df_salted</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">withColumn</span><span class="p">(</span><span class="s2">&quot;salt&quot;</span><span class="p">,</span> <span class="n">floor</span><span class="p">(</span><span class="n">rand</span><span class="p">()</span> <span class="o">*</span> <span class="n">num_salts</span><span class="p">))</span>
+
+<span class="c1"># Salted join</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">df_salted</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+    <span class="n">other_df</span><span class="o">.</span><span class="n">crossJoin</span><span class="p">(</span>
+        <span class="n">spark</span><span class="o">.</span><span class="n">range</span><span class="p">(</span><span class="n">num_salts</span><span class="p">)</span><span class="o">.</span><span class="n">withColumnRenamed</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;salt&quot;</span><span class="p">)</span>
+    <span class="p">),</span>
+    <span class="p">[</span><span class="s2">&quot;key&quot;</span><span class="p">,</span> <span class="s2">&quot;salt&quot;</span><span class="p">]</span>
+<span class="p">)</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;salt&quot;</span><span class="p">)</span>
+
+<span class="c1"># Solution 3: Broadcast (if possible)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">broadcast</span><span class="p">(</span><span class="n">small_df</span><span class="p">),</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="72-oom-out-of-memory">7.2 OOM (Out of Memory)<a class="header-link" href="#72-oom-out-of-memory" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Problem: Memory shortage</span>
+<span class="c1"># Symptom: OutOfMemoryError</span>
+
+<span class="c1"># Solution 1: Increase executor memory</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.executor.memory&quot;</span><span class="p">,</span> <span class="s2">&quot;8g&quot;</span><span class="p">)</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.executor.memoryOverhead&quot;</span><span class="p">,</span> <span class="s2">&quot;2g&quot;</span><span class="p">)</span>
+
+<span class="c1"># Solution 2: Increase partition count (distribute data)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="mi">500</span><span class="p">)</span>
+
+<span class="c1"># Solution 3: Release unnecessary caches</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">catalog</span><span class="o">.</span><span class="n">clearCache</span><span class="p">()</span>
+
+<span class="c1"># Solution 4: Reduce broadcast threshold</span>
+<span class="n">spark</span><span class="o">.</span><span class="n">conf</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s2">&quot;spark.sql.autoBroadcastJoinThreshold&quot;</span><span class="p">,</span> <span class="s2">&quot;10MB&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="73-excessive-shuffling">7.3 Excessive Shuffling<a class="header-link" href="#73-excessive-shuffling" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Problem: Network/disk I/O due to shuffle</span>
+<span class="c1"># Symptom: Increased wait time between stages</span>
+
+<span class="c1"># Solution 1: Filter before shuffle</span>
+<span class="n">df</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;active&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">groupBy</span><span class="p">(</span><span class="s2">&quot;key&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+
+<span class="c1"># Solution 2: Change partitioning strategy</span>
+<span class="c1"># Data partitioned by same key can join without shuffle</span>
+<span class="n">df1</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">df2</span><span class="o">.</span><span class="n">repartition</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">),</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+
+<span class="c1"># Solution 3: Use bucketing</span>
+<span class="n">df</span><span class="o">.</span><span class="n">write</span><span class="o">.</span><span class="n">bucketBy</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">saveAsTable</span><span class="p">(</span><span class="s2">&quot;bucketed_table&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="practice-problems">Practice Problems<a class="header-link" href="#practice-problems" title="Permanent link">&para;</a></h2>
+<h3 id="problem-1-execution-plan-analysis">Problem 1: Execution Plan Analysis<a class="header-link" href="#problem-1-execution-plan-analysis" title="Permanent link">&para;</a></h3>
+<p>Analyze the execution plan of a given query and find optimization points.</p>
+<h3 id="problem-2-join-optimization">Problem 2: Join Optimization<a class="header-link" href="#problem-2-join-optimization" title="Permanent link">&para;</a></h3>
+<p>Design the optimal method to join a transaction table with 100 million records and a customer table with 1 million records.</p>
+<h3 id="problem-3-skew-handling">Problem 3: Skew Handling<a class="header-link" href="#problem-3-skew-handling" title="Permanent link">&para;</a></h3>
+<p>Improve aggregation performance when data is concentrated in specific categories.</p>
+<hr />
+<h2 id="summary">Summary<a class="header-link" href="#summary" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Optimization Area</th>
+<th>Techniques</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Catalyst</strong></td>
+<td>Predicate Pushdown, Column Pruning</td>
+</tr>
+<tr>
+<td><strong>Partitioning</strong></td>
+<td>repartition, coalesce, partitionBy</td>
+</tr>
+<tr>
+<td><strong>Caching</strong></td>
+<td>cache, persist, StorageLevel</td>
+</tr>
+<tr>
+<td><strong>Join</strong></td>
+<td>Broadcast, Sort Merge, Bucketing</td>
+</tr>
+<tr>
+<td><strong>AQE</strong></td>
+<td>Automatic partition coalescing, skew handling</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="references">References<a class="header-link" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://spark.apache.org/docs/latest/sql-performance-tuning.html">Spark SQL Tuning</a></li>
+<li><a href="https://spark.apache.org/docs/latest/configuration.html">Spark Configuration</a></li>
+<li><a href="https://spark.apache.org/docs/latest/sql-performance-tuning.html#adaptive-query-execution">Adaptive Query Execution</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/Data_Engineering/08_PySpark_DataFrames.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">PySpark DataFrame</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/Data_Engineering/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/Data_Engineering/10_Kafka_Streaming.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">Kafka Streaming</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'en';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

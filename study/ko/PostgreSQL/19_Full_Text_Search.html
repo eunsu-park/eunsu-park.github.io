@@ -1,0 +1,915 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>19. 전문 검색(Full-Text Search) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/PostgreSQL/">PostgreSQL</a>
+    <span class="separator">/</span>
+    <span class="current">19. 전문 검색(Full-Text Search)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>19. 전문 검색(Full-Text Search)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/PostgreSQL/18_Table_Partitioning.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">18. 테이블 파티셔닝 (Table Partitioning)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/PostgreSQL/20_Security_Access_Control.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">20. 보안과 접근 제어</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#_2">목차</a></li>
+<li><a href="#1">1. 전문 검색 개요</a><ul>
+<li><a href="#11">1.1 왜 전문 검색인가?</a></li>
+<li><a href="#12">1.2 아키텍처 개요</a></li>
+</ul>
+</li>
+<li><a href="#2-tsvector-tsquery">2. tsvector와 tsquery</a><ul>
+<li><a href="#21-tsvector">2.1 tsvector — 문서 표현</a></li>
+<li><a href="#22-tsquery">2.2 tsquery — 쿼리 표현</a></li>
+<li><a href="#23">2.3 매치 연산자(@@)</a></li>
+<li><a href="#24-tsvector">2.4 저장된 tsvector 컬럼</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 검색 구성</a><ul>
+<li><a href="#31">3.1 텍스트 검색 구성</a></li>
+<li><a href="#32">3.2 사전과 불용어</a></li>
+<li><a href="#33">3.3 사용자 정의 구성</a></li>
+</ul>
+</li>
+<li><a href="#4-gin-gist">4. GIN과 GiST 인덱스</a><ul>
+<li><a href="#41-gin">4.1 전문 검색을 위한 GIN 인덱스</a></li>
+<li><a href="#42-gin-vs-gist">4.2 GIN vs GiST 비교</a></li>
+<li><a href="#43">4.3 인덱스 유지보수</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 랭킹과 가중치</a><ul>
+<li><a href="#51-ts_rank">5.1 ts_rank</a></li>
+<li><a href="#52-ts_rank_cd">5.2 ts_rank_cd (커버 밀도)</a></li>
+<li><a href="#53">5.3 가중치 검색</a></li>
+<li><a href="#54">5.4 검색 결과 하이라이팅</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 고급 검색 기법</a><ul>
+<li><a href="#61">6.1 다중 컬럼 검색</a></li>
+<li><a href="#62">6.2 구문 검색</a></li>
+<li><a href="#63">6.3 필터가 있는 검색</a></li>
+<li><a href="#64">6.4 자동 완성 / 접두어 검색</a></li>
+<li><a href="#65">6.5 검색 통계</a></li>
+</ul>
+</li>
+<li><a href="#7-pg_trgm">7. 퍼지 매칭을 위한 pg_trgm</a><ul>
+<li><a href="#71">7.1 트라이그램 기초</a></li>
+<li><a href="#72">7.2 트라이그램 인덱스</a></li>
+<li><a href="#73-likeilike">7.3 트라이그램 인덱스를 사용한 LIKE/ILIKE</a></li>
+<li><a href="#74-fts-pg_trgm">7.4 FTS와 pg_trgm 결합</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 연습 문제</a><ul>
+<li><a href="#1_1">연습 1: 제품 검색</a></li>
+<li><a href="#2">연습 2: 하이라이팅이 있는 검색</a></li>
+<li><a href="#3_1">연습 3: 다국어 검색</a></li>
+</ul>
+</li>
+<li><a href="#_3">다음 단계</a></li>
+<li><a href="#_4">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="19-full-text-search">19. 전문 검색(Full-Text Search)<a class="header-link" href="#19-full-text-search" title="Permanent link">&para;</a></h1>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>PostgreSQL 전문 검색(Full-Text Search) 아키텍처 이해하기</li>
+<li>tsvector와 tsquery 데이터 타입 효과적으로 사용하기</li>
+<li>빠른 텍스트 검색을 위한 GIN 인덱스 생성하기</li>
+<li>가중치를 활용한 랭킹 검색 구현하기</li>
+<li>다국어 검색 지원 설정하기</li>
+<li>퍼지 매칭(Fuzzy Matching)을 위한 pg_trgm 활용하기</li>
+</ul>
+<h2 id="_2">목차<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-전문-검색-개요">전문 검색 개요</a></li>
+<li><a href="#2-tsvector와-tsquery">tsvector와 tsquery</a></li>
+<li><a href="#3-검색-구성">검색 구성</a></li>
+<li><a href="#4-gin과-gist-인덱스">GIN과 GiST 인덱스</a></li>
+<li><a href="#5-랭킹과-가중치">랭킹과 가중치</a></li>
+<li><a href="#6-고급-검색-기법">고급 검색 기법</a></li>
+<li><a href="#7-퍼지-매칭을-위한-pg_trgm">퍼지 매칭을 위한 pg_trgm</a></li>
+<li><a href="#8-연습-문제">연습 문제</a></li>
+</ol>
+<hr />
+<h2 id="1">1. 전문 검색 개요<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="11">1.1 왜 전문 검색인가?<a class="header-link" href="#11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">              </span><span class="nt">LIKE</span><span class="w"> </span><span class="nt">vs</span><span class="w"> </span><span class="nt">전문</span><span class="w"> </span><span class="nt">검색</span><span class="o">(</span><span class="nt">Full-Text</span><span class="w"> </span><span class="nt">Search</span><span class="o">)</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nt">LIKE</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nt">ILIKE</span><span class="o">:</span><span class="w">                                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌──────────────────────────────────────────┐</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nt">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nt">FROM</span><span class="w"> </span><span class="nt">articles</span><span class="w">                   </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nt">WHERE</span><span class="w"> </span><span class="nt">body</span><span class="w"> </span><span class="nt">ILIKE</span><span class="w"> </span><span class="s1">&#39;%database%&#39;</span><span class="o">;</span><span class="w">           </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                          </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">✗</span><span class="w"> </span><span class="nt">인덱스</span><span class="w"> </span><span class="nt">사용</span><span class="w"> </span><span class="nt">불가</span><span class="w"> </span><span class="o">(</span><span class="nt">순차</span><span class="w"> </span><span class="nt">스캔</span><span class="o">)</span><span class="w">            </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">✗</span><span class="w"> </span><span class="nt">언어</span><span class="w"> </span><span class="nt">인식</span><span class="w"> </span><span class="nt">기능</span><span class="w"> </span><span class="nt">없음</span><span class="w">                     </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">✗</span><span class="w"> </span><span class="nt">랭킹</span><span class="w"> </span><span class="nt">기능</span><span class="w"> </span><span class="nt">없음</span><span class="w">                          </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">✗</span><span class="w"> </span><span class="s2">&quot;databases&quot;</span><span class="nt">가</span><span class="w"> </span><span class="s2">&quot;database&quot;</span><span class="nt">와</span><span class="w"> </span><span class="nt">매치</span><span class="w"> </span><span class="nt">안</span><span class="w"> </span><span class="nt">됨</span><span class="w">   </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└──────────────────────────────────────────┘</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="nt">전문</span><span class="w"> </span><span class="nt">검색</span><span class="o">(</span><span class="nt">Full-Text</span><span class="w"> </span><span class="nt">Search</span><span class="o">):</span><span class="w">                                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌──────────────────────────────────────────┐</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nt">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nt">FROM</span><span class="w"> </span><span class="nt">articles</span><span class="w">                   </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nt">WHERE</span><span class="w"> </span><span class="nt">to_tsvector</span><span class="o">(</span><span class="nt">body</span><span class="o">)</span><span class="w">                  </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">       </span><span class="o">@@</span><span class="w"> </span><span class="nt">to_tsquery</span><span class="o">(</span><span class="s1">&#39;database&#39;</span><span class="o">);</span><span class="w">          </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w">                                          </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">✓</span><span class="w"> </span><span class="nt">GIN</span><span class="w"> </span><span class="nt">인덱스</span><span class="w"> </span><span class="nt">지원</span><span class="w"> </span><span class="o">(</span><span class="nt">빠름</span><span class="o">)</span><span class="w">                  </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">✓</span><span class="w"> </span><span class="nt">형태소</span><span class="w"> </span><span class="nt">분석</span><span class="w"> </span><span class="o">(</span><span class="nt">databases</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nt">database</span><span class="o">)</span><span class="w">      </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">✓</span><span class="w"> </span><span class="nt">관련성에</span><span class="w"> </span><span class="nt">따른</span><span class="w"> </span><span class="nt">랭킹</span><span class="w">                      </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="err">✓</span><span class="w"> </span><span class="nt">불리언</span><span class="w"> </span><span class="nt">연산자</span><span class="w"> </span><span class="o">(</span><span class="nt">AND</span><span class="o">,</span><span class="w"> </span><span class="nt">OR</span><span class="o">,</span><span class="w"> </span><span class="nt">NOT</span><span class="o">)</span><span class="w">            </span><span class="err">│</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└──────────────────────────────────────────┘</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="12">1.2 아키텍처 개요<a class="header-link" href="#12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│              전문 검색 파이프라인                                │
+│                                                                 │
+│  문서 텍스트                                                    │
+│       │                                                         │
+│       ▼                                                         │
+│  ┌─────────────────┐                                            │
+│  │   Parser         │──▶ 단어로 토큰화                          │
+│  └─────────────────┘                                            │
+│       │                                                         │
+│       ▼                                                         │
+│  ┌─────────────────┐                                            │
+│  │  Dictionaries    │──▶ 정규화 (불용어, 어간)                  │
+│  └─────────────────┘                                            │
+│       │                                                         │
+│       ▼                                                         │
+│  ┌─────────────────┐                                            │
+│  │   tsvector       │──▶ 정렬된 렉심 리스트 + 위치              │
+│  └─────────────────┘                                            │
+│       │                                                         │
+│       ▼                                                         │
+│  ┌─────────────────┐                                            │
+│  │  GIN Index       │──▶ 렉심별 빠른 검색                       │
+│  └─────────────────┘                                            │
+│                                                                 │
+│  쿼리 텍스트 ──▶ tsquery ──▶ tsvector와 매치                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="2-tsvector-tsquery">2. tsvector와 tsquery<a class="header-link" href="#2-tsvector-tsquery" title="Permanent link">&para;</a></h2>
+<h3 id="21-tsvector">2.1 tsvector — 문서 표현<a class="header-link" href="#21-tsvector" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 기본 변환</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;The quick brown foxes jumped over the lazy dogs&#39;</span><span class="p">);</span>
+<span class="c1">-- 결과: &#39;brown&#39;:3 &#39;dog&#39;:9 &#39;fox&#39;:4 &#39;jump&#39;:5 &#39;lazi&#39;:8 &#39;quick&#39;:2</span>
+
+<span class="c1">-- 주의: 불용어 제거됨 (&quot;the&quot;, &quot;over&quot;), 단어 어간 추출됨 (&quot;foxes&quot; → &quot;fox&quot;)</span>
+
+<span class="c1">-- tsvector는 렉심을 위치와 함께 저장</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;A fat cat sat on a mat. A fat cat ate a fat rat.&#39;</span><span class="p">);</span>
+<span class="c1">-- 결과: &#39;ate&#39;:10 &#39;cat&#39;:3,8 &#39;fat&#39;:2,7,11 &#39;mat&#39;:6 &#39;rat&#39;:12 &#39;sat&#39;:4</span>
+</code></pre></div>
+
+<h3 id="22-tsquery">2.2 tsquery — 쿼리 표현<a class="header-link" href="#22-tsquery" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 기본 쿼리</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cats &amp; dogs&#39;</span><span class="p">);</span>
+<span class="c1">-- 결과: &#39;cat&#39; &amp; &#39;dog&#39;</span>
+
+<span class="c1">-- 불리언 연산자</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cat | dog&#39;</span><span class="p">);</span><span class="w">        </span><span class="c1">-- OR</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cat &amp; !dog&#39;</span><span class="p">);</span><span class="w">       </span><span class="c1">-- AND NOT</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cat &lt;-&gt; dog&#39;</span><span class="p">);</span><span class="w">      </span><span class="c1">-- FOLLOWED BY (구문)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cat &lt;2&gt; dog&#39;</span><span class="p">);</span><span class="w">      </span><span class="c1">-- 2단어 이내</span>
+
+<span class="c1">-- plainto_tsquery: 더 간단한 구문 (암묵적 AND)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">plainto_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;fat cats&#39;</span><span class="p">);</span>
+<span class="c1">-- 결과: &#39;fat&#39; &amp; &#39;cat&#39;</span>
+
+<span class="c1">-- phraseto_tsquery: 정확한 구문 매칭</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">phraseto_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;fat cats&#39;</span><span class="p">);</span>
+<span class="c1">-- 결과: &#39;fat&#39; &lt;-&gt; &#39;cat&#39;</span>
+
+<span class="c1">-- websearch_to_tsquery: 웹 스타일 구문 (PostgreSQL 11+)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&quot;fat cats&quot; -dogs&#39;</span><span class="p">);</span>
+<span class="c1">-- 결과: &#39;fat&#39; &lt;-&gt; &#39;cat&#39; &amp; !&#39;dog&#39;</span>
+
+<span class="k">SELECT</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cats or dogs&#39;</span><span class="p">);</span>
+<span class="c1">-- 결과: &#39;cat&#39; | &#39;dog&#39;</span>
+</code></pre></div>
+
+<h3 id="23">2.3 매치 연산자(@@)<a class="header-link" href="#23" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- tsvector @@ tsquery</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;The fat cats sat on the mat&#39;</span><span class="p">)</span>
+<span class="w">       </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cat &amp; mat&#39;</span><span class="p">);</span>
+<span class="c1">-- 결과: true</span>
+
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;The fat cats sat on the mat&#39;</span><span class="p">)</span>
+<span class="w">       </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;cat &amp; dog&#39;</span><span class="p">);</span>
+<span class="c1">-- 결과: false</span>
+
+<span class="c1">-- 실용적인 예제</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">title</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">body</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="n">NOW</span><span class="p">()</span>
+<span class="p">);</span>
+
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="p">(</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">body</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span>
+<span class="p">(</span><span class="s1">&#39;PostgreSQL Full-Text Search&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;PostgreSQL provides powerful full-text search capabilities using tsvector and tsquery.&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;Database Indexing Guide&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Indexes are crucial for database performance. B-tree, GIN, and GiST are common index types.&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;Introduction to SQL&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;SQL is a standard language for managing relational databases. SELECT, INSERT, UPDATE, DELETE.&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;Advanced Query Optimization&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Query optimization involves analyzing execution plans and choosing efficient access paths.&#39;</span><span class="p">);</span>
+
+<span class="c1">-- 문서 검색</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">ts_rank</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">body</span><span class="p">),</span><span class="w"> </span><span class="n">query</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rank</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="p">,</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database &amp; index&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">query</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">body</span><span class="p">)</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">query</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rank</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="24-tsvector">2.4 저장된 tsvector 컬럼<a class="header-link" href="#24-tsvector" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 성능 향상을 위한 생성된 tsvector 컬럼 추가</span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="n">tsvector</span>
+<span class="w">    </span><span class="k">GENERATED</span><span class="w"> </span><span class="n">ALWAYS</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;A&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">body</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;B&#39;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="n">STORED</span><span class="p">;</span>
+
+<span class="c1">-- 이제 쿼리는 미리 계산된 컬럼을 사용</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">);</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3">3. 검색 구성<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="31">3.1 텍스트 검색 구성<a class="header-link" href="#31" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 사용 가능한 구성 목록</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">cfgname</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">pg_ts_config</span><span class="p">;</span>
+
+<span class="c1">-- 일반적인 구성:</span>
+<span class="c1">-- &#39;simple&#39;    — 형태소 분석 없음, 불용어 없음</span>
+<span class="c1">-- &#39;english&#39;   — 영어 형태소 분석 및 불용어</span>
+<span class="c1">-- &#39;german&#39;    — 독일어 형태소 분석</span>
+<span class="c1">-- &#39;spanish&#39;   — 스페인어 형태소 분석</span>
+
+<span class="c1">-- 현재 기본값 표시</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">default_text_search_config</span><span class="p">;</span>
+
+<span class="c1">-- 기본값 설정</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">default_text_search_config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;english&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 구성 비교</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;simple&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;The running dogs are quickly jumping&#39;</span><span class="p">);</span>
+<span class="c1">-- 결과: &#39;are&#39;:4 &#39;dogs&#39;:3 &#39;jumping&#39;:6 &#39;quickly&#39;:5 &#39;running&#39;:2 &#39;the&#39;:1</span>
+
+<span class="k">SELECT</span><span class="w"> </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;The running dogs are quickly jumping&#39;</span><span class="p">);</span>
+<span class="c1">-- 결과: &#39;dog&#39;:3 &#39;jump&#39;:6 &#39;quick&#39;:5 &#39;run&#39;:2</span>
+</code></pre></div>
+
+<h3 id="32">3.2 사전과 불용어<a class="header-link" href="#32" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 구성에 대한 사전 표시</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">ts_debug</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;The quick brown foxes are jumping&#39;</span><span class="p">);</span>
+
+<span class="c1">-- 출력은 토큰 → 사전 → 렉심 매핑을 표시</span>
+<span class="c1">-- Token     | Dictionary   | Lexemes</span>
+<span class="c1">-- ----------|-------------|--------</span>
+<span class="c1">-- The       | english_stem | {stop word}</span>
+<span class="c1">-- quick     | english_stem | {quick}</span>
+<span class="c1">-- brown     | english_stem | {brown}</span>
+<span class="c1">-- foxes     | english_stem | {fox}</span>
+<span class="c1">-- are       | english_stem | {stop word}</span>
+<span class="c1">-- jumping   | english_stem | {jump}</span>
+</code></pre></div>
+
+<h3 id="33">3.3 사용자 정의 구성<a class="header-link" href="#33" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 영어 기반 사용자 정의 구성 생성</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">SEARCH</span><span class="w"> </span><span class="n">CONFIGURATION</span><span class="w"> </span><span class="n">my_english</span><span class="w"> </span><span class="p">(</span><span class="k">COPY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">english</span><span class="p">);</span>
+
+<span class="c1">-- 동의어 사전 추가</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">SEARCH</span><span class="w"> </span><span class="k">DICTIONARY</span><span class="w"> </span><span class="n">my_synonyms</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">TEMPLATE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">synonym</span><span class="p">,</span>
+<span class="w">    </span><span class="n">SYNONYMS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">my_synonyms</span><span class="w">  </span><span class="c1">-- $SHAREDIR/tsearch_data/my_synonyms.syn 참조</span>
+<span class="p">);</span>
+
+<span class="c1">-- 구성에 추가</span>
+<span class="k">ALTER</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">SEARCH</span><span class="w"> </span><span class="n">CONFIGURATION</span><span class="w"> </span><span class="n">my_english</span>
+<span class="w">    </span><span class="k">ALTER</span><span class="w"> </span><span class="n">MAPPING</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="n">asciiword</span>
+<span class="w">    </span><span class="k">WITH</span><span class="w"> </span><span class="n">my_synonyms</span><span class="p">,</span><span class="w"> </span><span class="n">english_stem</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-gin-gist">4. GIN과 GiST 인덱스<a class="header-link" href="#4-gin-gist" title="Permanent link">&para;</a></h2>
+<h3 id="41-gin">4.1 전문 검색을 위한 GIN 인덱스<a class="header-link" href="#41-gin" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- tsvector 컬럼에 GIN 인덱스 생성</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_search</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">search_vector</span><span class="p">);</span>
+
+<span class="c1">-- 또는 표현식에 (빌드는 느리지만, 저장된 컬럼 불필요)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_body_gin</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">articles</span>
+<span class="w">    </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">body</span><span class="p">));</span>
+
+<span class="c1">-- 쿼리는 자동으로 인덱스 사용</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="k">ANALYZE</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">);</span>
+<span class="c1">-- Bitmap Index Scan on idx_articles_search</span>
+</code></pre></div>
+
+<h3 id="42-gin-vs-gist">4.2 GIN vs GiST 비교<a class="header-link" href="#42-gin-vs-gist" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│              전문 검색을 위한 GIN vs GiST                        │
+├────────────────┬──────────────────┬──────────────────────────────┤
+│                │ GIN              │ GiST                         │
+├────────────────┼──────────────────┼──────────────────────────────┤
+│ 빌드 속도       │ 느림             │ 빠름                          │
+│ 검색 속도       │ 빠름 (3배)       │ 느림                          │
+│ 인덱스 크기     │ 큼               │ 작음                          │
+│ 업데이트 비용   │ 높음             │ 낮음                          │
+│ 정확한 결과     │ 예               │ 거짓 긍정 가능                 │
+│ 최적화         │ 정적 데이터,      │ 자주 업데이트되는 데이터,      │
+│                │ 읽기 위주         │ 쓰기 위주                     │
+└────────────────┴──────────────────┴──────────────────────────────┘
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1">-- GiST 인덱스 (대안)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_search_gist</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GiST</span><span class="w"> </span><span class="p">(</span><span class="n">search_vector</span><span class="p">);</span>
+
+<span class="c1">-- fastupdate가 있는 GIN (기본값 on, 배치 삽입에 좋음)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_search_gin</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">articles</span>
+<span class="w">    </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">search_vector</span><span class="p">)</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="p">(</span><span class="n">fastupdate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">on</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="43">4.3 인덱스 유지보수<a class="header-link" href="#43" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 인덱스 크기 확인</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="s1">&#39;idx_articles_search&#39;</span><span class="p">));</span>
+
+<span class="c1">-- 필요시 재인덱싱</span>
+<span class="k">REINDEX</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_search</span><span class="p">;</span>
+
+<span class="c1">-- 쿼리 플래너를 위한 분석</span>
+<span class="k">ANALYZE</span><span class="w"> </span><span class="n">articles</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 랭킹과 가중치<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="51-ts_rank">5.1 ts_rank<a class="header-link" href="#51-ts_rank" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 기본 랭킹</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">title</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ts_rank</span><span class="p">(</span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rank</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">)</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rank</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+
+<span class="c1">-- 정규화 옵션 (비트마스크)</span>
+<span class="c1">-- 0  = 기본값 (문서 길이 무시)</span>
+<span class="c1">-- 1  = 1 + log(문서 길이)로 나눔</span>
+<span class="c1">-- 2  = 문서 길이로 나눔</span>
+<span class="c1">-- 4  = 범위 간 평균 조화 거리로 나눔</span>
+<span class="c1">-- 8  = 고유 단어 수로 나눔</span>
+<span class="c1">-- 16 = 1 + log(고유 단어)로 나눔</span>
+<span class="c1">-- 32 = 자기 자신 + 1로 나눔</span>
+
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">title</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ts_rank</span><span class="p">(</span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rank_normalized</span><span class="w">  </span><span class="c1">-- 길이로 정규화</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="p">,</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">query</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">query</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rank_normalized</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="52-ts_rank_cd">5.2 ts_rank_cd (커버 밀도)<a class="header-link" href="#52-ts_rank_cd" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 커버 밀도 랭킹은 매칭 용어의 근접성을 고려</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">title</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ts_rank_cd</span><span class="p">(</span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database &amp; index&#39;</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rank_cd</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database &amp; index&#39;</span><span class="p">)</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rank_cd</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="53">5.3 가중치 검색<a class="header-link" href="#53" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 가중치: A (1.0), B (0.4), C (0.2), D (0.1)</span>
+<span class="c1">-- 사용자 정의 가중치 배열: {D, C, B, A}</span>
+
+<span class="c1">-- 사용자 정의 가중치 적용</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">title</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ts_rank</span><span class="p">(</span><span class="s1">&#39;{0.1, 0.2, 0.4, 1.0}&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">weighted_rank</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="p">,</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">query</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">query</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">weighted_rank</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+
+<span class="c1">-- 가중치가 있는 tsvector 생성</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;PostgreSQL Guide&#39;</span><span class="p">),</span><span class="w"> </span><span class="s1">&#39;A&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
+<span class="w">    </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;A comprehensive database tutorial&#39;</span><span class="p">),</span><span class="w"> </span><span class="s1">&#39;B&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
+<span class="w">    </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Learn SQL queries and optimization&#39;</span><span class="p">),</span><span class="w"> </span><span class="s1">&#39;C&#39;</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="54">5.4 검색 결과 하이라이팅<a class="header-link" href="#54" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- ts_headline은 매칭 용어를 하이라이트</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">title</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ts_headline</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">body</span><span class="p">,</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">),</span>
+<span class="w">        </span><span class="s1">&#39;StartSel=&lt;b&gt;, StopSel=&lt;/b&gt;, MaxWords=35, MinWords=15&#39;</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">highlighted</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">);</span>
+
+<span class="c1">-- 옵션:</span>
+<span class="c1">-- StartSel / StopSel — 하이라이트 마커</span>
+<span class="c1">-- MaxWords / MinWords — 컨텍스트 윈도우 크기</span>
+<span class="c1">-- ShortWord — 표시할 최소 단어 길이</span>
+<span class="c1">-- MaxFragments — 조각 수 (0 = 전체 문서)</span>
+<span class="c1">-- FragmentDelimiter — 조각 간 구분자</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 고급 검색 기법<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="61">6.1 다중 컬럼 검색<a class="header-link" href="#61" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 다른 가중치로 여러 컬럼에 걸쳐 검색</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">blog_posts</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">title</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">summary</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">body</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">tags</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">[],</span>
+<span class="w">    </span><span class="n">search_vector</span><span class="w"> </span><span class="n">tsvector</span><span class="w"> </span><span class="k">GENERATED</span><span class="w"> </span><span class="n">ALWAYS</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;A&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;B&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">body</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;C&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">array_to_string</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39; &#39;</span><span class="p">),</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;A&#39;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="n">STORED</span>
+<span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_blog_search</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">blog_posts</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">search_vector</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="62">6.2 구문 검색<a class="header-link" href="#62" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 정확한 구문: &quot;full text search&quot;</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">phraseto_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;full text search&#39;</span><span class="p">);</span>
+
+<span class="c1">-- 근접성: N개 위치 내의 단어</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;full &lt;3&gt; search&#39;</span><span class="p">);</span>
+<span class="c1">-- &quot;full&quot;과 &quot;search&quot;가 서로 3단어 이내</span>
+</code></pre></div>
+
+<h3 id="63">6.3 필터가 있는 검색<a class="header-link" href="#63" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 전문 검색과 일반 WHERE 절 결합</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">ts_rank</span><span class="p">(</span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rank</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="p">,</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;database&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">query</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">query</span>
+<span class="w">  </span><span class="k">AND</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">NOW</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">INTERVAL</span><span class="w"> </span><span class="s1">&#39;30 days&#39;</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rank</span><span class="w"> </span><span class="k">DESC</span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+
+<span class="c1">-- 결합 검색을 위한 복합 인덱스</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_date_search</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">articles</span>
+<span class="w">    </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">search_vector</span><span class="p">)</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="64">6.4 자동 완성 / 접두어 검색<a class="header-link" href="#64" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- :*를 사용한 접두어 매칭</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;dat:*&#39;</span><span class="p">);</span>
+<span class="c1">-- 매치: database, data, date 등</span>
+
+<span class="c1">-- 실용적인 자동 완성 함수</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">FUNCTION</span><span class="w"> </span><span class="n">search_autocomplete</span><span class="p">(</span><span class="n">search_term</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span><span class="w"> </span><span class="n">max_results</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">10</span><span class="p">)</span>
+<span class="k">RETURNS</span><span class="w"> </span><span class="k">TABLE</span><span class="p">(</span><span class="n">title</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span><span class="w"> </span><span class="n">rank</span><span class="w"> </span><span class="nb">REAL</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">$$</span>
+<span class="k">BEGIN</span>
+<span class="w">    </span><span class="k">RETURN</span><span class="w"> </span><span class="n">QUERY</span>
+<span class="w">    </span><span class="k">SELECT</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">ts_rank</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rank</span>
+<span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">search_term</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;:*&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">query</span>
+<span class="w">    </span><span class="k">WHERE</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">query</span>
+<span class="w">    </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rank</span><span class="w"> </span><span class="k">DESC</span>
+<span class="w">    </span><span class="k">LIMIT</span><span class="w"> </span><span class="n">max_results</span><span class="p">;</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="err">$$</span><span class="w"> </span><span class="k">LANGUAGE</span><span class="w"> </span><span class="n">plpgsql</span><span class="p">;</span>
+
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">search_autocomplete</span><span class="p">(</span><span class="s1">&#39;post&#39;</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="65">6.5 검색 통계<a class="header-link" href="#65" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 코퍼스에서 가장 흔한 단어</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">word</span><span class="p">,</span><span class="w"> </span><span class="n">ndoc</span><span class="p">,</span><span class="w"> </span><span class="n">nentry</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">ts_stat</span><span class="p">(</span><span class="s1">&#39;SELECT search_vector FROM articles&#39;</span><span class="p">)</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">nentry</span><span class="w"> </span><span class="k">DESC</span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">20</span><span class="p">;</span>
+
+<span class="c1">-- 특정 쿼리에 대한 단어 빈도</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">word</span><span class="p">,</span><span class="w"> </span><span class="n">ndoc</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">ts_stat</span><span class="p">(</span><span class="s1">&#39;SELECT search_vector FROM articles&#39;</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">word</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="s1">&#39;data%&#39;</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">ndoc</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7-pg_trgm">7. 퍼지 매칭을 위한 pg_trgm<a class="header-link" href="#7-pg_trgm" title="Permanent link">&para;</a></h2>
+<h3 id="71">7.1 트라이그램 기초<a class="header-link" href="#71" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 확장 활성화</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="n">EXTENSION</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="n">pg_trgm</span><span class="p">;</span>
+
+<span class="c1">-- 트라이그램 표시</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">show_trgm</span><span class="p">(</span><span class="s1">&#39;PostgreSQL&#39;</span><span class="p">);</span>
+<span class="c1">-- 결과: {&quot;  p&quot;,&quot; po&quot;,&quot;gre&quot;,&quot;osq&quot;,&quot;pos&quot;,&quot;ostg&quot;,&quot;pgr&quot;,&quot;ql &quot;,&quot;res&quot;,&quot;sql&quot;,&quot;stg&quot;,&quot;tgr&quot;}</span>
+
+<span class="c1">-- 유사도 점수 (0~1)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">similarity</span><span class="p">(</span><span class="s1">&#39;PostgreSQL&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Postgresql&#39;</span><span class="p">);</span><span class="w">  </span><span class="c1">-- ~0.75</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">similarity</span><span class="p">(</span><span class="s1">&#39;PostgreSQL&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;MySQL&#39;</span><span class="p">);</span><span class="w">       </span><span class="c1">-- ~0.09</span>
+</code></pre></div>
+
+<h3 id="72">7.2 트라이그램 인덱스<a class="header-link" href="#72" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- GIN 트라이그램 인덱스</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_title_trgm</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">title</span><span class="w"> </span><span class="n">gin_trgm_ops</span><span class="p">);</span>
+
+<span class="c1">-- GiST 트라이그램 인덱스 (거리 연산자 지원)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_title_trgm_gist</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GiST</span><span class="w"> </span><span class="p">(</span><span class="n">title</span><span class="w"> </span><span class="n">gist_trgm_ops</span><span class="p">);</span>
+
+<span class="c1">-- 유사도 검색</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">similarity</span><span class="p">(</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Postgre&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">sim</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="s1">&#39;Postgre&#39;</span><span class="w">  </span><span class="c1">-- % 연산자는 유사도 임계값 사용</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sim</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+
+<span class="c1">-- 유사도 임계값 설정 (기본값 0.3)</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">pg_trgm</span><span class="p">.</span><span class="n">similarity_threshold</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">2</span><span class="p">;</span>
+
+<span class="c1">-- 거리 연산자 (GiST만)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="o">&lt;-&gt;</span><span class="w"> </span><span class="s1">&#39;Postgre&#39;</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">distance</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">articles</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="o">&lt;-&gt;</span><span class="w"> </span><span class="s1">&#39;Postgre&#39;</span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="73-likeilike">7.3 트라이그램 인덱스를 사용한 LIKE/ILIKE<a class="header-link" href="#73-likeilike" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 트라이그램 인덱스는 LIKE 쿼리도 가속화</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_articles_body_trgm</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">body</span><span class="w"> </span><span class="n">gin_trgm_ops</span><span class="p">);</span>
+
+<span class="c1">-- 이제 이 쿼리들은 인덱스를 사용</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">body</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="s1">&#39;%database%&#39;</span><span class="p">;</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">body</span><span class="w"> </span><span class="k">ILIKE</span><span class="w"> </span><span class="s1">&#39;%DATABASE%&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 정규 표현식 쿼리도 이점 얻음</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">body</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="s1">&#39;data(base|set)&#39;</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="74-fts-pg_trgm">7.4 FTS와 pg_trgm 결합<a class="header-link" href="#74-fts-pg_trgm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 양쪽 장점: 관련성은 전문 검색, 오타 허용은 트라이그램</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">FUNCTION</span><span class="w"> </span><span class="n">smart_search</span><span class="p">(</span><span class="n">search_term</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span><span class="w"> </span><span class="n">max_results</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">10</span><span class="p">)</span>
+<span class="k">RETURNS</span><span class="w"> </span><span class="k">TABLE</span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span><span class="w"> </span><span class="n">score</span><span class="w"> </span><span class="nb">REAL</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">$$</span>
+<span class="k">BEGIN</span>
+<span class="w">    </span><span class="c1">-- 먼저 정확한 전문 검색 시도</span>
+<span class="w">    </span><span class="k">RETURN</span><span class="w"> </span><span class="n">QUERY</span>
+<span class="w">    </span><span class="k">SELECT</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">title</span><span class="p">,</span>
+<span class="w">           </span><span class="n">ts_rank</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">search_term</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">score</span>
+<span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="n">a</span>
+<span class="w">    </span><span class="k">WHERE</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">search_term</span><span class="p">)</span>
+<span class="w">    </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">score</span><span class="w"> </span><span class="k">DESC</span>
+<span class="w">    </span><span class="k">LIMIT</span><span class="w"> </span><span class="n">max_results</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">-- 결과가 없으면 퍼지 매칭으로 폴백</span>
+<span class="w">    </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">FOUND</span><span class="w"> </span><span class="k">THEN</span>
+<span class="w">        </span><span class="k">RETURN</span><span class="w"> </span><span class="n">QUERY</span>
+<span class="w">        </span><span class="k">SELECT</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">similarity</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">search_term</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">score</span>
+<span class="w">        </span><span class="k">FROM</span><span class="w"> </span><span class="n">articles</span><span class="w"> </span><span class="n">a</span>
+<span class="w">        </span><span class="k">WHERE</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">title</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">search_term</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">body</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">search_term</span>
+<span class="w">        </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">score</span><span class="w"> </span><span class="k">DESC</span>
+<span class="w">        </span><span class="k">LIMIT</span><span class="w"> </span><span class="n">max_results</span><span class="p">;</span>
+<span class="w">    </span><span class="k">END</span><span class="w"> </span><span class="k">IF</span><span class="p">;</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="err">$$</span><span class="w"> </span><span class="k">LANGUAGE</span><span class="w"> </span><span class="n">plpgsql</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="8">8. 연습 문제<a class="header-link" href="#8" title="Permanent link">&para;</a></h2>
+<h3 id="1_1">연습 1: 제품 검색<a class="header-link" href="#1_1" title="Permanent link">&para;</a></h3>
+<p>전자상거래 제품 카탈로그를 위한 전문 검색 시스템을 구축하세요.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 예시 답안</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">name</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">description</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">category</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">price</span><span class="w"> </span><span class="nb">NUMERIC</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">    </span><span class="n">search_vector</span><span class="w"> </span><span class="n">tsvector</span><span class="w"> </span><span class="k">GENERATED</span><span class="w"> </span><span class="n">ALWAYS</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;A&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">description</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;B&#39;</span><span class="p">)</span><span class="w"> </span><span class="o">||</span>
+<span class="w">        </span><span class="n">setweight</span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">category</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)),</span><span class="w"> </span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="n">STORED</span>
+<span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_products_search</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">search_vector</span><span class="p">);</span>
+
+<span class="c1">-- 카테고리 필터가 있는 검색 함수</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">FUNCTION</span><span class="w"> </span><span class="n">search_products</span><span class="p">(</span>
+<span class="w">    </span><span class="n">search_term</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">category_filter</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">max_results</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="mi">20</span>
+<span class="p">)</span>
+<span class="k">RETURNS</span><span class="w"> </span><span class="k">TABLE</span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="nb">NUMERIC</span><span class="p">,</span><span class="w"> </span><span class="n">rank</span><span class="w"> </span><span class="nb">REAL</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">$$</span>
+<span class="k">BEGIN</span>
+<span class="w">    </span><span class="k">RETURN</span><span class="w"> </span><span class="n">QUERY</span>
+<span class="w">    </span><span class="k">SELECT</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">price</span><span class="p">,</span>
+<span class="w">           </span><span class="n">ts_rank</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">search_term</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">rank</span>
+<span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="n">p</span>
+<span class="w">    </span><span class="k">WHERE</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">search_term</span><span class="p">)</span>
+<span class="w">      </span><span class="k">AND</span><span class="w"> </span><span class="p">(</span><span class="n">category_filter</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">category</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">category_filter</span><span class="p">)</span>
+<span class="w">    </span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">rank</span><span class="w"> </span><span class="k">DESC</span>
+<span class="w">    </span><span class="k">LIMIT</span><span class="w"> </span><span class="n">max_results</span><span class="p">;</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="err">$$</span><span class="w"> </span><span class="k">LANGUAGE</span><span class="w"> </span><span class="n">plpgsql</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="2">연습 2: 하이라이팅이 있는 검색<a class="header-link" href="#2" title="Permanent link">&para;</a></h3>
+<p>하이라이트된 매치가 있는 검색 결과를 생성하세요.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 예시 답안</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">id</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ts_headline</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="p">,</span>
+<span class="w">        </span><span class="s1">&#39;StartSel=&lt;mark&gt;, StopSel=&lt;/mark&gt;&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">highlighted_name</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ts_headline</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">description</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="p">,</span>
+<span class="w">        </span><span class="s1">&#39;StartSel=&lt;mark&gt;, StopSel=&lt;/mark&gt;, MaxFragments=2, FragmentDelimiter= ... &#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">highlighted_desc</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ts_rank</span><span class="p">(</span><span class="n">search_vector</span><span class="p">,</span><span class="w"> </span><span class="n">query</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">relevance</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="p">,</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;wireless bluetooth&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">query</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_vector</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">query</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">relevance</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="3_1">연습 3: 다국어 검색<a class="header-link" href="#3_1" title="Permanent link">&para;</a></h3>
+<p>영어와 simple(형태소 분석 없음) 텍스트를 모두 처리하는 검색 시스템을 설계하세요.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 예시 답안</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">multilingual_docs</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">content_en</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">content_raw</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">search_en</span><span class="w"> </span><span class="n">tsvector</span><span class="w"> </span><span class="k">GENERATED</span><span class="w"> </span><span class="n">ALWAYS</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">content_en</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">))</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="n">STORED</span><span class="p">,</span>
+<span class="w">    </span><span class="n">search_simple</span><span class="w"> </span><span class="n">tsvector</span><span class="w"> </span><span class="k">GENERATED</span><span class="w"> </span><span class="n">ALWAYS</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">        </span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;simple&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">coalesce</span><span class="p">(</span><span class="n">content_raw</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">))</span>
+<span class="w">    </span><span class="p">)</span><span class="w"> </span><span class="n">STORED</span>
+<span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_ml_en</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">multilingual_docs</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">search_en</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_ml_simple</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">multilingual_docs</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">search_simple</span><span class="p">);</span>
+
+<span class="c1">-- 양쪽에 걸쳐 검색</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">content_en</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">multilingual_docs</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">search_en</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;search term&#39;</span><span class="p">)</span>
+<span class="w">   </span><span class="k">OR</span><span class="w"> </span><span class="n">search_simple</span><span class="w"> </span><span class="o">@@</span><span class="w"> </span><span class="n">websearch_to_tsquery</span><span class="p">(</span><span class="s1">&#39;simple&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;search term&#39;</span><span class="p">);</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_3">다음 단계<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./20_Security_Access_Control.md">20. 보안과 접근 제어</a></li>
+<li><a href="./15_Query_Optimization.md">15. 쿼리 최적화</a></li>
+</ul>
+<h2 id="_4">참고 자료<a class="header-link" href="#_4" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://www.postgresql.org/docs/current/textsearch.html">PostgreSQL Full-Text Search</a></li>
+<li><a href="https://www.postgresql.org/docs/current/pgtrgm.html">pg_trgm Module</a></li>
+<li><a href="https://www.postgresql.org/docs/current/functions-textsearch.html">Text Search Functions</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/PostgreSQL/18_Table_Partitioning.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">18. 테이블 파티셔닝 (Table Partitioning)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/PostgreSQL/20_Security_Access_Control.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">20. 보안과 접근 제어</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

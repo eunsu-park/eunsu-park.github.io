@@ -1,0 +1,764 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>집계와 그룹 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/PostgreSQL/">PostgreSQL</a>
+    <span class="separator">/</span>
+    <span class="current">집계와 그룹</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>집계와 그룹</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/PostgreSQL/06_JOIN.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">JOIN</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/PostgreSQL/08_Subqueries_and_CTE.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">서브쿼리와 CTE</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#1-aggregate-functions">1. 집계 함수 (Aggregate Functions)</a></li>
+<li><a href="#2">2. 실습 테이블 준비</a></li>
+<li><a href="#3-count-">3. COUNT - 개수 세기</a><ul>
+<li><a href="#_2">전체 행 수</a></li>
+<li><a href="#null">특정 컬럼 개수 (NULL 제외)</a></li>
+<li><a href="#_3">중복 제거 개수</a></li>
+</ul>
+</li>
+<li><a href="#4-sum-">4. SUM - 합계</a></li>
+<li><a href="#5-avg-">5. AVG - 평균</a></li>
+<li><a href="#6-min-max-">6. MIN / MAX - 최소/최대</a></li>
+<li><a href="#7">7. 여러 집계 함수 함께 사용</a></li>
+<li><a href="#8-group-by-">8. GROUP BY - 그룹화</a><ul>
+<li><a href="#group-by">기본 GROUP BY</a></li>
+<li><a href="#_4">지역별 매출</a></li>
+<li><a href="#_5">상품별 매출</a></li>
+</ul>
+</li>
+<li><a href="#9-group-by">9. 다중 컬럼 GROUP BY</a></li>
+<li><a href="#10-having-">10. HAVING - 그룹 필터링</a><ul>
+<li><a href="#where-having">WHERE + HAVING</a></li>
+<li><a href="#having-postgresql">HAVING에서 별칭 사용 (PostgreSQL)</a></li>
+</ul>
+</li>
+<li><a href="#11-group-by-join">11. GROUP BY + JOIN</a></li>
+<li><a href="#12">12. 날짜별 집계</a><ul>
+<li><a href="#_6">일별 매출</a></li>
+<li><a href="#_7">월별 매출</a></li>
+<li><a href="#_8">연도별 매출</a></li>
+</ul>
+</li>
+<li><a href="#13">13. 조건부 집계</a><ul>
+<li><a href="#case-sum">CASE + SUM</a></li>
+<li><a href="#filter-postgresql-94">FILTER (PostgreSQL 9.4+)</a></li>
+</ul>
+</li>
+<li><a href="#14-rollup-cube">14. ROLLUP과 CUBE</a><ul>
+<li><a href="#rollup-">ROLLUP - 소계 추가</a></li>
+<li><a href="#cube-">CUBE - 모든 조합의 소계</a></li>
+<li><a href="#grouping-null">GROUPING - NULL 구분</a></li>
+</ul>
+</li>
+<li><a href="#15">15. 실습 예제</a><ul>
+<li><a href="#1">실습 1: 기본 집계</a></li>
+<li><a href="#2_1">실습 2: 복합 조건</a></li>
+<li><a href="#3">실습 3: 날짜 집계</a></li>
+<li><a href="#4">실습 4: 크로스탭 (피벗)</a></li>
+</ul>
+</li>
+<li><a href="#16">16. 쿼리 실행 순서</a></li>
+<li><a href="#_9">다음 단계</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="_1">집계와 그룹<a class="header-link" href="#_1" title="Permanent link">&para;</a></h1>
+<h2 id="1-aggregate-functions">1. 집계 함수 (Aggregate Functions)<a class="header-link" href="#1-aggregate-functions" title="Permanent link">&para;</a></h2>
+<p>집계 함수는 여러 행의 값을 하나의 결과로 계산합니다.</p>
+<table>
+<thead>
+<tr>
+<th>함수</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>COUNT()</code></td>
+<td>행 개수</td>
+</tr>
+<tr>
+<td><code>SUM()</code></td>
+<td>합계</td>
+</tr>
+<tr>
+<td><code>AVG()</code></td>
+<td>평균</td>
+</tr>
+<tr>
+<td><code>MIN()</code></td>
+<td>최소값</td>
+</tr>
+<tr>
+<td><code>MAX()</code></td>
+<td>최대값</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2">2. 실습 테이블 준비<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">sales</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">product</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span>
+<span class="w">    </span><span class="n">category</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">50</span><span class="p">),</span>
+<span class="w">    </span><span class="n">amount</span><span class="w"> </span><span class="nb">NUMERIC</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">),</span>
+<span class="w">    </span><span class="n">quantity</span><span class="w"> </span><span class="nb">INTEGER</span><span class="p">,</span>
+<span class="w">    </span><span class="n">sale_date</span><span class="w"> </span><span class="nb">DATE</span><span class="p">,</span>
+<span class="w">    </span><span class="n">region</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
+<span class="p">);</span>
+
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">sales</span><span class="w"> </span><span class="p">(</span><span class="n">product</span><span class="p">,</span><span class="w"> </span><span class="n">category</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span><span class="p">,</span><span class="w"> </span><span class="n">quantity</span><span class="p">,</span><span class="w"> </span><span class="n">sale_date</span><span class="p">,</span><span class="w"> </span><span class="n">region</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span>
+<span class="p">(</span><span class="s1">&#39;노트북&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;전자기기&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">1500000</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-01-05&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;서울&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;마우스&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;전자기기&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">50000</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-01-05&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;서울&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;키보드&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;전자기기&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-01-06&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;부산&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;모니터&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;전자기기&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">300000</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-01-07&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;서울&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;책상&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;가구&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">250000</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-01-08&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;대전&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;의자&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;가구&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">150000</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-01-08&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;서울&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;노트북&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;전자기기&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">1800000</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-01-10&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;부산&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;마우스&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;전자기기&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">45000</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-01-12&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;대전&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;책상&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;가구&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">280000</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-01-15&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;서울&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;의자&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;가구&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">180000</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2024-01-15&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;부산&#39;</span><span class="p">);</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-count-">3. COUNT - 개수 세기<a class="header-link" href="#3-count-" title="Permanent link">&para;</a></h2>
+<h3 id="_2">전체 행 수<a class="header-link" href="#_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+<span class="c1">-- 10</span>
+</code></pre></div>
+
+<h3 id="null">특정 컬럼 개수 (NULL 제외)<a class="header-link" href="#null" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="n">region</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+<span class="c1">-- NULL이 아닌 region 개수</span>
+</code></pre></div>
+
+<h3 id="_3">중복 제거 개수<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">category</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+<span class="c1">-- 2 (전자기기, 가구)</span>
+
+<span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">region</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+<span class="c1">-- 3 (서울, 부산, 대전)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-sum-">4. SUM - 합계<a class="header-link" href="#4-sum-" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 총 매출액</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+<span class="c1">-- 4653000</span>
+
+<span class="c1">-- 총 판매 수량</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">quantity</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+<span class="c1">-- 51</span>
+
+<span class="c1">-- 조건부 합계</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">category</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;전자기기&#39;</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-avg-">5. AVG - 평균<a class="header-link" href="#5-avg-" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 평균 매출액</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">AVG</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+<span class="c1">-- 465300</span>
+
+<span class="c1">-- 소수점 처리</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">ROUND</span><span class="p">(</span><span class="k">AVG</span><span class="p">(</span><span class="n">amount</span><span class="p">),</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">avg_amount</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+
+<span class="c1">-- 조건부 평균</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">ROUND</span><span class="p">(</span><span class="k">AVG</span><span class="p">(</span><span class="n">amount</span><span class="p">),</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">region</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;서울&#39;</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-min-max-">6. MIN / MAX - 최소/최대<a class="header-link" href="#6-min-max-" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 최소 매출액</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">MIN</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+<span class="c1">-- 45000</span>
+
+<span class="c1">-- 최대 매출액</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">MAX</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+<span class="c1">-- 1800000</span>
+
+<span class="c1">-- 가장 최근 판매일</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">MAX</span><span class="p">(</span><span class="n">sale_date</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+
+<span class="c1">-- 가장 오래된 판매일</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">MIN</span><span class="p">(</span><span class="n">sale_date</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 여러 집계 함수 함께 사용<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span>
+<span class="w">    </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_count</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_sales</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ROUND</span><span class="p">(</span><span class="k">AVG</span><span class="p">(</span><span class="n">amount</span><span class="p">),</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">avg_sales</span><span class="p">,</span>
+<span class="w">    </span><span class="k">MIN</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">min_sales</span><span class="p">,</span>
+<span class="w">    </span><span class="k">MAX</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">max_sales</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">quantity</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_quantity</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="8-group-by-">8. GROUP BY - 그룹화<a class="header-link" href="#8-group-by-" title="Permanent link">&para;</a></h2>
+<p>데이터를 특정 컬럼 기준으로 그룹화하여 집계합니다.</p>
+<h3 id="group-by">기본 GROUP BY<a class="header-link" href="#group-by" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 카테고리별 매출</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">category</span><span class="p">,</span>
+<span class="w">    </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">count</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_amount</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">category</span><span class="p">;</span>
+</code></pre></div>
+
+<p>결과:</p>
+<div class="highlight"><pre><span></span><code> category │ count │ total_amount
+──────────┼───────┼──────────────
+ 전자기기 │     6 │      3795000
+ 가구     │     4 │       858000
+</code></pre></div>
+
+<h3 id="_4">지역별 매출<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span>
+<span class="w">    </span><span class="n">region</span><span class="p">,</span>
+<span class="w">    </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">sales_count</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_amount</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ROUND</span><span class="p">(</span><span class="k">AVG</span><span class="p">(</span><span class="n">amount</span><span class="p">),</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">avg_amount</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">region</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">total_amount</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="_5">상품별 매출<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span>
+<span class="w">    </span><span class="n">product</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">quantity</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_qty</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_sales</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">product</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">total_sales</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="9-group-by">9. 다중 컬럼 GROUP BY<a class="header-link" href="#9-group-by" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 카테고리 + 지역별 매출</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">category</span><span class="p">,</span>
+<span class="w">    </span><span class="n">region</span><span class="p">,</span>
+<span class="w">    </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">count</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">category</span><span class="p">,</span><span class="w"> </span><span class="n">region</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">category</span><span class="p">,</span><span class="w"> </span><span class="n">region</span><span class="p">;</span>
+</code></pre></div>
+
+<p>결과:</p>
+<div class="highlight"><pre><span></span><code><span class="w"> </span><span class="n">category</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">region</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="n">total</span>
+<span class="err">──────────┼────────┼───────┼─────────</span>
+<span class="w"> </span><span class="err">가구</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">대전</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="mh">1</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="mh">250000</span>
+<span class="w"> </span><span class="err">가구</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">부산</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="mh">1</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="mh">180000</span>
+<span class="w"> </span><span class="err">가구</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">서울</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="mh">2</span><span class="w"> </span><span class="err">│</span><span class="w">  </span><span class="mh">430000</span>
+<span class="w"> </span><span class="err">전자기기</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">대전</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="mh">1</span><span class="w"> </span><span class="err">│</span><span class="w">   </span><span class="mh">45000</span>
+<span class="w"> </span><span class="err">전자기기</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">부산</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="mh">2</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="mh">1900000</span>
+<span class="w"> </span><span class="err">전자기기</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">서울</span><span class="w">   </span><span class="err">│</span><span class="w">     </span><span class="mh">3</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="mh">1850000</span>
+</code></pre></div>
+
+<hr />
+<h2 id="10-having-">10. HAVING - 그룹 필터링<a class="header-link" href="#10-having-" title="Permanent link">&para;</a></h2>
+<p>WHERE는 그룹화 전, HAVING은 그룹화 후 필터링합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 총 매출 50만원 이상인 카테고리만</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">category</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_amount</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">category</span>
+<span class="k">HAVING</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">500000</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="where-having">WHERE + HAVING<a class="header-link" href="#where-having" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 서울, 부산 지역에서 총 매출 100만원 이상인 상품</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">product</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_amount</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">region</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;서울&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;부산&#39;</span><span class="p">)</span><span class="w">  </span><span class="c1">-- 그룹화 전 필터</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">product</span>
+<span class="k">HAVING</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">1000000</span><span class="w">     </span><span class="c1">-- 그룹화 후 필터</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">total_amount</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="having-postgresql">HAVING에서 별칭 사용 (PostgreSQL)<a class="header-link" href="#having-postgresql" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- PostgreSQL은 HAVING에서 별칭 사용 가능</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">product</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">product</span>
+<span class="k">HAVING</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">500000</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 표준 방식</span>
+
+<span class="c1">-- 또는 (PostgreSQL 확장)</span>
+<span class="c1">-- HAVING total &gt; 500000;  -- 일부 버전에서만 동작</span>
+</code></pre></div>
+
+<hr />
+<h2 id="11-group-by-join">11. GROUP BY + JOIN<a class="header-link" href="#11-group-by-join" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 준비: 카테고리 테이블</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">categories</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
+<span class="w">    </span><span class="n">name</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">50</span><span class="p">),</span>
+<span class="w">    </span><span class="n">description</span><span class="w"> </span><span class="nb">TEXT</span>
+<span class="p">);</span>
+
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">categories</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">description</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span>
+<span class="p">(</span><span class="s1">&#39;전자기기&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;전자 제품&#39;</span><span class="p">),</span>
+<span class="p">(</span><span class="s1">&#39;가구&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;가구 제품&#39;</span><span class="p">);</span>
+
+<span class="c1">-- 카테고리 정보와 함께 집계</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="k">c</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">category</span><span class="p">,</span>
+<span class="w">    </span><span class="k">c</span><span class="p">.</span><span class="n">description</span><span class="p">,</span>
+<span class="w">    </span><span class="k">COUNT</span><span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="n">id</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">sales_count</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">s</span><span class="p">.</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_sales</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">categories</span><span class="w"> </span><span class="k">c</span>
+<span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">sales</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">s</span><span class="p">.</span><span class="n">category</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">description</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="12">12. 날짜별 집계<a class="header-link" href="#12" title="Permanent link">&para;</a></h2>
+<h3 id="_6">일별 매출<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span>
+<span class="w">    </span><span class="n">sale_date</span><span class="p">,</span>
+<span class="w">    </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">count</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">daily_total</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="_7">월별 매출<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span>
+<span class="w">    </span><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="s1">&#39;month&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">sale_date</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">month</span><span class="p">,</span>
+<span class="w">    </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">count</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">monthly_total</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">DATE_TRUNC</span><span class="p">(</span><span class="s1">&#39;month&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">sale_date</span><span class="p">)</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">month</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="_8">연도별 매출<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span>
+<span class="w">    </span><span class="k">EXTRACT</span><span class="p">(</span><span class="k">YEAR</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sale_date</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">year</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">yearly_total</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">EXTRACT</span><span class="p">(</span><span class="k">YEAR</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">sale_date</span><span class="p">);</span>
+</code></pre></div>
+
+<hr />
+<h2 id="13">13. 조건부 집계<a class="header-link" href="#13" title="Permanent link">&para;</a></h2>
+<h3 id="case-sum">CASE + SUM<a class="header-link" href="#case-sum" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="n">category</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;전자기기&#39;</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">ELSE</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">END</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">electronics</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="n">category</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;가구&#39;</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="k">ELSE</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="k">END</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">furniture</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="filter-postgresql-94">FILTER (PostgreSQL 9.4+)<a class="header-link" href="#filter-postgresql-94" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span>
+<span class="w">    </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="n">FILTER</span><span class="w"> </span><span class="p">(</span><span class="k">WHERE</span><span class="w"> </span><span class="n">category</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;전자기기&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">electronics_count</span><span class="p">,</span>
+<span class="w">    </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="n">FILTER</span><span class="w"> </span><span class="p">(</span><span class="k">WHERE</span><span class="w"> </span><span class="n">category</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;가구&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">furniture_count</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">FILTER</span><span class="w"> </span><span class="p">(</span><span class="k">WHERE</span><span class="w"> </span><span class="n">region</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;서울&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">seoul_sales</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="14-rollup-cube">14. ROLLUP과 CUBE<a class="header-link" href="#14-rollup-cube" title="Permanent link">&para;</a></h2>
+<h3 id="rollup-">ROLLUP - 소계 추가<a class="header-link" href="#rollup-" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span>
+<span class="w">    </span><span class="n">category</span><span class="p">,</span>
+<span class="w">    </span><span class="n">region</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">ROLLUP</span><span class="w"> </span><span class="p">(</span><span class="n">category</span><span class="p">,</span><span class="w"> </span><span class="n">region</span><span class="p">)</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">category</span><span class="w"> </span><span class="n">NULLS</span><span class="w"> </span><span class="k">LAST</span><span class="p">,</span><span class="w"> </span><span class="n">region</span><span class="w"> </span><span class="n">NULLS</span><span class="w"> </span><span class="k">LAST</span><span class="p">;</span>
+</code></pre></div>
+
+<p>결과:</p>
+<div class="highlight"><pre><span></span><code><span class="w"> </span><span class="n">category</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">region</span><span class="w"> </span><span class="err">│</span><span class="w">   </span><span class="n">total</span>
+<span class="err">──────────┼────────┼──────────</span>
+<span class="w"> </span><span class="err">가구</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">대전</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="mh">250000</span>
+<span class="w"> </span><span class="err">가구</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">부산</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="mh">180000</span>
+<span class="w"> </span><span class="err">가구</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="err">서울</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="mh">430000</span>
+<span class="w"> </span><span class="err">가구</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="n">NULL</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="mh">860000</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="err">가구</span><span class="w"> </span><span class="err">소계</span>
+<span class="w"> </span><span class="err">전자기기</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">대전</span><span class="w">   </span><span class="err">│</span><span class="w">    </span><span class="mh">45000</span>
+<span class="w"> </span><span class="err">전자기기</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">부산</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="mh">1900000</span>
+<span class="w"> </span><span class="err">전자기기</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="err">서울</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="mh">1850000</span>
+<span class="w"> </span><span class="err">전자기기</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">NULL</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="mh">3795000</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="err">전자기기</span><span class="w"> </span><span class="err">소계</span>
+<span class="w"> </span><span class="n">NULL</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="n">NULL</span><span class="w">   </span><span class="err">│</span><span class="w">  </span><span class="mh">4655000</span><span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="err">총계</span>
+</code></pre></div>
+
+<h3 id="cube-">CUBE - 모든 조합의 소계<a class="header-link" href="#cube-" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span>
+<span class="w">    </span><span class="n">category</span><span class="p">,</span>
+<span class="w">    </span><span class="n">region</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">CUBE</span><span class="w"> </span><span class="p">(</span><span class="n">category</span><span class="p">,</span><span class="w"> </span><span class="n">region</span><span class="p">)</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">category</span><span class="w"> </span><span class="n">NULLS</span><span class="w"> </span><span class="k">LAST</span><span class="p">,</span><span class="w"> </span><span class="n">region</span><span class="w"> </span><span class="n">NULLS</span><span class="w"> </span><span class="k">LAST</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="grouping-null">GROUPING - NULL 구분<a class="header-link" href="#grouping-null" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">SELECT</span>
+<span class="w">    </span><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="k">GROUPING</span><span class="p">(</span><span class="n">category</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="s1">&#39;전체&#39;</span><span class="w"> </span><span class="k">ELSE</span><span class="w"> </span><span class="n">category</span><span class="w"> </span><span class="k">END</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">category</span><span class="p">,</span>
+<span class="w">    </span><span class="k">CASE</span><span class="w"> </span><span class="k">WHEN</span><span class="w"> </span><span class="k">GROUPING</span><span class="p">(</span><span class="n">region</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">THEN</span><span class="w"> </span><span class="s1">&#39;전체&#39;</span><span class="w"> </span><span class="k">ELSE</span><span class="w"> </span><span class="n">region</span><span class="w"> </span><span class="k">END</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">region</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">ROLLUP</span><span class="w"> </span><span class="p">(</span><span class="n">category</span><span class="p">,</span><span class="w"> </span><span class="n">region</span><span class="p">);</span>
+</code></pre></div>
+
+<hr />
+<h2 id="15">15. 실습 예제<a class="header-link" href="#15" title="Permanent link">&para;</a></h2>
+<h3 id="1">실습 1: 기본 집계<a class="header-link" href="#1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 1. 전체 매출 통계</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">총</span><span class="n">_판매건수</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">총</span><span class="n">_매출</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ROUND</span><span class="p">(</span><span class="k">AVG</span><span class="p">(</span><span class="n">amount</span><span class="p">),</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">평균</span><span class="n">_매출</span><span class="p">,</span>
+<span class="w">    </span><span class="k">MIN</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">최소</span><span class="n">_매출</span><span class="p">,</span>
+<span class="w">    </span><span class="k">MAX</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">최대</span><span class="n">_매출</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span><span class="p">;</span>
+
+<span class="c1">-- 2. 카테고리별 판매 통계</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">category</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">카테고리</span><span class="p">,</span>
+<span class="w">    </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">판매건수</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">quantity</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">총</span><span class="n">_수량</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">총</span><span class="n">_매출</span><span class="p">,</span>
+<span class="w">    </span><span class="n">ROUND</span><span class="p">(</span><span class="k">AVG</span><span class="p">(</span><span class="n">amount</span><span class="p">),</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">평균</span><span class="n">_매출</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">category</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="err">총</span><span class="n">_매출</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="2_1">실습 2: 복합 조건<a class="header-link" href="#2_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 1. 지역별 매출 (50만원 이상만)</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">region</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">region</span>
+<span class="k">HAVING</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">500000</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">total</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+
+<span class="c1">-- 2. 상품별 판매 수량 랭킹</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">product</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">quantity</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_qty</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">product</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">total_qty</span><span class="w"> </span><span class="k">DESC</span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="3">실습 3: 날짜 집계<a class="header-link" href="#3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 1. 일별 매출 추이</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">sale_date</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">daily_sales</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">))</span><span class="w"> </span><span class="n">OVER</span><span class="w"> </span><span class="p">(</span><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">cumulative_sales</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span><span class="p">;</span>
+
+<span class="c1">-- 2. 최근 7일 일평균 매출</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">ROUND</span><span class="p">(</span><span class="k">AVG</span><span class="p">(</span><span class="n">daily_total</span><span class="p">),</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">avg_daily_sales</span>
+<span class="k">FROM</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">SELECT</span><span class="w"> </span><span class="n">sale_date</span><span class="p">,</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">daily_total</span>
+<span class="w">    </span><span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="w">    </span><span class="k">WHERE</span><span class="w"> </span><span class="n">sale_date</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="k">CURRENT_DATE</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">INTERVAL</span><span class="w"> </span><span class="s1">&#39;7 days&#39;</span>
+<span class="w">    </span><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">sale_date</span>
+<span class="p">)</span><span class="w"> </span><span class="n">daily</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="4">실습 4: 크로스탭 (피벗)<a class="header-link" href="#4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 카테고리 × 지역 매출 크로스탭</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">category</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">FILTER</span><span class="w"> </span><span class="p">(</span><span class="k">WHERE</span><span class="w"> </span><span class="n">region</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;서울&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">서울</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">FILTER</span><span class="w"> </span><span class="p">(</span><span class="k">WHERE</span><span class="w"> </span><span class="n">region</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;부산&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">부산</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="n">FILTER</span><span class="w"> </span><span class="p">(</span><span class="k">WHERE</span><span class="w"> </span><span class="n">region</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;대전&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">대전</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">총계</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">sales</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">category</span><span class="p">;</span>
+</code></pre></div>
+
+<p>결과:</p>
+<div class="highlight"><pre><span></span><code> category │  서울   │  부산   │ 대전  │   총계
+──────────┼─────────┼─────────┼───────┼──────────
+ 가구     │  430000 │  180000 │ 250000│   860000
+ 전자기기 │ 1850000 │ 1900000 │  45000│  3795000
+</code></pre></div>
+
+<hr />
+<h2 id="16">16. 쿼리 실행 순서<a class="header-link" href="#16" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">FROM</span><span class="w"> </span><span class="err">/</span><span class="w"> </span><span class="k">JOIN</span><span class="w">    </span><span class="n">←</span><span class="w"> </span><span class="n">테이블</span><span class="w"> </span><span class="n">지정</span>
+<span class="w">    </span><span class="n">↓</span>
+<span class="k">WHERE</span><span class="w">          </span><span class="n">←</span><span class="w"> </span><span class="n">행</span><span class="w"> </span><span class="n">필터링</span>
+<span class="w">    </span><span class="n">↓</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w">       </span><span class="n">←</span><span class="w"> </span><span class="n">그룹화</span>
+<span class="w">    </span><span class="n">↓</span>
+<span class="k">HAVING</span><span class="w">         </span><span class="n">←</span><span class="w"> </span><span class="n">그룹</span><span class="w"> </span><span class="n">필터링</span>
+<span class="w">    </span><span class="n">↓</span>
+<span class="k">SELECT</span><span class="w">         </span><span class="n">←</span><span class="w"> </span><span class="n">컬럼</span><span class="w"> </span><span class="n">선택</span>
+<span class="w">    </span><span class="n">↓</span>
+<span class="k">DISTINCT</span><span class="w">       </span><span class="n">←</span><span class="w"> </span><span class="n">중복</span><span class="w"> </span><span class="n">제거</span>
+<span class="w">    </span><span class="n">↓</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w">       </span><span class="n">←</span><span class="w"> </span><span class="n">정렬</span>
+<span class="w">    </span><span class="n">↓</span>
+<span class="k">LIMIT</span><span class="o">/</span><span class="k">OFFSET</span><span class="w">   </span><span class="n">←</span><span class="w"> </span><span class="n">결과</span><span class="w"> </span><span class="n">제한</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_9">다음 단계<a class="header-link" href="#_9" title="Permanent link">&para;</a></h2>
+<p><a href="./08_Subqueries_and_CTE.md">08_Subqueries_and_CTE.md</a>에서 서브쿼리와 WITH 절을 배워봅시다!</p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/PostgreSQL/06_JOIN.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">JOIN</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/PostgreSQL/08_Subqueries_and_CTE.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">서브쿼리와 CTE</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

@@ -1,0 +1,979 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>15. Advanced PostgreSQL Query Optimization - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/en/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/en/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/en/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" selected>
+                        English
+                    </option>
+                    
+                    <option value="ko" >
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/en/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/en/PostgreSQL/">PostgreSQL</a>
+    <span class="separator">/</span>
+    <span class="current">15. Advanced PostgreSQL Query Optimization</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>15. Advanced PostgreSQL Query Optimization</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/PostgreSQL/14_JSON_JSONB.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">14. PostgreSQL JSON/JSONB Features</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/PostgreSQL/16_Replication_HA.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">16. Replication & High Availability</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#learning-objectives">Learning Objectives</a></li>
+<li><a href="#table-of-contents">Table of Contents</a></li>
+<li><a href="#1-explain-analyze-deep-dive">1. EXPLAIN ANALYZE Deep Dive</a><ul>
+<li><a href="#11-explain-options">1.1 EXPLAIN Options</a></li>
+<li><a href="#12-reading-execution-plans">1.2 Reading Execution Plans</a></li>
+<li><a href="#13-key-metrics-interpretation">1.3 Key Metrics Interpretation</a></li>
+<li><a href="#14-problem-identification">1.4 Problem Identification</a></li>
+</ul>
+</li>
+<li><a href="#2-query-planner">2. Query Planner</a><ul>
+<li><a href="#21-planner-process">2.1 Planner Process</a></li>
+<li><a href="#22-planner-configuration">2.2 Planner Configuration</a></li>
+<li><a href="#23-planner-hints-pg_hint_plan">2.3 Planner Hints (pg_hint_plan)</a></li>
+</ul>
+</li>
+<li><a href="#3-index-strategies">3. Index Strategies</a><ul>
+<li><a href="#31-index-type-selection">3.1 Index Type Selection</a></li>
+<li><a href="#32-composite-indexes">3.2 Composite Indexes</a></li>
+<li><a href="#33-partial-indexes">3.3 Partial Indexes</a></li>
+<li><a href="#34-index-management">3.4 Index Management</a></li>
+</ul>
+</li>
+<li><a href="#4-join-optimization">4. Join Optimization</a><ul>
+<li><a href="#41-join-method-comparison">4.1 Join Method Comparison</a></li>
+<li><a href="#42-join-order-optimization">4.2 Join Order Optimization</a></li>
+<li><a href="#43-join-performance-improvement">4.3 Join Performance Improvement</a></li>
+</ul>
+</li>
+<li><a href="#5-statistics-and-cost-estimation">5. Statistics and Cost Estimation</a><ul>
+<li><a href="#51-statistics-collection">5.1 Statistics Collection</a></li>
+<li><a href="#52-row-count-estimation">5.2 Row Count Estimation</a></li>
+<li><a href="#53-cost-calculation">5.3 Cost Calculation</a></li>
+</ul>
+</li>
+<li><a href="#6-advanced-optimization-techniques">6. Advanced Optimization Techniques</a><ul>
+<li><a href="#61-query-refactoring">6.1 Query Refactoring</a></li>
+<li><a href="#62-materialized-view">6.2 Materialized View</a></li>
+<li><a href="#63-partitioning">6.3 Partitioning</a></li>
+<li><a href="#64-query-caching">6.4 Query Caching</a></li>
+</ul>
+</li>
+<li><a href="#7-practice-problems">7. Practice Problems</a><ul>
+<li><a href="#exercise-1-analyze-execution-plan">Exercise 1: Analyze Execution Plan</a></li>
+<li><a href="#exercise-2-index-design">Exercise 2: Index Design</a></li>
+<li><a href="#exercise-3-join-optimization">Exercise 3: Join Optimization</a></li>
+<li><a href="#exercise-4-partitioning-design">Exercise 4: Partitioning Design</a></li>
+</ul>
+</li>
+<li><a href="#next-steps">Next Steps</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="15-advanced-postgresql-query-optimization">15. Advanced PostgreSQL Query Optimization<a class="header-link" href="#15-advanced-postgresql-query-optimization" title="Permanent link">&para;</a></h1>
+<h2 id="learning-objectives">Learning Objectives<a class="header-link" href="#learning-objectives" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Complete understanding of EXPLAIN ANALYZE output</li>
+<li>Understanding query planner behavior</li>
+<li>Establishing index selection strategies</li>
+<li>Advanced query optimization techniques</li>
+</ul>
+<h2 id="table-of-contents">Table of Contents<a class="header-link" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-explain-analyze-deep-dive">EXPLAIN ANALYZE Deep Dive</a></li>
+<li><a href="#2-query-planner">Query Planner</a></li>
+<li><a href="#3-index-strategies">Index Strategies</a></li>
+<li><a href="#4-join-optimization">Join Optimization</a></li>
+<li><a href="#5-statistics-and-cost-estimation">Statistics and Cost Estimation</a></li>
+<li><a href="#6-advanced-optimization-techniques">Advanced Optimization Techniques</a></li>
+<li><a href="#7-practice-problems">Practice Problems</a></li>
+</ol>
+<hr />
+<h2 id="1-explain-analyze-deep-dive">1. EXPLAIN ANALYZE Deep Dive<a class="header-link" href="#1-explain-analyze-deep-dive" title="Permanent link">&para;</a></h2>
+<h3 id="11-explain-options">1.1 EXPLAIN Options<a class="header-link" href="#11-explain-options" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Basic execution plan</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+
+<span class="c1">-- Actual execution + timing</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="k">ANALYZE</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+
+<span class="c1">-- Include buffer information</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span><span class="w"> </span><span class="n">BUFFERS</span><span class="p">)</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+
+<span class="c1">-- Detailed output</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span><span class="w"> </span><span class="n">BUFFERS</span><span class="p">,</span><span class="w"> </span><span class="n">FORMAT</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">)</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="p">...;</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span><span class="w"> </span><span class="n">BUFFERS</span><span class="p">,</span><span class="w"> </span><span class="n">FORMAT</span><span class="w"> </span><span class="n">JSON</span><span class="p">)</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="p">...;</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span><span class="w"> </span><span class="n">BUFFERS</span><span class="p">,</span><span class="w"> </span><span class="n">FORMAT</span><span class="w"> </span><span class="n">YAML</span><span class="p">)</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="p">...;</span>
+
+<span class="c1">-- Plan only (without ANALYZE)</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="n">COSTS</span><span class="p">,</span><span class="w"> </span><span class="k">VERBOSE</span><span class="p">)</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+
+<span class="c1">-- Disable timing (reduce overhead)</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span><span class="w"> </span><span class="n">TIMING</span><span class="w"> </span><span class="k">OFF</span><span class="p">)</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+
+<span class="c1">-- Include settings</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span><span class="w"> </span><span class="n">SETTINGS</span><span class="p">)</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="12-reading-execution-plans">1.2 Reading Execution Plans<a class="header-link" href="#12-reading-execution-plans" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span><span class="w"> </span><span class="n">BUFFERS</span><span class="p">)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">id</span><span class="p">)</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span>
+<span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">name</span><span class="p">;</span>
+
+<span class="cm">/*</span>
+<span class="cm">HashAggregate  (cost=1234.56..1234.78 rows=100 width=40)</span>
+<span class="cm">               (actual time=45.123..45.456 loops=1)</span>
+<span class="cm">  Group Key: u.name</span>
+<span class="cm">  Batches: 1  Memory Usage: 24kB</span>
+<span class="cm">  Buffers: shared hit=500 read=100</span>
+<span class="cm">  -&gt;  Hash Right Join  (cost=100.00..1200.00 rows=5000 width=36)</span>
+<span class="cm">                       (actual time=5.123..40.456 loops=1)</span>
+<span class="cm">        Hash Cond: (o.user_id = u.id)</span>
+<span class="cm">        Buffers: shared hit=400 read=80</span>
+<span class="cm">        -&gt;  Seq Scan on orders o  (cost=0.00..800.00 rows=30000 width=8)</span>
+<span class="cm">                                  (actual time=0.015..15.123 loops=1)</span>
+<span class="cm">              Buffers: shared hit=300 read=50</span>
+<span class="cm">        -&gt;  Hash  (cost=80.00..80.00 rows=1000 width=36)</span>
+<span class="cm">                  (actual time=3.456..3.456 loops=1)</span>
+<span class="cm">              Buckets: 1024  Batches: 1  Memory Usage: 72kB</span>
+<span class="cm">              Buffers: shared hit=100 read=30</span>
+<span class="cm">              -&gt;  Index Scan using idx_users_created on users u</span>
+<span class="cm">                  (cost=0.29..80.00 rows=1000 width=36)</span>
+<span class="cm">                  (actual time=0.030..2.345 loops=1)</span>
+<span class="cm">                    Index Cond: (created_at &gt; &#39;2024-01-01&#39;)</span>
+<span class="cm">                    Buffers: shared hit=100 read=30</span>
+<span class="cm">Planning Time: 0.456 ms</span>
+<span class="cm">Execution Time: 46.789 ms</span>
+<span class="cm">*/</span>
+</code></pre></div>
+
+<h3 id="13-key-metrics-interpretation">1.3 Key Metrics Interpretation<a class="header-link" href="#13-key-metrics-interpretation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│              Execution Plan Metrics Interpretation           │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  cost=startup_cost..total_cost                              │
+│  • Startup cost: cost until first row                       │
+│  • Total cost: cost until all rows                          │
+│  • Unit: abstract cost units                                │
+│                                                             │
+│  rows=estimated_rows                                        │
+│  • Planner&#39;s estimated row count                            │
+│                                                             │
+│  width=row_width                                            │
+│  • Average bytes per row                                    │
+│                                                             │
+│  actual time=start..end                                     │
+│  • Actual execution time (milliseconds)                     │
+│                                                             │
+│  loops=loop_count                                           │
+│  • Number of times node was executed                        │
+│  • Actual time = time × loops                               │
+│                                                             │
+│  Buffers:                                                   │
+│  • shared hit: blocks read from cache                       │
+│  • shared read: blocks read from disk                       │
+│  • shared written: blocks written to disk                   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="14-problem-identification">1.4 Problem Identification<a class="header-link" href="#14-problem-identification" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Problem: Estimated vs actual row count difference</span>
+<span class="c1">-- Expected: rows=100, Actual: rows=10000</span>
+<span class="c1">-- Cause: Outdated statistics, ANALYZE needed</span>
+
+<span class="k">ANALYZE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+
+<span class="c1">-- Problem: High startup cost</span>
+<span class="c1">-- Occurs in Sort, Hash operations</span>
+<span class="c1">-- Solution: Add appropriate index</span>
+
+<span class="c1">-- Problem: High loops in Nested Loop</span>
+<span class="c1">-- Solution: Change JOIN method or add index</span>
+
+<span class="c1">-- Problem: Seq Scan on large table</span>
+<span class="c1">-- Solution: Add appropriate index</span>
+</code></pre></div>
+
+<hr />
+<h2 id="2-query-planner">2. Query Planner<a class="header-link" href="#2-query-planner" title="Permanent link">&para;</a></h2>
+<h3 id="21-planner-process">2.1 Planner Process<a class="header-link" href="#21-planner-process" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    Query Planner Process                     │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  SQL Query                                                  │
+│      │                                                      │
+│      ▼                                                      │
+│  ┌─────────┐                                               │
+│  │ Parser  │ → Parse syntax → Parse Tree                   │
+│  └─────────┘                                               │
+│      │                                                      │
+│      ▼                                                      │
+│  ┌─────────┐                                               │
+│  │Analyzer │ → Semantic analysis → Query Tree              │
+│  └─────────┘                                               │
+│      │                                                      │
+│      ▼                                                      │
+│  ┌─────────┐                                               │
+│  │Rewriter │ → Apply rules (VIEW, etc)                     │
+│  └─────────┘                                               │
+│      │                                                      │
+│      ▼                                                      │
+│  ┌─────────┐    ┌──────────────┐                          │
+│  │Planner  │◄───│  Statistics  │                          │
+│  └─────────┘    └──────────────┘                          │
+│      │                                                      │
+│      ▼ Select optimal execution plan                       │
+│  ┌─────────┐                                               │
+│  │Executor │ → Execute → Result                            │
+│  └─────────┘                                               │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="22-planner-configuration">2.2 Planner Configuration<a class="header-link" href="#22-planner-configuration" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Check planner settings</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">seq_page_cost</span><span class="p">;</span><span class="w">      </span><span class="c1">-- Sequential page read cost (default 1.0)</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">random_page_cost</span><span class="p">;</span><span class="w">   </span><span class="c1">-- Random page read cost (default 4.0)</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">cpu_tuple_cost</span><span class="p">;</span><span class="w">     </span><span class="c1">-- Tuple processing cost (default 0.01)</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">cpu_index_tuple_cost</span><span class="p">;</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">cpu_operator_cost</span><span class="p">;</span>
+
+<span class="c1">-- Lower random_page_cost for SSD</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">random_page_cost</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">.</span><span class="mi">1</span><span class="p">;</span>
+
+<span class="c1">-- Disable specific plans (for testing)</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">enable_seqscan</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">off</span><span class="p">;</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">enable_indexscan</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">off</span><span class="p">;</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">enable_bitmapscan</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">off</span><span class="p">;</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">enable_hashjoin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">off</span><span class="p">;</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">enable_mergejoin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">off</span><span class="p">;</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">enable_nestloop</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">off</span><span class="p">;</span>
+
+<span class="c1">-- Parallel query settings</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">max_parallel_workers_per_gather</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">parallel_tuple_cost</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">01</span><span class="p">;</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">parallel_setup_cost</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="23-planner-hints-pg_hint_plan">2.3 Planner Hints (pg_hint_plan)<a class="header-link" href="#23-planner-hints-pg_hint_plan" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- pg_hint_plan extension installation required</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="n">EXTENSION</span><span class="w"> </span><span class="n">pg_hint_plan</span><span class="p">;</span>
+
+<span class="c1">-- Index hint</span>
+<span class="cm">/*+ IndexScan(users idx_users_email) */</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;test@example.com&#39;</span><span class="p">;</span>
+
+<span class="c1">-- Join order hint</span>
+<span class="cm">/*+ Leading(orders users) */</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="p">;</span>
+
+<span class="c1">-- Join method hint</span>
+<span class="cm">/*+ HashJoin(users orders) */</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="p">;</span>
+
+<span class="cm">/*+ NestLoop(users orders) */</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="p">;</span>
+
+<span class="c1">-- Force Seq Scan</span>
+<span class="cm">/*+ SeqScan(users) */</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span>
+
+<span class="c1">-- Disable parallel query</span>
+<span class="cm">/*+ Parallel(users 0) */</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-index-strategies">3. Index Strategies<a class="header-link" href="#3-index-strategies" title="Permanent link">&para;</a></h2>
+<h3 id="31-index-type-selection">3.1 Index Type Selection<a class="header-link" href="#31-index-type-selection" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- B-tree (default, most cases)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_email</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">email</span><span class="p">);</span>
+
+<span class="c1">-- Suitable for: =, &lt;, &gt;, &lt;=, &gt;=, BETWEEN, IN, IS NULL</span>
+<span class="c1">-- LIKE &#39;abc%&#39; (prefix matching)</span>
+
+<span class="c1">-- Hash (equality only)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_email_hash</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">HASH</span><span class="w"> </span><span class="p">(</span><span class="n">email</span><span class="p">);</span>
+<span class="c1">-- Suitable for: = only</span>
+<span class="c1">-- WAL support in PostgreSQL 10+</span>
+
+<span class="c1">-- GiST (geometry, ranges, full-text search)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_locations_point</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">locations</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIST</span><span class="w"> </span><span class="p">(</span><span class="n">point</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_events_range</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIST</span><span class="w"> </span><span class="p">(</span><span class="n">time_range</span><span class="p">);</span>
+
+<span class="c1">-- GIN (arrays, JSONB, full-text search)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_posts_tags</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">posts</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">tags</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_products_attrs</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">attributes</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_docs_search</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">documents</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">content</span><span class="p">));</span>
+
+<span class="c1">-- BRIN (large sequential data)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_logs_time</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">logs</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">BRIN</span><span class="w"> </span><span class="p">(</span><span class="n">created_at</span><span class="p">);</span>
+<span class="c1">-- Suitable for: physically ordered data (time series, etc)</span>
+<span class="c1">-- Very small size, effective for large tables</span>
+</code></pre></div>
+
+<h3 id="32-composite-indexes">3.2 Composite Indexes<a class="header-link" href="#32-composite-indexes" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Composite index order matters!</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_orders_user_date</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">orders</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="p">);</span>
+
+<span class="c1">-- These queries can use the index:</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">;</span>
+
+<span class="c1">-- This query cannot use the index (no first column):</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">;</span>
+
+<span class="c1">-- Sort optimization</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_orders_user_date_desc</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">orders</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="k">DESC</span><span class="p">);</span>
+
+<span class="c1">-- INCLUDE (covering index, PostgreSQL 11+)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_orders_covering</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">orders</span><span class="p">(</span><span class="n">user_id</span><span class="p">)</span>
+<span class="n">INCLUDE</span><span class="w"> </span><span class="p">(</span><span class="n">status</span><span class="p">,</span><span class="w"> </span><span class="n">total</span><span class="p">);</span>
+<span class="c1">-- Query can use index only (Index Only Scan)</span>
+</code></pre></div>
+
+<h3 id="33-partial-indexes">3.3 Partial Indexes<a class="header-link" href="#33-partial-indexes" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Index on specific condition</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_orders_pending</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">orders</span><span class="p">(</span><span class="n">created_at</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;pending&#39;</span><span class="p">;</span>
+
+<span class="c1">-- Exclude NULL</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_email_notnull</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">email</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span>
+
+<span class="c1">-- Recent data only</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_logs_recent</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">logs</span><span class="p">(</span><span class="k">level</span><span class="p">,</span><span class="w"> </span><span class="n">message</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">;</span>
+
+<span class="c1">-- Non-deleted rows only</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_active_products</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">products</span><span class="p">(</span><span class="n">category_id</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">deleted_at</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="34-index-management">3.4 Index Management<a class="header-link" href="#34-index-management" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Index usage statistics</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">schemaname</span><span class="p">,</span>
+<span class="w">    </span><span class="n">relname</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">table_name</span><span class="p">,</span>
+<span class="w">    </span><span class="n">indexrelname</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">index_name</span><span class="p">,</span>
+<span class="w">    </span><span class="n">idx_scan</span><span class="p">,</span>
+<span class="w">    </span><span class="n">idx_tup_read</span><span class="p">,</span>
+<span class="w">    </span><span class="n">idx_tup_fetch</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_user_indexes</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">idx_scan</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+
+<span class="c1">-- Find unused indexes</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">schemaname</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;.&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">relname</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">table</span><span class="p">,</span>
+<span class="w">    </span><span class="n">indexrelname</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">index</span><span class="p">,</span>
+<span class="w">    </span><span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">i</span><span class="p">.</span><span class="n">indexrelid</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">size</span><span class="p">,</span>
+<span class="w">    </span><span class="n">idx_scan</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_user_indexes</span><span class="w"> </span><span class="n">ui</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">pg_index</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">ui</span><span class="p">.</span><span class="n">indexrelid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="p">.</span><span class="n">indexrelid</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">idx_scan</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+<span class="k">AND</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="n">indisunique</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">i</span><span class="p">.</span><span class="n">indexrelid</span><span class="p">)</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+
+<span class="c1">-- Find duplicate indexes</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">a</span><span class="p">.</span><span class="n">indrelid</span><span class="p">::</span><span class="n">regclass</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">table_name</span><span class="p">,</span>
+<span class="w">    </span><span class="n">a</span><span class="p">.</span><span class="n">indexrelid</span><span class="p">::</span><span class="n">regclass</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">index1</span><span class="p">,</span>
+<span class="w">    </span><span class="n">b</span><span class="p">.</span><span class="n">indexrelid</span><span class="p">::</span><span class="n">regclass</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">index2</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_index</span><span class="w"> </span><span class="n">a</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">pg_index</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">indrelid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">indrelid</span>
+<span class="k">AND</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">indexrelid</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">indexrelid</span>
+<span class="k">AND</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">indkey</span><span class="p">::</span><span class="nb">text</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">indkey</span><span class="p">::</span><span class="nb">text</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;%&#39;</span><span class="p">)</span>
+<span class="w">    </span><span class="k">OR</span><span class="w"> </span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">indkey</span><span class="p">::</span><span class="nb">text</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">indkey</span><span class="p">::</span><span class="nb">text</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;%&#39;</span><span class="p">)</span>
+<span class="p">);</span>
+
+<span class="c1">-- Reindex</span>
+<span class="k">REINDEX</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_email</span><span class="p">;</span>
+<span class="k">REINDEX</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+<span class="k">REINDEX</span><span class="w"> </span><span class="k">DATABASE</span><span class="w"> </span><span class="n">mydb</span><span class="w"> </span><span class="n">CONCURRENTLY</span><span class="p">;</span><span class="w">  </span><span class="c1">-- PostgreSQL 12+</span>
+
+<span class="c1">-- Create index concurrently (minimize locking)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">CONCURRENTLY</span><span class="w"> </span><span class="n">idx_users_email</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">email</span><span class="p">);</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-join-optimization">4. Join Optimization<a class="header-link" href="#4-join-optimization" title="Permanent link">&para;</a></h2>
+<h3 id="41-join-method-comparison">4.1 Join Method Comparison<a class="header-link" href="#41-join-method-comparison" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    Join Method Comparison                    │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Nested Loop Join                                           │
+│  ─────────────────                                          │
+│  for each row in outer:                                     │
+│      for each row in inner:                                 │
+│          if match: emit                                     │
+│                                                             │
+│  • Suitable: small tables, with index                       │
+│  • Cost: O(N × M), O(N × log M) with index                 │
+│                                                             │
+│  Hash Join                                                  │
+│  ─────────────────                                          │
+│  build hash table from inner                                │
+│  for each row in outer:                                     │
+│      probe hash table                                       │
+│                                                             │
+│  • Suitable: large tables, equijoin                         │
+│  • Cost: O(N + M)                                          │
+│  • Requires memory (work_mem)                               │
+│                                                             │
+│  Merge Join                                                 │
+│  ─────────────────                                          │
+│  sort both tables                                           │
+│  merge sorted lists                                         │
+│                                                             │
+│  • Suitable: already sorted data, range join               │
+│  • Cost: O(N log N + M log M + N + M)                      │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="42-join-order-optimization">4.2 Join Order Optimization<a class="header-link" href="#42-join-order-optimization" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Join order greatly affects performance</span>
+<span class="c1">-- Planner auto-optimizes but limited with many tables</span>
+
+<span class="c1">-- Check join limits</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">join_collapse_limit</span><span class="p">;</span><span class="w">  </span><span class="c1">-- default 8</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">from_collapse_limit</span><span class="p">;</span><span class="w">  </span><span class="c1">-- default 8</span>
+
+<span class="c1">-- Many table joins: order matters</span>
+<span class="c1">-- Small tables / heavily filtered tables first</span>
+
+<span class="c1">-- Good example: filter first</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;pending&#39;</span><span class="w">  </span><span class="c1">-- filtering</span>
+<span class="k">AND</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">;</span>
+
+<span class="c1">-- Explicit join order (for testing)</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">join_collapse_limit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">t1</span><span class="p">,</span><span class="w"> </span><span class="n">t2</span><span class="p">,</span><span class="w"> </span><span class="n">t3</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">t1</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">t2</span><span class="p">.</span><span class="n">t1_id</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">t2</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">t3</span><span class="p">.</span><span class="n">t2_id</span><span class="p">;</span>
+<span class="k">RESET</span><span class="w"> </span><span class="n">join_collapse_limit</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="43-join-performance-improvement">4.3 Join Performance Improvement<a class="header-link" href="#43-join-performance-improvement" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Appropriate indexes</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_orders_user</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">orders</span><span class="p">(</span><span class="n">user_id</span><span class="p">);</span>
+
+<span class="c1">-- Match join column types</span>
+<span class="c1">-- Bad: orders.user_id (int) JOIN users.id (bigint) → type conversion</span>
+<span class="c1">-- Good: use same type</span>
+
+<span class="c1">-- Remove unnecessary joins</span>
+<span class="c1">-- Bad</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="p">;</span><span class="w">  </span><span class="c1">-- nothing from users</span>
+
+<span class="c1">-- Good (remove join)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="p">);</span>
+
+<span class="c1">-- Convert subquery → join</span>
+<span class="c1">-- Bad (correlated subquery)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="p">,</span>
+<span class="w">    </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">user_name</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span><span class="p">;</span>
+
+<span class="c1">-- Good</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">user_name</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-statistics-and-cost-estimation">5. Statistics and Cost Estimation<a class="header-link" href="#5-statistics-and-cost-estimation" title="Permanent link">&para;</a></h2>
+<h3 id="51-statistics-collection">5.1 Statistics Collection<a class="header-link" href="#51-statistics-collection" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Collect table statistics</span>
+<span class="k">ANALYZE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+<span class="k">ANALYZE</span><span class="p">;</span><span class="w">  </span><span class="c1">-- entire database</span>
+
+<span class="c1">-- Auto ANALYZE settings</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">autovacuum_analyze_threshold</span><span class="p">;</span><span class="w">     </span><span class="c1">-- default 50</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">autovacuum_analyze_scale_factor</span><span class="p">;</span><span class="w">  </span><span class="c1">-- default 0.1</span>
+
+<span class="c1">-- Column statistics detail level</span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">ALTER</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="k">STATISTICS</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span>
+<span class="c1">-- default 100, max 10000</span>
+<span class="k">ANALYZE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+
+<span class="c1">-- Check statistics</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">attname</span><span class="p">,</span>
+<span class="w">    </span><span class="n">n_distinct</span><span class="p">,</span>
+<span class="w">    </span><span class="n">most_common_vals</span><span class="p">,</span>
+<span class="w">    </span><span class="n">most_common_freqs</span><span class="p">,</span>
+<span class="w">    </span><span class="n">histogram_bounds</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stats</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">tablename</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;users&#39;</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="52-row-count-estimation">5.2 Row Count Estimation<a class="header-link" href="#52-row-count-estimation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Estimate table row count</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">reltuples</span><span class="p">::</span><span class="nb">bigint</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">estimate</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_class</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">relname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;users&#39;</span><span class="p">;</span>
+
+<span class="c1">-- Exact row count (slow)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+
+<span class="c1">-- Conditional row count estimate</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;active&#39;</span><span class="p">;</span>
+<span class="c1">-- check rows=xxx</span>
+
+<span class="c1">-- Improve estimation accuracy</span>
+<span class="c1">-- 1. Run ANALYZE</span>
+<span class="c1">-- 2. Increase statistics detail</span>
+<span class="c1">-- 3. Extended statistics (PostgreSQL 10+)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">STATISTICS</span><span class="w"> </span><span class="n">stts_user_country_status</span><span class="w"> </span><span class="p">(</span><span class="n">dependencies</span><span class="p">)</span>
+<span class="k">ON</span><span class="w"> </span><span class="n">country</span><span class="p">,</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+<span class="k">ANALYZE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="53-cost-calculation">5.3 Cost Calculation<a class="header-link" href="#53-cost-calculation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- cost = (pages × page_cost) + (rows × row_cost)</span>
+
+<span class="c1">-- Check page count</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">relpages</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">pg_class</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">relname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;users&#39;</span><span class="p">;</span>
+
+<span class="c1">-- Cost parameters</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">seq_page_cost</span><span class="p">;</span><span class="w">        </span><span class="c1">-- 1.0</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">random_page_cost</span><span class="p">;</span><span class="w">     </span><span class="c1">-- 4.0</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">cpu_tuple_cost</span><span class="p">;</span><span class="w">       </span><span class="c1">-- 0.01</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">cpu_index_tuple_cost</span><span class="p">;</span><span class="w"> </span><span class="c1">-- 0.005</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">cpu_operator_cost</span><span class="p">;</span><span class="w">    </span><span class="c1">-- 0.0025</span>
+
+<span class="c1">-- Seq Scan cost calculation example</span>
+<span class="c1">-- cost = (relpages × seq_page_cost) + (reltuples × cpu_tuple_cost)</span>
+<span class="c1">-- cost = (1000 × 1.0) + (100000 × 0.01) = 2000</span>
+
+<span class="c1">-- Index Scan cost is more complex</span>
+<span class="c1">-- depends on selectivity</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-advanced-optimization-techniques">6. Advanced Optimization Techniques<a class="header-link" href="#6-advanced-optimization-techniques" title="Permanent link">&para;</a></h2>
+<h3 id="61-query-refactoring">6.1 Query Refactoring<a class="header-link" href="#61-query-refactoring" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- OR → UNION (use index)</span>
+<span class="c1">-- Bad</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">category_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="n">brand_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+
+<span class="c1">-- Good</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">category_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span>
+<span class="k">UNION</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">brand_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+
+<span class="c1">-- IN → EXISTS (large data)</span>
+<span class="c1">-- Bad (when subquery returns many rows)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">1000</span><span class="p">);</span>
+
+<span class="c1">-- Good</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">SELECT</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span>
+<span class="w">    </span><span class="k">WHERE</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">amount</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">1000</span>
+<span class="p">);</span>
+
+<span class="c1">-- NOT IN → NOT EXISTS (NULL handling)</span>
+<span class="c1">-- NOT IN returns empty result if NULL exists</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="p">);</span><span class="w">  </span><span class="c1">-- problem if orders.user_id has NULL</span>
+
+<span class="c1">-- Safe method</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="p">);</span>
+
+<span class="c1">-- DISTINCT → GROUP BY (use index)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="p">;</span>
+<span class="c1">-- →</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">user_id</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="62-materialized-view">6.2 Materialized View<a class="header-link" href="#62-materialized-view" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Store complex aggregation results</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="n">MATERIALIZED</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">mv_daily_sales</span><span class="w"> </span><span class="k">AS</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;day&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">day</span><span class="p">,</span>
+<span class="w">    </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">order_count</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">total</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_sales</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">orders</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;day&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="p">);</span>
+
+<span class="c1">-- Add index</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">UNIQUE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_mv_daily_sales_day</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">mv_daily_sales</span><span class="p">(</span><span class="k">day</span><span class="p">);</span>
+
+<span class="c1">-- Refresh</span>
+<span class="n">REFRESH</span><span class="w"> </span><span class="n">MATERIALIZED</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">mv_daily_sales</span><span class="p">;</span>
+<span class="n">REFRESH</span><span class="w"> </span><span class="n">MATERIALIZED</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">CONCURRENTLY</span><span class="w"> </span><span class="n">mv_daily_sales</span><span class="p">;</span><span class="w">  </span><span class="c1">-- requires UNIQUE index</span>
+
+<span class="c1">-- Auto refresh (use pg_cron or trigger)</span>
+</code></pre></div>
+
+<h3 id="63-partitioning">6.3 Partitioning<a class="header-link" href="#63-partitioning" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Range partitioning</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">BIGSERIAL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">user_id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">total</span><span class="w"> </span><span class="nb">DECIMAL</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+<span class="p">)</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">RANGE</span><span class="w"> </span><span class="p">(</span><span class="n">created_at</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders_2024_q1</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">orders</span>
+<span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-04-01&#39;</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders_2024_q2</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">orders</span>
+<span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-04-01&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-07-01&#39;</span><span class="p">);</span>
+
+<span class="c1">-- Check partition pruning</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;2024-02-15&#39;</span><span class="p">;</span>
+<span class="c1">-- only orders_2024_q1 scanned</span>
+
+<span class="c1">-- List partitioning</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">logs</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">BIGSERIAL</span><span class="p">,</span>
+<span class="w">    </span><span class="k">level</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span>
+<span class="w">    </span><span class="n">message</span><span class="w"> </span><span class="nb">TEXT</span>
+<span class="p">)</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">LIST</span><span class="w"> </span><span class="p">(</span><span class="k">level</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">logs_error</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">logs</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;ERROR&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;FATAL&#39;</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">logs_info</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">logs</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;INFO&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;DEBUG&#39;</span><span class="p">);</span>
+
+<span class="c1">-- Hash partitioning</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">BIGSERIAL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">user_id</span><span class="w"> </span><span class="nb">INT</span>
+<span class="p">)</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">HASH</span><span class="w"> </span><span class="p">(</span><span class="n">user_id</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">events_p0</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="p">(</span><span class="n">MODULUS</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="n">REMAINDER</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">events_p1</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="p">(</span><span class="n">MODULUS</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="n">REMAINDER</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">events_p2</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="p">(</span><span class="n">MODULUS</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="n">REMAINDER</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">events_p3</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="p">(</span><span class="n">MODULUS</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="n">REMAINDER</span><span class="w"> </span><span class="mi">3</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="64-query-caching">6.4 Query Caching<a class="header-link" href="#64-query-caching" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Prepared Statement (cache query plan)</span>
+<span class="k">PREPARE</span><span class="w"> </span><span class="n">get_user</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">$</span><span class="mi">1</span><span class="p">;</span>
+
+<span class="k">EXECUTE</span><span class="w"> </span><span class="n">get_user</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="k">EXECUTE</span><span class="w"> </span><span class="n">get_user</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+
+<span class="k">DEALLOCATE</span><span class="w"> </span><span class="n">get_user</span><span class="p">;</span>
+
+<span class="c1">-- Caution with prepared statements in connection poolers like PgBouncer</span>
+
+<span class="c1">-- Result caching (application level)</span>
+<span class="c1">-- Redis, Memcached recommended</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7-practice-problems">7. Practice Problems<a class="header-link" href="#7-practice-problems" title="Permanent link">&para;</a></h2>
+<h3 id="exercise-1-analyze-execution-plan">Exercise 1: Analyze Execution Plan<a class="header-link" href="#exercise-1-analyze-execution-plan" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Analyze and optimize the following query execution plan:</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">id</span><span class="p">),</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">total</span><span class="p">)</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span>
+<span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">country</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;US&#39;</span>
+<span class="k">AND</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">NOW</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">INTERVAL</span><span class="w"> </span><span class="s1">&#39;1 year&#39;</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">name</span>
+<span class="k">HAVING</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">id</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">10</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">total</span><span class="p">)</span><span class="w"> </span><span class="k">DESC</span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span>
+
+<span class="c1">-- Analyze and propose improvements:</span>
+</code></pre></div>
+
+<h3 id="exercise-2-index-design">Exercise 2: Index Design<a class="header-link" href="#exercise-2-index-design" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Design optimal indexes for the following queries:</span>
+<span class="c1">-- 1. SELECT * FROM orders WHERE user_id = ? AND status = &#39;pending&#39; ORDER BY created_at DESC</span>
+<span class="c1">-- 2. SELECT * FROM products WHERE category_id = ? AND price BETWEEN ? AND ?</span>
+<span class="c1">-- 3. SELECT * FROM logs WHERE level = &#39;ERROR&#39; AND created_at &gt; NOW() - INTERVAL &#39;1 day&#39;</span>
+
+<span class="c1">-- Write index creation statements:</span>
+</code></pre></div>
+
+<h3 id="exercise-3-join-optimization">Exercise 3: Join Optimization<a class="header-link" href="#exercise-3-join-optimization" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Optimize 5-table join query:</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">product_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">id</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">categories</span><span class="w"> </span><span class="k">c</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">category_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">id</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">suppliers</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">supplier_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">s</span><span class="p">.</span><span class="n">id</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Electronics&#39;</span>
+<span class="k">AND</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">;</span>
+
+<span class="c1">-- Develop optimization strategy:</span>
+</code></pre></div>
+
+<h3 id="exercise-4-partitioning-design">Exercise 4: Partitioning Design<a class="header-link" href="#exercise-4-partitioning-design" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Design partitioning for large log table:</span>
+<span class="c1">-- Requirements:</span>
+<span class="c1">-- - Daily data: 1 million rows</span>
+<span class="c1">-- - Retention: 3 months</span>
+<span class="c1">-- - Frequently queried: level, created_at, user_id</span>
+
+<span class="c1">-- Design partition:</span>
+</code></pre></div>
+
+<hr />
+<h2 id="next-steps">Next Steps<a class="header-link" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="16_Replication_HA.md">16_Replication_HA</a> - Read distribution</li>
+<li><a href="17_Window_Functions.md">17_Window_Functions</a> - Advanced analytics</li>
+<li><a href="https://wiki.postgresql.org/wiki/Performance_Optimization">PostgreSQL Performance</a></li>
+</ul>
+<h2 id="references">References<a class="header-link" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://www.postgresql.org/docs/current/using-explain.html">PostgreSQL EXPLAIN</a></li>
+<li><a href="https://www.postgresql.org/docs/current/planner-optimizer.html">Query Planning</a></li>
+<li><a href="https://www.postgresql.org/docs/current/indexes-types.html">Index Types</a></li>
+<li><a href="https://use-the-index-luke.com/">Use The Index, Luke</a></li>
+</ul>
+<hr />
+<p><a href="14_JSON_JSONB.md">← Previous: JSON/JSONB Features</a> | <a href="16_Replication_HA.md">Next: Replication and High Availability →</a> | <a href="00_Overview.md">Table of Contents</a></p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/PostgreSQL/14_JSON_JSONB.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">14. PostgreSQL JSON/JSONB Features</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/PostgreSQL/16_Replication_HA.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">16. Replication & High Availability</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'en';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

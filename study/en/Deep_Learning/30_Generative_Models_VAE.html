@@ -1,0 +1,955 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>30. Generative Models - VAE (Variational Autoencoder) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/en/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/en/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/en/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" selected>
+                        English
+                    </option>
+                    
+                    <option value="ko" >
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/en/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/en/Deep_Learning/">Deep Learning</a>
+    <span class="separator">/</span>
+    <span class="current">30. Generative Models - VAE (Variational Autoencoder)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>30. Generative Models - VAE (Variational Autoencoder)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/Deep_Learning/29_Impl_GAN.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">29. Generative Adversarial Networks (GAN)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/Deep_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/Deep_Learning/31_Impl_VAE.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">31. Variational Autoencoder (VAE)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#learning-objectives">Learning Objectives</a></li>
+<li><a href="#1-vae-theory">1. VAE Theory</a><ul>
+<li><a href="#autoencoder-vs-vae">Autoencoder vs VAE</a></li>
+<li><a href="#why-probabilistic">Why Probabilistic?</a></li>
+<li><a href="#graphical-model">Graphical Model</a></li>
+</ul>
+</li>
+<li><a href="#2-elbo-loss-function">2. ELBO Loss Function</a><ul>
+<li><a href="#derivation">Derivation</a></li>
+<li><a href="#meaning-of-two-terms">Meaning of Two Terms</a></li>
+<li><a href="#loss-function-implementation">Loss Function Implementation</a></li>
+</ul>
+</li>
+<li><a href="#3-reparameterization-trick">3. Reparameterization Trick</a><ul>
+<li><a href="#problem">Problem</a></li>
+<li><a href="#solution-reparameterization">Solution: Reparameterization</a></li>
+<li><a href="#visual-understanding">Visual Understanding</a></li>
+</ul>
+</li>
+<li><a href="#4-vae-model-implementation">4. VAE Model Implementation</a><ul>
+<li><a href="#encoder">Encoder</a></li>
+<li><a href="#decoder">Decoder</a></li>
+<li><a href="#complete-vae">Complete VAE</a></li>
+</ul>
+</li>
+<li><a href="#5-training-loop">5. Training Loop</a></li>
+<li><a href="#6-beta-vae">6. Beta-VAE</a><ul>
+<li><a href="#idea">Idea</a></li>
+<li><a href="#implementation">Implementation</a></li>
+<li><a href="#disentanglement-example">Disentanglement Example</a></li>
+</ul>
+</li>
+<li><a href="#7-latent-space-visualization">7. Latent Space Visualization</a><ul>
+<li><a href="#2d-latent-space">2D Latent Space</a></li>
+<li><a href="#latent-space-exploration">Latent Space Exploration</a></li>
+<li><a href="#manifold-generation">Manifold Generation</a></li>
+</ul>
+</li>
+<li><a href="#8-vae-vs-gan-comparison">8. VAE vs GAN Comparison</a><ul>
+<li><a href="#advantages-and-disadvantages">Advantages and Disadvantages</a></li>
+</ul>
+</li>
+<li><a href="#9-advanced-vae-variants">9. Advanced VAE Variants</a><ul>
+<li><a href="#conditional-vae-cvae">Conditional VAE (CVAE)</a></li>
+<li><a href="#vq-vae-vector-quantized-vae">VQ-VAE (Vector Quantized VAE)</a></li>
+</ul>
+</li>
+<li><a href="#10-complete-mnist-vae-example">10. Complete MNIST VAE Example</a></li>
+<li><a href="#summary">Summary</a><ul>
+<li><a href="#key-concepts">Key Concepts</a></li>
+<li><a href="#core-code">Core Code</a></li>
+<li><a href="#use-case-scenarios">Use Case Scenarios</a></li>
+</ul>
+</li>
+<li><a href="#next-steps">Next Steps</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <p><a href="./29_Impl_GAN.md">Previous: Generative Adversarial Networks (GAN)</a> | <a href="./31_Impl_VAE.md">Next: Variational Autoencoder (VAE)</a></p>
+<hr />
+<h1 id="30-generative-models-vae-variational-autoencoder">30. Generative Models - VAE (Variational Autoencoder)<a class="header-link" href="#30-generative-models-vae-variational-autoencoder" title="Permanent link">&para;</a></h1>
+<h2 id="learning-objectives">Learning Objectives<a class="header-link" href="#learning-objectives" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Theoretical foundation of VAE (Variational Inference)</li>
+<li>Understanding Latent Space and probabilistic generation</li>
+<li>Deriving ELBO loss function</li>
+<li>Reparameterization Trick</li>
+<li>Beta-VAE and Disentanglement</li>
+<li>PyTorch implementation and visualization</li>
+</ul>
+<hr />
+<h2 id="1-vae-theory">1. VAE Theory<a class="header-link" href="#1-vae-theory" title="Permanent link">&para;</a></h2>
+<h3 id="autoencoder-vs-vae">Autoencoder vs VAE<a class="header-link" href="#autoencoder-vs-vae" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">Autoencoder</span><span class="o">:</span>
+<span class="w">    </span><span class="n">Input</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Encoder</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Latent</span><span class="w"> </span><span class="n">vector</span><span class="w"> </span><span class="n">z</span><span class="w"> </span><span class="o">(</span><span class="n">deterministic</span><span class="o">)</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Decoder</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Reconstruction</span>
+
+<span class="n">VAE</span><span class="o">:</span>
+<span class="w">    </span><span class="n">Input</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Encoder</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Mean</span><span class="w"> </span><span class="n">mu</span><span class="o">,</span><span class="w"> </span><span class="n">Variance</span><span class="w"> </span><span class="n">sigma</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Sample</span><span class="w"> </span><span class="n">z</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="n">N</span><span class="o">(</span><span class="n">mu</span><span class="o">,</span><span class="w"> </span><span class="n">sigma</span><span class="o">)</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Decoder</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">Reconstruction</span>
+<span class="w">                         </span><span class="err">↓</span>
+<span class="w">                    </span><span class="n">Latent</span><span class="w"> </span><span class="n">space</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">continuous</span><span class="w"> </span><span class="n">and</span><span class="w"> </span><span class="n">follows</span><span class="w"> </span><span class="n">normal</span><span class="w"> </span><span class="n">distribution</span>
+<span class="w">                    </span><span class="err">→</span><span class="w"> </span><span class="n">Can</span><span class="w"> </span><span class="n">generate</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">images</span>
+</code></pre></div>
+
+<h3 id="why-probabilistic">Why Probabilistic?<a class="header-link" href="#why-probabilistic" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">Problems</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">regular</span><span class="w"> </span><span class="nl">Autoencoder:</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Latent</span><span class="w"> </span><span class="n">space</span><span class="w"> </span><span class="n">is</span><span class="w"> </span><span class="n">discontinuous</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Strange</span><span class="w"> </span><span class="k">output</span><span class="w"> </span><span class="n">when</span><span class="w"> </span><span class="n">inputting</span><span class="w"> </span><span class="n">z</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="n">in</span><span class="w"> </span><span class="n">training</span><span class="w"> </span><span class="n">data</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Difficult</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">use</span><span class="w"> </span><span class="n">as</span><span class="w"> </span><span class="n">generative</span><span class="w"> </span><span class="n">model</span>
+
+<span class="n">VAE</span><span class="w"> </span><span class="nl">solution:</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Regularize</span><span class="w"> </span><span class="n">latent</span><span class="w"> </span><span class="n">space</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">normal</span><span class="w"> </span><span class="n">distribution</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Continuous</span><span class="w"> </span><span class="n">latent</span><span class="w"> </span><span class="n">space</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Can</span><span class="w"> </span><span class="n">sample</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">arbitrary</span><span class="w"> </span><span class="n">z</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="n">N</span><span class="p">(</span><span class="mh">0</span><span class="p">,</span><span class="w"> </span><span class="n">I</span><span class="p">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">generation</span>
+</code></pre></div>
+
+<h3 id="graphical-model">Graphical Model<a class="header-link" href="#graphical-model" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Generative Process:
+    z ~ p(z) = N(0, I)           # Prior distribution
+    x ~ p_theta(x|z)             # Decoder
+
+Inference:
+    q_phi(z|x) ≈ p(z|x)          # Encoder approximates posterior
+
+Goal:
+    Maximize log p(x) (data likelihood)
+    → Maximize ELBO (Evidence Lower Bound)
+</code></pre></div>
+
+<hr />
+<h2 id="2-elbo-loss-function">2. ELBO Loss Function<a class="header-link" href="#2-elbo-loss-function" title="Permanent link">&para;</a></h2>
+<h3 id="derivation">Derivation<a class="header-link" href="#derivation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>log p(x) = log ∫ p(x, z) dz
+
+         = log ∫ p(x|z) p(z) dz
+
+         = log ∫ q(z|x) * [p(x|z) p(z) / q(z|x)] dz
+
+         ≥ ∫ q(z|x) log[p(x|z) p(z) / q(z|x)] dz    (Jensen&#39;s inequality)
+
+         = E_q[log p(x|z)] - KL(q(z|x) || p(z))
+
+         = ELBO (Evidence Lower Bound)
+</code></pre></div>
+
+<h3 id="meaning-of-two-terms">Meaning of Two Terms<a class="header-link" href="#meaning-of-two-terms" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># ELBO = Reconstruction - KL Divergence</span>
+
+<span class="c1"># 1. Reconstruction Term: E_q[log p(x|z)]</span>
+<span class="c1">#    - How well decoder reconstructs x from z</span>
+<span class="c1">#    - Reconstruction loss (MSE or BCE)</span>
+
+<span class="c1"># 2. KL Divergence: KL(q(z|x) || p(z))</span>
+<span class="c1">#    - How close encoded distribution is to prior N(0,I)</span>
+<span class="c1">#    - Latent space regularization</span>
+</code></pre></div>
+
+<h3 id="loss-function-implementation">Loss Function Implementation<a class="header-link" href="#loss-function-implementation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">vae_loss</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x_recon</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">log_var</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;VAE 손실 함수 (⭐⭐⭐)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x: 원본 이미지 (batch, ...)</span>
+<span class="sd">        x_recon: 재구성 이미지 (batch, ...)</span>
+<span class="sd">        mu: 평균 (batch, latent_dim)</span>
+<span class="sd">        log_var: 로그 분산 (batch, latent_dim)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        total_loss, recon_loss, kl_loss</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># 재구성 손실 (이진 이미지: BCE, 연속 이미지: MSE)</span>
+    <span class="n">recon_loss</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">binary_cross_entropy</span><span class="p">(</span><span class="n">x_recon</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s1">&#39;sum&#39;</span><span class="p">)</span>
+    <span class="c1"># 또는 MSE</span>
+    <span class="c1"># recon_loss = F.mse_loss(x_recon, x, reduction=&#39;sum&#39;)</span>
+
+    <span class="c1"># KL Divergence: -0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)</span>
+    <span class="n">kl_loss</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">log_var</span> <span class="o">-</span> <span class="n">mu</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">log_var</span><span class="o">.</span><span class="n">exp</span><span class="p">())</span>
+
+    <span class="n">total_loss</span> <span class="o">=</span> <span class="n">recon_loss</span> <span class="o">+</span> <span class="n">kl_loss</span>
+
+    <span class="k">return</span> <span class="n">total_loss</span><span class="p">,</span> <span class="n">recon_loss</span><span class="p">,</span> <span class="n">kl_loss</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-reparameterization-trick">3. Reparameterization Trick<a class="header-link" href="#3-reparameterization-trick" title="Permanent link">&para;</a></h2>
+<h3 id="problem">Problem<a class="header-link" href="#problem" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Sampling from z ~ q(z|x) = N(mu, sigma)
+
+Problem: Sampling is not differentiable → Cannot backpropagate
+</code></pre></div>
+
+<h3 id="solution-reparameterization">Solution: Reparameterization<a class="header-link" href="#solution-reparameterization" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">reparameterize</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">log_var</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reparameterization Trick (⭐⭐⭐)</span>
+
+<span class="sd">    z = mu + sigma * epsilon</span>
+<span class="sd">    epsilon ~ N(0, I)</span>
+
+<span class="sd">    This way, randomness is in epsilon,</span>
+<span class="sd">    and we can differentiate with respect to mu, sigma</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">std</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">log_var</span><span class="p">)</span>  <span class="c1"># sigma = exp(0.5 * log(sigma^2))</span>
+    <span class="n">eps</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn_like</span><span class="p">(</span><span class="n">std</span><span class="p">)</span>     <span class="c1"># epsilon ~ N(0, I)</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">mu</span> <span class="o">+</span> <span class="n">std</span> <span class="o">*</span> <span class="n">eps</span>
+    <span class="k">return</span> <span class="n">z</span>
+</code></pre></div>
+
+<h3 id="visual-understanding">Visual Understanding<a class="header-link" href="#visual-understanding" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">[Not differentiable]</span>
+<span class="na">mu, sigma → Sampling → z → Decoder</span>
+
+<span class="k">[Differentiable - Reparameterization]</span>
+<span class="na">mu ──────────────┐</span>
+<span class="w">                 </span><span class="na">│</span>
+<span class="w">                 </span><span class="na">▼</span>
+<span class="na">sigma ────────▶ (mu + sigma * eps) ──▶ z ──▶ Decoder</span>
+<span class="w">                       </span><span class="na">▲</span>
+<span class="na">eps ~ N(0, I) ─────────┘ (treated as constant)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-vae-model-implementation">4. VAE Model Implementation<a class="header-link" href="#4-vae-model-implementation" title="Permanent link">&para;</a></h2>
+<h3 id="encoder">Encoder<a class="header-link" href="#encoder" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn.functional</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">F</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">VAEEncoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;VAE Encoder (⭐⭐⭐)</span>
+
+<span class="sd">    이미지 → mu, log_var</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">latent_dim</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">conv_layers</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>  <span class="c1"># 28 → 14</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>           <span class="c1"># 14 → 7</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Flatten</span><span class="p">()</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fc_mu</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">64</span> <span class="o">*</span> <span class="mi">7</span> <span class="o">*</span> <span class="mi">7</span><span class="p">,</span> <span class="n">latent_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fc_logvar</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">64</span> <span class="o">*</span> <span class="mi">7</span> <span class="o">*</span> <span class="mi">7</span><span class="p">,</span> <span class="n">latent_dim</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conv_layers</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fc_mu</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+        <span class="n">log_var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fc_logvar</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">mu</span><span class="p">,</span> <span class="n">log_var</span>
+</code></pre></div>
+
+<h3 id="decoder">Decoder<a class="header-link" href="#decoder" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">VAEDecoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;VAE Decoder (⭐⭐⭐)</span>
+
+<span class="sd">    z → 이미지</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">latent_dim</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">out_channels</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fc</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">latent_dim</span><span class="p">,</span> <span class="mi">64</span> <span class="o">*</span> <span class="mi">7</span> <span class="o">*</span> <span class="mi">7</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">deconv_layers</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ConvTranspose2d</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>  <span class="c1"># 7 → 14</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ConvTranspose2d</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>  <span class="c1"># 14 → 28</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Sigmoid</span><span class="p">()</span>  <span class="c1"># [0, 1]</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fc</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+        <span class="n">x_recon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">deconv_layers</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x_recon</span>
+</code></pre></div>
+
+<h3 id="complete-vae">Complete VAE<a class="header-link" href="#complete-vae" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">VAE</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Variational Autoencoder (⭐⭐⭐)&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">latent_dim</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">VAEEncoder</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="n">latent_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">VAEDecoder</span><span class="p">(</span><span class="n">latent_dim</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">latent_dim</span> <span class="o">=</span> <span class="n">latent_dim</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">reparameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">log_var</span><span class="p">):</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">log_var</span><span class="p">)</span>
+        <span class="n">eps</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn_like</span><span class="p">(</span><span class="n">std</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">mu</span> <span class="o">+</span> <span class="n">std</span> <span class="o">*</span> <span class="n">eps</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">mu</span><span class="p">,</span> <span class="n">log_var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reparameterize</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">log_var</span><span class="p">)</span>
+        <span class="n">x_recon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x_recon</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">log_var</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_samples</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;새로운 샘플 생성&quot;&quot;&quot;</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">num_samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">latent_dim</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">samples</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">reconstruct</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;이미지 재구성&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">x_recon</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x_recon</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-training-loop">5. Training Loop<a class="header-link" href="#5-training-loop" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">train_vae</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">dataloader</span><span class="p">,</span> <span class="n">epochs</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;VAE 학습 (⭐⭐⭐)&quot;&quot;&quot;</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">epochs</span><span class="p">):</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+        <span class="n">total_loss</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">total_recon</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">total_kl</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">for</span> <span class="n">batch_idx</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dataloader</span><span class="p">):</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+            <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+
+            <span class="c1"># Forward</span>
+            <span class="n">x_recon</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">log_var</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+            <span class="c1"># Loss</span>
+            <span class="n">loss</span><span class="p">,</span> <span class="n">recon_loss</span><span class="p">,</span> <span class="n">kl_loss</span> <span class="o">=</span> <span class="n">vae_loss</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">x_recon</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">log_var</span><span class="p">)</span>
+
+            <span class="c1"># Normalize by batch size</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="n">loss</span> <span class="o">/</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="c1"># Backward</span>
+            <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+            <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+            <span class="n">total_loss</span> <span class="o">+=</span> <span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+            <span class="n">total_recon</span> <span class="o">+=</span> <span class="n">recon_loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">total_kl</span> <span class="o">+=</span> <span class="n">kl_loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">avg_loss</span> <span class="o">=</span> <span class="n">total_loss</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataloader</span><span class="p">)</span>
+        <span class="n">avg_recon</span> <span class="o">=</span> <span class="n">total_recon</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataloader</span><span class="p">)</span>
+        <span class="n">avg_kl</span> <span class="o">=</span> <span class="n">total_kl</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataloader</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Epoch </span><span class="si">{</span><span class="n">epoch</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">: Loss=</span><span class="si">{</span><span class="n">avg_loss</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, Recon=</span><span class="si">{</span><span class="n">avg_recon</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, KL=</span><span class="si">{</span><span class="n">avg_kl</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">model</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-beta-vae">6. Beta-VAE<a class="header-link" href="#6-beta-vae" title="Permanent link">&para;</a></h2>
+<h3 id="idea">Idea<a class="header-link" href="#idea" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">ELBO</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Reconstruction</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">beta</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">KL</span>
+
+<span class="n">beta</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span><span class="w"> </span><span class="n">Greater</span><span class="w"> </span><span class="n">weight</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">KL</span><span class="w"> </span><span class="n">term</span>
+<span class="w">    </span><span class="err">→</span><span class="w"> </span><span class="n">Latent</span><span class="w"> </span><span class="n">space</span><span class="w"> </span><span class="n">more</span><span class="w"> </span><span class="n">regularized</span>
+<span class="w">    </span><span class="err">→</span><span class="w"> </span><span class="n">Disentangled</span><span class="w"> </span><span class="n">representations</span>
+<span class="w">    </span><span class="err">→</span><span class="w"> </span><span class="n">Each</span><span class="w"> </span><span class="n">latent</span><span class="w"> </span><span class="n">dimension</span><span class="w"> </span><span class="n">captures</span><span class="w"> </span><span class="n">independent</span><span class="w"> </span><span class="n">feature</span>
+
+<span class="n">beta</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span><span class="w"> </span><span class="n">Regular</span><span class="w"> </span><span class="n">VAE</span>
+<span class="n">beta</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span><span class="w"> </span><span class="n">Focus</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">reconstruction</span>
+</code></pre></div>
+
+<h3 id="implementation">Implementation<a class="header-link" href="#implementation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">beta_vae_loss</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x_recon</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">log_var</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mf">4.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Beta-VAE 손실 함수 (⭐⭐⭐)&quot;&quot;&quot;</span>
+    <span class="n">recon_loss</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">binary_cross_entropy</span><span class="p">(</span><span class="n">x_recon</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s1">&#39;sum&#39;</span><span class="p">)</span>
+    <span class="n">kl_loss</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">log_var</span> <span class="o">-</span> <span class="n">mu</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">log_var</span><span class="o">.</span><span class="n">exp</span><span class="p">())</span>
+
+    <span class="c1"># Beta 가중치</span>
+    <span class="n">total_loss</span> <span class="o">=</span> <span class="n">recon_loss</span> <span class="o">+</span> <span class="n">beta</span> <span class="o">*</span> <span class="n">kl_loss</span>
+
+    <span class="k">return</span> <span class="n">total_loss</span><span class="p">,</span> <span class="n">recon_loss</span><span class="p">,</span> <span class="n">kl_loss</span>
+</code></pre></div>
+
+<h3 id="disentanglement-example">Disentanglement Example<a class="header-link" href="#disentanglement-example" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nx">Beta</span><span class="o">-</span><span class="nx">VAE</span><span class="w"> </span><span class="nx">trained</span><span class="w"> </span><span class="nx">on</span><span class="w"> </span><span class="nx">MNIST</span><span class="w"> </span><span class="p">(</span><span class="nx">beta</span><span class="p">=</span><span class="mi">4</span><span class="p">):</span>
+<span class="w">    </span><span class="nx">z</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span><span class="w"> </span><span class="nx">Digit</span><span class="w"> </span><span class="nx">tilt</span>
+<span class="w">    </span><span class="nx">z</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span><span class="w"> </span><span class="nx">Line</span><span class="w"> </span><span class="nx">thickness</span>
+<span class="w">    </span><span class="nx">z</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span><span class="w"> </span><span class="nx">Digit</span><span class="w"> </span><span class="k">type</span>
+<span class="w">    </span><span class="o">...</span>
+
+<span class="nx">Independently</span><span class="w"> </span><span class="nx">controlling</span><span class="w"> </span><span class="nx">each</span><span class="w"> </span><span class="nx">dimension</span><span class="w"> </span><span class="nx">changes</span><span class="w"> </span><span class="nx">only</span><span class="w"> </span><span class="nx">that</span><span class="w"> </span><span class="nx">feature</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7-latent-space-visualization">7. Latent Space Visualization<a class="header-link" href="#7-latent-space-visualization" title="Permanent link">&para;</a></h2>
+<h3 id="2d-latent-space">2D Latent Space<a class="header-link" href="#2d-latent-space" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">visualize_latent_space</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">dataloader</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;잠재 공간 시각화 (⭐⭐)&quot;&quot;&quot;</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+
+    <span class="n">latents</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">dataloader</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">mu</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">latents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mu</span><span class="o">.</span><span class="n">cpu</span><span class="p">())</span>
+            <span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+
+    <span class="n">latents</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">latents</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+    <span class="n">scatter</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">latents</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">latents</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;tab10&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">scatter</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;z[0]&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;z[1]&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;VAE Latent Space&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s1">&#39;latent_space.png&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="latent-space-exploration">Latent Space Exploration<a class="header-link" href="#latent-space-exploration" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">explore_latent_dimension</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">dim_idx</span><span class="p">,</span> <span class="n">range_vals</span><span class="p">,</span> <span class="n">fixed_z</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;특정 잠재 차원 탐색 (⭐⭐)&quot;&quot;&quot;</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+    <span class="n">images</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">range_vals</span><span class="p">:</span>
+            <span class="n">z</span> <span class="o">=</span> <span class="n">fixed_z</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+            <span class="n">z</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">dim_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+            <span class="n">img</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+            <span class="n">images</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">cpu</span><span class="p">())</span>
+
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="manifold-generation">Manifold Generation<a class="header-link" href="#manifold-generation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">generate_manifold</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">latent_dim</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;2D 잠재 공간의 manifold 생성 (⭐⭐⭐)&quot;&quot;&quot;</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+
+    <span class="c1"># 그리드 생성 (-3, 3) 범위</span>
+    <span class="n">grid_x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+    <span class="n">grid_y</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+
+    <span class="n">figure</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">28</span> <span class="o">*</span> <span class="n">n</span><span class="p">,</span> <span class="mi">28</span> <span class="o">*</span> <span class="n">n</span><span class="p">))</span>
+
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">yi</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">grid_y</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">xi</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">grid_x</span><span class="p">):</span>
+                <span class="n">z</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">latent_dim</span><span class="p">)</span>
+                <span class="n">z</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">xi</span>
+                <span class="n">z</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">yi</span>
+
+                <span class="n">x_decoded</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+                <span class="n">digit</span> <span class="o">=</span> <span class="n">x_decoded</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+                <span class="n">figure</span><span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="mi">28</span><span class="p">:(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">28</span><span class="p">,</span>
+                       <span class="n">j</span> <span class="o">*</span> <span class="mi">28</span><span class="p">:(</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">28</span><span class="p">]</span> <span class="o">=</span> <span class="n">digit</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">figure</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s1">&#39;vae_manifold.png&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2 id="8-vae-vs-gan-comparison">8. VAE vs GAN Comparison<a class="header-link" href="#8-vae-vs-gan-comparison" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Characteristic</th>
+<th>VAE</th>
+<th>GAN</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Training method</td>
+<td>Likelihood maximization</td>
+<td>Adversarial training</td>
+</tr>
+<tr>
+<td>Loss function</td>
+<td>ELBO (explicit)</td>
+<td>Min-max (implicit)</td>
+</tr>
+<tr>
+<td>Training stability</td>
+<td>Stable</td>
+<td>Unstable</td>
+</tr>
+<tr>
+<td>Image quality</td>
+<td>Tends to be blurry</td>
+<td>Sharp</td>
+</tr>
+<tr>
+<td>Latent space</td>
+<td>Structured</td>
+<td>Hard to interpret</td>
+</tr>
+<tr>
+<td>Mode Coverage</td>
+<td>Good</td>
+<td>Mode Collapse possible</td>
+</tr>
+<tr>
+<td>Density estimation</td>
+<td>Possible</td>
+<td>Not possible</td>
+</tr>
+</tbody>
+</table>
+<h3 id="advantages-and-disadvantages">Advantages and Disadvantages<a class="header-link" href="#advantages-and-disadvantages" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">VAE</span><span class="w"> </span><span class="n">Advantages</span><span class="p">:</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Explicit</span><span class="w"> </span><span class="n">density</span><span class="w"> </span><span class="n">model</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Stable</span><span class="w"> </span><span class="n">training</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Meaningful</span><span class="w"> </span><span class="n">latent</span><span class="w"> </span><span class="n">space</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Can</span><span class="w"> </span><span class="n">both</span><span class="w"> </span><span class="n">reconstruct</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">generate</span>
+
+<span class="n">VAE</span><span class="w"> </span><span class="n">Disadvantages</span><span class="p">:</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Blurry</span><span class="w"> </span><span class="n">images</span><span class="w"> </span><span class="n">due</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">reconstruction</span><span class="w"> </span><span class="n">loss</span>
+<span class="o">-</span><span class="w"> </span><span class="n">KL</span><span class="w"> </span><span class="n">term</span><span class="w"> </span><span class="n">limits</span><span class="w"> </span><span class="n">latent</span><span class="w"> </span><span class="n">space</span><span class="w"> </span><span class="n">expressiveness</span>
+
+<span class="n">GAN</span><span class="w"> </span><span class="n">Advantages</span><span class="p">:</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Sharp</span><span class="w"> </span><span class="n">high</span><span class="o">-</span><span class="n">quality</span><span class="w"> </span><span class="n">images</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Implicit</span><span class="w"> </span><span class="n">density</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">More</span><span class="w"> </span><span class="n">flexible</span>
+
+<span class="n">GAN</span><span class="w"> </span><span class="n">Disadvantages</span><span class="p">:</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Unstable</span><span class="w"> </span><span class="n">training</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Mode</span><span class="w"> </span><span class="n">Collapse</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Difficult</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">evaluate</span>
+</code></pre></div>
+
+<hr />
+<h2 id="9-advanced-vae-variants">9. Advanced VAE Variants<a class="header-link" href="#9-advanced-vae-variants" title="Permanent link">&para;</a></h2>
+<h3 id="conditional-vae-cvae">Conditional VAE (CVAE)<a class="header-link" href="#conditional-vae-cvae" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">CVAE</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Conditional VAE (⭐⭐⭐)</span>
+
+<span class="sd">    조건(예: 클래스 레이블)을 주어 특정 타입 생성</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">latent_dim</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">num_classes</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_classes</span> <span class="o">=</span> <span class="n">num_classes</span>
+
+        <span class="c1"># 조건을 one-hot으로 concat</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">CVAEEncoder</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="n">latent_dim</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">CVAEDecoder</span><span class="p">(</span><span class="n">latent_dim</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">latent_dim</span> <span class="o">=</span> <span class="n">latent_dim</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="c1"># One-hot encoding</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">one_hot</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_classes</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
+
+        <span class="n">mu</span><span class="p">,</span> <span class="n">log_var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reparameterize</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">log_var</span><span class="p">)</span>
+        <span class="n">x_recon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">x_recon</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">log_var</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">num_samples</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;특정 클래스 생성&quot;&quot;&quot;</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">num_samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">latent_dim</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">one_hot</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_classes</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">num_samples</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="vq-vae-vector-quantized-vae">VQ-VAE (Vector Quantized VAE)<a class="header-link" href="#vq-vae-vector-quantized-vae" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># VQ-VAE는 연속 잠재 공간 대신 이산 코드북 사용</span>
+<span class="c1"># 고품질 이미지/오디오 생성에 효과적</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">VectorQuantizer</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;VQ-VAE의 벡터 양자화 (⭐⭐⭐⭐)&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_embeddings</span><span class="p">,</span> <span class="n">embedding_dim</span><span class="p">,</span> <span class="n">commitment_cost</span><span class="o">=</span><span class="mf">0.25</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embedding_dim</span> <span class="o">=</span> <span class="n">embedding_dim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_embeddings</span> <span class="o">=</span> <span class="n">num_embeddings</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">commitment_cost</span> <span class="o">=</span> <span class="n">commitment_cost</span>
+
+        <span class="c1"># 코드북</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embeddings</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">num_embeddings</span><span class="p">,</span> <span class="n">embedding_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">uniform_</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="o">/</span><span class="n">num_embeddings</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="n">num_embeddings</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+        <span class="c1"># z: (batch, channels, H, W)</span>
+        <span class="n">z_flat</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">()</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">embedding_dim</span><span class="p">)</span>
+
+        <span class="c1"># 가장 가까운 코드북 벡터 찾기</span>
+        <span class="n">distances</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cdist</span><span class="p">(</span><span class="n">z_flat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">embeddings</span><span class="o">.</span><span class="n">weight</span><span class="p">)</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">distances</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">z_q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embeddings</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">z_q</span> <span class="o">=</span> <span class="n">z_q</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="c1"># 손실: 코드북 학습 + commitment loss</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">z_q</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> <span class="n">z</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">commitment_cost</span> <span class="o">*</span> <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">z_q</span><span class="p">,</span> <span class="n">z</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
+
+        <span class="c1"># Straight-through estimator</span>
+        <span class="n">z_q</span> <span class="o">=</span> <span class="n">z</span> <span class="o">+</span> <span class="p">(</span><span class="n">z_q</span> <span class="o">-</span> <span class="n">z</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">z_q</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">indices</span>
+</code></pre></div>
+
+<hr />
+<h2 id="10-complete-mnist-vae-example">10. Complete MNIST VAE Example<a class="header-link" href="#10-complete-mnist-vae-example" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn.functional</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">F</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.utils.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataLoader</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torchvision</span><span class="w"> </span><span class="kn">import</span> <span class="n">datasets</span><span class="p">,</span> <span class="n">transforms</span>
+
+<span class="c1"># 설정</span>
+<span class="n">latent_dim</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">batch_size</span> <span class="o">=</span> <span class="mi">128</span>
+<span class="n">epochs</span> <span class="o">=</span> <span class="mi">30</span>
+<span class="n">lr</span> <span class="o">=</span> <span class="mf">1e-3</span>
+
+<span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+
+<span class="c1"># 데이터</span>
+<span class="n">transform</span> <span class="o">=</span> <span class="n">transforms</span><span class="o">.</span><span class="n">ToTensor</span><span class="p">()</span>
+<span class="n">train_data</span> <span class="o">=</span> <span class="n">datasets</span><span class="o">.</span><span class="n">MNIST</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="n">train</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transform</span><span class="p">)</span>
+<span class="n">train_loader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="n">train_data</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># 모델</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">VAE</span><span class="p">(</span><span class="n">in_channels</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">latent_dim</span><span class="o">=</span><span class="n">latent_dim</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">)</span>
+
+<span class="c1"># 학습</span>
+<span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">epochs</span><span class="p">):</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+    <span class="n">train_loss</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">for</span> <span class="n">batch_idx</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">train_loader</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+        <span class="n">x_recon</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">log_var</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="c1"># Loss</span>
+        <span class="n">recon_loss</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">binary_cross_entropy</span><span class="p">(</span><span class="n">x_recon</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s1">&#39;sum&#39;</span><span class="p">)</span>
+        <span class="n">kl_loss</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">log_var</span> <span class="o">-</span> <span class="n">mu</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">log_var</span><span class="o">.</span><span class="n">exp</span><span class="p">())</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="p">(</span><span class="n">recon_loss</span> <span class="o">+</span> <span class="n">kl_loss</span><span class="p">)</span> <span class="o">/</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+        <span class="n">train_loss</span> <span class="o">+=</span> <span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+        <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Epoch </span><span class="si">{</span><span class="n">epoch</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">: Loss = </span><span class="si">{</span><span class="n">train_loss</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">train_loader</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># 생성</span>
+<span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+    <span class="c1"># 저장 또는 시각화...</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;VAE 학습 완료!&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="summary">Summary<a class="header-link" href="#summary" title="Permanent link">&para;</a></h2>
+<h3 id="key-concepts">Key Concepts<a class="header-link" href="#key-concepts" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>VAE</strong>: Generative model with probabilistic latent space</li>
+<li><strong>ELBO</strong>: Reconstruction + KL Divergence</li>
+<li><strong>Reparameterization</strong>: z = mu + sigma * epsilon</li>
+<li><strong>Beta-VAE</strong>: Control KL weight for disentanglement</li>
+<li><strong>Latent space</strong>: Continuous, structured</li>
+</ol>
+<h3 id="core-code">Core Code<a class="header-link" href="#core-code" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Encoder 출력</span>
+<span class="n">mu</span><span class="p">,</span> <span class="n">log_var</span> <span class="o">=</span> <span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+<span class="c1"># Reparameterization</span>
+<span class="n">std</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">log_var</span><span class="p">)</span>
+<span class="n">z</span> <span class="o">=</span> <span class="n">mu</span> <span class="o">+</span> <span class="n">std</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn_like</span><span class="p">(</span><span class="n">std</span><span class="p">)</span>
+
+<span class="c1"># Decoder</span>
+<span class="n">x_recon</span> <span class="o">=</span> <span class="n">decoder</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+
+<span class="c1"># Loss</span>
+<span class="n">recon</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">binary_cross_entropy</span><span class="p">(</span><span class="n">x_recon</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+<span class="n">kl</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">log_var</span> <span class="o">-</span> <span class="n">mu</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">log_var</span><span class="o">.</span><span class="n">exp</span><span class="p">())</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">recon</span> <span class="o">+</span> <span class="n">kl</span>
+</code></pre></div>
+
+<h3 id="use-case-scenarios">Use Case Scenarios<a class="header-link" href="#use-case-scenarios" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Purpose</th>
+<th>Recommended Method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Data generation</td>
+<td>VAE or GAN</td>
+</tr>
+<tr>
+<td>Latent space analysis</td>
+<td>VAE (especially Beta-VAE)</td>
+</tr>
+<tr>
+<td>High-quality images</td>
+<td>GAN or VQ-VAE</td>
+</tr>
+<tr>
+<td>Conditional generation</td>
+<td>CVAE</td>
+</tr>
+<tr>
+<td>Compression/reconstruction</td>
+<td>VAE</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="next-steps">Next Steps<a class="header-link" href="#next-steps" title="Permanent link">&para;</a></h2>
+<p>Learn about the latest generative model, Diffusion models, in <a href="./32_Diffusion_Models.md">32_Diffusion_Models.md</a>.</p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/Deep_Learning/29_Impl_GAN.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">29. Generative Adversarial Networks (GAN)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/Deep_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/Deep_Learning/31_Impl_VAE.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">31. Variational Autoencoder (VAE)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'en';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

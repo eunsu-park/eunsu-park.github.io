@@ -1,0 +1,584 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>05. ResNet - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Deep_Learning/">Deep Learning</a>
+    <span class="separator">/</span>
+    <span class="current">05. ResNet</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>05. ResNet</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Deep_Learning/11_Impl_VGG.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">04. VGG</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Deep_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Deep_Learning/13_RNN_Basics.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">08. RNN 기초 (Recurrent Neural Networks)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">개요</a></li>
+<li><a href="#_2">수학적 배경</a><ul>
+<li><a href="#1-degradation-problem">1. Degradation Problem</a></li>
+<li><a href="#2-residual-learning">2. Residual Learning</a></li>
+<li><a href="#3-skip-connection-gradient">3. Skip Connection의 Gradient</a></li>
+<li><a href="#4-projection-shortcut">4. 차원 맞추기 (Projection Shortcut)</a></li>
+</ul>
+</li>
+<li><a href="#resnet">ResNet 아키텍처</a><ul>
+<li><a href="#basicblock-vs-bottleneck">BasicBlock vs Bottleneck</a></li>
+<li><a href="#resnet_1">ResNet 변형 비교</a></li>
+<li><a href="#resnet-50">ResNet-50 상세 구조</a></li>
+</ul>
+</li>
+<li><a href="#_3">파일 구조</a></li>
+<li><a href="#_4">핵심 개념</a><ul>
+<li><a href="#1-identity-mapping">1. Identity Mapping이 중요한 이유</a></li>
+<li><a href="#2-resnet">2. ResNet의 앙상블 관점</a></li>
+<li><a href="#3-batch-normalization">3. Batch Normalization의 역할</a></li>
+<li><a href="#4-resnet">4. ResNet 이후 발전</a></li>
+</ul>
+</li>
+<li><a href="#_5">구현 레벨</a><ul>
+<li><a href="#level-2-pytorch-low-level-pytorch_lowlevel">Level 2: PyTorch Low-Level (pytorch_lowlevel/)</a></li>
+<li><a href="#level-3-paper-implementation-paper">Level 3: Paper Implementation (paper/)</a></li>
+<li><a href="#level-4-code-analysis-analysis">Level 4: Code Analysis (analysis/)</a></li>
+</ul>
+</li>
+<li><a href="#_6">학습 체크리스트</a></li>
+<li><a href="#_7">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="05-resnet">05. ResNet<a class="header-link" href="#05-resnet" title="Permanent link">&para;</a></h1>
+<h2 id="_1">개요<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<p>ResNet(Residual Network)은 2015년 ILSVRC에서 1위를 차지한 혁명적인 모델입니다. Kaiming He 등이 제안한 <strong>Skip Connection (Residual Connection)</strong>을 통해 수백 개 이상의 레이어를 학습할 수 있게 되었습니다.</p>
+<blockquote>
+<p>"깊이가 깊어질수록 성능이 떨어지는 degradation 문제를 해결"</p>
+</blockquote>
+<hr />
+<h2 id="_2">수학적 배경<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<h3 id="1-degradation-problem">1. Degradation Problem<a class="header-link" href="#1-degradation-problem" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">문제</span><span class="o">:</span><span class="w"> </span><span class="err">네트워크가</span><span class="w"> </span><span class="err">깊어지면</span><span class="w"> </span><span class="err">오히려</span><span class="w"> </span><span class="err">성능</span><span class="w"> </span><span class="err">저하</span>
+
+<span class="err">관찰</span><span class="o">:</span>
+<span class="o">-</span><span class="w"> </span><span class="mi">56</span><span class="o">-</span><span class="n">layer</span><span class="w"> </span><span class="n">network</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">20</span><span class="o">-</span><span class="n">layer</span><span class="w"> </span><span class="n">network</span><span class="w"> </span><span class="o">(</span><span class="n">CIFAR</span><span class="o">-</span><span class="mi">10</span><span class="o">)</span>
+<span class="o">-</span><span class="w"> </span><span class="err">이는</span><span class="w"> </span><span class="n">overfitting이</span><span class="w"> </span><span class="err">아님</span><span class="w"> </span><span class="o">(</span><span class="n">training</span><span class="w"> </span><span class="n">error도</span><span class="w"> </span><span class="err">높음</span><span class="o">)</span>
+<span class="o">-</span><span class="w"> </span><span class="err">최적화의</span><span class="w"> </span><span class="err">어려움</span><span class="w"> </span><span class="o">(</span><span class="n">vanishing</span><span class="o">/</span><span class="n">exploding</span><span class="w"> </span><span class="n">gradient</span><span class="o">)</span>
+
+<span class="err">이상적</span><span class="w"> </span><span class="err">상황</span><span class="o">:</span>
+<span class="o">-</span><span class="w"> </span><span class="err">더</span><span class="w"> </span><span class="err">깊은</span><span class="w"> </span><span class="err">네트워크</span><span class="w"> </span><span class="err">≥</span><span class="w"> </span><span class="err">얕은</span><span class="w"> </span><span class="err">네트워크</span>
+<span class="o">-</span><span class="w"> </span><span class="err">최소한</span><span class="w"> </span><span class="n">identity</span><span class="w"> </span><span class="n">mapping을</span><span class="w"> </span><span class="err">학습할</span><span class="w"> </span><span class="err">수</span><span class="w"> </span><span class="err">있어야</span><span class="w"> </span><span class="err">함</span>
+</code></pre></div>
+
+<h3 id="2-residual-learning">2. Residual Learning<a class="header-link" href="#2-residual-learning" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>기존 접근:
+  H(x) = desired output
+  네트워크가 H(x)를 직접 학습
+
+Residual 접근:
+  F(x) = H(x) - x  (잔차)
+  H(x) = F(x) + x  (원래 목표)
+
+왜 더 쉬운가?
+- Identity mapping 학습: F(x) = 0만 되면 됨
+- 작은 변화 학습: 큰 변화보다 쉬움
+- Gradient flow: 덧셈 연산으로 직접 전파
+</code></pre></div>
+
+<h3 id="3-skip-connection-gradient">3. Skip Connection의 Gradient<a class="header-link" href="#3-skip-connection-gradient" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">Forward</span><span class="o">:</span>
+<span class="w">  </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">F</span><span class="o">(</span><span class="n">x</span><span class="o">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">x</span>
+
+<span class="n">Backward</span><span class="o">:</span>
+<span class="w">  </span><span class="err">∂</span><span class="n">L</span><span class="sr">/∂x = ∂L/∂y × (∂F/</span><span class="err">∂</span><span class="n">x</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="o">)</span>
+<span class="w">              </span><span class="err">↑</span>
+<span class="w">            </span><span class="err">항상</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="err">이상</span><span class="o">!</span>
+
+<span class="err">결과</span><span class="o">:</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Gradient가</span><span class="w"> </span><span class="err">최소</span><span class="w"> </span><span class="mi">1</span><span class="err">의</span><span class="w"> </span><span class="err">경로로</span><span class="w"> </span><span class="err">직접</span><span class="w"> </span><span class="err">전파</span>
+<span class="o">-</span><span class="w"> </span><span class="err">수백</span><span class="w"> </span><span class="err">레이어에서도</span><span class="w"> </span><span class="n">gradient</span><span class="w"> </span><span class="err">유지</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Vanishing</span><span class="w"> </span><span class="n">gradient</span><span class="w"> </span><span class="err">해결</span>
+</code></pre></div>
+
+<h3 id="4-projection-shortcut">4. 차원 맞추기 (Projection Shortcut)<a class="header-link" href="#4-projection-shortcut" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>차원이 다를 때 (stride=2 또는 채널 변경):
+
+Option A: Zero Padding
+  x_padded = pad(x, extra_channels)
+
+Option B: 1×1 Convolution (논문 채택)
+  shortcut = Conv1×1(x)
+
+  x: (N, 64, 56, 56)
+  ↓ stride=2, channels 64→128
+  y: (N, 128, 28, 28)
+
+  shortcut = Conv1×1(64→128, stride=2)
+</code></pre></div>
+
+<hr />
+<h2 id="resnet">ResNet 아키텍처<a class="header-link" href="#resnet" title="Permanent link">&para;</a></h2>
+<h3 id="basicblock-vs-bottleneck">BasicBlock vs Bottleneck<a class="header-link" href="#basicblock-vs-bottleneck" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>BasicBlock (ResNet-18, 34):
+┌─────────────────────────┐
+│  Conv 3×3, BN, ReLU     │
+│  Conv 3×3, BN           │
+│         ↓               │
+│    + ← shortcut         │
+│       ReLU              │
+└─────────────────────────┘
+
+Bottleneck (ResNet-50, 101, 152):
+┌─────────────────────────┐
+│  Conv 1×1, BN, ReLU     │  ← 채널 축소
+│  Conv 3×3, BN, ReLU     │  ← 주요 연산
+│  Conv 1×1, BN           │  ← 채널 복원
+│         ↓               │
+│    + ← shortcut         │
+│       ReLU              │
+└─────────────────────────┘
+
+Bottleneck 장점:
+- 3×3 연산 전에 채널 축소 → 계산량 감소
+- 같은 계산량으로 더 많은 레이어
+</code></pre></div>
+
+<h3 id="resnet_1">ResNet 변형 비교<a class="header-link" href="#resnet_1" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>모델</th>
+<th>레이어</th>
+<th>블록</th>
+<th>블록 수</th>
+<th>Params</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ResNet-18</td>
+<td>18</td>
+<td>Basic</td>
+<td>[2,2,2,2]</td>
+<td>11.7M</td>
+</tr>
+<tr>
+<td>ResNet-34</td>
+<td>34</td>
+<td>Basic</td>
+<td>[3,4,6,3]</td>
+<td>21.8M</td>
+</tr>
+<tr>
+<td>ResNet-50</td>
+<td>50</td>
+<td>Bottleneck</td>
+<td>[3,4,6,3]</td>
+<td>25.6M</td>
+</tr>
+<tr>
+<td>ResNet-101</td>
+<td>101</td>
+<td>Bottleneck</td>
+<td>[3,4,23,3]</td>
+<td>44.5M</td>
+</tr>
+<tr>
+<td>ResNet-152</td>
+<td>152</td>
+<td>Bottleneck</td>
+<td>[3,8,36,3]</td>
+<td>60.2M</td>
+</tr>
+</tbody>
+</table>
+<h3 id="resnet-50">ResNet-50 상세 구조<a class="header-link" href="#resnet-50" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">입력</span><span class="o">:</span><span class="w"> </span><span class="mi">224</span><span class="err">×</span><span class="mi">224</span><span class="err">×</span><span class="mi">3</span>
+
+<span class="n">Conv1</span><span class="o">:</span><span class="w"> </span><span class="mi">7</span><span class="err">×</span><span class="mi">7</span><span class="o">,</span><span class="w"> </span><span class="mi">64</span><span class="o">,</span><span class="w"> </span><span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="o">,</span><span class="w"> </span><span class="n">padding</span><span class="o">=</span><span class="mi">3</span>
+<span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="o">(</span><span class="mi">112</span><span class="err">×</span><span class="mi">112</span><span class="err">×</span><span class="mi">64</span><span class="o">)</span>
+<span class="n">MaxPool</span><span class="o">:</span><span class="w"> </span><span class="mi">3</span><span class="err">×</span><span class="mi">3</span><span class="o">,</span><span class="w"> </span><span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="o">,</span><span class="w"> </span><span class="n">padding</span><span class="o">=</span><span class="mi">1</span>
+<span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="o">(</span><span class="mi">56</span><span class="err">×</span><span class="mi">56</span><span class="err">×</span><span class="mi">64</span><span class="o">)</span>
+
+<span class="n">Layer1</span><span class="o">:</span><span class="w"> </span><span class="n">Bottleneck</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">(</span><span class="mi">64</span><span class="err">→</span><span class="mi">256</span><span class="o">)</span>
+<span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="o">(</span><span class="mi">56</span><span class="err">×</span><span class="mi">56</span><span class="err">×</span><span class="mi">256</span><span class="o">)</span>
+
+<span class="n">Layer2</span><span class="o">:</span><span class="w"> </span><span class="n">Bottleneck</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="o">(</span><span class="mi">128</span><span class="err">→</span><span class="mi">512</span><span class="o">,</span><span class="w"> </span><span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="o">)</span>
+<span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="o">(</span><span class="mi">28</span><span class="err">×</span><span class="mi">28</span><span class="err">×</span><span class="mi">512</span><span class="o">)</span>
+
+<span class="n">Layer3</span><span class="o">:</span><span class="w"> </span><span class="n">Bottleneck</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="mi">6</span><span class="w"> </span><span class="o">(</span><span class="mi">256</span><span class="err">→</span><span class="mi">1024</span><span class="o">,</span><span class="w"> </span><span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="o">)</span>
+<span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="o">(</span><span class="mi">14</span><span class="err">×</span><span class="mi">14</span><span class="err">×</span><span class="mi">1024</span><span class="o">)</span>
+
+<span class="n">Layer4</span><span class="o">:</span><span class="w"> </span><span class="n">Bottleneck</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">(</span><span class="mi">512</span><span class="err">→</span><span class="mi">2048</span><span class="o">,</span><span class="w"> </span><span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="o">)</span>
+<span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="o">(</span><span class="mi">7</span><span class="err">×</span><span class="mi">7</span><span class="err">×</span><span class="mi">2048</span><span class="o">)</span>
+
+<span class="n">AdaptiveAvgPool</span><span class="o">:</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="o">(</span><span class="mi">1</span><span class="err">×</span><span class="mi">1</span><span class="err">×</span><span class="mi">2048</span><span class="o">)</span>
+<span class="n">FC</span><span class="o">:</span><span class="w"> </span><span class="mi">2048</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="mi">1000</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_3">파일 구조<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="mf">05</span><span class="n">_ResNet</span><span class="o">/</span>
+<span class="err">├──</span><span class="w"> </span><span class="kr">READ</span><span class="n">ME</span><span class="mf">.</span><span class="n">md</span><span class="w">                      </span><span class="err">#</span><span class="w"> </span><span class="n">이</span><span class="w"> </span><span class="n">파일</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">pytorch_lowlevel</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">resnet_lowlevel</span><span class="mf">.</span><span class="n">py</span><span class="w">        </span><span class="err">#</span><span class="w"> </span><span class="n">F</span><span class="mf">.</span><span class="n">conv2d</span><span class="p">,</span><span class="w"> </span><span class="n">수동</span><span class="w"> </span><span class="n">BN</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">paper</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">resnet_paper</span><span class="mf">.</span><span class="n">py</span><span class="w">           </span><span class="err">#</span><span class="w"> </span><span class="n">논문</span><span class="w"> </span><span class="n">정확</span><span class="w"> </span><span class="n">재현</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">analysis</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">gradient_flow</span><span class="mf">.</span><span class="n">py</span><span class="w">          </span><span class="err">#</span><span class="w"> </span><span class="n">Skip</span><span class="w"> </span><span class="n">connection</span><span class="w"> </span><span class="n">효과</span><span class="w"> </span><span class="n">분석</span>
+<span class="err">└──</span><span class="w"> </span><span class="n">exercises</span><span class="o">/</span>
+<span class="w">    </span><span class="err">├──</span><span class="w"> </span><span class="mf">01</span><span class="n">_gradient_analysis</span><span class="mf">.</span><span class="n">md</span><span class="w">   </span><span class="err">#</span><span class="w"> </span><span class="n">Gradient</span><span class="w"> </span><span class="n">flow</span><span class="w"> </span><span class="n">비교</span>
+<span class="w">    </span><span class="err">└──</span><span class="w"> </span><span class="mf">02</span><span class="n">_ablation_study</span><span class="mf">.</span><span class="n">md</span><span class="w">      </span><span class="err">#</span><span class="w"> </span><span class="n">Shortcut</span><span class="w"> </span><span class="n">종류</span><span class="w"> </span><span class="n">비교</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_4">핵심 개념<a class="header-link" href="#_4" title="Permanent link">&para;</a></h2>
+<h3 id="1-identity-mapping">1. Identity Mapping이 중요한 이유<a class="header-link" href="#1-identity-mapping" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Pre-activation ResNet (v2)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+    <span class="n">identity</span> <span class="o">=</span> <span class="n">x</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bn1</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conv1</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bn2</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conv2</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">out</span> <span class="o">+</span> <span class="n">identity</span>  <span class="c1"># Clean identity path</span>
+
+<span class="c1"># Post-activation (original)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+    <span class="n">identity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shortcut</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conv1</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bn1</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conv2</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bn2</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">out</span> <span class="o">+</span> <span class="n">identity</span><span class="p">)</span>  <span class="c1"># ReLU가 identity를 변형</span>
+    <span class="k">return</span> <span class="n">out</span>
+</code></pre></div>
+
+<h3 id="2-resnet">2. ResNet의 앙상블 관점<a class="header-link" href="#2-resnet" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>ResNet은 다양한 깊이의 경로 앙상블로 볼 수 있음
+
+n개 블록 → 2^n 개의 가능한 경로
+- 일부 블록을 &quot;건너뛰는&quot; 경로
+- 모든 블록을 거치는 경로
+
+실험: 학습 후 일부 블록 제거해도 성능 유지
+→ 다양한 깊이의 경로가 함께 학습됨
+</code></pre></div>
+
+<h3 id="3-batch-normalization">3. Batch Normalization의 역할<a class="header-link" href="#3-batch-normalization" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>ResNet에서 BN이 중요한 이유:
+
+1. 내부 공변량 변화 감소
+   - 레이어 입력의 분포 안정화
+
+2. 학습률 증가 가능
+   - 더 빠른 수렴
+
+3. Regularization 효과
+   - 미니배치 통계 사용 → 노이즈
+
+4. Gradient flow 개선
+   - 정규화로 gradient 안정화
+</code></pre></div>
+
+<h3 id="4-resnet">4. ResNet 이후 발전<a class="header-link" href="#4-resnet" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>ResNeXt (2017):
+- Grouped convolution으로 cardinality 도입
+- ResNeXt-50: ResNet-101 성능, 더 적은 파라미터
+
+DenseNet (2017):
+- 모든 레이어를 모든 후속 레이어에 연결
+- Feature reuse 극대화
+
+EfficientNet (2019):
+- Width, depth, resolution 동시 스케일링
+- Compound scaling
+
+RegNet (2020):
+- 최적 네트워크 구조 탐색
+- 단순하고 규칙적인 설계
+</code></pre></div>
+
+<hr />
+<h2 id="_5">구현 레벨<a class="header-link" href="#_5" title="Permanent link">&para;</a></h2>
+<h3 id="level-2-pytorch-low-level-pytorch_lowlevel">Level 2: PyTorch Low-Level (pytorch_lowlevel/)<a class="header-link" href="#level-2-pytorch-low-level-pytorch_lowlevel" title="Permanent link">&para;</a></h3>
+<ul>
+<li>F.conv2d, 수동 BatchNorm</li>
+<li>BasicBlock, Bottleneck 수동 구현</li>
+<li>Shortcut projection 구현</li>
+<li>파라미터 수동 관리</li>
+</ul>
+<h3 id="level-3-paper-implementation-paper">Level 3: Paper Implementation (paper/)<a class="header-link" href="#level-3-paper-implementation-paper" title="Permanent link">&para;</a></h3>
+<ul>
+<li>ResNet-18/34/50/101/152 전체</li>
+<li>Pre-activation ResNet (v2)</li>
+<li>Zero-padding vs Projection shortcut 비교</li>
+</ul>
+<h3 id="level-4-code-analysis-analysis">Level 4: Code Analysis (analysis/)<a class="header-link" href="#level-4-code-analysis-analysis" title="Permanent link">&para;</a></h3>
+<ul>
+<li>torchvision ResNet 코드 분석</li>
+<li>Gradient flow 시각화</li>
+<li>중간 블록 제거 실험</li>
+</ul>
+<hr />
+<h2 id="_6">학습 체크리스트<a class="header-link" href="#_6" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] Degradation problem 이해</li>
+<li>[ ] Residual learning 수식 유도</li>
+<li>[ ] Skip connection의 gradient 이점</li>
+<li>[ ] BasicBlock vs Bottleneck 차이</li>
+<li>[ ] ResNet-50 아키텍처 암기</li>
+<li>[ ] Projection shortcut 구현 방법</li>
+<li>[ ] Pre/Post-activation 차이</li>
+<li>[ ] ResNet의 앙상블 관점 이해</li>
+</ul>
+<hr />
+<h2 id="_7">참고 자료<a class="header-link" href="#_7" title="Permanent link">&para;</a></h2>
+<ul>
+<li>He et al. (2015). "Deep Residual Learning for Image Recognition"</li>
+<li>He et al. (2016). "Identity Mappings in Deep Residual Networks" (v2)</li>
+<li><a href="https://github.com/pytorch/vision/blob/main/torchvision/models/resnet.py">torchvision ResNet</a></li>
+<li><a href="https://d2l.ai/chapter_convolutional-modern/resnet.html">d2l.ai: ResNet</a></li>
+<li><a href="../04_VGG/README.md">../04_VGG/README.md</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Deep_Learning/11_Impl_VGG.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">04. VGG</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Deep_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Deep_Learning/13_RNN_Basics.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">08. RNN 기초 (Recurrent Neural Networks)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

@@ -1,0 +1,925 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>12. 샘플링과 몬테카를로 방법 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Math_for_AI/">Math for AI</a>
+    <span class="separator">/</span>
+    <span class="current">12. 샘플링과 몬테카를로 방법</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>12. 샘플링과 몬테카를로 방법</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Math_for_AI/11_Probability_Distributions_Advanced.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">11. 고급 확률 분포 (Advanced Probability Distributions)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Math_for_AI/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Math_for_AI/13_Linear_Algebra_for_Deep_Learning.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">13. 딥러닝을 위한 선형대수</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#1">1. 왜 샘플링인가?</a><ul>
+<li><a href="#11">1.1 해석적으로 계산 불가능한 적분</a></li>
+<li><a href="#12_1">1.2 몬테카를로 추정</a></li>
+<li><a href="#13">1.3 수렴 속도</a></li>
+</ul>
+</li>
+<li><a href="#2">2. 기본 샘플링 방법</a><ul>
+<li><a href="#21-inverse-transform-sampling">2.1 역변환 샘플링 (Inverse Transform Sampling)</a></li>
+<li><a href="#22-rejection-sampling">2.2 기각 샘플링 (Rejection Sampling)</a></li>
+<li><a href="#23">2.3 고차원에서의 한계</a></li>
+</ul>
+</li>
+<li><a href="#3-importance-sampling">3. 중요도 샘플링 (Importance Sampling)</a><ul>
+<li><a href="#31">3.1 기본 원리</a></li>
+<li><a href="#32">3.2 제안 분포 선택</a></li>
+<li><a href="#33">3.3 자기정규화 중요도 샘플링</a></li>
+<li><a href="#34">3.4 강화학습과의 연결</a></li>
+</ul>
+</li>
+<li><a href="#4-mcmc">4. 마르코프 체인 몬테카를로 (MCMC)</a><ul>
+<li><a href="#41">4.1 마르코프 체인 기초</a></li>
+<li><a href="#42-">4.2 메트로폴리스-헤이스팅스 알고리즘</a></li>
+<li><a href="#43-gibbs-sampling">4.3 깁스 샘플링 (Gibbs Sampling)</a></li>
+<li><a href="#44">4.4 번인과 자기상관</a></li>
+</ul>
+</li>
+<li><a href="#5-reparameterization-trick">5. 재매개변수화 트릭 (Reparameterization Trick)</a><ul>
+<li><a href="#51">5.1 문제: 확률적 노드의 역전파</a></li>
+<li><a href="#52">5.2 재매개변수화 해법</a></li>
+<li><a href="#53">5.3 다른 분포의 재매개변수화</a></li>
+<li><a href="#54-vae-elbo">5.4 VAE의 ELBO</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 머신러닝 응용</a><ul>
+<li><a href="#61-vae-elbo">6.1 VAE: ELBO 최적화</a></li>
+<li><a href="#62-reinforce">6.2 강화학습: REINFORCE = 몬테카를로</a></li>
+<li><a href="#63-mcmc-vs">6.3 베이지안 추론: MCMC vs 변분 추론</a></li>
+<li><a href="#64-dropout">6.4 Dropout = 베르누이 샘플링</a></li>
+</ul>
+</li>
+<li><a href="#_2">연습 문제</a><ul>
+<li><a href="#1_1">문제 1: 몬테카를로 적분</a></li>
+<li><a href="#2_1">문제 2: 중요도 샘플링</a></li>
+<li><a href="#3-mcmc">문제 3: MCMC 진단</a></li>
+<li><a href="#4">문제 4: 재매개변수화 트릭</a></li>
+<li><a href="#5">문제 5: 깁스 샘플링 확장</a></li>
+</ul>
+</li>
+<li><a href="#_3">참고 자료</a><ul>
+<li><a href="#_4">서적</a></li>
+<li><a href="#_5">논문</a></li>
+<li><a href="#_6">온라인 자료</a></li>
+<li><a href="#_7">라이브러리</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="12">12. 샘플링과 몬테카를로 방법<a class="header-link" href="#12" title="Permanent link">&para;</a></h1>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>몬테카를로 방법의 기본 원리와 수렴 속도를 이해한다</li>
+<li>기본 샘플링 방법(역변환, 기각 샘플링)을 구현하고 한계를 파악한다</li>
+<li>중요도 샘플링을 통한 분산 감소 기법을 습득한다</li>
+<li>MCMC(메트로폴리스-헤이스팅스, 깁스 샘플링)의 원리와 구현을 이해한다</li>
+<li>재매개변수화 트릭의 수학적 배경과 VAE에서의 역할을 파악한다</li>
+<li>머신러닝에서 샘플링이 사용되는 다양한 사례를 학습한다</li>
+</ul>
+<hr />
+<h2 id="1">1. 왜 샘플링인가?<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="11">1.1 해석적으로 계산 불가능한 적분<a class="header-link" href="#11" title="Permanent link">&para;</a></h3>
+<p>많은 머신러닝 문제에서 다음과 같은 적분을 계산해야 합니다:</p>
+<p>$$
+\mathbb{E}_{p(x)}[f(x)] = \int f(x) p(x) dx
+$$</p>
+<p>예를 들어:
+- <strong>베이지안 추론</strong>: 사후 분포의 정규화 상수 $\int p(x|\theta) p(\theta) d\theta$
+- <strong>강화학습</strong>: 정책의 기대 보상 $\mathbb{E}_{\pi}[R]$
+- <strong>VAE</strong>: ELBO의 기대값 $\mathbb{E}_{q(z|x)}[\log p(x|z)]$</p>
+<p>이러한 적분은 고차원에서 해석적으로 계산이 불가능합니다.</p>
+<h3 id="12_1">1.2 몬테카를로 추정<a class="header-link" href="#12_1" title="Permanent link">&para;</a></h3>
+<p><strong>몬테카를로 원리</strong>: 분포 $p(x)$에서 $N$개의 샘플 $x_1, \ldots, x_N$을 뽑으면:</p>
+<p>$$
+\mathbb{E}_{p(x)}[f(x)] \approx \frac{1}{N} \sum_{i=1}^{N} f(x_i)
+$$</p>
+<p>이는 <strong>대수의 법칙(Law of Large Numbers)</strong>에 의해 보장됩니다.</p>
+<h3 id="13">1.3 수렴 속도<a class="header-link" href="#13" title="Permanent link">&para;</a></h3>
+<p>몬테카를로 추정의 표준 오차는:</p>
+<p>$$
+\text{SE} = \frac{\sigma}{\sqrt{N}}
+$$</p>
+<p>여기서 $\sigma^2 = \text{Var}_{p(x)}[f(x)]$입니다.</p>
+<p><strong>중요한 관찰</strong>:
+- 오차가 $O(1/\sqrt{N})$로 감소 → 정확도를 10배 높이려면 샘플이 100배 필요
+- 차원에 <strong>무관</strong>: 고차원 적분에도 적용 가능 (격자 방법은 차원의 저주를 겪음)</p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="c1"># 몬테카를로로 원주율 π 추정</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">estimate_pi</span><span class="p">(</span><span class="n">n_samples</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;단위 사각형 내 랜덤 점을 생성하고 단위 원 내부 비율로 π 추정&quot;&quot;&quot;</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">)</span>
+    <span class="n">inside_circle</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span>
+    <span class="n">pi_estimate</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">inside_circle</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pi_estimate</span>
+
+<span class="c1"># 샘플 수에 따른 수렴</span>
+<span class="n">sample_sizes</span> <span class="o">=</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">10000</span><span class="p">,</span> <span class="mi">100000</span><span class="p">]</span>
+<span class="n">estimates</span> <span class="o">=</span> <span class="p">[</span><span class="n">estimate_pi</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">sample_sizes</span><span class="p">]</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;몬테카를로 π 추정:&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">est</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">sample_sizes</span><span class="p">,</span> <span class="n">estimates</span><span class="p">):</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">est</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;N=</span><span class="si">{</span><span class="n">n</span><span class="si">:</span><span class="s2">6d</span><span class="si">}</span><span class="s2">: π ≈ </span><span class="si">{</span><span class="n">est</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">, 오차 = </span><span class="si">{</span><span class="n">error</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># 수렴 시각화</span>
+<span class="n">n_trials</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">sample_range</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+<span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">sample_range</span><span class="p">:</span>
+    <span class="n">trial_estimates</span> <span class="o">=</span> <span class="p">[</span><span class="n">estimate_pi</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_trials</span><span class="p">)]</span>
+    <span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">trial_estimates</span><span class="p">))</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span><span class="n">sample_range</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="s1">&#39;b-&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;실제 표준 오차&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">loglog</span><span class="p">(</span><span class="n">sample_range</span><span class="p">,</span> <span class="mi">1</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">sample_range</span><span class="p">),</span> <span class="s1">&#39;r--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">r</span><span class="s1">&#39;$O(1/\sqrt</span><span class="si">{N}</span><span class="s1">)$&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;샘플 수 (N)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;표준 오차&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;몬테카를로 추정의 수렴 속도&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2 id="2">2. 기본 샘플링 방법<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="21-inverse-transform-sampling">2.1 역변환 샘플링 (Inverse Transform Sampling)<a class="header-link" href="#21-inverse-transform-sampling" title="Permanent link">&para;</a></h3>
+<p><strong>정리</strong>: $U \sim \text{Uniform}(0, 1)$이고 $F$가 누적분포함수(CDF)일 때, $X = F^{-1}(U)$는 CDF $F$를 따릅니다.</p>
+<p><strong>알고리즘</strong>:
+1. $u \sim \text{Uniform}(0, 1)$ 생성
+2. $x = F^{-1}(u)$ 계산</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 역변환 샘플링 예제: 지수분포</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">inverse_transform_exponential</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">lambda_param</span><span class="o">=</span><span class="mf">1.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;지수분포 Exp(λ)에서 샘플링&quot;&quot;&quot;</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">)</span>
+    <span class="c1"># F^(-1)(u) = -ln(1-u)/λ</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">u</span><span class="p">)</span> <span class="o">/</span> <span class="n">lambda_param</span>
+    <span class="k">return</span> <span class="n">x</span>
+
+<span class="c1"># 검증</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="n">inverse_transform_exponential</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="n">lambda_param</span><span class="o">=</span><span class="mf">2.0</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;샘플링 결과&#39;</span><span class="p">)</span>
+<span class="n">x_range</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_range</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">x_range</span><span class="p">),</span> <span class="s1">&#39;r-&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;이론 PDF&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;밀도&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;역변환 샘플링: 지수분포&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="c1"># Q-Q plot</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">stats</span>
+<span class="n">stats</span><span class="o">.</span><span class="n">probplot</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">dist</span><span class="o">=</span><span class="n">stats</span><span class="o">.</span><span class="n">expon</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">0.5</span><span class="p">),</span> <span class="n">plot</span><span class="o">=</span><span class="n">plt</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Q-Q Plot&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre></div>
+
+<p><strong>한계</strong>: $F^{-1}$를 계산하기 어려운 경우가 많습니다.</p>
+<h3 id="22-rejection-sampling">2.2 기각 샘플링 (Rejection Sampling)<a class="header-link" href="#22-rejection-sampling" title="Permanent link">&para;</a></h3>
+<p>목표 분포 $p(x)$에서 직접 샘플링하기 어려울 때, 제안 분포(proposal) $q(x)$를 사용합니다.</p>
+<p><strong>알고리즘</strong>:
+1. 상수 $M$을 선택하여 $M q(x) \geq p(x)$ (모든 $x$에 대해)
+2. $x \sim q(x)$ 생성
+3. $u \sim \text{Uniform}(0, 1)$ 생성
+4. $u \leq \frac{p(x)}{M q(x)}$이면 $x$ 수락, 아니면 거부</p>
+<p><strong>수락률</strong>: $\frac{1}{M}$</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 기각 샘플링 예제: 베타분포 Beta(2, 5)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">target_pdf</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;목표 분포: Beta(2, 5)&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">x</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">30</span> <span class="o">*</span> <span class="n">x</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">**</span><span class="mi">4</span>  <span class="c1"># 정규화된 Beta(2,5)</span>
+    <span class="k">return</span> <span class="mi">0</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">proposal_pdf</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;제안 분포: Uniform(0, 1)&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="mf">1.0</span> <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">x</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="k">else</span> <span class="mi">0</span>
+
+<span class="c1"># M 찾기 (최대값)</span>
+<span class="n">x_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+<span class="n">M</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">target_pdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="n">proposal_pdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">x_grid</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;M = </span><span class="si">{</span><span class="n">M</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">rejection_sampling</span><span class="p">(</span><span class="n">n_samples</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;기각 샘플링 구현&quot;&quot;&quot;</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">n_rejected</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">n_samples</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># 제안 분포에서 샘플</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">u</span> <span class="o">&lt;=</span> <span class="n">target_pdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">M</span> <span class="o">*</span> <span class="n">proposal_pdf</span><span class="p">(</span><span class="n">x</span><span class="p">)):</span>
+            <span class="n">samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">n_rejected</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="n">acceptance_rate</span> <span class="o">=</span> <span class="n">n_samples</span> <span class="o">/</span> <span class="p">(</span><span class="n">n_samples</span> <span class="o">+</span> <span class="n">n_rejected</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;수락률: </span><span class="si">{</span><span class="n">acceptance_rate</span><span class="si">:</span><span class="s2">.2%</span><span class="si">}</span><span class="s2"> (이론값: </span><span class="si">{</span><span class="mi">1</span><span class="o">/</span><span class="n">M</span><span class="si">:</span><span class="s2">.2%</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+
+<span class="n">samples</span> <span class="o">=</span> <span class="n">rejection_sampling</span><span class="p">(</span><span class="mi">10000</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;샘플링 결과&#39;</span><span class="p">)</span>
+<span class="n">x_range</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_range</span><span class="p">,</span> <span class="p">[</span><span class="n">target_pdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">x_range</span><span class="p">],</span> <span class="s1">&#39;r-&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;목표 PDF&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;밀도&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;기각 샘플링: Beta(2, 5)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="23">2.3 고차원에서의 한계<a class="header-link" href="#23" title="Permanent link">&para;</a></h3>
+<p>기각 샘플링의 수락률은 $1/M$입니다. 고차원에서 $M$은 기하급수적으로 증가하여 비효율적입니다.</p>
+<p><strong>예</strong>: 10차원 가우스 분포에서 $M \sim e^{10}$ → 수락률 $< 0.01\%$</p>
+<hr />
+<h2 id="3-importance-sampling">3. 중요도 샘플링 (Importance Sampling)<a class="header-link" href="#3-importance-sampling" title="Permanent link">&para;</a></h2>
+<h3 id="31">3.1 기본 원리<a class="header-link" href="#31" title="Permanent link">&para;</a></h3>
+<p>목표: $\mathbb{E}_{p(x)}[f(x)]$ 계산</p>
+<p><strong>중요도 샘플링 항등식</strong>:</p>
+<p>$$
+\mathbb{E}_{p(x)}[f(x)] = \int f(x) p(x) dx = \int f(x) \frac{p(x)}{q(x)} q(x) dx = \mathbb{E}_{q(x)}\left[f(x) \frac{p(x)}{q(x)}\right]
+$$</p>
+<p>$q(x)$를 <strong>제안 분포</strong>, $w(x) = \frac{p(x)}{q(x)}$를 <strong>중요도 가중치</strong>라고 합니다.</p>
+<p><strong>몬테카를로 추정</strong>:
+$$
+\mathbb{E}_{p(x)}[f(x)] \approx \frac{1}{N} \sum_{i=1}^{N} f(x_i) w(x_i), \quad x_i \sim q(x)
+$$</p>
+<h3 id="32">3.2 제안 분포 선택<a class="header-link" href="#32" title="Permanent link">&para;</a></h3>
+<p><strong>좋은 제안 분포</strong>:
+- $q(x)$가 $|f(x)| p(x)$와 비례하면 분산 최소
+- 실제로는 $p(x)$의 꼬리가 두꺼운 곳을 커버해야 함</p>
+<p><strong>나쁜 선택</strong>: $q(x)$가 $p(x)$보다 얇은 꼬리 → 가중치가 폭발하여 높은 분산</p>
+<h3 id="33">3.3 자기정규화 중요도 샘플링<a class="header-link" href="#33" title="Permanent link">&para;</a></h3>
+<p>$p(x)$를 정규화 상수까지만 알 때 ($p(x) = \tilde{p}(x)/Z$):</p>
+<p>$$
+\mathbb{E}_{p(x)}[f(x)] \approx \frac{\sum_{i=1}^{N} f(x_i) \tilde{w}(x_i)}{\sum_{i=1}^{N} \tilde{w}(x_i)}, \quad \tilde{w}(x_i) = \frac{\tilde{p}(x_i)}{q(x_i)}
+$$</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 중요도 샘플링 예제</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">target_unnormalized</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;정규화되지 않은 목표 분포: 혼합 가우스&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="mf">0.3</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="mf">0.5</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> \
+           <span class="mf">0.7</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span><span class="o">+</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="mf">1.0</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">proposal</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;제안 분포: N(0, 3)&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span><span class="o">/</span><span class="mi">3</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;계산하려는 함수: x^2&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span>
+
+<span class="c1"># 일반 몬테카를로 (목표 분포에서 직접 샘플링이 가능하다고 가정)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">naive_monte_carlo</span><span class="p">(</span><span class="n">n_samples</span><span class="p">):</span>
+    <span class="c1"># 기각 샘플링으로 목표 분포에서 샘플</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">n_samples</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">target_unnormalized</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">u</span> <span class="o">&lt;=</span> <span class="n">target_unnormalized</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+            <span class="n">samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="n">samples</span><span class="p">))</span>
+
+<span class="c1"># 중요도 샘플링</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">importance_sampling</span><span class="p">(</span><span class="n">n_samples</span><span class="p">):</span>
+    <span class="c1"># 제안 분포에서 샘플</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">n_samples</span><span class="p">)</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">target_unnormalized</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">/</span> <span class="n">proposal</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">weights</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>  <span class="c1"># 자기정규화</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span> <span class="o">*</span> <span class="n">weights</span> <span class="o">*</span> <span class="n">n_samples</span><span class="p">)</span>
+
+<span class="c1"># 비교</span>
+<span class="n">n_trials</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">n_samples</span> <span class="o">=</span> <span class="mi">1000</span>
+
+<span class="n">naive_results</span> <span class="o">=</span> <span class="p">[</span><span class="n">naive_monte_carlo</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_trials</span><span class="p">)]</span>
+<span class="n">is_results</span> <span class="o">=</span> <span class="p">[</span><span class="n">importance_sampling</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_trials</span><span class="p">)]</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;일반 MC: 평균 = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">naive_results</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, 표준편차 = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">naive_results</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;중요도 샘플링: 평균 = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">is_results</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, 표준편차 = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">is_results</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;분산 감소율: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">naive_results</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">is_results</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">x&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="34">3.4 강화학습과의 연결<a class="header-link" href="#34" title="Permanent link">&para;</a></h3>
+<p>정책 경사법(Policy Gradient)에서 중요도 샘플링이 핵심입니다:</p>
+<p>$$
+\nabla_\theta J(\theta) = \mathbb{E}_{\pi_{\theta_{\text{old}}}} \left[ \frac{\pi_\theta(a|s)}{\pi_{\theta_{\text{old}}}(a|s)} \nabla_\theta \log \pi_\theta(a|s) Q(s,a) \right]
+$$</p>
+<p>이는 <strong>off-policy learning</strong>을 가능하게 합니다 (PPO, TRPO).</p>
+<hr />
+<h2 id="4-mcmc">4. 마르코프 체인 몬테카를로 (MCMC)<a class="header-link" href="#4-mcmc" title="Permanent link">&para;</a></h2>
+<h3 id="41">4.1 마르코프 체인 기초<a class="header-link" href="#41" title="Permanent link">&para;</a></h3>
+<p><strong>마르코프 체인</strong>: 확률적 상태 전이 $P(x_{t+1} | x_t)$</p>
+<p><strong>정상 분포(Stationary Distribution)</strong>: $\pi(x) = \int \pi(x') P(x|x') dx'$</p>
+<p><strong>세부 균형 조건(Detailed Balance)</strong>:
+$$
+\pi(x) P(x'|x) = \pi(x') P(x|x')
+$$</p>
+<p>세부 균형을 만족하면 $\pi$가 정상 분포입니다.</p>
+<h3 id="42-">4.2 메트로폴리스-헤이스팅스 알고리즘<a class="header-link" href="#42-" title="Permanent link">&para;</a></h3>
+<p><strong>목표</strong>: 목표 분포 $\pi(x)$ (정규화 상수 불필요)에서 샘플링</p>
+<p><strong>알고리즘</strong>:
+1. 현재 상태 $x_t$에서 시작
+2. 제안 분포 $q(x'|x_t)$에서 후보 $x'$ 생성
+3. 수락 확률 계산:
+$$
+\alpha(x', x_t) = \min\left(1, \frac{\pi(x') q(x_t|x')}{\pi(x_t) q(x'|x_t)}\right)
+$$
+4. 확률 $\alpha$로 $x_{t+1} = x'$ (수락), 아니면 $x_{t+1} = x_t$ (거부)</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 메트로폴리스-헤이스팅스 구현</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">target_distribution</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;목표 분포: 이봉 분포 (bimodal)&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span><span class="o">-</span><span class="mi">3</span><span class="p">)</span><span class="o">/</span><span class="mf">0.8</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">((</span><span class="n">x</span><span class="o">+</span><span class="mi">3</span><span class="p">)</span><span class="o">/</span><span class="mf">0.8</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">metropolis_hastings</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">proposal_std</span><span class="o">=</span><span class="mf">1.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;MH 알고리즘 (대칭 제안 분포)&quot;&quot;&quot;</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_samples</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="mf">0.0</span>  <span class="c1"># 초기 상태</span>
+    <span class="n">n_accepted</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_samples</span><span class="p">):</span>
+        <span class="c1"># 제안 생성 (대칭 가우스)</span>
+        <span class="n">x_proposed</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">proposal_std</span><span class="p">)</span>
+
+        <span class="c1"># 수락 확률 계산 (대칭 제안이므로 q 항 소거)</span>
+        <span class="n">acceptance_prob</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">target_distribution</span><span class="p">(</span><span class="n">x_proposed</span><span class="p">)</span> <span class="o">/</span> <span class="n">target_distribution</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+
+        <span class="c1"># 수락/거부 결정</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">acceptance_prob</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x_proposed</span>
+            <span class="n">n_accepted</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">samples</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span>
+
+    <span class="n">acceptance_rate</span> <span class="o">=</span> <span class="n">n_accepted</span> <span class="o">/</span> <span class="n">n_samples</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;수락률: </span><span class="si">{</span><span class="n">acceptance_rate</span><span class="si">:</span><span class="s2">.2%</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">samples</span>
+
+<span class="c1"># 샘플링</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="n">metropolis_hastings</span><span class="p">(</span><span class="mi">50000</span><span class="p">,</span> <span class="n">proposal_std</span><span class="o">=</span><span class="mf">2.0</span><span class="p">)</span>
+
+<span class="c1"># 번인(burn-in) 제거</span>
+<span class="n">burn_in</span> <span class="o">=</span> <span class="mi">5000</span>
+<span class="n">samples_burned</span> <span class="o">=</span> <span class="n">samples</span><span class="p">[</span><span class="n">burn_in</span><span class="p">:]</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+
+<span class="c1"># 궤적</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">samples</span><span class="p">[:</span><span class="mi">1000</span><span class="p">])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;반복&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;MCMC 궤적 (처음 1000개)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">burn_in</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;번인 종료&#39;</span><span class="p">)</span>
+
+<span class="c1"># 히스토그램</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">samples_burned</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;MCMC 샘플&#39;</span><span class="p">)</span>
+<span class="n">x_range</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_range</span><span class="p">,</span> <span class="n">target_distribution</span><span class="p">(</span><span class="n">x_range</span><span class="p">)</span> <span class="o">/</span>
+         <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="mf">0.8</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span><span class="p">),</span> <span class="s1">&#39;r-&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;목표 분포&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;밀도&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;샘플 분포&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+
+<span class="c1"># 자기상관</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">statsmodels.graphics.tsaplots</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_acf</span>
+<span class="n">plot_acf</span><span class="p">(</span><span class="n">samples_burned</span><span class="p">[::</span><span class="mi">10</span><span class="p">],</span> <span class="n">lags</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">())</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;자기상관 함수 (ACF)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="43-gibbs-sampling">4.3 깁스 샘플링 (Gibbs Sampling)<a class="header-link" href="#43-gibbs-sampling" title="Permanent link">&para;</a></h3>
+<p>다변량 분포 $p(x_1, \ldots, x_d)$에서 조건부 분포 $p(x_i | x_{-i})$를 알 때 사용합니다.</p>
+<p><strong>알고리즘</strong>:
+1. 각 변수를 순회하며
+2. $x_i^{(t+1)} \sim p(x_i | x_1^{(t+1)}, \ldots, x_{i-1}^{(t+1)}, x_{i+1}^{(t)}, \ldots, x_d^{(t)})$</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 깁스 샘플링: 이변량 가우스</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">gibbs_sampling_bivariate_gaussian</span><span class="p">(</span><span class="n">n_samples</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="mf">0.9</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;이변량 가우스 N([0,0], [[1,ρ],[ρ,1]])에서 샘플링&quot;&quot;&quot;</span>
+    <span class="n">samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_samples</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span>  <span class="c1"># 초기값</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_samples</span><span class="p">):</span>
+        <span class="c1"># x | y ~ N(ρy, 1-ρ²)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">rho</span> <span class="o">*</span> <span class="n">y</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">rho</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="c1"># y | x ~ N(ρx, 1-ρ²)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">rho</span> <span class="o">*</span> <span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">rho</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">samples</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">samples</span>
+
+<span class="n">samples</span> <span class="o">=</span> <span class="n">gibbs_sampling_bivariate_gaussian</span><span class="p">(</span><span class="mi">10000</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="mf">0.9</span><span class="p">)</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span><span class="p">[</span><span class="mi">1000</span><span class="p">:]</span>  <span class="c1"># 번인 제거</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">samples</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">samples</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;깁스 샘플링: 이변량 가우스 (ρ=0.9)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;equal&#39;</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="c1"># 이론적 등고선</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">multivariate_normal</span>
+<span class="n">x_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">y_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x_grid</span><span class="p">,</span> <span class="n">y_grid</span><span class="p">)</span>
+<span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dstack</span><span class="p">((</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">))</span>
+<span class="n">rv</span> <span class="o">=</span> <span class="n">multivariate_normal</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.9</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">pos</span><span class="p">),</span> <span class="n">levels</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">samples</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">samples</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;이론 분포와 비교&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;equal&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="44">4.4 번인과 자기상관<a class="header-link" href="#44" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>번인(Burn-in)</strong>: 초기 샘플은 정상 분포에 도달하지 않았으므로 버립니다</li>
+<li><strong>자기상관</strong>: 연속 샘플이 상관관계를 가짐 → 간격을 두고 샘플링 (thinning)</li>
+<li><strong>유효 샘플 크기</strong>: $n_{\text{eff}} = \frac{n}{1 + 2\sum_{k=1}^{\infty} \rho_k}$</li>
+</ul>
+<hr />
+<h2 id="5-reparameterization-trick">5. 재매개변수화 트릭 (Reparameterization Trick)<a class="header-link" href="#5-reparameterization-trick" title="Permanent link">&para;</a></h2>
+<h3 id="51">5.1 문제: 확률적 노드의 역전파<a class="header-link" href="#51" title="Permanent link">&para;</a></h3>
+<p>VAE에서 인코더는 $q_\phi(z|x)$를 출력하고, $z \sim q_\phi(z|x)$를 샘플링합니다. 손실 함수:</p>
+<p>$$
+\mathcal{L}(\phi) = \mathbb{E}_{z \sim q_\phi(z|x)}[f(z)]
+$$</p>
+<p><strong>문제</strong>: $\frac{\partial}{\partial \phi} \mathbb{E}_{z \sim q_\phi}[f(z)]$를 어떻게 계산할까?</p>
+<p>샘플링 연산은 <strong>미분 불가능</strong>합니다.</p>
+<h3 id="52">5.2 재매개변수화 해법<a class="header-link" href="#52" title="Permanent link">&para;</a></h3>
+<p><strong>아이디어</strong>: 확률성을 $\phi$와 무관한 노이즈로 분리합니다.</p>
+<p><strong>가우스 분포</strong>: $z \sim \mathcal{N}(\mu_\phi, \sigma_\phi^2)$</p>
+<p>재매개변수화: $z = \mu_\phi + \sigma_\phi \cdot \epsilon$, 여기서 $\epsilon \sim \mathcal{N}(0, 1)$</p>
+<p>이제:
+$$
+\frac{\partial}{\partial \phi} \mathbb{E}_{\epsilon \sim \mathcal{N}(0,1)}[f(\mu_\phi + \sigma_\phi \epsilon)] = \mathbb{E}_{\epsilon}\left[\frac{\partial f(z)}{\partial z} \frac{\partial z}{\partial \phi}\right]
+$$</p>
+<p><strong>기울기가 샘플링 내부로 들어갈 수 있습니다!</strong></p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+
+<span class="c1"># 재매개변수화 트릭 구현</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">VAEEncoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">,</span> <span class="n">latent_dim</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fc</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">input_dim</span><span class="p">,</span> <span class="mi">128</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fc_mu</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="n">latent_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fc_logvar</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="n">latent_dim</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fc</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fc_mu</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+        <span class="n">logvar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fc_logvar</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">mu</span><span class="p">,</span> <span class="n">logvar</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">reparameterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">logvar</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;재매개변수화 트릭&quot;&quot;&quot;</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">logvar</span><span class="p">)</span>
+        <span class="n">eps</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn_like</span><span class="p">(</span><span class="n">std</span><span class="p">)</span>  <span class="c1"># ε ~ N(0, 1)</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">mu</span> <span class="o">+</span> <span class="n">std</span> <span class="o">*</span> <span class="n">eps</span>           <span class="c1"># z = μ + σε</span>
+        <span class="k">return</span> <span class="n">z</span>
+
+<span class="c1"># 기울기 흐름 테스트</span>
+<span class="n">encoder</span> <span class="o">=</span> <span class="n">VAEEncoder</span><span class="p">(</span><span class="n">input_dim</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">latent_dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+<span class="n">mu</span><span class="p">,</span> <span class="n">logvar</span> <span class="o">=</span> <span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">z</span> <span class="o">=</span> <span class="n">encoder</span><span class="o">.</span><span class="n">reparameterize</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">logvar</span><span class="p">)</span>
+
+<span class="c1"># 임의의 손실 함수</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="p">(</span><span class="n">z</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;기울기가 성공적으로 계산됨:&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  mu의 기울기: </span><span class="si">{</span><span class="n">encoder</span><span class="o">.</span><span class="n">fc_mu</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">grad</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  logvar의 기울기: </span><span class="si">{</span><span class="n">encoder</span><span class="o">.</span><span class="n">fc_logvar</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">grad</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  기울기 norm: </span><span class="si">{</span><span class="n">encoder</span><span class="o">.</span><span class="n">fc_mu</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">norm</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="53">5.3 다른 분포의 재매개변수화<a class="header-link" href="#53" title="Permanent link">&para;</a></h3>
+<p><strong>베르누이</strong>: Gumbel-Softmax 트릭
+$$
+z = \text{one-hot}\left(\arg\max_i \left[\log \pi_i + G_i\right]\right)
+$$
+여기서 $G_i \sim \text{Gumbel}(0, 1)$</p>
+<p><strong>감마 분포</strong>: Shape augmentation</p>
+<p><strong>일반적 원칙</strong>: $z = g(\epsilon; \theta)$로 표현 가능하면 재매개변수화 가능</p>
+<h3 id="54-vae-elbo">5.4 VAE의 ELBO<a class="header-link" href="#54-vae-elbo" title="Permanent link">&para;</a></h3>
+<p>VAE 손실 함수 (ELBO):</p>
+<p>$$
+\mathcal{L} = \mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] - D_{KL}(q_\phi(z|x) \| p(z))
+$$</p>
+<p><strong>재매개변수화 적용</strong>:
+- 첫 번째 항: 재매개변수화 트릭으로 기울기 계산
+- 두 번째 항: 가우스 사전분포 가정 시 해석적으로 계산 가능</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">vae_loss</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x_recon</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">logvar</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;VAE 손실 함수 (ELBO)&quot;&quot;&quot;</span>
+    <span class="c1"># 재구성 손실 (log p(x|z))</span>
+    <span class="n">recon_loss</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">binary_cross_entropy</span><span class="p">(</span><span class="n">x_recon</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s1">&#39;sum&#39;</span><span class="p">)</span>
+
+    <span class="c1"># KL 발산 (가우스 가정 하에 해석적 계산)</span>
+    <span class="c1"># KL(N(μ,σ²) || N(0,1)) = -0.5 * Σ(1 + log(σ²) - μ² - σ²)</span>
+    <span class="n">kl_loss</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">logvar</span> <span class="o">-</span> <span class="n">mu</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">logvar</span><span class="o">.</span><span class="n">exp</span><span class="p">())</span>
+
+    <span class="k">return</span> <span class="n">recon_loss</span> <span class="o">+</span> <span class="n">kl_loss</span>
+
+<span class="c1"># 전체 VAE 학습 루프 (간략화)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">train_vae</span><span class="p">(</span><span class="n">encoder</span><span class="p">,</span> <span class="n">decoder</span><span class="p">,</span> <span class="n">data_loader</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="n">epochs</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">epochs</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">data_loader</span><span class="p">:</span>
+            <span class="c1"># 인코더</span>
+            <span class="n">mu</span><span class="p">,</span> <span class="n">logvar</span> <span class="o">=</span> <span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">z</span> <span class="o">=</span> <span class="n">encoder</span><span class="o">.</span><span class="n">reparameterize</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">logvar</span><span class="p">)</span>
+
+            <span class="c1"># 디코더</span>
+            <span class="n">x_recon</span> <span class="o">=</span> <span class="n">decoder</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+
+            <span class="c1"># 손실 계산 및 역전파</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="n">vae_loss</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x_recon</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">logvar</span><span class="p">)</span>
+            <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+            <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>  <span class="c1"># 재매개변수화 덕분에 기울기 계산 가능!</span>
+            <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 머신러닝 응용<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="61-vae-elbo">6.1 VAE: ELBO 최적화<a class="header-link" href="#61-vae-elbo" title="Permanent link">&para;</a></h3>
+<p>재매개변수화 트릭이 없었다면 VAE는 불가능했습니다. REINFORCE (점수 함수 추정)는 분산이 너무 높습니다.</p>
+<h3 id="62-reinforce">6.2 강화학습: REINFORCE = 몬테카를로<a class="header-link" href="#62-reinforce" title="Permanent link">&para;</a></h3>
+<p>정책 경사 정리:
+$$
+\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\left[\sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t) R(\tau)\right]
+$$</p>
+<p>이는 몬테카를로 샘플링으로 추정합니다.</p>
+<p><strong>분산 감소</strong>: 베이스라인 사용, GAE (Generalized Advantage Estimation)</p>
+<h3 id="63-mcmc-vs">6.3 베이지안 추론: MCMC vs 변분 추론<a class="header-link" href="#63-mcmc-vs" title="Permanent link">&para;</a></h3>
+<p><strong>MCMC</strong>:
+- 장점: 이론적으로 정확한 샘플
+- 단점: 느림, 수렴 진단 어려움</p>
+<p><strong>변분 추론</strong>:
+- 장점: 빠름, 확장 가능
+- 단점: 근사 품질이 $q$의 표현력에 제한됨</p>
+<h3 id="64-dropout">6.4 Dropout = 베르누이 샘플링<a class="header-link" href="#64-dropout" title="Permanent link">&para;</a></h3>
+<p>Dropout은 훈련 중 베르누이 샘플링입니다:
+$$
+h_{\text{drop}} = h \odot \text{Bernoulli}(p)
+$$</p>
+<p><strong>베이지안 해석</strong>: Dropout은 근사 베이지안 추론으로 볼 수 있습니다 (Gal &amp; Ghahramani, 2016).</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># MC Dropout으로 불확실성 추정</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MCDropoutModel</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fc1</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">50</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fc2</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fc1</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># 추론 시에도 dropout 적용</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fc2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">predict_with_uncertainty</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">n_samples</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;MC Dropout으로 예측 불확실성 추정&quot;&quot;&quot;</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>  <span class="c1"># Dropout 활성화</span>
+    <span class="n">predictions</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_samples</span><span class="p">):</span>
+            <span class="n">pred</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">predictions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pred</span><span class="p">)</span>
+
+    <span class="n">predictions</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">mean</span> <span class="o">=</span> <span class="n">predictions</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">std</span> <span class="o">=</span> <span class="n">predictions</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">mean</span><span class="p">,</span> <span class="n">std</span>
+
+<span class="c1"># 테스트</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">MCDropoutModel</span><span class="p">()</span>
+<span class="n">x_test</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="n">mean</span><span class="p">,</span> <span class="n">std</span> <span class="o">=</span> <span class="n">predict_with_uncertainty</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">x_test</span><span class="p">,</span> <span class="n">n_samples</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;예측 평균: </span><span class="si">{</span><span class="n">mean</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;예측 표준편차 (불확실성): </span><span class="si">{</span><span class="n">std</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_2">연습 문제<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<h3 id="1_1">문제 1: 몬테카를로 적분<a class="header-link" href="#1_1" title="Permanent link">&para;</a></h3>
+<p>다음 적분을 몬테카를로 방법으로 추정하세요:
+$$
+I = \int_0^1 e^{-x^2} dx
+$$</p>
+<p>(a) 10, 100, 1000, 10000개 샘플을 사용하여 추정하고 오차를 계산하세요.
+(b) 오차가 $O(1/\sqrt{N})$로 감소하는지 log-log 플롯으로 확인하세요.
+(c) <code>scipy.integrate.quad</code>의 결과와 비교하세요.</p>
+<h3 id="2_1">문제 2: 중요도 샘플링<a class="header-link" href="#2_1" title="Permanent link">&para;</a></h3>
+<p>목표 분포 $p(x) \propto e^{-|x|^3}$에서 $\mathbb{E}[x^2]$를 계산하려고 합니다.</p>
+<p>(a) 제안 분포로 $q(x) = \mathcal{N}(0, 1)$을 사용한 중요도 샘플링을 구현하세요.
+(b) 제안 분포로 $q(x) = \text{Laplace}(0, 1)$을 사용한 경우와 분산을 비교하세요.
+(c) 어떤 제안 분포가 더 효율적인가요? 이유를 설명하세요.</p>
+<h3 id="3-mcmc">문제 3: MCMC 진단<a class="header-link" href="#3-mcmc" title="Permanent link">&para;</a></h3>
+<p>이봉 분포 $p(x) \propto e^{-(x-3)^2/2} + e^{-(x+3)^2/2}$에서 메트로폴리스-헤이스팅스 샘플링을 수행하세요.</p>
+<p>(a) 제안 분포 표준편차를 0.1, 1.0, 10.0으로 변경하며 수락률을 관찰하세요.
+(b) 각 경우의 자기상관 함수(ACF)를 플롯하고 유효 샘플 크기를 추정하세요.
+(c) 최적의 제안 분포 표준편차는 무엇인가요?</p>
+<h3 id="4">문제 4: 재매개변수화 트릭<a class="header-link" href="#4" title="Permanent link">&para;</a></h3>
+<p>간단한 VAE를 구현하고 재매개변수화 트릭의 효과를 검증하세요.</p>
+<p>(a) MNIST 데이터셋에서 작은 VAE를 훈련하세요 (latent_dim=2).
+(b) 재매개변수화 트릭을 사용하지 않고 REINFORCE로 훈련할 때와 비교하세요.
+(c) 잠재 공간을 2D 플롯으로 시각화하세요.</p>
+<h3 id="5">문제 5: 깁스 샘플링 확장<a class="header-link" href="#5" title="Permanent link">&para;</a></h3>
+<p>3변량 가우스 분포에서 깁스 샘플링을 구현하세요.</p>
+<p>$$
+\mathbf{x} \sim \mathcal{N}\left(\mathbf{0}, \begin{bmatrix} 1 & 0.8 & 0.5 \\ 0.8 & 1 & 0.7 \\ 0.5 & 0.7 & 1 \end{bmatrix}\right)
+$$</p>
+<p>(a) 조건부 분포 $p(x_i | x_{-i})$를 유도하세요 (가우스 조건부 공식 사용).
+(b) 깁스 샘플링을 10,000회 반복하고 샘플 공분산을 계산하세요.
+(c) 이론적 공분산과 비교하세요.</p>
+<hr />
+<h2 id="_3">참고 자료<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<h3 id="_4">서적<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Pattern Recognition and Machine Learning</strong> (Bishop, 2006) - Chapter 11: Sampling Methods</li>
+<li><strong>Monte Carlo Statistical Methods</strong> (Robert &amp; Casella, 2004)</li>
+<li><strong>Deep Learning</strong> (Goodfellow et al., 2016) - Chapter 17: Monte Carlo Methods</li>
+</ul>
+<h3 id="_5">논문<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Kingma &amp; Welling (2013), "Auto-Encoding Variational Bayes" - VAE와 재매개변수화 트릭</li>
+<li>Metropolis et al. (1953), "Equation of State Calculations by Fast Computing Machines"</li>
+<li>Hastings (1970), "Monte Carlo Sampling Methods Using Markov Chains"</li>
+<li>Gal &amp; Ghahramani (2016), "Dropout as a Bayesian Approximation"</li>
+</ul>
+<h3 id="_6">온라인 자료<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="https://chi-feng.github.io/mcmc-demo/">MCMC Interactive Gallery</a></li>
+<li><a href="https://distill.pub">Distill.pub: Visualizing Sampling Methods</a></li>
+<li><a href="https://www.pymc.io">PyMC Documentation</a> - 실제 베이지안 추론 라이브러리</li>
+</ul>
+<h3 id="_7">라이브러리<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>PyMC3/PyMC4</strong>: 베이지안 추론 및 MCMC</li>
+<li><strong>Stan</strong>: 강력한 MCMC 추론 엔진</li>
+<li><strong>PyTorch</strong>: VAE 구현</li>
+<li><strong>NumPyro</strong>: JAX 기반 확률적 프로그래밍</li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Math_for_AI/11_Probability_Distributions_Advanced.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">11. 고급 확률 분포 (Advanced Probability Distributions)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Math_for_AI/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Math_for_AI/13_Linear_Algebra_for_Deep_Learning.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">13. 딥러닝을 위한 선형대수</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

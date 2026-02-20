@@ -1,0 +1,1101 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>13. systemd 심화 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Linux/">Linux</a>
+    <span class="separator">/</span>
+    <span class="current">13. systemd 심화</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>13. systemd 심화</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Linux/12_Security_and_Firewall.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">보안과 방화벽</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Linux/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Linux/14_Performance_Tuning.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">14. Linux 성능 튜닝</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#_2">목차</a></li>
+<li><a href="#1-systemd">1. systemd 아키텍처</a><ul>
+<li><a href="#11-systemd">1.1 systemd 개요</a></li>
+<li><a href="#12">1.2 유닛 파일 위치</a></li>
+<li><a href="#13-systemctl">1.3 기본 systemctl 명령</a></li>
+</ul>
+</li>
+<li><a href="#2">2. 서비스 유닛 작성</a><ul>
+<li><a href="#21">2.1 기본 서비스 유닛</a></li>
+<li><a href="#22-type">2.2 서비스 Type</a></li>
+<li><a href="#23-exec">2.3 Exec 옵션</a></li>
+<li><a href="#24">2.4 보안 옵션</a></li>
+<li><a href="#25-nodejs">2.5 완전한 예제: Node.js 앱</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 타이머 유닛</a><ul>
+<li><a href="#31">3.1 타이머 기본</a></li>
+<li><a href="#32-oncalendar">3.2 OnCalendar 문법</a></li>
+<li><a href="#33">3.3 타이머 관리</a></li>
+<li><a href="#34">3.4 여러 스케줄</a></li>
+</ul>
+</li>
+<li><a href="#4">4. 소켓 활성화</a><ul>
+<li><a href="#41">4.1 소켓 활성화 개념</a></li>
+<li><a href="#42">4.2 소켓 유닛</a></li>
+<li><a href="#43">4.3 소켓 활성화 서비스 예제</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 의존성과 순서</a><ul>
+<li><a href="#51">5.1 의존성 지시자</a></li>
+<li><a href="#52">5.2 순서 지시자</a></li>
+<li><a href="#53-target">5.3 Target 유닛</a></li>
+<li><a href="#54">5.4 의존성 시각화</a></li>
+</ul>
+</li>
+<li><a href="#6-journald">6. journald 로깅</a><ul>
+<li><a href="#61-journalctl">6.1 journalctl 기본</a></li>
+<li><a href="#62-journald">6.2 journald 설정</a></li>
+<li><a href="#63">6.3 구조화된 로깅</a></li>
+<li><a href="#64">6.4 로그 필터링 고급</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 연습 문제</a><ul>
+<li><a href="#1">연습 1: 웹 애플리케이션 서비스</a></li>
+<li><a href="#2_1">연습 2: 백업 타이머</a></li>
+<li><a href="#3_1">연습 3: 소켓 활성화 서비스</a></li>
+<li><a href="#4_1">연습 4: 마이크로서비스 스택</a></li>
+</ul>
+</li>
+<li><a href="#_3">다음 단계</a></li>
+<li><a href="#_4">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="13-systemd">13. systemd 심화<a class="header-link" href="#13-systemd" title="Permanent link">&para;</a></h1>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>systemd 아키텍처와 동작 원리 이해</li>
+<li>커스텀 서비스 유닛 작성</li>
+<li>타이머 유닛으로 스케줄링</li>
+<li>소켓 활성화와 의존성 관리</li>
+</ul>
+<h2 id="_2">목차<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-systemd-아키텍처">systemd 아키텍처</a></li>
+<li><a href="#2-서비스-유닛-작성">서비스 유닛 작성</a></li>
+<li><a href="#3-타이머-유닛">타이머 유닛</a></li>
+<li><a href="#4-소켓-활성화">소켓 활성화</a></li>
+<li><a href="#5-의존성과-순서">의존성과 순서</a></li>
+<li><a href="#6-journald-로깅">journald 로깅</a></li>
+<li><a href="#7-연습-문제">연습 문제</a></li>
+</ol>
+<hr />
+<h2 id="1-systemd">1. systemd 아키텍처<a class="header-link" href="#1-systemd" title="Permanent link">&para;</a></h2>
+<h3 id="11-systemd">1.1 systemd 개요<a class="header-link" href="#11-systemd" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    systemd 아키텍처                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                  systemd (PID 1)                     │   │
+│  │  • 시스템 초기화 및 서비스 관리                      │   │
+│  │  • 병렬 서비스 시작                                  │   │
+│  │  • 소켓/D-Bus 활성화                                 │   │
+│  │  • cgroups 기반 리소스 관리                          │   │
+│  └─────────────────────────────────────────────────────┘   │
+│           │                                                 │
+│    ┌──────┼──────────────────────────────┐                 │
+│    │      │                              │                  │
+│    ▼      ▼                              ▼                  │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐             │
+│  │udevd │ │logind│ │journald│ │networkd│ │resolved│         │
+│  └──────┘ └──────┘ └──────┘ └──────┘ └──────┘             │
+│                                                             │
+│  유닛 타입:                                                 │
+│  • .service  - 서비스/데몬                                  │
+│  • .socket   - 소켓                                         │
+│  • .timer    - 타이머 (cron 대체)                          │
+│  • .target   - 그룹 (런레벨 대체)                          │
+│  • .mount    - 마운트 포인트                                │
+│  • .device   - 장치                                         │
+│  • .path     - 경로 모니터링                                │
+│  • .slice    - 리소스 그룹                                  │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="12">1.2 유닛 파일 위치<a class="header-link" href="#12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 유닛 파일 위치 (우선순위 순)</span>
+/etc/systemd/system/<span class="w">        </span><span class="c1"># 시스템 관리자 설정 (최우선)</span>
+/run/systemd/system/<span class="w">        </span><span class="c1"># 런타임 생성 유닛</span>
+/usr/lib/systemd/system/<span class="w">    </span><span class="c1"># 패키지 설치 유닛</span>
+
+<span class="c1"># 사용자 유닛</span>
+~/.config/systemd/user/<span class="w">     </span><span class="c1"># 사용자 설정</span>
+/etc/systemd/user/<span class="w">          </span><span class="c1"># 전역 사용자 설정</span>
+/usr/lib/systemd/user/<span class="w">      </span><span class="c1"># 패키지 설치 사용자 유닛</span>
+
+<span class="c1"># 유닛 파일 위치 확인</span>
+systemctl<span class="w"> </span>show<span class="w"> </span>-p<span class="w"> </span>FragmentPath<span class="w"> </span>nginx.service
+systemctl<span class="w"> </span>cat<span class="w"> </span>nginx.service
+</code></pre></div>
+
+<h3 id="13-systemctl">1.3 기본 systemctl 명령<a class="header-link" href="#13-systemctl" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 서비스 관리</span>
+systemctl<span class="w"> </span>start<span class="w"> </span>nginx
+systemctl<span class="w"> </span>stop<span class="w"> </span>nginx
+systemctl<span class="w"> </span>restart<span class="w"> </span>nginx
+systemctl<span class="w"> </span>reload<span class="w"> </span>nginx<span class="w">       </span><span class="c1"># 설정만 리로드</span>
+systemctl<span class="w"> </span>status<span class="w"> </span>nginx
+
+<span class="c1"># 부팅 시 자동 시작</span>
+systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>nginx
+systemctl<span class="w"> </span>disable<span class="w"> </span>nginx
+systemctl<span class="w"> </span>is-enabled<span class="w"> </span>nginx
+
+<span class="c1"># 서비스 마스킹 (시작 완전 방지)</span>
+systemctl<span class="w"> </span>mask<span class="w"> </span>nginx
+systemctl<span class="w"> </span>unmask<span class="w"> </span>nginx
+
+<span class="c1"># 유닛 목록</span>
+systemctl<span class="w"> </span>list-units
+systemctl<span class="w"> </span>list-units<span class="w"> </span>--type<span class="o">=</span>service
+systemctl<span class="w"> </span>list-units<span class="w"> </span>--state<span class="o">=</span>failed
+
+<span class="c1"># 유닛 파일 목록</span>
+systemctl<span class="w"> </span>list-unit-files
+
+<span class="c1"># 의존성 확인</span>
+systemctl<span class="w"> </span>list-dependencies<span class="w"> </span>nginx.service
+systemctl<span class="w"> </span>list-dependencies<span class="w"> </span>--reverse<span class="w"> </span>nginx.service
+
+<span class="c1"># 데몬 리로드 (유닛 파일 수정 후)</span>
+systemctl<span class="w"> </span>daemon-reload
+</code></pre></div>
+
+<hr />
+<h2 id="2">2. 서비스 유닛 작성<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="21">2.1 기본 서비스 유닛<a class="header-link" href="#21" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/systemd/system/myapp.service</span>
+<span class="k">[Unit]</span>
+<span class="na">Description</span><span class="o">=</span><span class="s">My Application Service</span>
+<span class="na">Documentation</span><span class="o">=</span><span class="s">https://myapp.example.com/docs</span>
+<span class="na">After</span><span class="o">=</span><span class="s">network.target</span>
+<span class="na">Wants</span><span class="o">=</span><span class="s">network-online.target</span>
+
+<span class="k">[Service]</span>
+<span class="na">Type</span><span class="o">=</span><span class="s">simple</span>
+<span class="na">User</span><span class="o">=</span><span class="s">myapp</span>
+<span class="na">Group</span><span class="o">=</span><span class="s">myapp</span>
+<span class="na">WorkingDirectory</span><span class="o">=</span><span class="s">/opt/myapp</span>
+<span class="na">ExecStart</span><span class="o">=</span><span class="s">/opt/myapp/bin/myapp --config /etc/myapp/config.yaml</span>
+<span class="na">ExecReload</span><span class="o">=</span><span class="s">/bin/kill -HUP $MAINPID</span>
+<span class="na">Restart</span><span class="o">=</span><span class="s">on-failure</span>
+<span class="na">RestartSec</span><span class="o">=</span><span class="s">5</span>
+
+<span class="c1"># 환경 변수</span>
+<span class="na">Environment</span><span class="o">=</span><span class="s">NODE_ENV=production</span>
+<span class="na">EnvironmentFile</span><span class="o">=</span><span class="s">-/etc/myapp/env</span><span class="w">  </span><span class="c1"># - 는 파일 없어도 에러 안 남</span>
+
+<span class="c1"># 로깅</span>
+<span class="na">StandardOutput</span><span class="o">=</span><span class="s">journal</span>
+<span class="na">StandardError</span><span class="o">=</span><span class="s">journal</span>
+<span class="na">SyslogIdentifier</span><span class="o">=</span><span class="s">myapp</span>
+
+<span class="k">[Install]</span>
+<span class="na">WantedBy</span><span class="o">=</span><span class="s">multi-user.target</span>
+</code></pre></div>
+
+<h3 id="22-type">2.2 서비스 Type<a class="header-link" href="#22-type" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Type=simple (기본값)</span>
+<span class="c1"># 프로세스가 바로 메인 프로세스</span>
+<span class="k">[Service]</span>
+<span class="na">Type</span><span class="o">=</span><span class="s">simple</span>
+<span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/bin/myapp</span>
+
+<span class="c1"># Type=forking</span>
+<span class="c1"># 프로세스가 fork하고 부모가 종료</span>
+<span class="k">[Service]</span>
+<span class="na">Type</span><span class="o">=</span><span class="s">forking</span>
+<span class="na">PIDFile</span><span class="o">=</span><span class="s">/var/run/myapp.pid</span>
+<span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/bin/myapp --daemon</span>
+
+<span class="c1"># Type=oneshot</span>
+<span class="c1"># 시작 후 종료되는 일회성 작업</span>
+<span class="k">[Service]</span>
+<span class="na">Type</span><span class="o">=</span><span class="s">oneshot</span>
+<span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/local/bin/setup-script.sh</span>
+<span class="na">RemainAfterExit</span><span class="o">=</span><span class="s">yes</span><span class="w">  </span><span class="c1"># 종료 후에도 active 상태 유지</span>
+
+<span class="c1"># Type=notify</span>
+<span class="c1"># 프로세스가 sd_notify()로 준비 완료 알림</span>
+<span class="k">[Service]</span>
+<span class="na">Type</span><span class="o">=</span><span class="s">notify</span>
+<span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/bin/myapp-with-notify</span>
+
+<span class="c1"># Type=dbus</span>
+<span class="c1"># D-Bus 이름 획득 시 준비 완료</span>
+<span class="k">[Service]</span>
+<span class="na">Type</span><span class="o">=</span><span class="s">dbus</span>
+<span class="na">BusName</span><span class="o">=</span><span class="s">org.example.MyApp</span>
+<span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/bin/myapp</span>
+
+<span class="c1"># Type=idle</span>
+<span class="c1"># 다른 작업 완료 후 실행 (부팅 메시지 출력 등)</span>
+<span class="k">[Service]</span>
+<span class="na">Type</span><span class="o">=</span><span class="s">idle</span>
+<span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/bin/welcome-message</span>
+</code></pre></div>
+
+<h3 id="23-exec">2.3 Exec 옵션<a class="header-link" href="#23-exec" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">[Service]</span>
+<span class="c1"># 시작/종료 명령</span>
+<span class="na">ExecStartPre</span><span class="o">=</span><span class="s">/usr/bin/myapp-check</span><span class="w">    </span><span class="c1"># 시작 전 실행</span>
+<span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/bin/myapp</span><span class="w">             </span><span class="c1"># 메인 명령</span>
+<span class="na">ExecStartPost</span><span class="o">=</span><span class="s">/usr/bin/myapp-notify</span><span class="w">  </span><span class="c1"># 시작 후 실행</span>
+<span class="na">ExecReload</span><span class="o">=</span><span class="s">/bin/kill -HUP $MAINPID</span><span class="w">   </span><span class="c1"># reload 시 실행</span>
+<span class="na">ExecStop</span><span class="o">=</span><span class="s">/usr/bin/myapp stop</span><span class="w">         </span><span class="c1"># 종료 명령</span>
+<span class="na">ExecStopPost</span><span class="o">=</span><span class="s">/usr/bin/cleanup</span><span class="w">        </span><span class="c1"># 종료 후 실행</span>
+
+<span class="c1"># 실패해도 계속 (-접두사)</span>
+<span class="na">ExecStartPre</span><span class="o">=</span><span class="s">-/usr/bin/optional-check</span>
+
+<span class="c1"># 쉘 사용 (;는 여러 명령)</span>
+<span class="na">ExecStart</span><span class="o">=</span><span class="s">/bin/sh -c &#39;echo start &amp;&amp; /usr/bin/myapp&#39;</span>
+
+<span class="c1"># 타임아웃</span>
+<span class="na">TimeoutStartSec</span><span class="o">=</span><span class="s">30</span>
+<span class="na">TimeoutStopSec</span><span class="o">=</span><span class="s">30</span>
+<span class="na">TimeoutSec</span><span class="o">=</span><span class="s">30</span><span class="w">  </span><span class="c1"># 둘 다 설정</span>
+
+<span class="c1"># 재시작 조건</span>
+<span class="na">Restart</span><span class="o">=</span><span class="s">no</span><span class="w">              </span><span class="c1"># 재시작 안 함</span>
+<span class="na">Restart</span><span class="o">=</span><span class="s">on-success</span><span class="w">      </span><span class="c1"># 정상 종료 시만</span>
+<span class="na">Restart</span><span class="o">=</span><span class="s">on-failure</span><span class="w">      </span><span class="c1"># 비정상 종료 시만</span>
+<span class="na">Restart</span><span class="o">=</span><span class="s">on-abnormal</span><span class="w">     </span><span class="c1"># 시그널/타임아웃 시</span>
+<span class="na">Restart</span><span class="o">=</span><span class="s">on-watchdog</span><span class="w">     </span><span class="c1"># watchdog 타임아웃 시</span>
+<span class="na">Restart</span><span class="o">=</span><span class="s">on-abort</span><span class="w">        </span><span class="c1"># 캐치 안 된 시그널 시</span>
+<span class="na">Restart</span><span class="o">=</span><span class="s">always</span><span class="w">          </span><span class="c1"># 항상 재시작</span>
+
+<span class="na">RestartSec</span><span class="o">=</span><span class="s">5</span><span class="w">            </span><span class="c1"># 재시작 전 대기 시간</span>
+<span class="na">RestartPreventExitStatus</span><span class="o">=</span><span class="s">1 23</span><span class="w">  </span><span class="c1"># 이 종료코드면 재시작 안 함</span>
+</code></pre></div>
+
+<h3 id="24">2.4 보안 옵션<a class="header-link" href="#24" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">[Service]</span>
+<span class="c1"># 사용자/그룹</span>
+<span class="na">User</span><span class="o">=</span><span class="s">myapp</span>
+<span class="na">Group</span><span class="o">=</span><span class="s">myapp</span>
+<span class="na">DynamicUser</span><span class="o">=</span><span class="s">yes</span><span class="w">  </span><span class="c1"># 동적 사용자 생성 (임시)</span>
+
+<span class="c1"># 파일시스템 접근 제한</span>
+<span class="na">ProtectSystem</span><span class="o">=</span><span class="s">strict</span><span class="w">     </span><span class="c1"># /usr, /boot 읽기 전용</span>
+<span class="na">ProtectHome</span><span class="o">=</span><span class="s">yes</span><span class="w">          </span><span class="c1"># /home 접근 불가</span>
+<span class="na">PrivateTmp</span><span class="o">=</span><span class="s">yes</span><span class="w">           </span><span class="c1"># 격리된 /tmp</span>
+<span class="na">ReadWritePaths</span><span class="o">=</span><span class="s">/var/lib/myapp</span>
+<span class="na">ReadOnlyPaths</span><span class="o">=</span><span class="s">/etc/myapp</span>
+
+<span class="c1"># 네트워크 제한</span>
+<span class="na">PrivateNetwork</span><span class="o">=</span><span class="s">yes</span><span class="w">       </span><span class="c1"># 격리된 네트워크</span>
+<span class="na">RestrictAddressFamilies</span><span class="o">=</span><span class="s">AF_INET AF_INET6</span>
+
+<span class="c1"># 시스템 콜 필터링</span>
+<span class="na">SystemCallFilter</span><span class="o">=</span><span class="s">@system-service</span>
+<span class="na">SystemCallFilter</span><span class="o">=</span><span class="s">~@privileged @resources</span>
+
+<span class="c1"># 기타 보안</span>
+<span class="na">NoNewPrivileges</span><span class="o">=</span><span class="s">yes</span>
+<span class="na">ProtectKernelTunables</span><span class="o">=</span><span class="s">yes</span>
+<span class="na">ProtectKernelModules</span><span class="o">=</span><span class="s">yes</span>
+<span class="na">ProtectControlGroups</span><span class="o">=</span><span class="s">yes</span>
+<span class="na">CapabilityBoundingSet</span><span class="o">=</span><span class="s">CAP_NET_BIND_SERVICE</span>
+<span class="na">AmbientCapabilities</span><span class="o">=</span><span class="s">CAP_NET_BIND_SERVICE</span>
+
+<span class="c1"># 리소스 제한</span>
+<span class="na">LimitNOFILE</span><span class="o">=</span><span class="s">65536</span>
+<span class="na">LimitNPROC</span><span class="o">=</span><span class="s">4096</span>
+<span class="na">MemoryMax</span><span class="o">=</span><span class="s">1G</span>
+<span class="na">CPUQuota</span><span class="o">=</span><span class="s">50%</span>
+</code></pre></div>
+
+<h3 id="25-nodejs">2.5 완전한 예제: Node.js 앱<a class="header-link" href="#25-nodejs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/systemd/system/nodeapp.service</span>
+<span class="k">[Unit]</span>
+<span class="na">Description</span><span class="o">=</span><span class="s">Node.js Application</span>
+<span class="na">Documentation</span><span class="o">=</span><span class="s">https://example.com/docs</span>
+<span class="na">After</span><span class="o">=</span><span class="s">network.target mongodb.service</span>
+<span class="na">Wants</span><span class="o">=</span><span class="s">mongodb.service</span>
+
+<span class="k">[Service]</span>
+<span class="na">Type</span><span class="o">=</span><span class="s">simple</span>
+<span class="na">User</span><span class="o">=</span><span class="s">nodeapp</span>
+<span class="na">Group</span><span class="o">=</span><span class="s">nodeapp</span>
+<span class="na">WorkingDirectory</span><span class="o">=</span><span class="s">/opt/nodeapp</span>
+
+<span class="c1"># Node.js 경로</span>
+<span class="na">Environment</span><span class="o">=</span><span class="s">PATH=/opt/nodeapp/node/bin:/usr/bin</span>
+<span class="na">Environment</span><span class="o">=</span><span class="s">NODE_ENV=production</span>
+<span class="na">EnvironmentFile</span><span class="o">=</span><span class="s">/etc/nodeapp/env</span>
+
+<span class="c1"># 실행</span>
+<span class="na">ExecStart</span><span class="o">=</span><span class="s">/opt/nodeapp/node/bin/node /opt/nodeapp/app.js</span>
+<span class="na">ExecReload</span><span class="o">=</span><span class="s">/bin/kill -HUP $MAINPID</span>
+
+<span class="c1"># 재시작 정책</span>
+<span class="na">Restart</span><span class="o">=</span><span class="s">always</span>
+<span class="na">RestartSec</span><span class="o">=</span><span class="s">10</span>
+<span class="na">WatchdogSec</span><span class="o">=</span><span class="s">30</span>
+
+<span class="c1"># 로깅</span>
+<span class="na">StandardOutput</span><span class="o">=</span><span class="s">journal</span>
+<span class="na">StandardError</span><span class="o">=</span><span class="s">journal</span>
+<span class="na">SyslogIdentifier</span><span class="o">=</span><span class="s">nodeapp</span>
+
+<span class="c1"># 보안</span>
+<span class="na">NoNewPrivileges</span><span class="o">=</span><span class="s">yes</span>
+<span class="na">ProtectSystem</span><span class="o">=</span><span class="s">strict</span>
+<span class="na">ProtectHome</span><span class="o">=</span><span class="s">yes</span>
+<span class="na">PrivateTmp</span><span class="o">=</span><span class="s">yes</span>
+<span class="na">ReadWritePaths</span><span class="o">=</span><span class="s">/var/lib/nodeapp /var/log/nodeapp</span>
+
+<span class="c1"># 리소스 제한</span>
+<span class="na">LimitNOFILE</span><span class="o">=</span><span class="s">65536</span>
+<span class="na">MemoryMax</span><span class="o">=</span><span class="s">2G</span>
+
+<span class="k">[Install]</span>
+<span class="na">WantedBy</span><span class="o">=</span><span class="s">multi-user.target</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3">3. 타이머 유닛<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="31">3.1 타이머 기본<a class="header-link" href="#31" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/systemd/system/backup.timer</span>
+<span class="k">[Unit]</span>
+<span class="na">Description</span><span class="o">=</span><span class="s">Daily Backup Timer</span>
+
+<span class="k">[Timer]</span>
+<span class="c1"># 실시간 (wallclock) 타이머</span>
+<span class="na">OnCalendar</span><span class="o">=</span><span class="s">*-*-* 02:00:00</span><span class="w">  </span><span class="c1"># 매일 새벽 2시</span>
+
+<span class="c1"># 또는 모노토닉 타이머</span>
+<span class="c1"># OnBootSec=15min           # 부팅 15분 후</span>
+<span class="c1"># OnUnitActiveSec=1h        # 마지막 활성화 후 1시간</span>
+
+<span class="c1"># 정확도 (배터리 절약)</span>
+<span class="na">AccuracySec</span><span class="o">=</span><span class="s">1min</span>
+
+<span class="c1"># 놓친 실행 처리</span>
+<span class="na">Persistent</span><span class="o">=</span><span class="s">yes</span><span class="w">  </span><span class="c1"># 시스템 꺼져있던 동안 놓친 실행 보정</span>
+
+<span class="k">[Install]</span>
+<span class="na">WantedBy</span><span class="o">=</span><span class="s">timers.target</span>
+
+<span class="na">---</span>
+<span class="c1"># /etc/systemd/system/backup.service</span>
+<span class="k">[Unit]</span>
+<span class="na">Description</span><span class="o">=</span><span class="s">Backup Service</span>
+
+<span class="k">[Service]</span>
+<span class="na">Type</span><span class="o">=</span><span class="s">oneshot</span>
+<span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/local/bin/backup.sh</span>
+</code></pre></div>
+
+<h3 id="32-oncalendar">3.2 OnCalendar 문법<a class="header-link" href="#32-oncalendar" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># OnCalendar 형식: DayOfWeek Year-Month-Day Hour:Minute:Second</span>
+
+<span class="c1"># 매일 자정</span>
+<span class="nv">OnCalendar</span><span class="o">=</span>daily
+<span class="nv">OnCalendar</span><span class="o">=</span>*-*-*<span class="w"> </span><span class="m">00</span>:00:00
+
+<span class="c1"># 매시간</span>
+<span class="nv">OnCalendar</span><span class="o">=</span>hourly
+<span class="nv">OnCalendar</span><span class="o">=</span>*-*-*<span class="w"> </span>*:00:00
+
+<span class="c1"># 매주 월요일 오전 6시</span>
+<span class="nv">OnCalendar</span><span class="o">=</span>Mon<span class="w"> </span>*-*-*<span class="w"> </span><span class="m">06</span>:00:00
+<span class="nv">OnCalendar</span><span class="o">=</span>weekly
+
+<span class="c1"># 매월 1일</span>
+<span class="nv">OnCalendar</span><span class="o">=</span>monthly
+<span class="nv">OnCalendar</span><span class="o">=</span>*-*-01<span class="w"> </span><span class="m">00</span>:00:00
+
+<span class="c1"># 매년 1월 1일</span>
+<span class="nv">OnCalendar</span><span class="o">=</span>yearly
+<span class="nv">OnCalendar</span><span class="o">=</span>*-01-01<span class="w"> </span><span class="m">00</span>:00:00
+
+<span class="c1"># 5분마다</span>
+<span class="nv">OnCalendar</span><span class="o">=</span>*:0/5
+<span class="nv">OnCalendar</span><span class="o">=</span>*-*-*<span class="w"> </span>*:00/5:00
+
+<span class="c1"># 평일 오전 9시</span>
+<span class="nv">OnCalendar</span><span class="o">=</span>Mon..Fri<span class="w"> </span>*-*-*<span class="w"> </span><span class="m">09</span>:00:00
+
+<span class="c1"># 특정 날짜</span>
+<span class="nv">OnCalendar</span><span class="o">=</span><span class="m">2024</span>-12-25<span class="w"> </span><span class="m">00</span>:00:00
+
+<span class="c1"># 범위</span>
+<span class="nv">OnCalendar</span><span class="o">=</span>*-*-*<span class="w"> </span><span class="m">08</span>..18:00:00<span class="w">  </span><span class="c1"># 매시간 (8시-18시)</span>
+
+<span class="c1"># 타이머 테스트</span>
+systemd-analyze<span class="w"> </span>calendar<span class="w"> </span><span class="s2">&quot;Mon *-*-* 09:00:00&quot;</span>
+systemd-analyze<span class="w"> </span>calendar<span class="w"> </span>--iterations<span class="o">=</span><span class="m">5</span><span class="w"> </span><span class="s2">&quot;daily&quot;</span>
+</code></pre></div>
+
+<h3 id="33">3.3 타이머 관리<a class="header-link" href="#33" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 타이머 시작/활성화</span>
+systemctl<span class="w"> </span>start<span class="w"> </span>backup.timer
+systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>backup.timer
+
+<span class="c1"># 타이머 목록</span>
+systemctl<span class="w"> </span>list-timers
+systemctl<span class="w"> </span>list-timers<span class="w"> </span>--all
+
+<span class="c1"># 타이머 상태</span>
+systemctl<span class="w"> </span>status<span class="w"> </span>backup.timer
+
+<span class="c1"># 즉시 실행 (타이머 무시)</span>
+systemctl<span class="w"> </span>start<span class="w"> </span>backup.service
+
+<span class="c1"># cron에서 마이그레이션</span>
+<span class="c1"># crontab: 0 2 * * * /usr/local/bin/backup.sh</span>
+<span class="c1"># → systemd timer: OnCalendar=*-*-* 02:00:00</span>
+</code></pre></div>
+
+<h3 id="34">3.4 여러 스케줄<a class="header-link" href="#34" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/systemd/system/multi-schedule.timer</span>
+<span class="k">[Unit]</span>
+<span class="na">Description</span><span class="o">=</span><span class="s">Multiple Schedule Timer</span>
+
+<span class="k">[Timer]</span>
+<span class="c1"># 여러 시간 지정 가능</span>
+<span class="na">OnCalendar</span><span class="o">=</span><span class="s">Mon *-*-* 06:00:00</span>
+<span class="na">OnCalendar</span><span class="o">=</span><span class="s">Wed *-*-* 06:00:00</span>
+<span class="na">OnCalendar</span><span class="o">=</span><span class="s">Fri *-*-* 06:00:00</span>
+
+<span class="c1"># 또는</span>
+<span class="na">OnCalendar</span><span class="o">=</span><span class="s">Mon,Wed,Fri *-*-* 06:00:00</span>
+
+<span class="k">[Install]</span>
+<span class="na">WantedBy</span><span class="o">=</span><span class="s">timers.target</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4">4. 소켓 활성화<a class="header-link" href="#4" title="Permanent link">&para;</a></h2>
+<h3 id="41">4.1 소켓 활성화 개념<a class="header-link" href="#41" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    소켓 활성화 흐름                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  1. 부팅 시                                                 │
+│     ┌─────────┐                                            │
+│     │ systemd │──▶ 소켓 열기 (서비스 시작 안 함)           │
+│     └─────────┘                                            │
+│          │                                                  │
+│          ▼                                                  │
+│     ┌─────────┐                                            │
+│     │ socket  │ (대기 중)                                  │
+│     └─────────┘                                            │
+│                                                             │
+│  2. 연결 요청 시                                            │
+│     ┌─────────┐      ┌─────────┐      ┌─────────┐         │
+│     │ Client  │─────▶│ socket  │─────▶│ systemd │         │
+│     └─────────┘      └─────────┘      └─────────┘         │
+│                                              │              │
+│                                              ▼              │
+│                                        서비스 시작          │
+│                                              │              │
+│                                              ▼              │
+│                                        ┌─────────┐         │
+│                                        │ service │         │
+│                                        └─────────┘         │
+│                                                             │
+│  장점:                                                      │
+│  • 부팅 시간 단축                                           │
+│  • 요청 시에만 서비스 시작                                  │
+│  • 서비스 재시작 중에도 연결 유지                           │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="42">4.2 소켓 유닛<a class="header-link" href="#42" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/systemd/system/myapp.socket</span>
+<span class="k">[Unit]</span>
+<span class="na">Description</span><span class="o">=</span><span class="s">My App Socket</span>
+
+<span class="k">[Socket]</span>
+<span class="c1"># TCP 소켓</span>
+<span class="na">ListenStream</span><span class="o">=</span><span class="s">8080</span>
+<span class="c1"># 또는 IP 지정</span>
+<span class="c1"># ListenStream=127.0.0.1:8080</span>
+<span class="c1"># 또는 IPv6</span>
+<span class="c1"># ListenStream=[::1]:8080</span>
+
+<span class="c1"># Unix 소켓</span>
+<span class="c1"># ListenStream=/run/myapp/myapp.sock</span>
+<span class="c1"># SocketUser=myapp</span>
+<span class="c1"># SocketGroup=myapp</span>
+<span class="c1"># SocketMode=0660</span>
+
+<span class="c1"># UDP 소켓</span>
+<span class="c1"># ListenDatagram=8081</span>
+
+<span class="c1"># 연결 대기열</span>
+<span class="na">Backlog</span><span class="o">=</span><span class="s">128</span>
+
+<span class="c1"># 연결당 하나의 서비스 인스턴스</span>
+<span class="na">Accept</span><span class="o">=</span><span class="s">no</span><span class="w">  </span><span class="c1"># 기본값, 하나의 서비스가 모든 연결 처리</span>
+<span class="c1"># Accept=yes  # 연결마다 새 인스턴스 (inetd 스타일)</span>
+
+<span class="c1"># 서비스와 연결 (기본: 같은 이름.service)</span>
+<span class="c1"># Service=myapp.service</span>
+
+<span class="k">[Install]</span>
+<span class="na">WantedBy</span><span class="o">=</span><span class="s">sockets.target</span>
+
+<span class="na">---</span>
+<span class="c1"># /etc/systemd/system/myapp.service</span>
+<span class="k">[Unit]</span>
+<span class="na">Description</span><span class="o">=</span><span class="s">My App Service</span>
+<span class="na">Requires</span><span class="o">=</span><span class="s">myapp.socket</span>
+
+<span class="k">[Service]</span>
+<span class="na">Type</span><span class="o">=</span><span class="s">simple</span>
+<span class="na">ExecStart</span><span class="o">=</span><span class="s">/opt/myapp/bin/myapp</span>
+<span class="c1"># 소켓은 fd 3으로 전달됨 (또는 $LISTEN_FDS)</span>
+
+<span class="k">[Install]</span>
+<span class="na">WantedBy</span><span class="o">=</span><span class="s">multi-user.target</span>
+</code></pre></div>
+
+<h3 id="43">4.3 소켓 활성화 서비스 예제<a class="header-link" href="#43" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># /opt/myapp/bin/myapp.py</span>
+<span class="c1"># 소켓 활성화를 지원하는 Python 서버</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">get_systemd_socket</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;systemd에서 전달된 소켓 가져오기&quot;&quot;&quot;</span>
+    <span class="c1"># LISTEN_FDS: 전달된 fd 개수</span>
+    <span class="c1"># LISTEN_PID: 대상 프로세스 PID</span>
+    <span class="n">listen_fds</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;LISTEN_FDS&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+    <span class="n">listen_pid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;LISTEN_PID&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">listen_pid</span> <span class="o">!=</span> <span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">():</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="n">listen_fds</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c1"># fd 3부터 시작 (0=stdin, 1=stdout, 2=stderr)</span>
+        <span class="k">return</span> <span class="n">socket</span><span class="o">.</span><span class="n">fromfd</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="kc">None</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+    <span class="c1"># systemd 소켓 또는 새 소켓 생성</span>
+    <span class="n">sock</span> <span class="o">=</span> <span class="n">get_systemd_socket</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">sock</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">sock</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+        <span class="n">sock</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SO_REUSEADDR</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">sock</span><span class="o">.</span><span class="n">bind</span><span class="p">((</span><span class="s1">&#39;0.0.0.0&#39;</span><span class="p">,</span> <span class="mi">8080</span><span class="p">))</span>
+        <span class="n">sock</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="mi">128</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Listening on port 8080&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Using systemd socket&quot;</span><span class="p">)</span>
+
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">conn</span><span class="p">,</span> <span class="n">addr</span> <span class="o">=</span> <span class="n">sock</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
+        <span class="k">with</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Connection from </span><span class="si">{</span><span class="n">addr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">sendall</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;Hello from socket-activated service!</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 의존성과 순서<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="51">5.1 의존성 지시자<a class="header-link" href="#51" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">[Unit]</span>
+<span class="c1"># Requires: 필수 의존성 (의존 유닛 실패 시 이 유닛도 실패)</span>
+<span class="na">Requires</span><span class="o">=</span><span class="s">postgresql.service</span>
+
+<span class="c1"># Wants: 선택적 의존성 (의존 유닛 실패해도 계속)</span>
+<span class="na">Wants</span><span class="o">=</span><span class="s">redis.service</span>
+
+<span class="c1"># Requisite: 이미 활성화된 유닛에만 의존</span>
+<span class="na">Requisite</span><span class="o">=</span><span class="s">network.target</span>
+
+<span class="c1"># BindsTo: 강한 의존성 (의존 유닛 종료 시 이 유닛도 종료)</span>
+<span class="na">BindsTo</span><span class="o">=</span><span class="s">libvirtd.service</span>
+
+<span class="c1"># PartOf: 의존 유닛 재시작/종료 시 같이 재시작/종료</span>
+<span class="na">PartOf</span><span class="o">=</span><span class="s">docker.service</span>
+
+<span class="c1"># Conflicts: 동시 실행 불가</span>
+<span class="na">Conflicts</span><span class="o">=</span><span class="s">shutdown.target</span>
+</code></pre></div>
+
+<h3 id="52">5.2 순서 지시자<a class="header-link" href="#52" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">[Unit]</span>
+<span class="c1"># After: 지정 유닛 시작 후에 시작</span>
+<span class="na">After</span><span class="o">=</span><span class="s">network.target postgresql.service</span>
+
+<span class="c1"># Before: 지정 유닛 시작 전에 시작</span>
+<span class="na">Before</span><span class="o">=</span><span class="s">httpd.service</span>
+
+<span class="c1"># 의존성과 순서는 별개!</span>
+<span class="c1"># Wants=postgresql.service → postgresql과 함께 시작 시도</span>
+<span class="c1"># After=postgresql.service → postgresql 시작 완료 후 시작</span>
+
+<span class="c1"># 올바른 조합</span>
+<span class="na">Wants</span><span class="o">=</span><span class="s">postgresql.service</span>
+<span class="na">After</span><span class="o">=</span><span class="s">postgresql.service</span>
+</code></pre></div>
+
+<h3 id="53-target">5.3 Target 유닛<a class="header-link" href="#53-target" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/systemd/system/myapp.target</span>
+<span class="k">[Unit]</span>
+<span class="na">Description</span><span class="o">=</span><span class="s">My Application Stack</span>
+<span class="na">Requires</span><span class="o">=</span><span class="s">myapp-web.service myapp-worker.service</span>
+<span class="na">After</span><span class="o">=</span><span class="s">myapp-web.service myapp-worker.service</span>
+
+<span class="k">[Install]</span>
+<span class="na">WantedBy</span><span class="o">=</span><span class="s">multi-user.target</span>
+
+<span class="c1"># 사용</span>
+<span class="na">systemctl start myapp.target    # 모든 관련 서비스 시작</span>
+<span class="na">systemctl stop myapp.target     # 모든 관련 서비스 종료</span>
+<span class="na">systemctl restart myapp.target</span>
+</code></pre></div>
+
+<h3 id="54">5.4 의존성 시각화<a class="header-link" href="#54" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 의존성 트리</span>
+systemctl<span class="w"> </span>list-dependencies<span class="w"> </span>nginx.service
+systemctl<span class="w"> </span>list-dependencies<span class="w"> </span>--reverse<span class="w"> </span>nginx.service
+
+<span class="c1"># 부팅 순서 분석</span>
+systemd-analyze
+systemd-analyze<span class="w"> </span>blame
+systemd-analyze<span class="w"> </span>critical-chain
+systemd-analyze<span class="w"> </span>critical-chain<span class="w"> </span>nginx.service
+
+<span class="c1"># 그래프 생성 (SVG)</span>
+systemd-analyze<span class="w"> </span>dot<span class="w"> </span><span class="p">|</span><span class="w"> </span>dot<span class="w"> </span>-Tsvg<span class="w"> </span>&gt;<span class="w"> </span>systemd.svg
+systemd-analyze<span class="w"> </span>dot<span class="w"> </span><span class="s2">&quot;nginx.service&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>dot<span class="w"> </span>-Tsvg<span class="w"> </span>&gt;<span class="w"> </span>nginx-deps.svg
+</code></pre></div>
+
+<hr />
+<h2 id="6-journald">6. journald 로깅<a class="header-link" href="#6-journald" title="Permanent link">&para;</a></h2>
+<h3 id="61-journalctl">6.1 journalctl 기본<a class="header-link" href="#61-journalctl" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 전체 로그</span>
+journalctl
+
+<span class="c1"># 특정 유닛 로그</span>
+journalctl<span class="w"> </span>-u<span class="w"> </span>nginx.service
+
+<span class="c1"># 실시간 로그 (tail -f)</span>
+journalctl<span class="w"> </span>-f
+journalctl<span class="w"> </span>-fu<span class="w"> </span>nginx.service
+
+<span class="c1"># 부팅 로그</span>
+journalctl<span class="w"> </span>-b<span class="w">          </span><span class="c1"># 현재 부팅</span>
+journalctl<span class="w"> </span>-b<span class="w"> </span>-1<span class="w">       </span><span class="c1"># 이전 부팅</span>
+journalctl<span class="w"> </span>--list-boots
+
+<span class="c1"># 시간 범위</span>
+journalctl<span class="w"> </span>--since<span class="w"> </span><span class="s2">&quot;2024-01-01&quot;</span>
+journalctl<span class="w"> </span>--since<span class="w"> </span><span class="s2">&quot;1 hour ago&quot;</span>
+journalctl<span class="w"> </span>--since<span class="w"> </span><span class="s2">&quot;2024-01-01&quot;</span><span class="w"> </span>--until<span class="w"> </span><span class="s2">&quot;2024-01-02&quot;</span>
+journalctl<span class="w"> </span>--since<span class="w"> </span>yesterday
+
+<span class="c1"># 우선순위 필터</span>
+journalctl<span class="w"> </span>-p<span class="w"> </span>err<span class="w">      </span><span class="c1"># error 이상</span>
+journalctl<span class="w"> </span>-p<span class="w"> </span>warning<span class="w">  </span><span class="c1"># warning 이상</span>
+<span class="c1"># 0=emerg, 1=alert, 2=crit, 3=err, 4=warning, 5=notice, 6=info, 7=debug</span>
+
+<span class="c1"># 커널 메시지</span>
+journalctl<span class="w"> </span>-k
+journalctl<span class="w"> </span>--dmesg
+
+<span class="c1"># JSON 출력</span>
+journalctl<span class="w"> </span>-o<span class="w"> </span>json
+journalctl<span class="w"> </span>-o<span class="w"> </span>json-pretty
+
+<span class="c1"># 디스크 사용량</span>
+journalctl<span class="w"> </span>--disk-usage
+
+<span class="c1"># 로그 정리</span>
+journalctl<span class="w"> </span>--vacuum-size<span class="o">=</span>500M
+journalctl<span class="w"> </span>--vacuum-time<span class="o">=</span>7d
+</code></pre></div>
+
+<h3 id="62-journald">6.2 journald 설정<a class="header-link" href="#62-journald" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/systemd/journald.conf</span>
+<span class="k">[Journal]</span>
+<span class="c1"># 저장 방식</span>
+<span class="na">Storage</span><span class="o">=</span><span class="s">persistent</span><span class="w">     </span><span class="c1"># 영구 저장 (/var/log/journal)</span>
+<span class="c1"># Storage=volatile     # 메모리만 (/run/log/journal)</span>
+<span class="c1"># Storage=auto         # /var/log/journal 있으면 persistent</span>
+
+<span class="c1"># 크기 제한</span>
+<span class="na">SystemMaxUse</span><span class="o">=</span><span class="s">500M</span><span class="w">      </span><span class="c1"># 최대 디스크 사용량</span>
+<span class="na">SystemMaxFileSize</span><span class="o">=</span><span class="s">50M</span><span class="w">  </span><span class="c1"># 개별 파일 최대 크기</span>
+<span class="na">RuntimeMaxUse</span><span class="o">=</span><span class="s">100M</span><span class="w">     </span><span class="c1"># 런타임(메모리) 최대</span>
+
+<span class="c1"># 보존 기간</span>
+<span class="na">MaxRetentionSec</span><span class="o">=</span><span class="s">1month</span>
+
+<span class="c1"># 압축</span>
+<span class="na">Compress</span><span class="o">=</span><span class="s">yes</span>
+
+<span class="c1"># syslog 전달</span>
+<span class="na">ForwardToSyslog</span><span class="o">=</span><span class="s">no</span>
+
+<span class="c1"># 콘솔 출력</span>
+<span class="na">ForwardToConsole</span><span class="o">=</span><span class="s">no</span>
+
+<span class="c1"># 속도 제한</span>
+<span class="na">RateLimitIntervalSec</span><span class="o">=</span><span class="s">30s</span>
+<span class="na">RateLimitBurst</span><span class="o">=</span><span class="s">10000</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># 설정 적용</span>
+systemctl<span class="w"> </span>restart<span class="w"> </span>systemd-journald
+
+<span class="c1"># 영구 저장 디렉토리 생성</span>
+mkdir<span class="w"> </span>-p<span class="w"> </span>/var/log/journal
+systemd-tmpfiles<span class="w"> </span>--create<span class="w"> </span>--prefix<span class="w"> </span>/var/log/journal
+</code></pre></div>
+
+<h3 id="63">6.3 구조화된 로깅<a class="header-link" href="#63" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># systemd-cat으로 로그 전송</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Hello&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>systemd-cat<span class="w"> </span>-t<span class="w"> </span>myapp<span class="w"> </span>-p<span class="w"> </span>info
+
+<span class="c1"># 스크립트에서</span>
+<span class="c1">#!/bin/bash</span>
+<span class="nb">exec</span><span class="w"> </span><span class="m">1</span>&gt;<span class="w"> </span>&gt;<span class="o">(</span>systemd-cat<span class="w"> </span>-t<span class="w"> </span>myscript<span class="w"> </span>-p<span class="w"> </span>info<span class="o">)</span>
+<span class="nb">exec</span><span class="w"> </span><span class="m">2</span>&gt;<span class="w"> </span>&gt;<span class="o">(</span>systemd-cat<span class="w"> </span>-t<span class="w"> </span>myscript<span class="w"> </span>-p<span class="w"> </span>err<span class="o">)</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;This goes to journal&quot;</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># Python에서 (systemd.journal)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">systemd</span><span class="w"> </span><span class="kn">import</span> <span class="n">journal</span>
+
+<span class="n">journal</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s1">&#39;Hello from Python&#39;</span><span class="p">,</span>
+             <span class="n">PRIORITY</span><span class="o">=</span><span class="n">journal</span><span class="o">.</span><span class="n">LOG_INFO</span><span class="p">,</span>
+             <span class="n">SYSLOG_IDENTIFIER</span><span class="o">=</span><span class="s1">&#39;myapp&#39;</span><span class="p">,</span>
+             <span class="n">MYFIELD</span><span class="o">=</span><span class="s1">&#39;custom_value&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="64">6.4 로그 필터링 고급<a class="header-link" href="#64" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 필드 기반 필터링</span>
+journalctl<span class="w"> </span><span class="nv">_SYSTEMD_UNIT</span><span class="o">=</span>nginx.service
+journalctl<span class="w"> </span><span class="nv">_UID</span><span class="o">=</span><span class="m">1000</span>
+journalctl<span class="w"> </span><span class="nv">_PID</span><span class="o">=</span><span class="m">1234</span>
+journalctl<span class="w"> </span><span class="nv">_COMM</span><span class="o">=</span>nginx
+
+<span class="c1"># 여러 조건 (AND)</span>
+journalctl<span class="w"> </span><span class="nv">_SYSTEMD_UNIT</span><span class="o">=</span>nginx.service<span class="w"> </span><span class="nv">_PID</span><span class="o">=</span><span class="m">1234</span>
+
+<span class="c1"># OR 조건</span>
+journalctl<span class="w"> </span><span class="nv">_SYSTEMD_UNIT</span><span class="o">=</span>nginx.service<span class="w"> </span>+<span class="w"> </span><span class="nv">_SYSTEMD_UNIT</span><span class="o">=</span>php-fpm.service
+
+<span class="c1"># 특정 필드 출력</span>
+journalctl<span class="w"> </span>-o<span class="w"> </span>verbose
+journalctl<span class="w"> </span>-u<span class="w"> </span>nginx<span class="w"> </span>--output-fields<span class="o">=</span>MESSAGE,_PID
+
+<span class="c1"># grep과 함께</span>
+journalctl<span class="w"> </span>-u<span class="w"> </span>nginx<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-i<span class="w"> </span>error
+journalctl<span class="w"> </span>-u<span class="w"> </span>nginx<span class="w"> </span>-g<span class="w"> </span><span class="s2">&quot;error|warning&quot;</span><span class="w">  </span><span class="c1"># -g는 grep 패턴</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 연습 문제<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="1">연습 1: 웹 애플리케이션 서비스<a class="header-link" href="#1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 요구사항:</span>
+<span class="c1"># 1. Python/Node.js 웹 앱을 서비스로 등록</span>
+<span class="c1"># 2. 재시작 정책 설정 (on-failure)</span>
+<span class="c1"># 3. 환경 변수 파일 사용</span>
+<span class="c1"># 4. 보안 옵션 적용</span>
+
+<span class="c1"># 서비스 유닛 작성:</span>
+</code></pre></div>
+
+<h3 id="2_1">연습 2: 백업 타이머<a class="header-link" href="#2_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 요구사항:</span>
+<span class="c1"># 1. 매일 새벽 3시 백업 실행</span>
+<span class="c1"># 2. 매주 일요일 전체 백업</span>
+<span class="c1"># 3. 놓친 실행 보정</span>
+<span class="c1"># 4. 로그를 journal에 기록</span>
+
+<span class="c1"># 타이머 및 서비스 유닛 작성:</span>
+</code></pre></div>
+
+<h3 id="3_1">연습 3: 소켓 활성화 서비스<a class="header-link" href="#3_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 요구사항:</span>
+<span class="c1"># 1. 포트 9000에서 대기</span>
+<span class="c1"># 2. 연결 시에만 서비스 시작</span>
+<span class="c1"># 3. 유휴 시 자동 종료 (IdleTimeout)</span>
+
+<span class="c1"># 소켓 및 서비스 유닛 작성:</span>
+</code></pre></div>
+
+<h3 id="4_1">연습 4: 마이크로서비스 스택<a class="header-link" href="#4_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 요구사항:</span>
+<span class="c1"># 1. API 서비스 (api.service)</span>
+<span class="c1"># 2. 워커 서비스 (worker.service)</span>
+<span class="c1"># 3. 데이터베이스 의존성</span>
+<span class="c1"># 4. 전체 스택 target</span>
+
+<span class="c1"># 모든 유닛 파일 작성:</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_3">다음 단계<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="14_성능_튜닝.md">14_성능_튜닝</a> - 시스템 성능 최적화</li>
+<li><a href="15_컨테이너_내부_구조.md">15_컨테이너_내부_구조</a> - cgroups, namespaces</li>
+<li><a href="https://systemd.io/">systemd 공식 문서</a></li>
+</ul>
+<h2 id="_4">참고 자료<a class="header-link" href="#_4" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://www.freedesktop.org/software/systemd/man/">systemd Documentation</a></li>
+<li><a href="https://wiki.archlinux.org/title/systemd">Arch Wiki - systemd</a></li>
+<li><a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_basic_system_settings/managing-services-with-systemd_configuring-basic-system-settings">RHEL systemd Guide</a></li>
+</ul>
+<hr />
+<p><a href="12_보안과_방화벽.md">← 이전: 보안과 방화벽</a> | <a href="14_성능_튜닝.md">다음: 성능 튜닝 →</a> | <a href="00_Overview.md">목차</a></p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Linux/12_Security_and_Firewall.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">보안과 방화벽</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Linux/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Linux/14_Performance_Tuning.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">14. Linux 성능 튜닝</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

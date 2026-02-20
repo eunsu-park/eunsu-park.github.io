@@ -1,0 +1,981 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apache Airflow 기초 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Data_Engineering/">Data Engineering</a>
+    <span class="separator">/</span>
+    <span class="current">Apache Airflow 기초</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>Apache Airflow 기초</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Data_Engineering/03_ETL_vs_ELT.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">ETL vs ELT</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Data_Engineering/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Data_Engineering/05_Airflow_Advanced.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">Airflow 심화</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">개요</a></li>
+<li><a href="#1-airflow">1. Airflow 아키텍처</a><ul>
+<li><a href="#11">1.1 핵심 구성 요소</a></li>
+<li><a href="#12">1.2 구성 요소 역할</a></li>
+<li><a href="#13-executor">1.3 Executor 유형</a></li>
+</ul>
+</li>
+<li><a href="#2">2. 설치 및 환경 설정</a><ul>
+<li><a href="#21-docker-compose">2.1 Docker Compose 설치 (권장)</a></li>
+<li><a href="#22-pip">2.2 pip 설치 (로컬 개발)</a></li>
+</ul>
+</li>
+<li><a href="#3-dag-directed-acyclic-graph">3. DAG (Directed Acyclic Graph)</a><ul>
+<li><a href="#31-dag">3.1 DAG 기본 구조</a></li>
+<li><a href="#32-dag">3.2 DAG 매개변수</a></li>
+</ul>
+</li>
+<li><a href="#4-operator">4. Operator 유형</a><ul>
+<li><a href="#41-operator">4.1 주요 Operator</a></li>
+<li><a href="#42-operator">4.2 브랜치 Operator</a></li>
+<li><a href="#43-operator">4.3 커스텀 Operator</a></li>
+</ul>
+</li>
+<li><a href="#5-task">5. Task 의존성</a><ul>
+<li><a href="#51">5.1 의존성 정의 방법</a></li>
+<li><a href="#52-trigger-rule">5.2 Trigger Rule</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 스케줄링</a><ul>
+<li><a href="#61-cron">6.1 Cron 표현식</a></li>
+<li><a href="#62-data-interval">6.2 데이터 간격 (Data Interval)</a></li>
+</ul>
+</li>
+<li><a href="#7-dag">7. 기본 DAG 작성 예제</a><ul>
+<li><a href="#71-etl-dag">7.1 일일 ETL DAG</a></li>
+</ul>
+</li>
+<li><a href="#_2">연습 문제</a><ul>
+<li><a href="#1-dag">문제 1: 기본 DAG 작성</a></li>
+<li><a href="#2_1">문제 2: 조건부 실행</a></li>
+</ul>
+</li>
+<li><a href="#_3">요약</a></li>
+<li><a href="#_4">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="apache-airflow">Apache Airflow 기초<a class="header-link" href="#apache-airflow" title="Permanent link">&para;</a></h1>
+<h2 id="_1">개요<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<p>Apache Airflow는 워크플로우를 프로그래밍 방식으로 작성, 스케줄링, 모니터링하는 플랫폼입니다. Python으로 DAG(Directed Acyclic Graph)를 정의하여 복잡한 데이터 파이프라인을 관리합니다.</p>
+<hr />
+<h2 id="1-airflow">1. Airflow 아키텍처<a class="header-link" href="#1-airflow" title="Permanent link">&para;</a></h2>
+<h3 id="11">1.1 핵심 구성 요소<a class="header-link" href="#11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌──────────────────────────────────────────────────────────────┐
+│                    Airflow Architecture                      │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│   ┌─────────────┐         ┌─────────────┐                   │
+│   │  Web Server │         │  Scheduler  │                   │
+│   │    (UI)     │         │  (스케줄러) │                   │
+│   └──────┬──────┘         └──────┬──────┘                   │
+│          │                       │                          │
+│          │    ┌─────────────┐    │                          │
+│          └───→│  Metadata   │←───┘                          │
+│               │  Database   │                               │
+│               │ (PostgreSQL)│                               │
+│               └──────┬──────┘                               │
+│                      │                                      │
+│          ┌───────────┴───────────┐                          │
+│          ↓                       ↓                          │
+│   ┌─────────────┐         ┌─────────────┐                   │
+│   │   Worker    │         │   Worker    │                   │
+│   │  (Celery)   │         │  (Celery)   │                   │
+│   └─────────────┘         └─────────────┘                   │
+│                                                              │
+│   DAGs Folder: /opt/airflow/dags/                           │
+└──────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="12">1.2 구성 요소 역할<a class="header-link" href="#12" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>구성 요소</th>
+<th>역할</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Web Server</strong></td>
+<td>UI 제공, DAG 시각화, 로그 조회</td>
+</tr>
+<tr>
+<td><strong>Scheduler</strong></td>
+<td>DAG 파싱, Task 스케줄링, 실행 트리거</td>
+</tr>
+<tr>
+<td><strong>Executor</strong></td>
+<td>Task 실행 방식 결정 (Local, Celery, K8s)</td>
+</tr>
+<tr>
+<td><strong>Worker</strong></td>
+<td>실제 Task 실행 (Celery/K8s Executor)</td>
+</tr>
+<tr>
+<td><strong>Metadata DB</strong></td>
+<td>DAG 메타데이터, 실행 이력 저장</td>
+</tr>
+</tbody>
+</table>
+<h3 id="13-executor">1.3 Executor 유형<a class="header-link" href="#13-executor" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># airflow.cfg 설정</span>
+<span class="n">executor_types</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;SequentialExecutor&quot;</span><span class="p">:</span> <span class="s2">&quot;단일 프로세스, 개발용&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;LocalExecutor&quot;</span><span class="p">:</span> <span class="s2">&quot;멀티프로세스, 단일 머신&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;CeleryExecutor&quot;</span><span class="p">:</span> <span class="s2">&quot;분산 처리, 프로덕션&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;KubernetesExecutor&quot;</span><span class="p">:</span> <span class="s2">&quot;K8s Pod으로 실행&quot;</span>
+<span class="p">}</span>
+
+<span class="c1"># 권장 설정</span>
+<span class="c1"># 개발: LocalExecutor</span>
+<span class="c1"># 프로덕션: CeleryExecutor 또는 KubernetesExecutor</span>
+</code></pre></div>
+
+<hr />
+<h2 id="2">2. 설치 및 환경 설정<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="21-docker-compose">2.1 Docker Compose 설치 (권장)<a class="header-link" href="#21-docker-compose" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># docker-compose.yaml</span>
+<span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3.8&#39;</span>
+
+<span class="nt">x-airflow-common</span><span class="p">:</span><span class="w"> </span><span class="nl">&amp;airflow-common</span>
+<span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">apache/airflow:2.7.0</span>
+<span class="w">  </span><span class="nt">environment</span><span class="p">:</span>
+<span class="w">    </span><span class="nl">&amp;airflow-common-env</span>
+<span class="w">    </span><span class="nt">AIRFLOW__CORE__EXECUTOR</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CeleryExecutor</span>
+<span class="w">    </span><span class="nt">AIRFLOW__DATABASE__SQL_ALCHEMY_CONN</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgresql+psycopg2://airflow:airflow@postgres/airflow</span>
+<span class="w">    </span><span class="nt">AIRFLOW__CELERY__RESULT_BACKEND</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">db+postgresql://airflow:airflow@postgres/airflow</span>
+<span class="w">    </span><span class="nt">AIRFLOW__CELERY__BROKER_URL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">redis://:@redis:6379/0</span>
+<span class="w">    </span><span class="nt">AIRFLOW__CORE__FERNET_KEY</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;&#39;</span>
+<span class="w">    </span><span class="nt">AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;true&#39;</span>
+<span class="w">    </span><span class="nt">AIRFLOW__CORE__LOAD_EXAMPLES</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;false&#39;</span>
+<span class="w">  </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./dags:/opt/airflow/dags</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./logs:/opt/airflow/logs</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./plugins:/opt/airflow/plugins</span>
+
+<span class="nt">services</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">postgres</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres:13</span>
+<span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">POSTGRES_USER</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">airflow</span>
+<span class="w">      </span><span class="nt">POSTGRES_PASSWORD</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">airflow</span>
+<span class="w">      </span><span class="nt">POSTGRES_DB</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">airflow</span>
+<span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres-db-volume:/var/lib/postgresql/data</span>
+
+<span class="w">  </span><span class="nt">redis</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">redis:latest</span>
+
+<span class="w">  </span><span class="nt">airflow-webserver</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">&lt;&lt;</span><span class="p">:</span><span class="w"> </span><span class="nv">*airflow-common</span>
+<span class="w">    </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">webserver</span>
+<span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8080:8080</span>
+<span class="w">    </span><span class="nt">depends_on</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">redis</span>
+
+<span class="w">  </span><span class="nt">airflow-scheduler</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">&lt;&lt;</span><span class="p">:</span><span class="w"> </span><span class="nv">*airflow-common</span>
+<span class="w">    </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">scheduler</span>
+<span class="w">    </span><span class="nt">depends_on</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">postgres</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">redis</span>
+
+<span class="w">  </span><span class="nt">airflow-worker</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">&lt;&lt;</span><span class="p">:</span><span class="w"> </span><span class="nv">*airflow-common</span>
+<span class="w">    </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">celery worker</span>
+<span class="w">    </span><span class="nt">depends_on</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">airflow-scheduler</span>
+
+<span class="w">  </span><span class="nt">airflow-init</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">&lt;&lt;</span><span class="p">:</span><span class="w"> </span><span class="nv">*airflow-common</span>
+<span class="w">    </span><span class="nt">entrypoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/bin/bash</span>
+<span class="w">    </span><span class="nt">command</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">-c</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">        </span><span class="no">airflow db init</span>
+<span class="w">        </span><span class="no">airflow users create \</span>
+<span class="w">          </span><span class="no">--username admin \</span>
+<span class="w">          </span><span class="no">--password admin \</span>
+<span class="w">          </span><span class="no">--firstname Admin \</span>
+<span class="w">          </span><span class="no">--lastname User \</span>
+<span class="w">          </span><span class="no">--role Admin \</span>
+<span class="w">          </span><span class="no">--email admin@example.com</span>
+
+<span class="nt">volumes</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">postgres-db-volume</span><span class="p">:</span>
+</code></pre></div>
+
+<h3 id="22-pip">2.2 pip 설치 (로컬 개발)<a class="header-link" href="#22-pip" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 가상 환경 생성</span>
+python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>airflow-venv
+<span class="nb">source</span><span class="w"> </span>airflow-venv/bin/activate
+
+<span class="c1"># Airflow 설치</span>
+pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;apache-airflow[celery,postgres,redis]==2.7.0&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--constraint<span class="w"> </span><span class="s2">&quot;https://raw.githubusercontent.com/apache/airflow/constraints-2.7.0/constraints-3.9.txt&quot;</span>
+
+<span class="c1"># 초기화</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">AIRFLOW_HOME</span><span class="o">=</span>~/airflow
+airflow<span class="w"> </span>db<span class="w"> </span>init
+
+<span class="c1"># 사용자 생성</span>
+airflow<span class="w"> </span>users<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--username<span class="w"> </span>admin<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--password<span class="w"> </span>admin<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--firstname<span class="w"> </span>Admin<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--lastname<span class="w"> </span>User<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--role<span class="w"> </span>Admin<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--email<span class="w"> </span>admin@example.com
+
+<span class="c1"># 서비스 시작</span>
+airflow<span class="w"> </span>webserver<span class="w"> </span>--port<span class="w"> </span><span class="m">8080</span><span class="w"> </span><span class="p">&amp;</span>
+airflow<span class="w"> </span>scheduler<span class="w"> </span><span class="p">&amp;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-dag-directed-acyclic-graph">3. DAG (Directed Acyclic Graph)<a class="header-link" href="#3-dag-directed-acyclic-graph" title="Permanent link">&para;</a></h2>
+<h3 id="31-dag">3.1 DAG 기본 구조<a class="header-link" href="#31-dag" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># dags/simple_dag.py</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow</span><span class="w"> </span><span class="kn">import</span> <span class="n">DAG</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.operators.python</span><span class="w"> </span><span class="kn">import</span> <span class="n">PythonOperator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.operators.bash</span><span class="w"> </span><span class="kn">import</span> <span class="n">BashOperator</span>
+
+<span class="c1"># DAG 기본 인자</span>
+<span class="n">default_args</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;owner&#39;</span><span class="p">:</span> <span class="s1">&#39;data_team&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;depends_on_past&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s1">&#39;email&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;data-team@company.com&#39;</span><span class="p">],</span>
+    <span class="s1">&#39;email_on_failure&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;email_on_retry&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s1">&#39;retries&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="s1">&#39;retry_delay&#39;</span><span class="p">:</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">5</span><span class="p">),</span>
+<span class="p">}</span>
+
+<span class="c1"># DAG 정의</span>
+<span class="k">with</span> <span class="n">DAG</span><span class="p">(</span>
+    <span class="n">dag_id</span><span class="o">=</span><span class="s1">&#39;simple_example_dag&#39;</span><span class="p">,</span>
+    <span class="n">default_args</span><span class="o">=</span><span class="n">default_args</span><span class="p">,</span>
+    <span class="n">description</span><span class="o">=</span><span class="s1">&#39;간단한 예제 DAG&#39;</span><span class="p">,</span>
+    <span class="n">schedule_interval</span><span class="o">=</span><span class="s1">&#39;0 9 * * *&#39;</span><span class="p">,</span>  <span class="c1"># 매일 오전 9시</span>
+    <span class="n">start_date</span><span class="o">=</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2024</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="n">catchup</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># 과거 실행 건너뛰기</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;example&#39;</span><span class="p">,</span> <span class="s1">&#39;tutorial&#39;</span><span class="p">],</span>
+<span class="p">)</span> <span class="k">as</span> <span class="n">dag</span><span class="p">:</span>
+
+    <span class="c1"># Task 1: Python 함수 실행</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">print_hello</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hello, Airflow!&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">&quot;Hello returned&quot;</span>
+
+    <span class="n">task_hello</span> <span class="o">=</span> <span class="n">PythonOperator</span><span class="p">(</span>
+        <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;print_hello&#39;</span><span class="p">,</span>
+        <span class="n">python_callable</span><span class="o">=</span><span class="n">print_hello</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Task 2: Bash 명령 실행</span>
+    <span class="n">task_date</span> <span class="o">=</span> <span class="n">BashOperator</span><span class="p">(</span>
+        <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;print_date&#39;</span><span class="p">,</span>
+        <span class="n">bash_command</span><span class="o">=</span><span class="s1">&#39;date&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Task 3: Python 함수 (인자 전달)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">greet</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">execution_date</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;ds&#39;</span><span class="p">]</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Hello, </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">! Today is </span><span class="si">{</span><span class="n">execution_date</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">task_greet</span> <span class="o">=</span> <span class="n">PythonOperator</span><span class="p">(</span>
+        <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;greet_user&#39;</span><span class="p">,</span>
+        <span class="n">python_callable</span><span class="o">=</span><span class="n">greet</span><span class="p">,</span>
+        <span class="n">op_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Data Engineer&#39;</span><span class="p">},</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Task 의존성 정의</span>
+    <span class="n">task_hello</span> <span class="o">&gt;&gt;</span> <span class="n">task_date</span> <span class="o">&gt;&gt;</span> <span class="n">task_greet</span>
+    <span class="c1"># 또는: task_hello.set_downstream(task_date)</span>
+</code></pre></div>
+
+<h3 id="32-dag">3.2 DAG 매개변수<a class="header-link" href="#32-dag" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">airflow</span><span class="w"> </span><span class="kn">import</span> <span class="n">DAG</span>
+
+<span class="n">dag</span> <span class="o">=</span> <span class="n">DAG</span><span class="p">(</span>
+    <span class="c1"># 필수 매개변수</span>
+    <span class="n">dag_id</span><span class="o">=</span><span class="s1">&#39;my_dag&#39;</span><span class="p">,</span>                    <span class="c1"># 고유 식별자</span>
+    <span class="n">start_date</span><span class="o">=</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2024</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>    <span class="c1"># 시작 날짜</span>
+
+    <span class="c1"># 스케줄 관련</span>
+    <span class="n">schedule_interval</span><span class="o">=</span><span class="s1">&#39;@daily&#39;</span><span class="p">,</span>         <span class="c1"># 실행 주기</span>
+    <span class="c1"># schedule_interval=&#39;0 0 * * *&#39;     # Cron 표현식</span>
+    <span class="c1"># schedule_interval=timedelta(days=1)</span>
+
+    <span class="c1"># 실행 제어</span>
+    <span class="n">catchup</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>                      <span class="c1"># 과거 실행 여부</span>
+    <span class="n">max_active_runs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>                  <span class="c1"># 동시 실행 제한</span>
+    <span class="n">max_active_tasks</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>                <span class="c1"># 동시 Task 제한</span>
+
+    <span class="c1"># 기타</span>
+    <span class="n">default_args</span><span class="o">=</span><span class="n">default_args</span><span class="p">,</span>          <span class="c1"># 기본 인자</span>
+    <span class="n">description</span><span class="o">=</span><span class="s1">&#39;DAG 설명&#39;</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;production&#39;</span><span class="p">,</span> <span class="s1">&#39;etl&#39;</span><span class="p">],</span>
+    <span class="n">doc_md</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    ## DAG 문서</span>
+<span class="s2">    이 DAG는 일일 ETL을 수행합니다.</span>
+<span class="s2">    &quot;&quot;&quot;</span>
+<span class="p">)</span>
+
+<span class="c1"># 스케줄 프리셋</span>
+<span class="n">schedule_presets</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;@once&#39;</span><span class="p">:</span> <span class="s1">&#39;한 번만 실행&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;@hourly&#39;</span><span class="p">:</span> <span class="s1">&#39;매시간 (0 * * * *)&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;@daily&#39;</span><span class="p">:</span> <span class="s1">&#39;매일 자정 (0 0 * * *)&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;@weekly&#39;</span><span class="p">:</span> <span class="s1">&#39;매주 일요일 (0 0 * * 0)&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;@monthly&#39;</span><span class="p">:</span> <span class="s1">&#39;매월 1일 (0 0 1 * *)&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;@yearly&#39;</span><span class="p">:</span> <span class="s1">&#39;매년 1월 1일 (0 0 1 1 *)&#39;</span><span class="p">,</span>
+    <span class="kc">None</span><span class="p">:</span> <span class="s1">&#39;수동 실행만&#39;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-operator">4. Operator 유형<a class="header-link" href="#4-operator" title="Permanent link">&para;</a></h2>
+<h3 id="41-operator">4.1 주요 Operator<a class="header-link" href="#41-operator" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">airflow.operators.python</span><span class="w"> </span><span class="kn">import</span> <span class="n">PythonOperator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.operators.bash</span><span class="w"> </span><span class="kn">import</span> <span class="n">BashOperator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.operators.empty</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmptyOperator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.operators.email</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmailOperator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.providers.postgres.operators.postgres</span><span class="w"> </span><span class="kn">import</span> <span class="n">PostgresOperator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.providers.http.operators.http</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimpleHttpOperator</span>
+
+<span class="c1"># 1. PythonOperator - Python 함수 실행</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">my_function</span><span class="p">(</span><span class="n">arg1</span><span class="p">,</span> <span class="n">arg2</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">arg1</span> <span class="o">+</span> <span class="n">arg2</span>
+
+<span class="n">python_task</span> <span class="o">=</span> <span class="n">PythonOperator</span><span class="p">(</span>
+    <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;python_task&#39;</span><span class="p">,</span>
+    <span class="n">python_callable</span><span class="o">=</span><span class="n">my_function</span><span class="p">,</span>
+    <span class="n">op_args</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>              <span class="c1"># 위치 인자</span>
+    <span class="n">op_kwargs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;arg1&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>       <span class="c1"># 키워드 인자</span>
+<span class="p">)</span>
+
+
+<span class="c1"># 2. BashOperator - Bash 명령 실행</span>
+<span class="n">bash_task</span> <span class="o">=</span> <span class="n">BashOperator</span><span class="p">(</span>
+    <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;bash_task&#39;</span><span class="p">,</span>
+    <span class="n">bash_command</span><span class="o">=</span><span class="s1">&#39;echo &quot;Hello&quot; &amp;&amp; date&#39;</span><span class="p">,</span>
+    <span class="n">env</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;MY_VAR&#39;</span><span class="p">:</span> <span class="s1">&#39;value&#39;</span><span class="p">},</span>     <span class="c1"># 환경 변수</span>
+    <span class="n">cwd</span><span class="o">=</span><span class="s1">&#39;/tmp&#39;</span><span class="p">,</span>                  <span class="c1"># 작업 디렉토리</span>
+<span class="p">)</span>
+
+
+<span class="c1"># 3. EmptyOperator - 더미 Task (의존성 그룹화)</span>
+<span class="n">start</span> <span class="o">=</span> <span class="n">EmptyOperator</span><span class="p">(</span><span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;start&#39;</span><span class="p">)</span>
+<span class="n">end</span> <span class="o">=</span> <span class="n">EmptyOperator</span><span class="p">(</span><span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;end&#39;</span><span class="p">)</span>
+
+
+<span class="c1"># 4. PostgresOperator - SQL 실행</span>
+<span class="n">sql_task</span> <span class="o">=</span> <span class="n">PostgresOperator</span><span class="p">(</span>
+    <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;sql_task&#39;</span><span class="p">,</span>
+    <span class="n">postgres_conn_id</span><span class="o">=</span><span class="s1">&#39;my_postgres&#39;</span><span class="p">,</span>
+    <span class="n">sql</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        INSERT INTO logs (message, created_at)</span>
+<span class="s2">        VALUES (&#39;Task executed&#39;, NOW());</span>
+<span class="s2">    &quot;&quot;&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="c1"># 5. EmailOperator - 이메일 전송</span>
+<span class="n">email_task</span> <span class="o">=</span> <span class="n">EmailOperator</span><span class="p">(</span>
+    <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;send_email&#39;</span><span class="p">,</span>
+    <span class="n">to</span><span class="o">=</span><span class="s1">&#39;user@example.com&#39;</span><span class="p">,</span>
+    <span class="n">subject</span><span class="o">=</span><span class="s1">&#39;Airflow Notification&#39;</span><span class="p">,</span>
+    <span class="n">html_content</span><span class="o">=</span><span class="s1">&#39;&lt;h1&gt;Task completed!&lt;/h1&gt;&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="c1"># 6. SimpleHttpOperator - HTTP 요청</span>
+<span class="n">http_task</span> <span class="o">=</span> <span class="n">SimpleHttpOperator</span><span class="p">(</span>
+    <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;http_task&#39;</span><span class="p">,</span>
+    <span class="n">http_conn_id</span><span class="o">=</span><span class="s1">&#39;my_api&#39;</span><span class="p">,</span>
+    <span class="n">endpoint</span><span class="o">=</span><span class="s1">&#39;/api/data&#39;</span><span class="p">,</span>
+    <span class="n">method</span><span class="o">=</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span>
+    <span class="n">response_check</span><span class="o">=</span><span class="k">lambda</span> <span class="n">response</span><span class="p">:</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<h3 id="42-operator">4.2 브랜치 Operator<a class="header-link" href="#42-operator" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">airflow.operators.python</span><span class="w"> </span><span class="kn">import</span> <span class="n">BranchPythonOperator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.operators.empty</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmptyOperator</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">choose_branch</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;조건에 따라 실행할 Task 선택&quot;&quot;&quot;</span>
+    <span class="n">execution_date</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;ds&#39;</span><span class="p">]</span>
+    <span class="n">day_of_week</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">execution_date</span><span class="p">,</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">weekday</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">day_of_week</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">:</span>  <span class="c1"># 평일</span>
+        <span class="k">return</span> <span class="s1">&#39;weekday_task&#39;</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c1"># 주말</span>
+        <span class="k">return</span> <span class="s1">&#39;weekend_task&#39;</span>
+
+<span class="k">with</span> <span class="n">DAG</span><span class="p">(</span><span class="s1">&#39;branch_example&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="k">as</span> <span class="n">dag</span><span class="p">:</span>
+
+    <span class="n">branch_task</span> <span class="o">=</span> <span class="n">BranchPythonOperator</span><span class="p">(</span>
+        <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;branch&#39;</span><span class="p">,</span>
+        <span class="n">python_callable</span><span class="o">=</span><span class="n">choose_branch</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">weekday_task</span> <span class="o">=</span> <span class="n">EmptyOperator</span><span class="p">(</span><span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;weekday_task&#39;</span><span class="p">)</span>
+    <span class="n">weekend_task</span> <span class="o">=</span> <span class="n">EmptyOperator</span><span class="p">(</span><span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;weekend_task&#39;</span><span class="p">)</span>
+    <span class="n">join_task</span> <span class="o">=</span> <span class="n">EmptyOperator</span><span class="p">(</span><span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;join&#39;</span><span class="p">,</span> <span class="n">trigger_rule</span><span class="o">=</span><span class="s1">&#39;none_failed_min_one_success&#39;</span><span class="p">)</span>
+
+    <span class="n">branch_task</span> <span class="o">&gt;&gt;</span> <span class="p">[</span><span class="n">weekday_task</span><span class="p">,</span> <span class="n">weekend_task</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="n">join_task</span>
+</code></pre></div>
+
+<h3 id="43-operator">4.3 커스텀 Operator<a class="header-link" href="#43-operator" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">airflow.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseOperator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.utils.decorators</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_defaults</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MyCustomOperator</span><span class="p">(</span><span class="n">BaseOperator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;커스텀 Operator 예시&quot;&quot;&quot;</span>
+
+    <span class="n">template_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;param&#39;</span><span class="p">]</span>  <span class="c1"># Jinja 템플릿 지원 필드</span>
+
+    <span class="nd">@apply_defaults</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">param</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">param</span> <span class="o">=</span> <span class="n">param</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Task 실행 로직&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Executing with param: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">param</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># context에서 실행 정보 접근</span>
+        <span class="n">execution_date</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="s1">&#39;ds&#39;</span><span class="p">]</span>
+        <span class="n">task_instance</span> <span class="o">=</span> <span class="n">context</span><span class="p">[</span><span class="s1">&#39;ti&#39;</span><span class="p">]</span>
+
+        <span class="c1"># 비즈니스 로직</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Processed </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">param</span><span class="si">}</span><span class="s2"> on </span><span class="si">{</span><span class="n">execution_date</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="c1"># XCom으로 결과 반환</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="c1"># 사용</span>
+<span class="n">custom_task</span> <span class="o">=</span> <span class="n">MyCustomOperator</span><span class="p">(</span>
+    <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;custom_task&#39;</span><span class="p">,</span>
+    <span class="n">param</span><span class="o">=</span><span class="s1">&#39;my_value&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-task">5. Task 의존성<a class="header-link" href="#5-task" title="Permanent link">&para;</a></h2>
+<h3 id="51">5.1 의존성 정의 방법<a class="header-link" href="#51" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">airflow</span><span class="w"> </span><span class="kn">import</span> <span class="n">DAG</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.operators.empty</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmptyOperator</span>
+
+<span class="k">with</span> <span class="n">DAG</span><span class="p">(</span><span class="s1">&#39;dependency_example&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="k">as</span> <span class="n">dag</span><span class="p">:</span>
+
+    <span class="n">task_a</span> <span class="o">=</span> <span class="n">EmptyOperator</span><span class="p">(</span><span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;task_a&#39;</span><span class="p">)</span>
+    <span class="n">task_b</span> <span class="o">=</span> <span class="n">EmptyOperator</span><span class="p">(</span><span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;task_b&#39;</span><span class="p">)</span>
+    <span class="n">task_c</span> <span class="o">=</span> <span class="n">EmptyOperator</span><span class="p">(</span><span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;task_c&#39;</span><span class="p">)</span>
+    <span class="n">task_d</span> <span class="o">=</span> <span class="n">EmptyOperator</span><span class="p">(</span><span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;task_d&#39;</span><span class="p">)</span>
+    <span class="n">task_e</span> <span class="o">=</span> <span class="n">EmptyOperator</span><span class="p">(</span><span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;task_e&#39;</span><span class="p">)</span>
+
+    <span class="c1"># 방법 1: &gt;&gt; 연산자 (권장)</span>
+    <span class="n">task_a</span> <span class="o">&gt;&gt;</span> <span class="n">task_b</span> <span class="o">&gt;&gt;</span> <span class="n">task_c</span>
+
+    <span class="c1"># 방법 2: &lt;&lt; 연산자 (역방향)</span>
+    <span class="n">task_c</span> <span class="o">&lt;&lt;</span> <span class="n">task_b</span> <span class="o">&lt;&lt;</span> <span class="n">task_a</span>  <span class="c1"># 위와 동일</span>
+
+    <span class="c1"># 방법 3: set_downstream / set_upstream</span>
+    <span class="n">task_a</span><span class="o">.</span><span class="n">set_downstream</span><span class="p">(</span><span class="n">task_b</span><span class="p">)</span>
+    <span class="n">task_b</span><span class="o">.</span><span class="n">set_downstream</span><span class="p">(</span><span class="n">task_c</span><span class="p">)</span>
+
+    <span class="c1"># 병렬 실행</span>
+    <span class="n">task_a</span> <span class="o">&gt;&gt;</span> <span class="p">[</span><span class="n">task_b</span><span class="p">,</span> <span class="n">task_c</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="n">task_d</span>
+
+    <span class="c1"># 복잡한 의존성</span>
+    <span class="c1">#     ┌→ B ─┐</span>
+    <span class="c1"># A ──┤     ├──→ E</span>
+    <span class="c1">#     └→ C → D ─┘</span>
+
+    <span class="n">task_a</span> <span class="o">&gt;&gt;</span> <span class="n">task_b</span> <span class="o">&gt;&gt;</span> <span class="n">task_e</span>
+    <span class="n">task_a</span> <span class="o">&gt;&gt;</span> <span class="n">task_c</span> <span class="o">&gt;&gt;</span> <span class="n">task_d</span> <span class="o">&gt;&gt;</span> <span class="n">task_e</span>
+</code></pre></div>
+
+<h3 id="52-trigger-rule">5.2 Trigger Rule<a class="header-link" href="#52-trigger-rule" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">airflow.utils.trigger_rule</span><span class="w"> </span><span class="kn">import</span> <span class="n">TriggerRule</span>
+
+<span class="c1"># Trigger Rule 유형</span>
+<span class="n">trigger_rules</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;all_success&#39;</span><span class="p">:</span> <span class="s1">&#39;모든 상위 Task 성공 (기본값)&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;all_failed&#39;</span><span class="p">:</span> <span class="s1">&#39;모든 상위 Task 실패&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;all_done&#39;</span><span class="p">:</span> <span class="s1">&#39;모든 상위 Task 완료 (성공/실패 무관)&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;one_success&#39;</span><span class="p">:</span> <span class="s1">&#39;하나 이상 성공&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;one_failed&#39;</span><span class="p">:</span> <span class="s1">&#39;하나 이상 실패&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;none_failed&#39;</span><span class="p">:</span> <span class="s1">&#39;실패 없음 (스킵 허용)&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;none_failed_min_one_success&#39;</span><span class="p">:</span> <span class="s1">&#39;실패 없고 최소 하나 성공&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;none_skipped&#39;</span><span class="p">:</span> <span class="s1">&#39;스킵 없음&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;always&#39;</span><span class="p">:</span> <span class="s1">&#39;항상 실행&#39;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1"># 사용 예시</span>
+<span class="n">task_join</span> <span class="o">=</span> <span class="n">EmptyOperator</span><span class="p">(</span>
+    <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;join&#39;</span><span class="p">,</span>
+    <span class="n">trigger_rule</span><span class="o">=</span><span class="n">TriggerRule</span><span class="o">.</span><span class="n">NONE_FAILED_MIN_ONE_SUCCESS</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># 에러 핸들링 Task</span>
+<span class="n">task_error_handler</span> <span class="o">=</span> <span class="n">EmptyOperator</span><span class="p">(</span>
+    <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;error_handler&#39;</span><span class="p">,</span>
+    <span class="n">trigger_rule</span><span class="o">=</span><span class="n">TriggerRule</span><span class="o">.</span><span class="n">ONE_FAILED</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 스케줄링<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="61-cron">6.1 Cron 표현식<a class="header-link" href="#61-cron" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Cron 형식: 분 시 일 월 요일</span>
+<span class="n">cron_examples</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;0 0 * * *&#39;</span><span class="p">:</span> <span class="s1">&#39;매일 자정&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;0 9 * * 1-5&#39;</span><span class="p">:</span> <span class="s1">&#39;평일 오전 9시&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;0 */2 * * *&#39;</span><span class="p">:</span> <span class="s1">&#39;2시간마다&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;30 8 1 * *&#39;</span><span class="p">:</span> <span class="s1">&#39;매월 1일 오전 8:30&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;0 0 * * 0&#39;</span><span class="p">:</span> <span class="s1">&#39;매주 일요일 자정&#39;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1"># DAG에서 사용</span>
+<span class="n">dag</span> <span class="o">=</span> <span class="n">DAG</span><span class="p">(</span>
+    <span class="n">dag_id</span><span class="o">=</span><span class="s1">&#39;scheduled_dag&#39;</span><span class="p">,</span>
+    <span class="n">schedule_interval</span><span class="o">=</span><span class="s1">&#39;0 9 * * 1-5&#39;</span><span class="p">,</span>  <span class="c1"># 평일 오전 9시</span>
+    <span class="n">start_date</span><span class="o">=</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2024</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="o">...</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<h3 id="62-data-interval">6.2 데이터 간격 (Data Interval)<a class="header-link" href="#62-data-interval" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Airflow 2.0+ 데이터 간격 개념</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">schedule_interval = @daily, start_date = 2024-01-01</span>
+
+<span class="sd">실행 시점: 2024-01-02 00:00</span>
+<span class="sd">data_interval_start: 2024-01-01 00:00</span>
+<span class="sd">data_interval_end: 2024-01-02 00:00</span>
+<span class="sd">logical_date (execution_date): 2024-01-01 00:00</span>
+
+<span class="sd">→ 2024-01-01 데이터를 처리하기 위해 2024-01-02에 실행</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">process_daily_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="c1"># 처리할 데이터 기간</span>
+    <span class="n">data_interval_start</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;data_interval_start&#39;</span><span class="p">]</span>
+    <span class="n">data_interval_end</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;data_interval_end&#39;</span><span class="p">]</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Processing data from </span><span class="si">{</span><span class="n">data_interval_start</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">data_interval_end</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># Jinja 템플릿 사용</span>
+<span class="n">sql_task</span> <span class="o">=</span> <span class="n">PostgresOperator</span><span class="p">(</span>
+    <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;load_data&#39;</span><span class="p">,</span>
+    <span class="n">sql</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        SELECT * FROM sales</span>
+<span class="s2">        WHERE sale_date &gt;= &#39;{{ data_interval_start }}&#39;</span>
+<span class="s2">          AND sale_date &lt; &#39;{{ data_interval_end }}&#39;</span>
+<span class="s2">    &quot;&quot;&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7-dag">7. 기본 DAG 작성 예제<a class="header-link" href="#7-dag" title="Permanent link">&para;</a></h2>
+<h3 id="71-etl-dag">7.1 일일 ETL DAG<a class="header-link" href="#71-etl-dag" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># dags/daily_etl_dag.py</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow</span><span class="w"> </span><span class="kn">import</span> <span class="n">DAG</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.operators.python</span><span class="w"> </span><span class="kn">import</span> <span class="n">PythonOperator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.providers.postgres.operators.postgres</span><span class="w"> </span><span class="kn">import</span> <span class="n">PostgresOperator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">airflow.operators.empty</span><span class="w"> </span><span class="kn">import</span> <span class="n">EmptyOperator</span>
+
+<span class="n">default_args</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;owner&#39;</span><span class="p">:</span> <span class="s1">&#39;data_team&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;retries&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="s1">&#39;retry_delay&#39;</span><span class="p">:</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">5</span><span class="p">),</span>
+    <span class="s1">&#39;email_on_failure&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;email&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;data-alerts@company.com&#39;</span><span class="p">],</span>
+<span class="p">}</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;데이터 추출&quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+    <span class="n">ds</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;ds&#39;</span><span class="p">]</span>  <span class="c1"># execution date (YYYY-MM-DD)</span>
+
+    <span class="c1"># 소스에서 데이터 추출</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        SELECT * FROM source_table</span>
+<span class="s2">        WHERE date = &#39;</span><span class="si">{</span><span class="n">ds</span><span class="si">}</span><span class="s2">&#39;</span>
+<span class="s2">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># df = pd.read_sql(query, source_conn)</span>
+    <span class="c1"># df.to_parquet(f&#39;/tmp/extract_{ds}.parquet&#39;)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Extracted data for </span><span class="si">{</span><span class="n">ds</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;/tmp/extract_</span><span class="si">{</span><span class="n">ds</span><span class="si">}</span><span class="s2">.parquet&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">transform_data</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;데이터 변환&quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+    <span class="n">ti</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;ti&#39;</span><span class="p">]</span>
+    <span class="n">extract_path</span> <span class="o">=</span> <span class="n">ti</span><span class="o">.</span><span class="n">xcom_pull</span><span class="p">(</span><span class="n">task_ids</span><span class="o">=</span><span class="s1">&#39;extract&#39;</span><span class="p">)</span>
+
+    <span class="c1"># df = pd.read_parquet(extract_path)</span>
+    <span class="c1"># 변환 로직</span>
+    <span class="c1"># df[&#39;new_column&#39;] = df[&#39;column&#39;].apply(transform_func)</span>
+    <span class="c1"># df.to_parquet(f&#39;/tmp/transform_{kwargs[&quot;ds&quot;]}.parquet&#39;)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Data transformed&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;/tmp/transform_</span><span class="si">{</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;ds&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">.parquet&quot;</span>
+
+
+<span class="k">with</span> <span class="n">DAG</span><span class="p">(</span>
+    <span class="n">dag_id</span><span class="o">=</span><span class="s1">&#39;daily_etl_pipeline&#39;</span><span class="p">,</span>
+    <span class="n">default_args</span><span class="o">=</span><span class="n">default_args</span><span class="p">,</span>
+    <span class="n">description</span><span class="o">=</span><span class="s1">&#39;일일 ETL 파이프라인&#39;</span><span class="p">,</span>
+    <span class="n">schedule_interval</span><span class="o">=</span><span class="s1">&#39;0 6 * * *&#39;</span><span class="p">,</span>  <span class="c1"># 매일 오전 6시</span>
+    <span class="n">start_date</span><span class="o">=</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2024</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="n">catchup</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;etl&#39;</span><span class="p">,</span> <span class="s1">&#39;daily&#39;</span><span class="p">,</span> <span class="s1">&#39;production&#39;</span><span class="p">],</span>
+<span class="p">)</span> <span class="k">as</span> <span class="n">dag</span><span class="p">:</span>
+
+    <span class="n">start</span> <span class="o">=</span> <span class="n">EmptyOperator</span><span class="p">(</span><span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;start&#39;</span><span class="p">)</span>
+
+    <span class="n">extract</span> <span class="o">=</span> <span class="n">PythonOperator</span><span class="p">(</span>
+        <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;extract&#39;</span><span class="p">,</span>
+        <span class="n">python_callable</span><span class="o">=</span><span class="n">extract_data</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">transform</span> <span class="o">=</span> <span class="n">PythonOperator</span><span class="p">(</span>
+        <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;transform&#39;</span><span class="p">,</span>
+        <span class="n">python_callable</span><span class="o">=</span><span class="n">transform_data</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">load</span> <span class="o">=</span> <span class="n">PostgresOperator</span><span class="p">(</span>
+        <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;load&#39;</span><span class="p">,</span>
+        <span class="n">postgres_conn_id</span><span class="o">=</span><span class="s1">&#39;warehouse&#39;</span><span class="p">,</span>
+        <span class="n">sql</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            COPY target_table FROM &#39;/tmp/transform_{{ ds }}.parquet&#39;</span>
+<span class="s2">            WITH (FORMAT &#39;parquet&#39;);</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">validate</span> <span class="o">=</span> <span class="n">PostgresOperator</span><span class="p">(</span>
+        <span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;validate&#39;</span><span class="p">,</span>
+        <span class="n">postgres_conn_id</span><span class="o">=</span><span class="s1">&#39;warehouse&#39;</span><span class="p">,</span>
+        <span class="n">sql</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT</span>
+<span class="s2">                CASE WHEN COUNT(*) &gt; 0 THEN 1</span>
+<span class="s2">                     ELSE 1/0  -- 에러 발생</span>
+<span class="s2">                END</span>
+<span class="s2">            FROM target_table</span>
+<span class="s2">            WHERE date = &#39;{{ ds }}&#39;;</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">end</span> <span class="o">=</span> <span class="n">EmptyOperator</span><span class="p">(</span><span class="n">task_id</span><span class="o">=</span><span class="s1">&#39;end&#39;</span><span class="p">)</span>
+
+    <span class="c1"># 의존성 정의</span>
+    <span class="n">start</span> <span class="o">&gt;&gt;</span> <span class="n">extract</span> <span class="o">&gt;&gt;</span> <span class="n">transform</span> <span class="o">&gt;&gt;</span> <span class="n">load</span> <span class="o">&gt;&gt;</span> <span class="n">validate</span> <span class="o">&gt;&gt;</span> <span class="n">end</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_2">연습 문제<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<h3 id="1-dag">문제 1: 기본 DAG 작성<a class="header-link" href="#1-dag" title="Permanent link">&para;</a></h3>
+<p>매시간 실행되는 DAG를 작성하세요. 현재 시간을 로그에 출력하고, 임시 파일을 생성하는 두 개의 Task를 포함해야 합니다.</p>
+<h3 id="2_1">문제 2: 조건부 실행<a class="header-link" href="#2_1" title="Permanent link">&para;</a></h3>
+<p>평일과 주말에 다른 Task를 실행하는 BranchPythonOperator를 사용한 DAG를 작성하세요.</p>
+<hr />
+<h2 id="_3">요약<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>개념</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>DAG</strong></td>
+<td>Task의 의존성을 정의한 방향성 비순환 그래프</td>
+</tr>
+<tr>
+<td><strong>Operator</strong></td>
+<td>Task의 실행 유형 (Python, Bash, SQL 등)</td>
+</tr>
+<tr>
+<td><strong>Task</strong></td>
+<td>DAG 내의 개별 작업 단위</td>
+</tr>
+<tr>
+<td><strong>Scheduler</strong></td>
+<td>DAG 파싱 및 Task 스케줄링</td>
+</tr>
+<tr>
+<td><strong>Executor</strong></td>
+<td>Task 실행 방식 (Local, Celery, K8s)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="_4">참고 자료<a class="header-link" href="#_4" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://airflow.apache.org/docs/">Apache Airflow Documentation</a></li>
+<li><a href="https://airflow.apache.org/docs/apache-airflow/stable/best-practices.html">Airflow Best Practices</a></li>
+<li><a href="https://www.astronomer.io/guides/">Astronomer Guides</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Data_Engineering/03_ETL_vs_ELT.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">ETL vs ELT</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Data_Engineering/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Data_Engineering/05_Airflow_Advanced.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">Airflow 심화</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

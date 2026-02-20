@@ -1,0 +1,997 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPU 스케줄링 기초 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/OS_Theory/">OS Theory</a>
+    <span class="separator">/</span>
+    <span class="current">CPU 스케줄링 기초</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>CPU 스케줄링 기초</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/OS_Theory/03_Threads_and_Multithreading.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">스레드와 멀티스레딩</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/OS_Theory/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/OS_Theory/05_Scheduling_Algorithms.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">스케줄링 알고리즘</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">개요</a></li>
+<li><a href="#_2">목차</a></li>
+<li><a href="#1-cpu">1. CPU 스케줄링이란?</a><ul>
+<li><a href="#_3">정의</a></li>
+<li><a href="#_4">스케줄링이 필요한 이유</a></li>
+</ul>
+</li>
+<li><a href="#2-cpu-burst-io-burst">2. CPU Burst와 I/O Burst</a><ul>
+<li><a href="#burst">Burst란?</a></li>
+<li><a href="#cpu-bound-vs-io-bound">CPU-bound vs I/O-bound 프로세스</a></li>
+<li><a href="#cpu-burst">CPU Burst 분포</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 스케줄링 목표</a><ul>
+<li><a href="#_5">주요 성능 지표</a></li>
+<li><a href="#_6">시간 개념 시각화</a></li>
+<li><a href="#_7">목표 간 트레이드오프</a></li>
+</ul>
+</li>
+<li><a href="#4-vs">4. 선점 vs 비선점 스케줄링</a><ul>
+<li><a href="#non-preemptive">비선점 스케줄링 (Non-preemptive)</a></li>
+<li><a href="#preemptive">선점 스케줄링 (Preemptive)</a></li>
+<li><a href="#_8">비교</a></li>
+<li><a href="#_9">스케줄링 결정 시점</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 스케줄러 종류</a><ul>
+<li><a href="#3_1">3단계 스케줄러</a></li>
+<li><a href="#long-term-scheduler">장기 스케줄러 (Long-term Scheduler)</a></li>
+<li><a href="#short-term-scheduler">단기 스케줄러 (Short-term Scheduler)</a></li>
+<li><a href="#medium-term-scheduler">중기 스케줄러 (Medium-term Scheduler)</a></li>
+<li><a href="#_10">스케줄러 비교</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 디스패처</a><ul>
+<li><a href="#_11">디스패처란?</a></li>
+<li><a href="#_12">디스패처 수행 작업</a></li>
+<li><a href="#dispatch-latency">디스패치 지연 시간 (Dispatch Latency)</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 연습 문제</a><ul>
+<li><a href="#1">문제 1: 기본 개념</a></li>
+<li><a href="#2">문제 2: 시간 계산</a></li>
+<li><a href="#3_2">문제 3: 스케줄러 식별</a></li>
+<li><a href="#4-vs_1">문제 4: 선점 vs 비선점</a></li>
+<li><a href="#5_1">문제 5: 디스패처</a></li>
+</ul>
+</li>
+<li><a href="#_13">다음 단계</a></li>
+<li><a href="#_14">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="cpu">CPU 스케줄링 기초<a class="header-link" href="#cpu" title="Permanent link">&para;</a></h1>
+<h2 id="_1">개요<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<p>CPU 스케줄링은 준비 상태의 프로세스들 중 어떤 프로세스에게 CPU를 할당할지 결정하는 과정입니다. 이 레슨에서는 CPU burst와 I/O burst, 스케줄링 목표, 선점/비선점 스케줄링, 그리고 다양한 스케줄러의 역할을 학습합니다.</p>
+<hr />
+<h2 id="_2">목차<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-cpu-스케줄링이란">CPU 스케줄링이란?</a></li>
+<li><a href="#2-cpu-burst와-io-burst">CPU Burst와 I/O Burst</a></li>
+<li><a href="#3-스케줄링-목표">스케줄링 목표</a></li>
+<li><a href="#4-선점-vs-비선점-스케줄링">선점 vs 비선점 스케줄링</a></li>
+<li><a href="#5-스케줄러-종류">스케줄러 종류</a></li>
+<li><a href="#6-디스패처">디스패처</a></li>
+<li><a href="#7-연습-문제">연습 문제</a></li>
+</ol>
+<hr />
+<h2 id="1-cpu">1. CPU 스케줄링이란?<a class="header-link" href="#1-cpu" title="Permanent link">&para;</a></h2>
+<h3 id="_3">정의<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nv">CPU</span><span class="w"> </span>스케줄링<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">Ready</span><span class="w"> </span>큐에<span class="w"> </span>있는<span class="w"> </span>프로세스<span class="w"> </span>중
+<span class="w">              </span><span class="nv">CPU</span>를<span class="w"> </span>할당할<span class="w"> </span>프로세스를<span class="w"> </span>선택하는<span class="w"> </span>것
+
+┌─────────────────────────────────────────────────────────┐
+│<span class="w">                   </span><span class="nv">CPU</span><span class="w"> </span>스케줄링의<span class="w"> </span>위치<span class="w">                    </span>│
+├─────────────────────────────────────────────────────────┤
+│<span class="w">                                                         </span>│
+│<span class="w">  </span>┌────────┐<span class="w">    </span>┌─────────────────────────────────────┐<span class="w">  </span>│
+│<span class="w">  </span>│<span class="w"> </span><span class="nv">New</span><span class="w">    </span>│───▶│<span class="w">          </span><span class="nv">Ready</span><span class="w"> </span><span class="nv">Queue</span><span class="w">               </span>│<span class="w">  </span>│
+│<span class="w">  </span>│프로세스<span class="w"> </span>│<span class="w">    </span>│<span class="w">  </span><span class="nv">P1</span><span class="w"> </span>→<span class="w"> </span><span class="nv">P2</span><span class="w"> </span>→<span class="w"> </span><span class="nv">P3</span><span class="w"> </span>→<span class="w"> </span><span class="nv">P4</span><span class="w"> </span>→<span class="w"> </span>...<span class="w">          </span>│<span class="w">  </span>│
+│<span class="w">  </span>└────────┘<span class="w">    </span>└─────────────┬───────────────────────┘<span class="w">  </span>│
+│<span class="w">                              </span>│<span class="w">                          </span>│
+│<span class="w">                              </span>│<span class="w"> </span><span class="nv">CPU</span><span class="w"> </span>스케줄러가<span class="w"> </span>선택<span class="w">       </span>│
+│<span class="w">                              </span>▼<span class="w">                          </span>│
+│<span class="w">                       </span>┌───────────┐<span class="w">                     </span>│
+│<span class="w">                       </span>│<span class="w">    </span><span class="nv">CPU</span><span class="w">    </span>│<span class="w">                     </span>│
+│<span class="w">                       </span>│<span class="w">  </span><span class="ss">(</span>실행<span class="ss">)</span><span class="w">    </span>│<span class="w">                     </span>│
+│<span class="w">                       </span>└─────┬─────┘<span class="w">                     </span>│
+│<span class="w">                             </span>│<span class="w">                           </span>│
+│<span class="w">            </span>┌────────────────┼────────────────┐<span class="w">          </span>│
+│<span class="w">            </span>▼<span class="w">                </span>▼<span class="w">                </span>▼<span class="w">          </span>│
+│<span class="w">       </span>┌─────────┐<span class="w">    </span>┌───────────┐<span class="w">    </span>┌─────────┐<span class="w">      </span>│
+│<span class="w">       </span>│<span class="w"> </span>종료<span class="w">    </span>│<span class="w">    </span>│<span class="w"> </span><span class="nv">I</span><span class="o">/</span><span class="nv">O</span><span class="w"> </span>대기<span class="w">  </span>│<span class="w">    </span>│<span class="nv">Ready</span>로<span class="w">  </span>│<span class="w">      </span>│
+│<span class="w">       </span>│<span class="ss">(</span><span class="nv">Terminate</span><span class="ss">)</span>│<span class="w">   </span>│<span class="w"> </span><span class="ss">(</span><span class="k">Wait</span><span class="ss">)</span><span class="w">   </span>│<span class="w">    </span>│복귀<span class="w">     </span>│<span class="w">      </span>│
+│<span class="w">       </span>└─────────┘<span class="w">    </span>└───────────┘<span class="w">    </span>└─────────┘<span class="w">      </span>│
+│<span class="w">                                                         </span>│
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_4">스케줄링이 필요한 이유<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="mf">1.</span><span class="w"> </span><span class="n">CPU</span><span class="w"> </span><span class="n">이용률</span><span class="w"> </span><span class="n">최대화</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">CPU가</span><span class="w"> </span><span class="n">놀지</span><span class="w"> </span><span class="n">않도록</span><span class="w"> </span><span class="n">항상</span><span class="w"> </span><span class="n">실행할</span><span class="w"> </span><span class="n">프로세스</span><span class="w"> </span><span class="n">준비</span>
+
+<span class="mf">2.</span><span class="w"> </span><span class="n">공정한</span><span class="w"> </span><span class="n">자원</span><span class="w"> </span><span class="n">분배</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">모든</span><span class="w"> </span><span class="n">프로세스에게</span><span class="w"> </span><span class="n">적절한</span><span class="w"> </span><span class="n">CPU</span><span class="w"> </span><span class="n">시간</span><span class="w"> </span><span class="n">제공</span>
+
+<span class="mf">3.</span><span class="w"> </span><span class="n">시스템</span><span class="w"> </span><span class="n">성능</span><span class="w"> </span><span class="n">최적화</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">처리량</span><span class="w"> </span><span class="n">증가</span><span class="p">,</span><span class="w"> </span><span class="n">응답</span><span class="w"> </span><span class="n">시간</span><span class="w"> </span><span class="n">감소</span>
+
+<span class="mf">4.</span><span class="w"> </span><span class="n">멀티태스킹</span><span class="w"> </span><span class="n">지원</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">여러</span><span class="w"> </span><span class="n">프로세스가</span><span class="w"> </span><span class="n">동시에</span><span class="w"> </span><span class="n">실행되는</span><span class="w"> </span><span class="n">것처럼</span><span class="w"> </span><span class="n">보이게</span><span class="w"> </span><span class="n">함</span>
+
+<span class="err">┌──────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">             </span><span class="n">스케줄링</span><span class="w"> </span><span class="n">없이</span><span class="w"> </span><span class="n">vs</span><span class="w"> </span><span class="n">스케줄링</span><span class="w"> </span><span class="n">사용</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">├──────────────────────────────────────────────────────────┤</span>
+<span class="err">│</span><span class="w">                                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">스케줄링</span><span class="w"> </span><span class="n">없이</span><span class="w"> </span><span class="p">(</span><span class="n">순차</span><span class="w"> </span><span class="n">실행</span><span class="p">):</span><span class="w">                               </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">P1</span><span class="w"> </span><span class="p">(</span><span class="n">I</span><span class="o">/</span><span class="n">O대기</span><span class="p">)</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">P2</span><span class="w"> </span><span class="p">(</span><span class="n">I</span><span class="o">/</span><span class="n">O대기</span><span class="p">)</span><span class="w">    </span><span class="err">│</span><span class="w"> </span><span class="n">P3</span><span class="w"> </span><span class="p">(</span><span class="n">I</span><span class="o">/</span><span class="n">O대기</span><span class="p">)</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└─────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">시간</span><span class="p">:</span><span class="w"> </span><span class="err">████░░░░░░░████░░░░░░░████░░░░</span><span class="w">                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">               </span><span class="n">CPU</span><span class="w"> </span><span class="n">유휴</span><span class="w"> </span><span class="n">시간</span><span class="w"> </span><span class="n">많음</span><span class="w">                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">스케줄링</span><span class="w"> </span><span class="n">사용</span><span class="p">:</span><span class="w">                                          </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">┌─────────────────────────────────────────────────────┐</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="n">P1</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">P2</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">P3</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">P1</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">P2</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="n">P3</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="mf">...</span><span class="w">                  </span><span class="err">│</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="err">└─────────────────────────────────────────────────────┘</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">시간</span><span class="p">:</span><span class="w"> </span><span class="err">██████████████████████████</span><span class="w">                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">               </span><span class="n">CPU</span><span class="w"> </span><span class="n">유휴</span><span class="w"> </span><span class="n">시간</span><span class="w"> </span><span class="n">최소화</span><span class="w">                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                          </span><span class="err">│</span>
+<span class="err">└──────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<hr />
+<h2 id="2-cpu-burst-io-burst">2. CPU Burst와 I/O Burst<a class="header-link" href="#2-cpu-burst-io-burst" title="Permanent link">&para;</a></h2>
+<h3 id="burst">Burst란?<a class="header-link" href="#burst" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>프로세스 실행 = CPU Burst와 I/O Burst의 반복
+
+┌─────────────────────────────────────────────────────────┐
+│                    프로세스 실행 사이클                   │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  시작 ──▶ CPU Burst ──▶ I/O Burst ──▶ CPU Burst ──▶ ... │
+│             │            │            │                 │
+│             ▼            ▼            ▼                 │
+│          연산 수행      I/O 대기     연산 수행           │
+│          (Running)     (Waiting)   (Running)           │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+
+시간축 예시:
+
+프로세스 P1:
+┌──────┬──────────┬───────┬──────────┬──────┬──────┐
+│ CPU  │  I/O     │  CPU  │   I/O    │ CPU  │ 종료  │
+│ 10ms │  50ms    │  5ms  │  30ms    │ 8ms  │      │
+└──────┴──────────┴───────┴──────────┴──────┴──────┘
+</code></pre></div>
+
+<h3 id="cpu-bound-vs-io-bound">CPU-bound vs I/O-bound 프로세스<a class="header-link" href="#cpu-bound-vs-io-bound" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌──────────────────────────────────────────────────────────┐
+│              프로세스 유형에 따른 Burst 패턴              │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  CPU-bound 프로세스 (계산 집약적):                        │
+│  ┌────────────────────┬──┬────────────────────┬──┐       │
+│  │     긴 CPU burst    │IO│     긴 CPU burst    │IO│       │
+│  └────────────────────┴──┴────────────────────┴──┘       │
+│  예: 과학 계산, 비디오 인코딩, 컴파일러                    │
+│                                                          │
+│  I/O-bound 프로세스 (입출력 집약적):                      │
+│  ┌──┬─────┬──┬─────┬──┬─────┬──┬─────┐                   │
+│  │CP│ I/O │CP│ I/O │CP│ I/O │CP│ I/O │                   │
+│  └──┴─────┴──┴─────┴──┴─────┴──┴─────┘                   │
+│  예: 텍스트 에디터, 웹 브라우저, 대화형 프로그램           │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+
+┌─────────────────┬────────────────┬────────────────────────┐
+│      특성        │  CPU-bound    │      I/O-bound        │
+├─────────────────┼────────────────┼────────────────────────┤
+│ CPU burst 길이  │ 김              │ 짧음                  │
+│ I/O burst 빈도  │ 낮음           │ 높음                   │
+│ 스케줄링 요구   │ 긴 시간 슬라이스 │ 빠른 응답 시간         │
+│ 예시            │ 수치 연산       │ 웹 서버, 데이터베이스   │
+└─────────────────┴────────────────┴────────────────────────┘
+</code></pre></div>
+
+<h3 id="cpu-burst">CPU Burst 분포<a class="header-link" href="#cpu-burst" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>빈도
+ ↑
+ │  ██
+ │  ██
+ │  ████
+ │  ██████
+ │  ████████
+ │  ██████████
+ │  ████████████
+ │  ██████████████
+ │  ████████████████
+ │  ██████████████████
+ └────────────────────────────────▶ CPU Burst 길이
+
+대부분의 프로세스는 짧은 CPU burst를 가짐
+→ I/O-bound 프로세스가 많음
+→ 짧은 프로세스를 먼저 처리하면 평균 대기 시간 감소
+</code></pre></div>
+
+<hr />
+<h2 id="3">3. 스케줄링 목표<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="_5">주요 성능 지표<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│                    스케줄링 성능 지표                    │
+├───────────────────┬─────────────────────────────────────┤
+│ CPU 이용률        │ CPU가 작업을 수행하는 시간의 비율    │
+│ (CPU Utilization) │ 목표: 최대화 (40%~90%)              │
+├───────────────────┼─────────────────────────────────────┤
+│ 처리량            │ 단위 시간당 완료되는 프로세스 수      │
+│ (Throughput)      │ 목표: 최대화                        │
+├───────────────────┼─────────────────────────────────────┤
+│ 총 처리 시간      │ 프로세스 제출 ~ 완료까지 걸린 시간   │
+│ (Turnaround Time) │ = 대기 시간 + 실행 시간 + I/O 시간   │
+│                   │ 목표: 최소화                        │
+├───────────────────┼─────────────────────────────────────┤
+│ 대기 시간         │ Ready 큐에서 대기한 총 시간          │
+│ (Waiting Time)    │ 목표: 최소화                        │
+├───────────────────┼─────────────────────────────────────┤
+│ 응답 시간         │ 요청 제출 ~ 첫 응답까지 시간         │
+│ (Response Time)   │ 대화형 시스템에서 중요               │
+│                   │ 목표: 최소화                        │
+└───────────────────┴─────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_6">시간 개념 시각화<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>프로세스<span class="w"> </span><span class="nv">P</span><span class="w"> </span>타임라인:
+
+도착<span class="w">                 </span>완료
+<span class="w">  </span>│<span class="w">                   </span>│
+<span class="w">  </span>▼<span class="w">                   </span>▼
+──┬─────────────────────┬─────────────────────┬──▶<span class="w"> </span>시간
+<span class="w">  </span>│<span class="w">                     </span>│<span class="w">                     </span>│
+<span class="w">  </span>│◀──<span class="w"> </span>총<span class="w"> </span>처리<span class="w"> </span>시간<span class="w"> </span><span class="ss">(</span><span class="nv">Turnaround</span><span class="w"> </span><span class="nv">Time</span><span class="ss">)</span><span class="w"> </span>───────▶│
+<span class="w">  </span>│<span class="w">                                           </span>│
+<span class="w">  </span>│<span class="w">    </span>대기<span class="w">    </span>│<span class="w">  </span>실행<span class="w">  </span>│<span class="w">  </span>대기<span class="w">  </span>│<span class="w">  </span>실행<span class="w">     </span>│
+<span class="w">  </span>│◀─<span class="w"> </span><span class="k">Wait</span><span class="w"> </span>─▶│<span class="w">       </span>│◀<span class="w"> </span><span class="k">Wait</span><span class="w"> </span>▶│<span class="w">           </span>│
+<span class="w">  </span>│<span class="w">                                           </span>│
+<span class="w">  </span>│◀─▶첫응답<span class="w">                                  </span>│
+<span class="w">  </span>│<span class="nv">Response</span><span class="w">                                   </span>│
+<span class="w">  </span>│<span class="nv">Time</span><span class="w">                                       </span>│
+
+
+계산<span class="w"> </span>예시:
+┌─────────────────────────────────────────────────────────┐
+│<span class="w"> </span>프로세스<span class="w"> </span><span class="nv">P</span>:<span class="w">                                             </span>│
+│<span class="w">   </span>도착<span class="w"> </span>시간<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="w">                                         </span>│
+│<span class="w">   </span>실행<span class="w"> </span>시간<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="nv">ms</span><span class="w"> </span><span class="ss">(</span>총<span class="w"> </span><span class="nv">CPU</span><span class="w"> </span>사용<span class="w"> </span>시간<span class="ss">)</span><span class="w">                    </span>│
+│<span class="w">   </span>완료<span class="w"> </span>시간<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">25</span><span class="nv">ms</span><span class="w">                                      </span>│
+│<span class="w">                                                         </span>│
+│<span class="w"> </span>총<span class="w"> </span>처리<span class="w"> </span>시간<span class="w"> </span><span class="ss">(</span><span class="nv">Turnaround</span><span class="ss">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>완료<span class="w"> </span><span class="o">-</span><span class="w"> </span>도착<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">25</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">25</span><span class="nv">ms</span><span class="w">  </span>│
+│<span class="w"> </span>대기<span class="w"> </span>시간<span class="w"> </span><span class="ss">(</span><span class="nv">Waiting</span><span class="ss">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>총처리시간<span class="w"> </span><span class="o">-</span><span class="w"> </span>실행시간<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">25</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">15</span><span class="nv">ms</span><span class="w"> </span>│
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_7">목표 간 트레이드오프<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│                   스케줄링 목표 트레이드오프              │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  CPU 이용률 ←─────────────────────▶ 응답 시간           │
+│  (최대화)           상충 관계          (최소화)          │
+│                                                         │
+│  처리량 ←───────────────────────▶ 공정성               │
+│  (최대화)        상충 관계        (균등 분배)           │
+│                                                         │
+│  시스템 유형에 따라 우선순위가 다름:                     │
+│                                                         │
+│  ┌────────────────┬───────────────────────────────────┐ │
+│  │ 배치 시스템     │ 처리량, CPU 이용률 우선            │ │
+│  ├────────────────┼───────────────────────────────────┤ │
+│  │ 대화형 시스템   │ 응답 시간 우선                    │ │
+│  ├────────────────┼───────────────────────────────────┤ │
+│  │ 실시간 시스템   │ 마감시간 준수 우선                │ │
+│  └────────────────┴───────────────────────────────────┘ │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="4-vs">4. 선점 vs 비선점 스케줄링<a class="header-link" href="#4-vs" title="Permanent link">&para;</a></h2>
+<h3 id="non-preemptive">비선점 스케줄링 (Non-preemptive)<a class="header-link" href="#non-preemptive" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│              비선점 스케줄링 (Non-preemptive)            │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  • 프로세스가 CPU를 자발적으로 반환할 때까지 실행         │
+│  • CPU를 강제로 빼앗지 않음                             │
+│                                                         │
+│  CPU 반환 시점:                                         │
+│  1. 프로세스 종료                                       │
+│  2. I/O 요청으로 대기 상태 전환                         │
+│  3. yield() 등으로 자발적 양보                          │
+│                                                         │
+│  시간축:                                                │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ P1 (10ms)              │ P2 (5ms)    │ P3 (3ms) │   │
+│  └──────────────────────────────────────────────────┘   │
+│  P2, P3가 도착해도 P1이 끝날 때까지 대기                  │
+│                                                         │
+│  장점: 구현 단순, 컨텍스트 스위치 오버헤드 적음           │
+│  단점: 응답 시간 길어질 수 있음, 긴 프로세스가 독점 가능  │
+│                                                         │
+│  예시 알고리즘: FCFS, SJF (비선점)                       │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="preemptive">선점 스케줄링 (Preemptive)<a class="header-link" href="#preemptive" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│                선점 스케줄링 (Preemptive)                │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  • 스케줄러가 프로세스의 CPU를 강제로 빼앗을 수 있음      │
+│  • 더 중요한 프로세스가 도착하면 즉시 CPU 할당 가능       │
+│                                                         │
+│  CPU 빼앗는 시점:                                       │
+│  1. 타임 슬라이스(Time Quantum) 만료                    │
+│  2. 높은 우선순위 프로세스 도착                          │
+│  3. I/O 완료로 프로세스가 Ready로 전환                   │
+│                                                         │
+│  시간축 (Round Robin 예시):                             │
+│  ┌──────┬──────┬──────┬──────┬──────┬──────┐           │
+│  │  P1  │  P2  │  P3  │  P1  │  P2  │  P1  │           │
+│  └──────┴──────┴──────┴──────┴──────┴──────┘           │
+│  타임 슬라이스마다 프로세스 교체                         │
+│                                                         │
+│  장점: 응답 시간 개선, CPU 독점 방지                     │
+│  단점: 컨텍스트 스위치 오버헤드, 동기화 이슈 복잡         │
+│                                                         │
+│  예시 알고리즘: RR, SRTF, Priority (선점)               │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_8">비교<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────┬─────────────────┬─────────────────────┐
+│      특성        │    비선점       │       선점           │
+├─────────────────┼─────────────────┼─────────────────────┤
+│ CPU 빼앗김      │ 불가능          │ 가능                │
+├─────────────────┼─────────────────┼─────────────────────┤
+│ 응답 시간       │ 길어질 수 있음   │ 짧음                │
+├─────────────────┼─────────────────┼─────────────────────┤
+│ 컨텍스트 스위치  │ 적음            │ 많음                │
+├─────────────────┼─────────────────┼─────────────────────┤
+│ 구현 복잡도     │ 낮음            │ 높음                │
+├─────────────────┼─────────────────┼─────────────────────┤
+│ 동기화 이슈     │ 적음            │ 경쟁 상태 주의 필요  │
+├─────────────────┼─────────────────┼─────────────────────┤
+│ 적합한 시스템   │ 배치 시스템      │ 대화형/실시간 시스템 │
+└─────────────────┴─────────────────┴─────────────────────┘
+</code></pre></div>
+
+<h3 id="_9">스케줄링 결정 시점<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│                CPU 스케줄링 결정 시점                    │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  1. Running → Waiting (I/O 요청)         [비선점]        │
+│     • 프로세스가 자발적으로 CPU 반환                     │
+│                                                         │
+│  2. Running → Ready (인터럽트, 타임아웃)  [선점]          │
+│     • 타임 슬라이스 만료                                │
+│     • 높은 우선순위 프로세스 도착                        │
+│                                                         │
+│  3. Waiting → Ready (I/O 완료)           [선점 가능]     │
+│     • I/O 완료된 프로세스가 현재 프로세스보다             │
+│       우선순위가 높으면 선점 가능                        │
+│                                                         │
+│  4. Running → Terminated (종료)           [비선점]        │
+│     • 프로세스 종료, 다음 프로세스 선택 필요             │
+│                                                         │
+│                                                         │
+│  1번, 4번만 있으면: 비선점 스케줄링                      │
+│  1~4번 모두 있으면: 선점 스케줄링                        │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 스케줄러 종류<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="3_1">3단계 스케줄러<a class="header-link" href="#3_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                     3단계 스케줄러 구조                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │                   작업 큐 (Job Queue)               │    │
+│  │     디스크에 있는 모든 프로세스                      │    │
+│  │     ┌───┐ ┌───┐ ┌───┐ ┌───┐ ┌───┐                  │    │
+│  │     │P1 │ │P2 │ │P3 │ │P4 │ │...│                  │    │
+│  │     └───┘ └───┘ └───┘ └───┘ └───┘                  │    │
+│  └───────────────────────┬─────────────────────────────┘    │
+│                          │                                  │
+│                    장기 스케줄러                             │
+│                   (Long-term Scheduler)                    │
+│                    • 작업 승인                              │
+│                    • 멀티프로그래밍 정도 제어               │
+│                    • 실행 빈도: 초~분 단위                  │
+│                          │                                  │
+│                          ▼                                  │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │                   준비 큐 (Ready Queue)             │    │
+│  │     메모리에 있는 실행 대기 프로세스                 │    │
+│  │     ┌───┐ ┌───┐ ┌───┐                              │    │
+│  │     │P1 │→│P2 │→│P3 │                              │    │
+│  │     └───┘ └───┘ └───┘                              │    │
+│  └──────────────┬────────────────────────┬─────────────┘    │
+│                 │                        │                  │
+│           단기 스케줄러           중기 스케줄러              │
+│         (Short-term Scheduler) (Medium-term Scheduler)     │
+│          • CPU 할당                • 스와핑                 │
+│          • 실행 빈도: ms 단위       • 메모리 관리            │
+│          • 가장 빈번                • 멀티프로그래밍 조절    │
+│                 │                        │                  │
+│                 ▼                        ▼                  │
+│            ┌─────────┐           ┌───────────────┐          │
+│            │   CPU   │           │   Suspended   │          │
+│            │(Running)│           │    Queue      │          │
+│            └─────────┘           └───────────────┘          │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="long-term-scheduler">장기 스케줄러 (Long-term Scheduler)<a class="header-link" href="#long-term-scheduler" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│               장기 스케줄러 (Job Scheduler)              │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  역할:                                                  │
+│  • 디스크의 작업 → 메모리 (Ready Queue)                 │
+│  • 어떤 프로세스를 시스템에 들일지 결정                  │
+│  • 멀티프로그래밍 정도 (Degree) 제어                    │
+│                                                         │
+│  결정 기준:                                             │
+│  • 시스템 자원 (메모리, CPU) 상태                       │
+│  • CPU-bound와 I/O-bound 프로세스의 적절한 혼합          │
+│                                                         │
+│  실행 빈도: 드물게 (초~분 단위)                         │
+│                                                         │
+│  현대 시스템:                                           │
+│  • 시분할 시스템에서는 거의 사용 안 함                   │
+│  • 모든 프로세스를 바로 Ready Queue로                    │
+│  • 가상 메모리가 메모리 관리를 담당                      │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="short-term-scheduler">단기 스케줄러 (Short-term Scheduler)<a class="header-link" href="#short-term-scheduler" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│               단기 스케줄러 (CPU Scheduler)              │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  역할:                                                  │
+│  • Ready Queue → CPU (Running)                         │
+│  • 어떤 프로세스에게 CPU를 할당할지 결정                 │
+│                                                         │
+│  실행 빈도: 매우 자주 (밀리초 단위)                      │
+│  → 빠른 알고리즘이 필수                                 │
+│                                                         │
+│  호출 시점:                                             │
+│  • 타임 슬라이스 만료                                   │
+│  • 프로세스 블로킹 (I/O 요청)                           │
+│  • 프로세스 종료                                        │
+│  • 인터럽트 발생                                        │
+│                                                         │
+│  사용 알고리즘:                                         │
+│  • FCFS, SJF, Priority, Round Robin, MLFQ 등           │
+│                                                         │
+│  주의: 스케줄러 자체도 CPU 시간을 사용                   │
+│       → 스케줄러 오버헤드 최소화 필요                    │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="medium-term-scheduler">중기 스케줄러 (Medium-term Scheduler)<a class="header-link" href="#medium-term-scheduler" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│              중기 스케줄러 (Swapper)                     │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  역할:                                                  │
+│  • 스와핑 (Swapping) 관리                               │
+│  • 메모리 ↔ 디스크 간 프로세스 이동                      │
+│  • 멀티프로그래밍 정도 동적 조절                         │
+│                                                         │
+│  동작:                                                  │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │    메모리 (Ready/Blocked)                       │    │
+│  │    ┌───┐ ┌───┐ ┌───┐                           │    │
+│  │    │P1 │ │P2 │ │P3 │  ← 메모리 부족 시         │    │
+│  │    └───┘ └───┘ └───┘       P3를 swap out       │    │
+│  └─────────────────────────────────────────────────┘    │
+│              │ swap out          ▲ swap in             │
+│              ▼                   │                     │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │    디스크 (Suspended)                           │    │
+│  │    ┌───┐ ┌───┐                                 │    │
+│  │    │P4 │ │P5 │  → 메모리 여유 시 swap in       │    │
+│  │    └───┘ └───┘                                 │    │
+│  └─────────────────────────────────────────────────┘    │
+│                                                         │
+│  Swap out 기준:                                         │
+│  • 오래 대기 중인 프로세스                              │
+│  • 낮은 우선순위 프로세스                               │
+│  • 메모리를 많이 사용하는 프로세스                       │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_10">스케줄러 비교<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌────────────────────┬────────────────┬────────────────┬────────────────┐
+│       특성          │   장기 스케줄러 │  단기 스케줄러  │  중기 스케줄러  │
+├────────────────────┼────────────────┼────────────────┼────────────────┤
+│ 다른 이름          │ Job Scheduler  │ CPU Scheduler  │ Swapper       │
+├────────────────────┼────────────────┼────────────────┼────────────────┤
+│ 전환               │ 디스크→메모리   │ Ready→Running  │ 메모리↔디스크  │
+├────────────────────┼────────────────┼────────────────┼────────────────┤
+│ 실행 빈도          │ 드물게         │ 매우 자주      │ 가끔           │
+├────────────────────┼────────────────┼────────────────┼────────────────┤
+│ 속도 요구          │ 느려도 됨      │ 매우 빨라야 함 │ 중간           │
+├────────────────────┼────────────────┼────────────────┼────────────────┤
+│ 멀티프로그래밍     │ 전체 수 제어    │ 영향 없음      │ 동적 조절      │
+├────────────────────┼────────────────┼────────────────┼────────────────┤
+│ 현대 시스템        │ 거의 사용 X    │ 핵심 사용      │ 가상메모리 대체 │
+└────────────────────┴────────────────┴────────────────┴────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 디스패처<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="_11">디스패처란?<a class="header-link" href="#_11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│                    디스패처 (Dispatcher)                 │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  디스패처 = CPU 스케줄러가 선택한 프로세스에게            │
+│            실제로 CPU 제어권을 넘겨주는 모듈             │
+│                                                         │
+│  스케줄러와 디스패처 관계:                               │
+│  ┌───────────────┐          ┌───────────────┐           │
+│  │   스케줄러     │ ─결정──▶ │   디스패처    │ ─실행──▶   │
+│  │ &quot;P3를 실행&quot;   │          │ CPU 할당 수행 │           │
+│  └───────────────┘          └───────────────┘           │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_12">디스패처 수행 작업<a class="header-link" href="#_12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│                  디스패처 수행 작업                      │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  1. 컨텍스트 스위치                                     │
+│     • 현재 프로세스 상태를 PCB에 저장                   │
+│     • 새 프로세스 상태를 PCB에서 복원                   │
+│                                                         │
+│  2. 사용자 모드로 전환                                  │
+│     • 커널 모드 → 사용자 모드                           │
+│                                                         │
+│  3. 프로그램 재시작                                     │
+│     • 새 프로세스의 적절한 위치로 점프                   │
+│     • PC (프로그램 카운터) 설정                         │
+│                                                         │
+│  시간축:                                                │
+│  ┌────────┬──────────────────┬────────────────────┐     │
+│  │ P1 실행 │  디스패처 실행    │      P2 실행       │     │
+│  │        │(디스패치 지연시간) │                   │     │
+│  └────────┴──────────────────┴────────────────────┘     │
+│           ↑                                             │
+│      Dispatch Latency (가능한 짧아야 함)                │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="dispatch-latency">디스패치 지연 시간 (Dispatch Latency)<a class="header-link" href="#dispatch-latency" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>디스패치 지연 시간 = 현재 프로세스 중단 ~ 새 프로세스 실행 시작
+
+구성 요소:
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│  1. 인터럽트 처리 시간                                  │
+│  2. 현재 프로세스 상태 저장                             │
+│  3. 스케줄링 알고리즘 실행                              │
+│  4. 새 프로세스 상태 복원                               │
+│  5. 캐시/TLB 관련 비용                                  │
+│                                                         │
+│  일반적으로: 1~10 마이크로초                            │
+│                                                         │
+│  최소화 방법:                                           │
+│  • 효율적인 스케줄링 알고리즘                           │
+│  • 최적화된 컨텍스트 스위치 코드                        │
+│  • 하드웨어 지원 활용                                   │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 연습 문제<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="1">문제 1: 기본 개념<a class="header-link" href="#1" title="Permanent link">&para;</a></h3>
+<p>다음 용어를 정의하세요.</p>
+<ol>
+<li>CPU Burst</li>
+<li>처리량 (Throughput)</li>
+<li>총 처리 시간 (Turnaround Time)</li>
+<li>선점 스케줄링</li>
+</ol>
+<details>
+<summary>정답 보기</summary>
+
+1. **CPU Burst**: 프로세스가 CPU를 연속적으로 사용하는 시간. I/O 요청 없이 계산만 수행하는 구간.
+
+2. **처리량 (Throughput)**: 단위 시간당 완료되는 프로세스의 수. 시스템 효율성의 지표.
+
+3. **총 처리 시간 (Turnaround Time)**: 프로세스가 시스템에 제출된 시점부터 완료될 때까지 걸린 총 시간. 대기 시간 + 실행 시간 + I/O 시간.
+
+4. **선점 스케줄링**: 스케줄러가 실행 중인 프로세스의 CPU를 강제로 빼앗을 수 있는 스케줄링 방식. 타임 슬라이스 만료, 높은 우선순위 프로세스 도착 등의 시점에 발생.
+
+</details>
+
+<h3 id="2">문제 2: 시간 계산<a class="header-link" href="#2" title="Permanent link">&para;</a></h3>
+<p>다음 프로세스에 대해 평균 대기 시간과 평균 총 처리 시간을 계산하세요.
+(FCFS 스케줄링, 모든 프로세스가 시간 0에 도착)</p>
+<table>
+<thead>
+<tr>
+<th>프로세스</th>
+<th>실행 시간</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P1</td>
+<td>24</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>3</td>
+</tr>
+<tr>
+<td>P3</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+<details>
+<summary>정답 보기</summary>
+
+**간트 차트:**
+
+<div class="highlight"><pre><span></span><code>┌────────────────────────┬───┬───┐
+│          P1            │P2 │P3 │
+└────────────────────────┴───┴───┘
+0                       24  27  30
+</code></pre></div>
+
+
+
+**대기 시간:**
+- P1: 0
+- P2: 24
+- P3: 27
+- 평균 대기 시간 = (0 + 24 + 27) / 3 = 17
+
+**총 처리 시간:**
+- P1: 24 - 0 = 24
+- P2: 27 - 0 = 27
+- P3: 30 - 0 = 30
+- 평균 총 처리 시간 = (24 + 27 + 30) / 3 = 27
+
+</details>
+
+<h3 id="3_2">문제 3: 스케줄러 식별<a class="header-link" href="#3_2" title="Permanent link">&para;</a></h3>
+<p>다음 설명에 맞는 스케줄러를 고르세요.</p>
+<p>A. 장기 스케줄러
+B. 단기 스케줄러
+C. 중기 스케줄러</p>
+<ol>
+<li>( ) 밀리초 단위로 매우 자주 실행되어야 한다.</li>
+<li>( ) CPU-bound와 I/O-bound 프로세스를 적절히 섞어 선택한다.</li>
+<li>( ) 메모리가 부족할 때 프로세스를 디스크로 스왑한다.</li>
+<li>( ) CPU를 할당할 다음 프로세스를 결정한다.</li>
+</ol>
+<details>
+<summary>정답 보기</summary>
+
+1. (B) 단기 스케줄러 - 매우 자주 실행되어 빠른 알고리즘 필요
+2. (A) 장기 스케줄러 - 시스템 균형을 위해 프로세스 혼합 고려
+3. (C) 중기 스케줄러 - 스와핑 담당
+4. (B) 단기 스케줄러 - CPU 스케줄링 담당
+
+</details>
+
+<h3 id="4-vs_1">문제 4: 선점 vs 비선점<a class="header-link" href="#4-vs_1" title="Permanent link">&para;</a></h3>
+<p>다음 상황에서 스케줄링 결정이 선점인지 비선점인지 구분하세요.</p>
+<ol>
+<li>프로세스가 exit()를 호출하여 종료</li>
+<li>타임 슬라이스가 만료되어 다른 프로세스로 전환</li>
+<li>프로세스가 I/O를 요청하여 대기 상태로 전환</li>
+<li>높은 우선순위의 프로세스가 Ready 큐에 도착하여 현재 프로세스를 중단</li>
+</ol>
+<details>
+<summary>정답 보기</summary>
+
+1. **비선점** - 프로세스가 자발적으로 종료
+2. **선점** - 스케줄러가 강제로 CPU를 빼앗음
+3. **비선점** - 프로세스가 자발적으로 CPU 반환
+4. **선점** - 스케줄러가 강제로 CPU를 빼앗음
+
+</details>
+
+<h3 id="5_1">문제 5: 디스패처<a class="header-link" href="#5_1" title="Permanent link">&para;</a></h3>
+<p>디스패처가 수행하는 세 가지 주요 작업을 설명하고, 디스패치 지연 시간이 긴 경우 시스템에 어떤 영향을 미치는지 서술하세요.</p>
+<details>
+<summary>정답 보기</summary>
+
+**디스패처의 주요 작업:**
+1. **컨텍스트 스위치**: 현재 프로세스의 상태(레지스터, PC 등)를 PCB에 저장하고, 새 프로세스의 상태를 PCB에서 복원
+2. **모드 전환**: 커널 모드에서 사용자 모드로 전환
+3. **점프**: 새 프로세스의 적절한 위치(PC가 가리키는 주소)로 제어 이동
+
+**디스패치 지연 시간이 긴 경우의 영향:**
+- CPU 이용률 감소 (실제 작업에 사용되는 시간 비율 감소)
+- 응답 시간 증가 (사용자 요청에 대한 반응 느려짐)
+- 처리량 감소 (단위 시간당 완료되는 프로세스 수 감소)
+- 시스템 오버헤드 증가
+
+</details>
+
+<hr />
+<h2 id="_13">다음 단계<a class="header-link" href="#_13" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./05_Scheduling_Algorithms.md">05_Scheduling_Algorithms.md</a> - FCFS, SJF, Priority, RR 알고리즘</li>
+</ul>
+<hr />
+<h2 id="_14">참고 자료<a class="header-link" href="#_14" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://pages.cs.wisc.edu/~remzi/OSTEP/cpu-sched.pdf">OSTEP - CPU Scheduling</a></li>
+<li><a href="https://www.os-book.com/">Operating System Concepts - Chapter 5</a></li>
+<li><a href="https://www.kernel.org/doc/html/latest/scheduler/">Linux Scheduler Documentation</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/OS_Theory/03_Threads_and_Multithreading.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">스레드와 멀티스레딩</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/OS_Theory/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/OS_Theory/05_Scheduling_Algorithms.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">스케줄링 알고리즘</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

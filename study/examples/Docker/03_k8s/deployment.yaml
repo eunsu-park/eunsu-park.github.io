@@ -1,0 +1,242 @@
+# Kubernetes Deployment for Flask application
+# This defines the desired state for running application pods
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-app
+  labels:
+    app: flask-app
+    tier: backend
+    version: v1
+  annotations:
+    description: "Flask web application deployment"
+spec:
+  # Number of pod replicas for high availability
+  replicas: 3
+
+  # Deployment strategy
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # Max number of pods that can be created over desired replicas
+      maxUnavailable: 1  # Max number of pods that can be unavailable during update
+
+  # Selector to identify which pods belong to this deployment
+  selector:
+    matchLabels:
+      app: flask-app
+
+  # Pod template
+  template:
+    metadata:
+      labels:
+        app: flask-app
+        tier: backend
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5000"
+        prometheus.io/path: "/metrics"
+
+    spec:
+      # Security context for the pod
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      # Service account for RBAC
+      serviceAccountName: flask-app-sa
+
+      containers:
+      - name: flask-app
+        image: your-registry/flask-app:1.0
+        imagePullPolicy: IfNotPresent
+
+        ports:
+        - containerPort: 5000
+          name: http
+          protocol: TCP
+
+        # Environment variables from ConfigMap and Secret
+        env:
+        - name: FLASK_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: flask-config
+              key: flask_env
+
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: flask-secrets
+              key: database_url
+
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: flask-secrets
+              key: redis_url
+
+        # Resource limits and requests
+        # Requests: guaranteed resources
+        # Limits: maximum resources
+        resources:
+          requests:
+            cpu: 100m      # 0.1 CPU core
+            memory: 128Mi  # 128 MiB
+          limits:
+            cpu: 500m      # 0.5 CPU core
+            memory: 512Mi  # 512 MiB
+
+        # Liveness probe: restart container if unhealthy
+        # Determines if container is running
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+            scheme: HTTP
+          initialDelaySeconds: 30  # Wait before first probe
+          periodSeconds: 10         # Probe interval
+          timeoutSeconds: 5         # Probe timeout
+          successThreshold: 1       # Success after n consecutive successes
+          failureThreshold: 3       # Restart after n consecutive failures
+
+        # Readiness probe: remove from service if not ready
+        # Determines if container can accept traffic
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+
+        # Startup probe: handle slow-starting containers
+        # Disables liveness/readiness until first success
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 5000
+            scheme: HTTP
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 30  # 30 * 10s = 5 minutes max startup time
+
+        # Security context for the container
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+
+        # Volume mounts (if needed)
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /app/cache
+
+      # Volumes
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+
+      # Node affinity (optional): prefer specific nodes
+      # affinity:
+      #   nodeAffinity:
+      #     preferredDuringSchedulingIgnoredDuringExecution:
+      #     - weight: 1
+      #       preference:
+      #         matchExpressions:
+      #         - key: node-type
+      #           operator: In
+      #           values:
+      #           - application
+
+      # Pod anti-affinity: spread pods across nodes
+      # This ensures high availability
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - flask-app
+              topologyKey: kubernetes.io/hostname
+
+      # Tolerations (optional): allow scheduling on tainted nodes
+      # tolerations:
+      # - key: "dedicated"
+      #   operator: "Equal"
+      #   value: "application"
+      #   effect: "NoSchedule"
+
+---
+# ServiceAccount for RBAC
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: flask-app-sa
+  labels:
+    app: flask-app
+
+---
+# HorizontalPodAutoscaler for automatic scaling
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: flask-app-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: flask-app
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  # Scale based on CPU utilization
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  # Scale based on memory utilization
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300  # Wait 5 min before scaling down
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+      - type: Pods
+        value: 2
+        periodSeconds: 30

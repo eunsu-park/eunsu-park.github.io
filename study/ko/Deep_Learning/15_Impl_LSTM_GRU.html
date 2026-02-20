@@ -1,0 +1,543 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>06. LSTM / GRU - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Deep_Learning/">Deep Learning</a>
+    <span class="separator">/</span>
+    <span class="current">06. LSTM / GRU</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>06. LSTM / GRU</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Deep_Learning/14_LSTM_GRU.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">09. LSTM과 GRU</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Deep_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Deep_Learning/16_Attention_Transformer.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">10. Attention과 Transformer</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">개요</a></li>
+<li><a href="#_2">수학적 배경</a><ul>
+<li><a href="#1-vanilla-rnn">1. Vanilla RNN의 문제</a></li>
+<li><a href="#2-lstm">2. LSTM 수식</a></li>
+<li><a href="#3-gru">3. GRU 수식</a></li>
+<li><a href="#4-gradient">4. 왜 Gradient가 보존되는가?</a></li>
+</ul>
+</li>
+<li><a href="#_3">아키텍처</a><ul>
+<li><a href="#lstm">LSTM 구조 다이어그램</a></li>
+<li><a href="#gru">GRU 구조 다이어그램</a></li>
+<li><a href="#_4">파라미터 수</a></li>
+</ul>
+</li>
+<li><a href="#_5">파일 구조</a></li>
+<li><a href="#_6">핵심 개념</a><ul>
+<li><a href="#1">1. 게이트의 역할</a></li>
+<li><a href="#2-peephole-connection">2. Peephole Connection (선택적)</a></li>
+<li><a href="#3-bidirectional-lstm">3. Bidirectional LSTM</a></li>
+<li><a href="#4-stacked-lstm">4. Stacked LSTM</a></li>
+</ul>
+</li>
+<li><a href="#_7">구현 레벨</a><ul>
+<li><a href="#level-1-numpy-from-scratch-numpy">Level 1: NumPy From-Scratch (numpy/)</a></li>
+<li><a href="#level-2-pytorch-low-level-pytorch_lowlevel">Level 2: PyTorch Low-Level (pytorch_lowlevel/)</a></li>
+<li><a href="#level-3-paper-implementation-paper">Level 3: Paper Implementation (paper/)</a></li>
+</ul>
+</li>
+<li><a href="#_8">학습 체크리스트</a></li>
+<li><a href="#_9">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="06-lstm-gru">06. LSTM / GRU<a class="header-link" href="#06-lstm-gru" title="Permanent link">&para;</a></h1>
+<h2 id="_1">개요<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<p>LSTM(Long Short-Term Memory)과 GRU(Gated Recurrent Unit)는 <strong>vanishing gradient 문제</strong>를 해결한 순환 신경망(RNN) 변형입니다. 게이트 메커니즘을 통해 장기 의존성(long-term dependency)을 효과적으로 학습합니다.</p>
+<hr />
+<h2 id="_2">수학적 배경<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<h3 id="1-vanilla-rnn">1. Vanilla RNN의 문제<a class="header-link" href="#1-vanilla-rnn" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Vanilla RNN:
+  h_t = tanh(W_h · h_{t-1} + W_x · x_t + b)
+
+문제: Backpropagation Through Time (BPTT)
+
+∂L/∂h_0 = ∂L/∂h_T · ∂h_T/∂h_{T-1} · ... · ∂h_1/∂h_0
+        = ∂L/∂h_T · Π_{t=1}^{T} ∂h_t/∂h_{t-1}
+
+∂h_t/∂h_{t-1} = diag(1 - tanh²(·)) · W_h
+
+결과:
+<span class="k">-</span> |eigenvalue(W_h)| &lt; 1 → Vanishing gradient
+<span class="k">-</span> |eigenvalue(W_h)| &gt; 1 → Exploding gradient
+
+→ 긴 시퀀스에서 초기 정보 학습 불가
+</code></pre></div>
+
+<h3 id="2-lstm">2. LSTM 수식<a class="header-link" href="#2-lstm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">입력</span><span class="o">:</span><span class="w"> </span><span class="n">x_t</span><span class="w"> </span><span class="o">(</span><span class="err">현재</span><span class="w"> </span><span class="err">입력</span><span class="o">),</span><span class="w"> </span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">}</span><span class="w"> </span><span class="o">(</span><span class="err">이전</span><span class="w"> </span><span class="n">hidden</span><span class="o">),</span><span class="w"> </span><span class="n">c_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">}</span><span class="w"> </span><span class="o">(</span><span class="err">이전</span><span class="w"> </span><span class="n">cell</span><span class="o">)</span>
+<span class="err">출력</span><span class="o">:</span><span class="w"> </span><span class="n">h_t</span><span class="w"> </span><span class="o">(</span><span class="err">현재</span><span class="w"> </span><span class="n">hidden</span><span class="o">),</span><span class="w"> </span><span class="n">c_t</span><span class="w"> </span><span class="o">(</span><span class="err">현재</span><span class="w"> </span><span class="n">cell</span><span class="o">)</span>
+
+<span class="mi">1</span><span class="o">.</span><span class="w"> </span><span class="n">Forget</span><span class="w"> </span><span class="n">Gate</span><span class="w"> </span><span class="o">(</span><span class="err">무엇을</span><span class="w"> </span><span class="err">버릴까</span><span class="o">?)</span>
+<span class="w">   </span><span class="n">f_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">σ</span><span class="o">(</span><span class="n">W_f</span><span class="w"> </span><span class="err">·</span><span class="w"> </span><span class="o">[</span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">},</span><span class="w"> </span><span class="n">x_t</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b_f</span><span class="o">)</span>
+
+<span class="mi">2</span><span class="o">.</span><span class="w"> </span><span class="n">Input</span><span class="w"> </span><span class="n">Gate</span><span class="w"> </span><span class="o">(</span><span class="err">무엇을</span><span class="w"> </span><span class="err">저장할까</span><span class="o">?)</span>
+<span class="w">   </span><span class="n">i_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">σ</span><span class="o">(</span><span class="n">W_i</span><span class="w"> </span><span class="err">·</span><span class="w"> </span><span class="o">[</span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">},</span><span class="w"> </span><span class="n">x_t</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b_i</span><span class="o">)</span>
+
+<span class="mi">3</span><span class="o">.</span><span class="w"> </span><span class="n">Candidate</span><span class="w"> </span><span class="n">Cell</span><span class="w"> </span><span class="o">(</span><span class="err">새로운</span><span class="w"> </span><span class="err">정보</span><span class="o">)</span>
+<span class="w">   </span><span class="n">c</span><span class="err">̃</span><span class="n">_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tanh</span><span class="o">(</span><span class="n">W_c</span><span class="w"> </span><span class="err">·</span><span class="w"> </span><span class="o">[</span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">},</span><span class="w"> </span><span class="n">x_t</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b_c</span><span class="o">)</span>
+
+<span class="mi">4</span><span class="o">.</span><span class="w"> </span><span class="n">Cell</span><span class="w"> </span><span class="n">State</span><span class="w"> </span><span class="err">업데이트</span>
+<span class="w">   </span><span class="n">c_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">f_t</span><span class="w"> </span><span class="err">⊙</span><span class="w"> </span><span class="n">c_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">}</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">i_t</span><span class="w"> </span><span class="err">⊙</span><span class="w"> </span><span class="n">c</span><span class="err">̃</span><span class="n">_t</span>
+<span class="w">        </span><span class="err">↑</span><span class="w"> </span><span class="err">이전</span><span class="w"> </span><span class="err">정보</span><span class="w">   </span><span class="err">↑</span><span class="w"> </span><span class="err">새</span><span class="w"> </span><span class="err">정보</span>
+
+<span class="mi">5</span><span class="o">.</span><span class="w"> </span><span class="n">Output</span><span class="w"> </span><span class="n">Gate</span><span class="w"> </span><span class="o">(</span><span class="err">무엇을</span><span class="w"> </span><span class="err">출력할까</span><span class="o">?)</span>
+<span class="w">   </span><span class="n">o_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">σ</span><span class="o">(</span><span class="n">W_o</span><span class="w"> </span><span class="err">·</span><span class="w"> </span><span class="o">[</span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">},</span><span class="w"> </span><span class="n">x_t</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b_o</span><span class="o">)</span>
+
+<span class="mi">6</span><span class="o">.</span><span class="w"> </span><span class="n">Hidden</span><span class="w"> </span><span class="n">State</span>
+<span class="w">   </span><span class="n">h_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o_t</span><span class="w"> </span><span class="err">⊙</span><span class="w"> </span><span class="n">tanh</span><span class="o">(</span><span class="n">c_t</span><span class="o">)</span>
+
+<span class="err">σ</span><span class="o">:</span><span class="w"> </span><span class="n">sigmoid</span><span class="w"> </span><span class="o">(</span><span class="mi">0</span><span class="o">~</span><span class="mi">1</span><span class="o">)</span>
+<span class="err">⊙</span><span class="o">:</span><span class="w"> </span><span class="n">element</span><span class="o">-</span><span class="n">wise</span><span class="w"> </span><span class="err">곱</span>
+</code></pre></div>
+
+<h3 id="3-gru">3. GRU 수식<a class="header-link" href="#3-gru" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">GRU</span><span class="o">:</span><span class="w"> </span><span class="n">LSTM의</span><span class="w"> </span><span class="err">간소화</span><span class="w"> </span><span class="err">버전</span><span class="w"> </span><span class="o">(</span><span class="n">cell</span><span class="w"> </span><span class="n">state</span><span class="w"> </span><span class="err">없음</span><span class="o">)</span>
+
+<span class="mi">1</span><span class="o">.</span><span class="w"> </span><span class="n">Reset</span><span class="w"> </span><span class="n">Gate</span><span class="w"> </span><span class="o">(</span><span class="err">이전</span><span class="w"> </span><span class="err">정보</span><span class="w"> </span><span class="err">얼마나</span><span class="w"> </span><span class="err">무시</span><span class="o">?)</span>
+<span class="w">   </span><span class="n">r_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">σ</span><span class="o">(</span><span class="n">W_r</span><span class="w"> </span><span class="err">·</span><span class="w"> </span><span class="o">[</span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">},</span><span class="w"> </span><span class="n">x_t</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b_r</span><span class="o">)</span>
+
+<span class="mi">2</span><span class="o">.</span><span class="w"> </span><span class="n">Update</span><span class="w"> </span><span class="n">Gate</span><span class="w"> </span><span class="o">(</span><span class="err">이전</span><span class="w"> </span><span class="n">vs</span><span class="w"> </span><span class="err">새</span><span class="w"> </span><span class="err">정보</span><span class="w"> </span><span class="err">비율</span><span class="o">)</span>
+<span class="w">   </span><span class="n">z_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">σ</span><span class="o">(</span><span class="n">W_z</span><span class="w"> </span><span class="err">·</span><span class="w"> </span><span class="o">[</span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">},</span><span class="w"> </span><span class="n">x_t</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b_z</span><span class="o">)</span>
+
+<span class="mi">3</span><span class="o">.</span><span class="w"> </span><span class="n">Candidate</span><span class="w"> </span><span class="n">Hidden</span>
+<span class="w">   </span><span class="n">h</span><span class="err">̃</span><span class="n">_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tanh</span><span class="o">(</span><span class="n">W_h</span><span class="w"> </span><span class="err">·</span><span class="w"> </span><span class="o">[</span><span class="n">r_t</span><span class="w"> </span><span class="err">⊙</span><span class="w"> </span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">},</span><span class="w"> </span><span class="n">x_t</span><span class="o">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b_h</span><span class="o">)</span>
+
+<span class="mi">4</span><span class="o">.</span><span class="w"> </span><span class="n">Hidden</span><span class="w"> </span><span class="n">State</span>
+<span class="w">   </span><span class="n">h_t</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">(</span><span class="mi">1</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">z_t</span><span class="o">)</span><span class="w"> </span><span class="err">⊙</span><span class="w"> </span><span class="n">h_</span><span class="o">{</span><span class="n">t</span><span class="o">-</span><span class="mi">1</span><span class="o">}</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">z_t</span><span class="w"> </span><span class="err">⊙</span><span class="w"> </span><span class="n">h</span><span class="err">̃</span><span class="n">_t</span>
+<span class="w">        </span><span class="err">↑</span><span class="w"> </span><span class="err">이전</span><span class="w"> </span><span class="err">정보</span><span class="w"> </span><span class="err">유지</span><span class="w">      </span><span class="err">↑</span><span class="w"> </span><span class="err">새</span><span class="w"> </span><span class="err">정보</span>
+
+<span class="n">LSTM</span><span class="w"> </span><span class="n">vs</span><span class="w"> </span><span class="n">GRU</span><span class="o">:</span>
+<span class="o">-</span><span class="w"> </span><span class="n">GRU</span><span class="o">:</span><span class="w"> </span><span class="mi">2</span><span class="err">개</span><span class="w"> </span><span class="err">게이트</span><span class="w"> </span><span class="o">(</span><span class="n">reset</span><span class="o">,</span><span class="w"> </span><span class="n">update</span><span class="o">)</span>
+<span class="o">-</span><span class="w"> </span><span class="n">LSTM</span><span class="o">:</span><span class="w"> </span><span class="mi">3</span><span class="err">개</span><span class="w"> </span><span class="err">게이트</span><span class="w"> </span><span class="o">(</span><span class="n">forget</span><span class="o">,</span><span class="w"> </span><span class="n">input</span><span class="o">,</span><span class="w"> </span><span class="n">output</span><span class="o">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">cell</span><span class="w"> </span><span class="n">state</span>
+<span class="o">-</span><span class="w"> </span><span class="n">GRU가</span><span class="w"> </span><span class="err">파라미터</span><span class="w"> </span><span class="mi">25</span><span class="o">%</span><span class="w"> </span><span class="err">적음</span>
+<span class="o">-</span><span class="w"> </span><span class="err">성능은</span><span class="w"> </span><span class="n">task에</span><span class="w"> </span><span class="err">따라</span><span class="w"> </span><span class="err">비슷</span>
+</code></pre></div>
+
+<h3 id="4-gradient">4. 왜 Gradient가 보존되는가?<a class="header-link" href="#4-gradient" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>LSTM Cell State 업데이트:
+  c_t = f_t ⊙ c_{t-1} + i_t ⊙ c̃_t
+
+Gradient:
+  ∂c_t/∂c_{t-1} = f_t  (forget gate)
+
+f_t ≈ 1이면 gradient가 거의 그대로 전파!
+
+이것이 &quot;highway&quot; 역할:
+<span class="k">-</span> Cell state가 변형 없이 흐를 수 있음
+<span class="k">-</span> 긴 시퀀스에서도 gradient 유지
+<span class="k">-</span> 모델이 f_t를 학습해 어떤 정보를 유지할지 결정
+</code></pre></div>
+
+<hr />
+<h2 id="_3">아키텍처<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<h3 id="lstm">LSTM 구조 다이어그램<a class="header-link" href="#lstm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>                      ┌─────────────────────────────────┐
+                      │           Cell State c_t         │
+c_{t-1} ─────────────►│   ⊙────────────+────────────►  c_t
+                      │   ↑ forget     ↑ input           │
+                      │   f_t        i_t ⊙ c̃_t          │
+                      │                                  │
+                      │   ┌──────────────────────┐       │
+                      │   │  σ   σ   tanh   σ   │       │
+                      │   │  f   i    c̃    o   │       │
+                      │   └──────────────────────┘       │
+                      │         ↑                        │
+                      │    [h_{t-1}, x_t]                │
+h_{t-1} ─────────────►│                                  ├───► h_t
+                      │                 ⊙ ◄── tanh(c_t)  │
+                      │                 o_t              │
+                      └─────────────────────────────────┘
+                                    ↑
+                                   x_t
+</code></pre></div>
+
+<h3 id="gru">GRU 구조 다이어그램<a class="header-link" href="#gru" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>                      ┌─────────────────────────────────┐
+                      │                                  │
+h_{t-1} ─────────────►│ ⊙────────────+────────────────►│ h_t
+                      │ (1-z)        z ⊙ h̃             │
+                      │              ↑                   │
+                      │   ┌──────────────────────┐       │
+                      │   │    σ   σ   tanh     │       │
+                      │   │    r   z    h̃      │       │
+                      │   └──────────────────────┘       │
+                      │         ↑                        │
+                      │    [h_{t-1}, x_t]                │
+                      │    [r⊙h_{t-1}, x_t]              │
+                      └─────────────────────────────────┘
+                                    ↑
+                                   x_t
+</code></pre></div>
+
+<h3 id="_4">파라미터 수<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">LSTM</span><span class="o">:</span>
+<span class="w">  </span><span class="mi">4</span><span class="err">개</span><span class="w"> </span><span class="err">게이트</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="o">(</span><span class="n">input_size</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="n">hidden_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">hidden_size</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="n">hidden_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">hidden_size</span><span class="o">)</span>
+<span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="o">(</span><span class="n">input_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">hidden_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="o">)</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="n">hidden_size</span>
+
+<span class="err">예</span><span class="o">:</span><span class="w"> </span><span class="n">input</span><span class="o">=</span><span class="mi">128</span><span class="o">,</span><span class="w"> </span><span class="n">hidden</span><span class="o">=</span><span class="mi">256</span>
+<span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="o">(</span><span class="mi">128</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">256</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="o">)</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="mi">256</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">394</span><span class="o">,</span><span class="mi">240</span>
+
+<span class="n">GRU</span><span class="o">:</span>
+<span class="w">  </span><span class="mi">3</span><span class="err">개</span><span class="w"> </span><span class="err">게이트</span>
+<span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="o">(</span><span class="n">input_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">hidden_size</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="o">)</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="n">hidden_size</span>
+
+<span class="err">예</span><span class="o">:</span><span class="w"> </span><span class="n">input</span><span class="o">=</span><span class="mi">128</span><span class="o">,</span><span class="w"> </span><span class="n">hidden</span><span class="o">=</span><span class="mi">256</span>
+<span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="o">(</span><span class="mi">128</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">256</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="o">)</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="mi">256</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">295</span><span class="o">,</span><span class="mi">680</span><span class="w">  </span><span class="o">(</span><span class="mi">25</span><span class="o">%</span><span class="w"> </span><span class="err">적음</span><span class="o">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_5">파일 구조<a class="header-link" href="#_5" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="mf">06</span><span class="n">_LSTM_GRU</span><span class="o">/</span>
+<span class="err">├──</span><span class="w"> </span><span class="kr">READ</span><span class="n">ME</span><span class="mf">.</span><span class="n">md</span><span class="w">                      </span><span class="err">#</span><span class="w"> </span><span class="n">이</span><span class="w"> </span><span class="n">파일</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">numpy</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">lstm_numpy</span><span class="mf">.</span><span class="n">py</span><span class="w">             </span><span class="err">#</span><span class="w"> </span><span class="n">NumPy</span><span class="w"> </span><span class="n">LSTM</span><span class="w"> </span><span class="p">(</span><span class="kr">for</span><span class="n">ward</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">backward</span><span class="p">)</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">gru_numpy</span><span class="mf">.</span><span class="n">py</span><span class="w">              </span><span class="err">#</span><span class="w"> </span><span class="n">NumPy</span><span class="w"> </span><span class="n">GRU</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">pytorch_lowlevel</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">lstm_gru_lowlevel</span><span class="mf">.</span><span class="n">py</span><span class="w">      </span><span class="err">#</span><span class="w"> </span><span class="n">F</span><span class="mf">.</span><span class="n">linear</span><span class="w"> </span><span class="n">사용</span><span class="p">,</span><span class="w"> </span><span class="n">nn</span><span class="mf">.</span><span class="n">LSTM</span><span class="w"> </span><span class="n">미사용</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">paper</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">lstm_paper</span><span class="mf">.</span><span class="n">py</span><span class="w">             </span><span class="err">#</span><span class="w"> </span><span class="n">원본</span><span class="w"> </span><span class="mf">1997</span><span class="w"> </span><span class="n">논문</span><span class="w"> </span><span class="n">구현</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">gru_paper</span><span class="mf">.</span><span class="n">py</span><span class="w">              </span><span class="err">#</span><span class="w"> </span><span class="mf">2014</span><span class="w"> </span><span class="n">논문</span><span class="w"> </span><span class="n">구현</span>
+<span class="err">└──</span><span class="w"> </span><span class="n">exercises</span><span class="o">/</span>
+<span class="w">    </span><span class="err">├──</span><span class="w"> </span><span class="mf">01</span><span class="n">_gradient_flow</span><span class="mf">.</span><span class="n">md</span><span class="w">       </span><span class="err">#</span><span class="w"> </span><span class="n">BPTT</span><span class="w"> </span><span class="n">gradient</span><span class="w"> </span><span class="n">분석</span>
+<span class="w">    </span><span class="err">└──</span><span class="w"> </span><span class="mf">02</span><span class="n">_sequence_tasks</span><span class="mf">.</span><span class="n">md</span><span class="w">      </span><span class="err">#</span><span class="w"> </span><span class="n">시퀀스</span><span class="w"> </span><span class="n">분류</span><span class="o">/</span><span class="n">생성</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_6">핵심 개념<a class="header-link" href="#_6" title="Permanent link">&para;</a></h2>
+<h3 id="1">1. 게이트의 역할<a class="header-link" href="#1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Forget Gate (f):
+- 1에 가까움: 이전 정보 유지
+- 0에 가까움: 이전 정보 삭제
+- 예: 새 문장 시작 시 이전 문맥 리셋
+
+Input Gate (i):
+- 새 정보의 중요도 결정
+- Candidate (c̃)와 함께 작동
+
+Output Gate (o):
+- Cell state 중 무엇을 hidden으로 노출
+- 예: 내부적으로는 기억하지만 출력하지 않음
+</code></pre></div>
+
+<h3 id="2-peephole-connection">2. Peephole Connection (선택적)<a class="header-link" href="#2-peephole-connection" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>기본 LSTM: 게이트가 [h_{t-1}, x_t]만 참조
+Peephole: 게이트가 c_{t-1}도 참조
+
+f_t = σ(W_f · [h_{t-1}, x_t] + W_{cf} · c_{t-1} + b_f)
+i_t = σ(W_i · [h_{t-1}, x_t] + W_{ci} · c_{t-1} + b_i)
+o_t = σ(W_o · [h_{t-1}, x_t] + W_{co} · c_t + b_o)
+
+효과: cell state 정보를 게이트 결정에 직접 활용
+</code></pre></div>
+
+<h3 id="3-bidirectional-lstm">3. Bidirectional LSTM<a class="header-link" href="#3-bidirectional-lstm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nt">시퀀스를</span><span class="w"> </span><span class="nt">양방향으로</span><span class="w"> </span><span class="nt">처리</span><span class="o">:</span>
+
+<span class="nt">Forward</span><span class="o">:</span><span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="nt">h_1</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nt">h_2</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nt">h_3</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nt">h_4</span><span class="w"> </span><span class="err">→</span>
+<span class="nt">Backward</span><span class="o">:</span><span class="w"> </span><span class="err">←</span><span class="w"> </span><span class="nt">h_4</span><span class="w"> </span><span class="err">←</span><span class="w"> </span><span class="nt">h_3</span><span class="w"> </span><span class="err">←</span><span class="w"> </span><span class="nt">h_2</span><span class="w"> </span><span class="err">←</span><span class="w"> </span><span class="nt">h_1</span><span class="w"> </span><span class="err">←</span>
+
+<span class="nt">출력</span><span class="o">:</span><span class="w"> </span><span class="cp">[</span><span class="nx">forward_h_t</span><span class="p">;</span><span class="w"> </span><span class="nx">backward_h_t</span><span class="cp">]</span><span class="w"> </span><span class="o">(</span><span class="nt">concatenate</span><span class="o">)</span>
+
+<span class="nt">장점</span><span class="o">:</span>
+<span class="nt">-</span><span class="w"> </span><span class="nt">미래</span><span class="w"> </span><span class="nt">컨텍스트도</span><span class="w"> </span><span class="nt">활용</span>
+<span class="nt">-</span><span class="w"> </span><span class="nt">NER</span><span class="o">,</span><span class="w"> </span><span class="nt">POS</span><span class="w"> </span><span class="nt">tagging에</span><span class="w"> </span><span class="nt">효과적</span>
+<span class="nt">-</span><span class="w"> </span><span class="nt">Transformer</span><span class="w"> </span><span class="nt">등장</span><span class="w"> </span><span class="nt">전</span><span class="w"> </span><span class="nt">NLP</span><span class="w"> </span><span class="nt">표준</span>
+</code></pre></div>
+
+<h3 id="4-stacked-lstm">4. Stacked LSTM<a class="header-link" href="#4-stacked-lstm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>여러 LSTM 레이어 쌓기:
+
+x_t → LSTM_1 → h_t^1 → LSTM_2 → h_t^2 → ... → output
+
+각 레이어:
+<span class="k">-</span> 이전 레이어의 hidden을 입력으로
+<span class="k">-</span> 더 추상적인 표현 학습
+
+주의: 깊어질수록 학습 어려움
+<span class="k">-</span> Dropout 필수 (특히 레이어 간)
+<span class="k">-</span> Residual connection 도움
+</code></pre></div>
+
+<hr />
+<h2 id="_7">구현 레벨<a class="header-link" href="#_7" title="Permanent link">&para;</a></h2>
+<h3 id="level-1-numpy-from-scratch-numpy">Level 1: NumPy From-Scratch (numpy/)<a class="header-link" href="#level-1-numpy-from-scratch-numpy" title="Permanent link">&para;</a></h3>
+<ul>
+<li>모든 게이트 연산 직접 구현</li>
+<li>BPTT gradient 수동 계산</li>
+<li>Cell state gradient 유도</li>
+</ul>
+<h3 id="level-2-pytorch-low-level-pytorch_lowlevel">Level 2: PyTorch Low-Level (pytorch_lowlevel/)<a class="header-link" href="#level-2-pytorch-low-level-pytorch_lowlevel" title="Permanent link">&para;</a></h3>
+<ul>
+<li>F.linear, torch.sigmoid, torch.tanh 사용</li>
+<li>nn.LSTM 미사용</li>
+<li>파라미터 수동 관리</li>
+<li>Bidirectional, Stacked 구현</li>
+</ul>
+<h3 id="level-3-paper-implementation-paper">Level 3: Paper Implementation (paper/)<a class="header-link" href="#level-3-paper-implementation-paper" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Hochreiter &amp; Schmidhuber (1997) LSTM</li>
+<li>Cho et al. (2014) GRU</li>
+<li>Peephole connections</li>
+</ul>
+<hr />
+<h2 id="_8">학습 체크리스트<a class="header-link" href="#_8" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] Vanilla RNN의 vanishing gradient 문제</li>
+<li>[ ] LSTM 4개 수식 암기</li>
+<li>[ ] GRU 3개 수식 암기</li>
+<li>[ ] Cell state가 gradient를 보존하는 이유</li>
+<li>[ ] 각 게이트의 역할 설명</li>
+<li>[ ] LSTM vs GRU 장단점</li>
+<li>[ ] BPTT 구현</li>
+<li>[ ] Bidirectional, Stacked 구조</li>
+</ul>
+<hr />
+<h2 id="_9">참고 자료<a class="header-link" href="#_9" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Hochreiter &amp; Schmidhuber (1997). "Long Short-Term Memory"</li>
+<li>Cho et al. (2014). "Learning Phrase Representations using RNN Encoder-Decoder"</li>
+<li><a href="https://colah.github.io/posts/2015-08-Understanding-LSTMs/">colah's blog: Understanding LSTM</a></li>
+<li><a href="https://d2l.ai/chapter_recurrent-modern/lstm.html">d2l.ai: LSTM</a></li>
+<li><a href="../02_MLP/README.md">../02_MLP/README.md</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Deep_Learning/14_LSTM_GRU.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">09. LSTM과 GRU</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Deep_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Deep_Learning/16_Attention_Transformer.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">10. Attention과 Transformer</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

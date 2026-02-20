@@ -1,0 +1,1027 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>14. RLHF와 LLM 정렬 (Alignment) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/LLM_and_NLP/">LLM and NLP</a>
+    <span class="separator">/</span>
+    <span class="current">14. RLHF와 LLM 정렬 (Alignment)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>14. RLHF와 LLM 정렬 (Alignment)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/LLM_and_NLP/13_Model_Quantization.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">13. 모델 양자화 (Model Quantization)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/LLM_and_NLP/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/LLM_and_NLP/15_LLM_Agents.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">15. LLM 에이전트 (LLM Agents)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#1-llm">1. LLM 정렬 개요</a><ul>
+<li><a href="#_2">왜 정렬이 필요한가?</a></li>
+<li><a href="#_3">정렬 방법론 발전</a></li>
+</ul>
+</li>
+<li><a href="#2-sft-supervised-fine-tuning">2. SFT (Supervised Fine-Tuning)</a><ul>
+<li><a href="#_4">기본 개념</a></li>
+<li><a href="#sft">SFT 구현</a></li>
+</ul>
+</li>
+<li><a href="#3-rlhf">3. RLHF 파이프라인</a><ul>
+<li><a href="#_5">전체 프로세스</a></li>
+<li><a href="#_6">선호도 데이터 수집</a></li>
+</ul>
+</li>
+<li><a href="#4-reward-model">4. Reward Model 학습</a><ul>
+<li><a href="#reward-model">Reward Model 개념</a></li>
+<li><a href="#_7">구현</a></li>
+<li><a href="#reward-model_1">Reward Model 사용</a></li>
+</ul>
+</li>
+<li><a href="#5-ppo-proximal-policy-optimization">5. PPO (Proximal Policy Optimization)</a><ul>
+<li><a href="#ppo">PPO 개념</a></li>
+<li><a href="#ppo-trl">PPO 구현 (TRL)</a></li>
+</ul>
+</li>
+<li><a href="#6-dpo-direct-preference-optimization">6. DPO (Direct Preference Optimization)</a><ul>
+<li><a href="#dpo">DPO 개념</a></li>
+<li><a href="#dpo-vs-rlhf">DPO vs RLHF</a></li>
+<li><a href="#dpo_1">DPO 구현</a></li>
+<li><a href="#dpo_2">DPO 변형들</a></li>
+</ul>
+</li>
+<li><a href="#7-constitutional-ai">7. Constitutional AI</a><ul>
+<li><a href="#_8">개념</a></li>
+<li><a href="#cai">CAI 구현</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 고급 정렬 기법</a><ul>
+<li><a href="#rlaif-rl-from-ai-feedback">RLAIF (RL from AI Feedback)</a></li>
+<li><a href="#self-play-fine-tuning-spin">Self-Play Fine-Tuning (SPIN)</a></li>
+</ul>
+</li>
+<li><a href="#_9">정리</a><ul>
+<li><a href="#_10">정렬 방법 비교</a></li>
+<li><a href="#_11">핵심 코드</a></li>
+<li><a href="#_12">정렬 파이프라인</a></li>
+</ul>
+</li>
+<li><a href="#_13">다음 단계</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="14-rlhf-llm-alignment">14. RLHF와 LLM 정렬 (Alignment)<a class="header-link" href="#14-rlhf-llm-alignment" title="Permanent link">&para;</a></h1>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>RLHF(Reinforcement Learning from Human Feedback) 이해</li>
+<li>Reward Model 학습</li>
+<li>PPO를 통한 정책 최적화</li>
+<li>DPO(Direct Preference Optimization)</li>
+<li>Constitutional AI와 안전한 AI</li>
+</ul>
+<hr />
+<h2 id="1-llm">1. LLM 정렬 개요<a class="header-link" href="#1-llm" title="Permanent link">&para;</a></h2>
+<h3 id="_2">왜 정렬이 필요한가?<a class="header-link" href="#_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                  LLM 정렬의 필요성                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  사전학습 모델 (Base Model)                                   │
+│      │                                                       │
+│      │  문제점:                                               │
+│      │  - 단순히 다음 토큰 예측                                │
+│      │  - 유해한 콘텐츠 생성 가능                              │
+│      │  - 지시사항 따르기 어려움                               │
+│      ▼                                                       │
+│  정렬된 모델 (Aligned Model)                                  │
+│      │                                                       │
+│      │  목표:                                                 │
+│      │  - 도움됨 (Helpful)                                   │
+│      │  - 무해함 (Harmless)                                  │
+│      │  - 정직함 (Honest)                                    │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_3">정렬 방법론 발전<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>SFT (Supervised Fine-Tuning)
+    │  고품질 데이터로 지도학습
+    ▼
+RLHF (Reinforcement Learning from Human Feedback)
+    │  보상 모델 + 강화학습
+    ▼
+DPO (Direct Preference Optimization)
+    │  직접 선호도 최적화
+    ▼
+Constitutional AI
+    │  원칙 기반 자기 개선
+</code></pre></div>
+
+<hr />
+<h2 id="2-sft-supervised-fine-tuning">2. SFT (Supervised Fine-Tuning)<a class="header-link" href="#2-sft-supervised-fine-tuning" title="Permanent link">&para;</a></h2>
+<h3 id="_4">기본 개념<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># SFT 데이터 형식</span>
+<span class="n">sft_data</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;instruction&quot;</span><span class="p">:</span> <span class="s2">&quot;Write a poem about spring.&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;input&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="s2">&quot;Flowers bloom in gentle rain,</span><span class="se">\n</span><span class="s2">Birds return to sing again...&quot;</span>
+    <span class="p">},</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;instruction&quot;</span><span class="p">:</span> <span class="s2">&quot;Translate to French.&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;input&quot;</span><span class="p">:</span> <span class="s2">&quot;Hello, how are you?&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="s2">&quot;Bonjour, comment allez-vous?&quot;</span>
+    <span class="p">}</span>
+<span class="p">]</span>
+</code></pre></div>
+
+<h3 id="sft">SFT 구현<a class="header-link" href="#sft" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoModelForCausalLM</span><span class="p">,</span> <span class="n">AutoTokenizer</span><span class="p">,</span> <span class="n">TrainingArguments</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">trl</span><span class="w"> </span><span class="kn">import</span> <span class="n">SFTTrainer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_dataset</span>
+
+<span class="c1"># 모델과 토크나이저</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;meta-llama/Llama-2-7b-hf&quot;</span><span class="p">)</span>
+<span class="n">tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;meta-llama/Llama-2-7b-hf&quot;</span><span class="p">)</span>
+<span class="n">tokenizer</span><span class="o">.</span><span class="n">pad_token</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">eos_token</span>
+
+<span class="c1"># 데이터셋</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">load_dataset</span><span class="p">(</span><span class="s2">&quot;databricks/databricks-dolly-15k&quot;</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">)</span>
+
+<span class="c1"># 포맷팅 함수</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">format_instruction</span><span class="p">(</span><span class="n">example</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">example</span><span class="p">[</span><span class="s2">&quot;context&quot;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;### Instruction:</span>
+<span class="si">{</span><span class="n">example</span><span class="p">[</span><span class="s1">&#39;instruction&#39;</span><span class="p">]</span><span class="si">}</span>
+
+<span class="s2">### Context:</span>
+<span class="si">{</span><span class="n">example</span><span class="p">[</span><span class="s1">&#39;context&#39;</span><span class="p">]</span><span class="si">}</span>
+
+<span class="s2">### Response:</span>
+<span class="si">{</span><span class="n">example</span><span class="p">[</span><span class="s1">&#39;response&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;&quot;&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;### Instruction:</span>
+<span class="si">{</span><span class="n">example</span><span class="p">[</span><span class="s1">&#39;instruction&#39;</span><span class="p">]</span><span class="si">}</span>
+
+<span class="s2">### Response:</span>
+<span class="si">{</span><span class="n">example</span><span class="p">[</span><span class="s1">&#39;response&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;&quot;&quot;</span>
+
+<span class="c1"># 학습 설정</span>
+<span class="n">training_args</span> <span class="o">=</span> <span class="n">TrainingArguments</span><span class="p">(</span>
+    <span class="n">output_dir</span><span class="o">=</span><span class="s2">&quot;./sft_model&quot;</span><span class="p">,</span>
+    <span class="n">num_train_epochs</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="n">per_device_train_batch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">gradient_accumulation_steps</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">2e-5</span><span class="p">,</span>
+    <span class="n">warmup_ratio</span><span class="o">=</span><span class="mf">0.03</span><span class="p">,</span>
+    <span class="n">logging_steps</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">save_strategy</span><span class="o">=</span><span class="s2">&quot;epoch&quot;</span><span class="p">,</span>
+    <span class="n">fp16</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># SFTTrainer</span>
+<span class="n">trainer</span> <span class="o">=</span> <span class="n">SFTTrainer</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+    <span class="n">train_dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span>
+    <span class="n">formatting_func</span><span class="o">=</span><span class="n">format_instruction</span><span class="p">,</span>
+    <span class="n">max_seq_length</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
+    <span class="n">args</span><span class="o">=</span><span class="n">training_args</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">trainer</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-rlhf">3. RLHF 파이프라인<a class="header-link" href="#3-rlhf" title="Permanent link">&para;</a></h2>
+<h3 id="_5">전체 프로세스<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌────────────────────────────────────────────────────────────────┐
+│                     RLHF 파이프라인                              │
+├────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1단계: SFT                                                     │
+│  ┌─────────────┐    지도학습    ┌─────────────┐                │
+│  │ Base Model  │ ──────────▶  │  SFT Model  │                │
+│  └─────────────┘              └─────────────┘                │
+│                                                                 │
+│  2단계: Reward Model 학습                                       │
+│  ┌─────────────┐    선호도 데이터   ┌─────────────┐            │
+│  │ SFT Model   │ ──────────────▶ │Reward Model│            │
+│  └─────────────┘                  └─────────────┘            │
+│                                                                 │
+│  3단계: PPO 강화학습                                             │
+│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐          │
+│  │  SFT Model  │ + │Reward Model│ ▶ │ RLHF Model │          │
+│  │  (Policy)   │   │  (Critic)  │   │ (Aligned)  │          │
+│  └─────────────┘   └─────────────┘   └─────────────┘          │
+│                                                                 │
+└────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_6">선호도 데이터 수집<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 선호도 데이터 형식</span>
+<span class="n">preference_data</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;prompt&quot;</span><span class="p">:</span> <span class="s2">&quot;Write a haiku about mountains.&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;chosen&quot;</span><span class="p">:</span> <span class="s2">&quot;Peaks touch morning sky</span><span class="se">\n</span><span class="s2">Silent guardians of earth</span><span class="se">\n</span><span class="s2">Mist embraces stone&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;rejected&quot;</span><span class="p">:</span> <span class="s2">&quot;Mountains are big</span><span class="se">\n</span><span class="s2">They are tall and rocky</span><span class="se">\n</span><span class="s2">I like mountains&quot;</span>
+    <span class="p">},</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;prompt&quot;</span><span class="p">:</span> <span class="s2">&quot;Explain quantum computing.&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;chosen&quot;</span><span class="p">:</span> <span class="s2">&quot;Quantum computing harnesses quantum mechanics principles...&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;rejected&quot;</span><span class="p">:</span> <span class="s2">&quot;Quantum computing is computers that use quantum stuff...&quot;</span>
+    <span class="p">}</span>
+<span class="p">]</span>
+
+<span class="c1"># HuggingFace 형식</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dataset</span>
+
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">Dataset</span><span class="o">.</span><span class="n">from_list</span><span class="p">(</span><span class="n">preference_data</span><span class="p">)</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">&quot;prompt&quot;</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="s2">&quot;prompt&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;chosen&quot;</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="s2">&quot;chosen&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;rejected&quot;</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="s2">&quot;rejected&quot;</span><span class="p">]</span>
+<span class="p">})</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-reward-model">4. Reward Model 학습<a class="header-link" href="#4-reward-model" title="Permanent link">&para;</a></h2>
+<h3 id="reward-model">Reward Model 개념<a class="header-link" href="#reward-model" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>입력: (prompt, response)
+출력: scalar reward (점수)
+
+학습 목표:
+    reward(prompt, chosen) &gt; reward(prompt, rejected)
+</code></pre></div>
+
+<h3 id="_7">구현<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoModelForSequenceClassification</span><span class="p">,</span> <span class="n">AutoTokenizer</span><span class="p">,</span> <span class="n">TrainingArguments</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">trl</span><span class="w"> </span><span class="kn">import</span> <span class="n">RewardTrainer</span>
+
+<span class="c1"># Reward Model (분류 헤드 추가)</span>
+<span class="n">reward_model</span> <span class="o">=</span> <span class="n">AutoModelForSequenceClassification</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
+    <span class="s2">&quot;meta-llama/Llama-2-7b-hf&quot;</span><span class="p">,</span>
+    <span class="n">num_labels</span><span class="o">=</span><span class="mi">1</span>  <span class="c1"># 스칼라 출력</span>
+<span class="p">)</span>
+<span class="n">tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;meta-llama/Llama-2-7b-hf&quot;</span><span class="p">)</span>
+<span class="n">tokenizer</span><span class="o">.</span><span class="n">pad_token</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">eos_token</span>
+
+<span class="c1"># 데이터 전처리</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">preprocess_reward_data</span><span class="p">(</span><span class="n">examples</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;선호도 데이터를 Reward 학습용으로 변환&quot;&quot;&quot;</span>
+    <span class="n">new_examples</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;input_ids_chosen&quot;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s2">&quot;attention_mask_chosen&quot;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s2">&quot;input_ids_rejected&quot;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s2">&quot;attention_mask_rejected&quot;</span><span class="p">:</span> <span class="p">[],</span>
+    <span class="p">}</span>
+
+    <span class="k">for</span> <span class="n">prompt</span><span class="p">,</span> <span class="n">chosen</span><span class="p">,</span> <span class="n">rejected</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">examples</span><span class="p">[</span><span class="s2">&quot;prompt&quot;</span><span class="p">],</span> <span class="n">examples</span><span class="p">[</span><span class="s2">&quot;chosen&quot;</span><span class="p">],</span> <span class="n">examples</span><span class="p">[</span><span class="s2">&quot;rejected&quot;</span><span class="p">]):</span>
+        <span class="c1"># Chosen</span>
+        <span class="n">chosen_text</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;### Prompt: </span><span class="si">{</span><span class="n">prompt</span><span class="si">}</span><span class="se">\n</span><span class="s2">### Response: </span><span class="si">{</span><span class="n">chosen</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">chosen_tokenized</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">chosen_text</span><span class="p">,</span> <span class="n">truncation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">512</span><span class="p">)</span>
+        <span class="n">new_examples</span><span class="p">[</span><span class="s2">&quot;input_ids_chosen&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chosen_tokenized</span><span class="p">[</span><span class="s2">&quot;input_ids&quot;</span><span class="p">])</span>
+        <span class="n">new_examples</span><span class="p">[</span><span class="s2">&quot;attention_mask_chosen&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chosen_tokenized</span><span class="p">[</span><span class="s2">&quot;attention_mask&quot;</span><span class="p">])</span>
+
+        <span class="c1"># Rejected</span>
+        <span class="n">rejected_text</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;### Prompt: </span><span class="si">{</span><span class="n">prompt</span><span class="si">}</span><span class="se">\n</span><span class="s2">### Response: </span><span class="si">{</span><span class="n">rejected</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">rejected_tokenized</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">rejected_text</span><span class="p">,</span> <span class="n">truncation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">512</span><span class="p">)</span>
+        <span class="n">new_examples</span><span class="p">[</span><span class="s2">&quot;input_ids_rejected&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rejected_tokenized</span><span class="p">[</span><span class="s2">&quot;input_ids&quot;</span><span class="p">])</span>
+        <span class="n">new_examples</span><span class="p">[</span><span class="s2">&quot;attention_mask_rejected&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rejected_tokenized</span><span class="p">[</span><span class="s2">&quot;attention_mask&quot;</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">new_examples</span>
+
+<span class="c1"># 학습</span>
+<span class="n">training_args</span> <span class="o">=</span> <span class="n">TrainingArguments</span><span class="p">(</span>
+    <span class="n">output_dir</span><span class="o">=</span><span class="s2">&quot;./reward_model&quot;</span><span class="p">,</span>
+    <span class="n">num_train_epochs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">per_device_train_batch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">gradient_accumulation_steps</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span>
+    <span class="n">logging_steps</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">eval_strategy</span><span class="o">=</span><span class="s2">&quot;steps&quot;</span><span class="p">,</span>
+    <span class="n">eval_steps</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
+    <span class="n">save_strategy</span><span class="o">=</span><span class="s2">&quot;steps&quot;</span><span class="p">,</span>
+    <span class="n">save_steps</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
+    <span class="n">fp16</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">trainer</span> <span class="o">=</span> <span class="n">RewardTrainer</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">reward_model</span><span class="p">,</span>
+    <span class="n">args</span><span class="o">=</span><span class="n">training_args</span><span class="p">,</span>
+    <span class="n">train_dataset</span><span class="o">=</span><span class="n">train_dataset</span><span class="p">,</span>
+    <span class="n">eval_dataset</span><span class="o">=</span><span class="n">eval_dataset</span><span class="p">,</span>
+    <span class="n">tokenizer</span><span class="o">=</span><span class="n">tokenizer</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">trainer</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="reward-model_1">Reward Model 사용<a class="header-link" href="#reward-model_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_reward</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">tokenizer</span><span class="p">,</span> <span class="n">prompt</span><span class="p">,</span> <span class="n">response</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;응답에 대한 보상 점수 계산&quot;&quot;&quot;</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;### Prompt: </span><span class="si">{</span><span class="n">prompt</span><span class="si">}</span><span class="se">\n</span><span class="s2">### Response: </span><span class="si">{</span><span class="n">response</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s2">&quot;pt&quot;</span><span class="p">,</span> <span class="n">truncation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">512</span><span class="p">)</span>
+    <span class="n">inputs</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">inputs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="n">outputs</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="o">**</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">reward</span> <span class="o">=</span> <span class="n">outputs</span><span class="o">.</span><span class="n">logits</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">reward</span>
+
+<span class="c1"># 사용 예시</span>
+<span class="n">prompt</span> <span class="o">=</span> <span class="s2">&quot;Explain photosynthesis.&quot;</span>
+<span class="n">response_good</span> <span class="o">=</span> <span class="s2">&quot;Photosynthesis is the process by which plants convert sunlight...&quot;</span>
+<span class="n">response_bad</span> <span class="o">=</span> <span class="s2">&quot;Plants eat light.&quot;</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Good response reward: </span><span class="si">{</span><span class="n">get_reward</span><span class="p">(</span><span class="n">reward_model</span><span class="p">,</span><span class="w"> </span><span class="n">tokenizer</span><span class="p">,</span><span class="w"> </span><span class="n">prompt</span><span class="p">,</span><span class="w"> </span><span class="n">response_good</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Bad response reward: </span><span class="si">{</span><span class="n">get_reward</span><span class="p">(</span><span class="n">reward_model</span><span class="p">,</span><span class="w"> </span><span class="n">tokenizer</span><span class="p">,</span><span class="w"> </span><span class="n">prompt</span><span class="p">,</span><span class="w"> </span><span class="n">response_bad</span><span class="p">)</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-ppo-proximal-policy-optimization">5. PPO (Proximal Policy Optimization)<a class="header-link" href="#5-ppo-proximal-policy-optimization" title="Permanent link">&para;</a></h2>
+<h3 id="ppo">PPO 개념<a class="header-link" href="#ppo" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>PPO 목표함수:
+    L^CLIP(θ) = E[min(r_t(θ)A_t, clip(r_t(θ), 1-ε, 1+ε)A_t)]
+
+여기서:
+    r_t(θ) = π_θ(a_t|s_t) / π_θ_old(a_t|s_t)  (확률 비율)
+    A_t = 어드밴티지 (Reward - Baseline)
+    ε = 클리핑 범위 (보통 0.2)
+
+KL 제약:
+    D_KL[π_θ || π_ref] &lt; δ  (기준 모델과 너무 멀어지지 않도록)
+</code></pre></div>
+
+<h3 id="ppo-trl">PPO 구현 (TRL)<a class="header-link" href="#ppo-trl" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">trl</span><span class="w"> </span><span class="kn">import</span> <span class="n">PPOConfig</span><span class="p">,</span> <span class="n">PPOTrainer</span><span class="p">,</span> <span class="n">AutoModelForCausalLMWithValueHead</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoTokenizer</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="c1"># PPO 설정</span>
+<span class="n">ppo_config</span> <span class="o">=</span> <span class="n">PPOConfig</span><span class="p">(</span>
+    <span class="n">model_name</span><span class="o">=</span><span class="s2">&quot;./sft_model&quot;</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1.41e-5</span><span class="p">,</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>
+    <span class="n">mini_batch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">gradient_accumulation_steps</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">ppo_epochs</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">max_grad_norm</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">kl_penalty</span><span class="o">=</span><span class="s2">&quot;kl&quot;</span><span class="p">,</span>           <span class="c1"># KL 페널티 방식</span>
+    <span class="n">target_kl</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>             <span class="c1"># 목표 KL divergence</span>
+    <span class="n">init_kl_coef</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>          <span class="c1"># 초기 KL 계수</span>
+<span class="p">)</span>
+
+<span class="c1"># 모델 (Value head 포함)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLMWithValueHead</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;./sft_model&quot;</span><span class="p">)</span>
+<span class="n">ref_model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLMWithValueHead</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;./sft_model&quot;</span><span class="p">)</span>  <span class="c1"># 기준 모델 (고정)</span>
+<span class="n">tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;./sft_model&quot;</span><span class="p">)</span>
+<span class="n">tokenizer</span><span class="o">.</span><span class="n">pad_token</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">eos_token</span>
+
+<span class="c1"># Reward Model 로드</span>
+<span class="n">reward_model</span> <span class="o">=</span> <span class="n">AutoModelForSequenceClassification</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;./reward_model&quot;</span><span class="p">)</span>
+<span class="n">reward_tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;./reward_model&quot;</span><span class="p">)</span>
+
+<span class="c1"># PPO Trainer</span>
+<span class="n">ppo_trainer</span> <span class="o">=</span> <span class="n">PPOTrainer</span><span class="p">(</span>
+    <span class="n">config</span><span class="o">=</span><span class="n">ppo_config</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+    <span class="n">ref_model</span><span class="o">=</span><span class="n">ref_model</span><span class="p">,</span>
+    <span class="n">tokenizer</span><span class="o">=</span><span class="n">tokenizer</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># 학습 루프</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_reward_batch</span><span class="p">(</span><span class="n">prompts</span><span class="p">,</span> <span class="n">responses</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;배치 보상 계산&quot;&quot;&quot;</span>
+    <span class="n">rewards</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">prompt</span><span class="p">,</span> <span class="n">response</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">prompts</span><span class="p">,</span> <span class="n">responses</span><span class="p">):</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;### Prompt: </span><span class="si">{</span><span class="n">prompt</span><span class="si">}</span><span class="se">\n</span><span class="s2">### Response: </span><span class="si">{</span><span class="n">response</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="n">reward_tokenizer</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s2">&quot;pt&quot;</span><span class="p">,</span> <span class="n">truncation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">512</span><span class="p">)</span>
+        <span class="n">inputs</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">reward_model</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">inputs</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">reward</span> <span class="o">=</span> <span class="n">reward_model</span><span class="p">(</span><span class="o">**</span><span class="n">inputs</span><span class="p">)</span><span class="o">.</span><span class="n">logits</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+        <span class="n">rewards</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reward</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">rewards</span>
+
+<span class="c1"># 학습</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_dataset</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">load_dataset</span><span class="p">(</span><span class="s2">&quot;Anthropic/hh-rlhf&quot;</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ppo_config</span><span class="o">.</span><span class="n">ppo_epochs</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">dataset</span><span class="o">.</span><span class="n">iter</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="n">ppo_config</span><span class="o">.</span><span class="n">batch_size</span><span class="p">):</span>
+        <span class="c1"># 프롬프트 토큰화</span>
+        <span class="n">query_tensors</span> <span class="o">=</span> <span class="p">[</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s2">&quot;pt&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">[</span><span class="s2">&quot;prompt&quot;</span><span class="p">]]</span>
+
+        <span class="c1"># 응답 생성</span>
+        <span class="n">response_tensors</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">query</span> <span class="ow">in</span> <span class="n">query_tensors</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">ppo_trainer</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">max_new_tokens</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+            <span class="n">response_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">squeeze</span><span class="p">())</span>
+
+        <span class="c1"># 텍스트 디코딩</span>
+        <span class="n">prompts</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[</span><span class="s2">&quot;prompt&quot;</span><span class="p">]</span>
+        <span class="n">responses</span> <span class="o">=</span> <span class="p">[</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">skip_special_tokens</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">response_tensors</span><span class="p">]</span>
+
+        <span class="c1"># 보상 계산</span>
+        <span class="n">rewards</span> <span class="o">=</span> <span class="n">get_reward_batch</span><span class="p">(</span><span class="n">prompts</span><span class="p">,</span> <span class="n">responses</span><span class="p">)</span>
+
+        <span class="c1"># PPO 스텝</span>
+        <span class="n">stats</span> <span class="o">=</span> <span class="n">ppo_trainer</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">query_tensors</span><span class="p">,</span> <span class="n">response_tensors</span><span class="p">,</span> <span class="n">rewards</span><span class="p">)</span>
+
+        <span class="c1"># 로깅</span>
+        <span class="n">ppo_trainer</span><span class="o">.</span><span class="n">log_stats</span><span class="p">(</span><span class="n">stats</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">rewards</span><span class="p">)</span>
+
+<span class="c1"># 저장</span>
+<span class="n">model</span><span class="o">.</span><span class="n">save_pretrained</span><span class="p">(</span><span class="s2">&quot;./rlhf_model&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-dpo-direct-preference-optimization">6. DPO (Direct Preference Optimization)<a class="header-link" href="#6-dpo-direct-preference-optimization" title="Permanent link">&para;</a></h2>
+<h3 id="dpo">DPO 개념<a class="header-link" href="#dpo" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>DPO = RLHF without Reward Model
+
+핵심 아이디어:
+    <span class="k">-</span> Reward Model 없이 직접 선호도 데이터로 학습
+    <span class="k">-</span> Bradley-Terry 모델 기반
+    <span class="k">-</span> 더 안정적이고 간단한 학습
+
+손실 함수:
+    L_DPO = -E[log σ(β(log π_θ(y_w|x) - log π_ref(y_w|x)
+                      <span class="k">-</span> log π_θ(y_l|x) + log π_ref(y_l|x)))]
+
+여기서:
+    y_w = 선호 응답 (winner)
+    y_l = 비선호 응답 (loser)
+    β = 온도 파라미터
+</code></pre></div>
+
+<h3 id="dpo-vs-rlhf">DPO vs RLHF<a class="header-link" href="#dpo-vs-rlhf" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>항목</th>
+<th>RLHF</th>
+<th>DPO</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reward Model</td>
+<td>필요</td>
+<td>불필요</td>
+</tr>
+<tr>
+<td>학습 안정성</td>
+<td>불안정</td>
+<td>안정적</td>
+</tr>
+<tr>
+<td>하이퍼파라미터</td>
+<td>많음</td>
+<td>적음</td>
+</tr>
+<tr>
+<td>메모리</td>
+<td>높음</td>
+<td>낮음</td>
+</tr>
+<tr>
+<td>성능</td>
+<td>우수</td>
+<td>동등 이상</td>
+</tr>
+</tbody>
+</table>
+<h3 id="dpo_1">DPO 구현<a class="header-link" href="#dpo_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">trl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DPOConfig</span><span class="p">,</span> <span class="n">DPOTrainer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoModelForCausalLM</span><span class="p">,</span> <span class="n">AutoTokenizer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_dataset</span>
+
+<span class="c1"># 모델</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;./sft_model&quot;</span><span class="p">)</span>
+<span class="n">ref_model</span> <span class="o">=</span> <span class="n">AutoModelForCausalLM</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;./sft_model&quot;</span><span class="p">)</span>
+<span class="n">tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;./sft_model&quot;</span><span class="p">)</span>
+<span class="n">tokenizer</span><span class="o">.</span><span class="n">pad_token</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">eos_token</span>
+
+<span class="c1"># 데이터셋 (prompt, chosen, rejected 형식)</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">load_dataset</span><span class="p">(</span><span class="s2">&quot;Anthropic/hh-rlhf&quot;</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">)</span>
+
+<span class="c1"># DPO 설정</span>
+<span class="n">dpo_config</span> <span class="o">=</span> <span class="n">DPOConfig</span><span class="p">(</span>
+    <span class="n">beta</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>                          <span class="c1"># 온도 파라미터</span>
+    <span class="n">loss_type</span><span class="o">=</span><span class="s2">&quot;sigmoid&quot;</span><span class="p">,</span>               <span class="c1"># sigmoid 또는 hinge</span>
+    <span class="n">max_length</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span>
+    <span class="n">max_prompt_length</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">5e-7</span><span class="p">,</span>
+    <span class="n">per_device_train_batch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">gradient_accumulation_steps</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">num_train_epochs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">logging_steps</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+    <span class="n">save_strategy</span><span class="o">=</span><span class="s2">&quot;epoch&quot;</span><span class="p">,</span>
+    <span class="n">output_dir</span><span class="o">=</span><span class="s2">&quot;./dpo_model&quot;</span><span class="p">,</span>
+    <span class="n">fp16</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># DPO Trainer</span>
+<span class="n">dpo_trainer</span> <span class="o">=</span> <span class="n">DPOTrainer</span><span class="p">(</span>
+    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+    <span class="n">ref_model</span><span class="o">=</span><span class="n">ref_model</span><span class="p">,</span>
+    <span class="n">args</span><span class="o">=</span><span class="n">dpo_config</span><span class="p">,</span>
+    <span class="n">train_dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span>
+    <span class="n">tokenizer</span><span class="o">=</span><span class="n">tokenizer</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># 학습</span>
+<span class="n">dpo_trainer</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+
+<span class="c1"># 저장</span>
+<span class="n">model</span><span class="o">.</span><span class="n">save_pretrained</span><span class="p">(</span><span class="s2">&quot;./dpo_model_final&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="dpo_2">DPO 변형들<a class="header-link" href="#dpo_2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># IPO (Identity Preference Optimization)</span>
+<span class="n">dpo_config</span> <span class="o">=</span> <span class="n">DPOConfig</span><span class="p">(</span>
+    <span class="n">loss_type</span><span class="o">=</span><span class="s2">&quot;ipo&quot;</span><span class="p">,</span>
+    <span class="n">label_smoothing</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># KTO (Kahneman-Tversky Optimization)</span>
+<span class="c1"># 선호/비선호 쌍 대신 개별 평가 사용</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">trl</span><span class="w"> </span><span class="kn">import</span> <span class="n">KTOConfig</span><span class="p">,</span> <span class="n">KTOTrainer</span>
+
+<span class="n">kto_config</span> <span class="o">=</span> <span class="n">KTOConfig</span><span class="p">(</span>
+    <span class="n">beta</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">desirable_weight</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">undesirable_weight</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># ORPO (Odds Ratio Preference Optimization)</span>
+<span class="c1"># Reference model 불필요</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">trl</span><span class="w"> </span><span class="kn">import</span> <span class="n">ORPOConfig</span><span class="p">,</span> <span class="n">ORPOTrainer</span>
+
+<span class="n">orpo_config</span> <span class="o">=</span> <span class="n">ORPOConfig</span><span class="p">(</span>
+    <span class="n">beta</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+    <span class="c1"># ref_model 없이 학습</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7-constitutional-ai">7. Constitutional AI<a class="header-link" href="#7-constitutional-ai" title="Permanent link">&para;</a></h2>
+<h3 id="_8">개념<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Constitutional AI (CAI) = 원칙 기반 자기 개선
+
+단계:
+    1. 모델이 응답 생성
+    2. 헌법(원칙)에 따라 자기 비평
+    3. 비평을 바탕으로 응답 수정
+    4. 수정된 응답으로 학습
+
+원칙 예시:
+    - &quot;도움이 되어야 함&quot;
+    - &quot;해로운 내용을 포함하지 않아야 함&quot;
+    - &quot;정직해야 함&quot;
+    - &quot;개인정보를 노출하지 않아야 함&quot;
+</code></pre></div>
+
+<h3 id="cai">CAI 구현<a class="header-link" href="#cai" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAI</span>
+
+<span class="n">client</span> <span class="o">=</span> <span class="n">OpenAI</span><span class="p">()</span>
+
+<span class="c1"># 원칙 (Constitution)</span>
+<span class="n">constitution</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">1. 응답은 도움이 되어야 합니다.</span>
+<span class="s2">2. 응답은 해로운 내용을 포함하지 않아야 합니다.</span>
+<span class="s2">3. 응답은 정직하고 사실에 기반해야 합니다.</span>
+<span class="s2">4. 개인정보나 민감한 정보를 공개하지 않아야 합니다.</span>
+<span class="s2">5. 차별적이거나 편견 있는 내용을 포함하지 않아야 합니다.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_initial_response</span><span class="p">(</span><span class="n">prompt</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;초기 응답 생성&quot;&quot;&quot;</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-3.5-turbo&quot;</span><span class="p">,</span>
+        <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="n">prompt</span><span class="p">}],</span>
+        <span class="n">temperature</span><span class="o">=</span><span class="mf">0.7</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">critique_response</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">constitution</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;응답 비평&quot;&quot;&quot;</span>
+    <span class="n">critique_prompt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;다음 응답이 주어진 원칙을 잘 따르는지 평가하세요.</span>
+
+<span class="s2">원칙:</span>
+<span class="si">{</span><span class="n">constitution</span><span class="si">}</span>
+
+<span class="s2">사용자 질문: </span><span class="si">{</span><span class="n">prompt</span><span class="si">}</span>
+
+<span class="s2">응답: </span><span class="si">{</span><span class="n">response</span><span class="si">}</span>
+
+<span class="s2">각 원칙에 대해 응답이 어떻게 위반하거나 준수하는지 분석하세요.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">critique</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-3.5-turbo&quot;</span><span class="p">,</span>
+        <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="n">critique_prompt</span><span class="p">}],</span>
+        <span class="n">temperature</span><span class="o">=</span><span class="mf">0.3</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">critique</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">revise_response</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">critique</span><span class="p">,</span> <span class="n">constitution</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;응답 수정&quot;&quot;&quot;</span>
+    <span class="n">revision_prompt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;다음 비평을 바탕으로 응답을 개선하세요.</span>
+
+<span class="s2">원칙:</span>
+<span class="si">{</span><span class="n">constitution</span><span class="si">}</span>
+
+<span class="s2">사용자 질문: </span><span class="si">{</span><span class="n">prompt</span><span class="si">}</span>
+
+<span class="s2">원래 응답: </span><span class="si">{</span><span class="n">response</span><span class="si">}</span>
+
+<span class="s2">비평: </span><span class="si">{</span><span class="n">critique</span><span class="si">}</span>
+
+<span class="s2">원칙을 더 잘 준수하도록 응답을 수정하세요. 수정된 응답만 출력하세요.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">revised</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-3.5-turbo&quot;</span><span class="p">,</span>
+        <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="n">revision_prompt</span><span class="p">}],</span>
+        <span class="n">temperature</span><span class="o">=</span><span class="mf">0.3</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">revised</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">constitutional_ai_pipeline</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">constitution</span><span class="p">,</span> <span class="n">iterations</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;CAI 파이프라인&quot;&quot;&quot;</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">generate_initial_response</span><span class="p">(</span><span class="n">prompt</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;초기 응답:</span><span class="se">\n</span><span class="si">{</span><span class="n">response</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">iterations</span><span class="p">):</span>
+        <span class="n">critique</span> <span class="o">=</span> <span class="n">critique_response</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">constitution</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;비평 </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">:</span><span class="se">\n</span><span class="si">{</span><span class="n">critique</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="n">revise_response</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">critique</span><span class="p">,</span> <span class="n">constitution</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;수정된 응답 </span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">:</span><span class="se">\n</span><span class="si">{</span><span class="n">response</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">response</span>
+
+<span class="c1"># 사용</span>
+<span class="n">prompt</span> <span class="o">=</span> <span class="s2">&quot;How can I pick a lock?&quot;</span>
+<span class="n">final_response</span> <span class="o">=</span> <span class="n">constitutional_ai_pipeline</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">constitution</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="8">8. 고급 정렬 기법<a class="header-link" href="#8" title="Permanent link">&para;</a></h2>
+<h3 id="rlaif-rl-from-ai-feedback">RLAIF (RL from AI Feedback)<a class="header-link" href="#rlaif-rl-from-ai-feedback" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_ai_preference</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">response_a</span><span class="p">,</span> <span class="n">response_b</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;AI가 선호도 판단&quot;&quot;&quot;</span>
+    <span class="n">judge_prompt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;다음 두 응답 중 더 좋은 것을 선택하세요.</span>
+
+<span class="s2">질문: </span><span class="si">{</span><span class="n">prompt</span><span class="si">}</span>
+
+<span class="s2">응답 A: </span><span class="si">{</span><span class="n">response_a</span><span class="si">}</span>
+
+<span class="s2">응답 B: </span><span class="si">{</span><span class="n">response_b</span><span class="si">}</span>
+
+<span class="s2">평가 기준:</span>
+<span class="s2">- 정확성</span>
+<span class="s2">- 유용성</span>
+<span class="s2">- 명확성</span>
+<span class="s2">- 안전성</span>
+
+<span class="s2">더 좋은 응답 (A 또는 B)와 이유를 말하세요.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+        <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4&quot;</span><span class="p">,</span>
+        <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="n">judge_prompt</span><span class="p">}],</span>
+        <span class="n">temperature</span><span class="o">=</span><span class="mi">0</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">message</span><span class="o">.</span><span class="n">content</span>
+</code></pre></div>
+
+<h3 id="self-play-fine-tuning-spin">Self-Play Fine-Tuning (SPIN)<a class="header-link" href="#self-play-fine-tuning-spin" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># SPIN: 모델이 자신의 응답과 경쟁</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">spin_iteration</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;SPIN 반복&quot;&quot;&quot;</span>
+    <span class="c1"># 1. 현재 모델로 응답 생성</span>
+    <span class="n">synthetic_responses</span> <span class="o">=</span> <span class="n">generate_responses</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;prompts&quot;</span><span class="p">])</span>
+
+    <span class="c1"># 2. 실제 응답 vs 생성된 응답으로 DPO</span>
+    <span class="n">spin_dataset</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;prompt&quot;</span><span class="p">:</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;prompts&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;chosen&quot;</span><span class="p">:</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;responses&quot;</span><span class="p">],</span>      <span class="c1"># 실제 응답</span>
+        <span class="s2">&quot;rejected&quot;</span><span class="p">:</span> <span class="n">synthetic_responses</span>      <span class="c1"># 모델 생성 응답</span>
+    <span class="p">}</span>
+
+    <span class="c1"># 3. DPO 학습</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">dpo_train</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">spin_dataset</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">model</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_9">정리<a class="header-link" href="#_9" title="Permanent link">&para;</a></h2>
+<h3 id="_10">정렬 방법 비교<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>방법</th>
+<th>복잡도</th>
+<th>성능</th>
+<th>사용 시점</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SFT</td>
+<td>낮음</td>
+<td>기본</td>
+<td>항상 첫 단계</td>
+</tr>
+<tr>
+<td>RLHF (PPO)</td>
+<td>높음</td>
+<td>우수</td>
+<td>복잡한 정렬</td>
+</tr>
+<tr>
+<td>DPO</td>
+<td>중간</td>
+<td>우수</td>
+<td>간단한 정렬</td>
+</tr>
+<tr>
+<td>ORPO</td>
+<td>낮음</td>
+<td>좋음</td>
+<td>메모리 제한</td>
+</tr>
+<tr>
+<td>CAI</td>
+<td>중간</td>
+<td>안전성</td>
+<td>안전 중요</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_11">핵심 코드<a class="header-link" href="#_11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># SFT</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">trl</span><span class="w"> </span><span class="kn">import</span> <span class="n">SFTTrainer</span>
+<span class="n">trainer</span> <span class="o">=</span> <span class="n">SFTTrainer</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">train_dataset</span><span class="p">,</span> <span class="n">formatting_func</span><span class="o">=</span><span class="n">format_fn</span><span class="p">)</span>
+
+<span class="c1"># DPO</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">trl</span><span class="w"> </span><span class="kn">import</span> <span class="n">DPOTrainer</span><span class="p">,</span> <span class="n">DPOConfig</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">DPOConfig</span><span class="p">(</span><span class="n">beta</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+<span class="n">trainer</span> <span class="o">=</span> <span class="n">DPOTrainer</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">ref_model</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="n">config</span><span class="p">,</span> <span class="n">train_dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">)</span>
+
+<span class="c1"># PPO</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">trl</span><span class="w"> </span><span class="kn">import</span> <span class="n">PPOTrainer</span><span class="p">,</span> <span class="n">PPOConfig</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">PPOConfig</span><span class="p">(</span><span class="n">target_kl</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+<span class="n">trainer</span> <span class="o">=</span> <span class="n">PPOTrainer</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">ref_model</span><span class="p">,</span> <span class="n">tokenizer</span><span class="p">)</span>
+<span class="n">stats</span> <span class="o">=</span> <span class="n">trainer</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">queries</span><span class="p">,</span> <span class="n">responses</span><span class="p">,</span> <span class="n">rewards</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="_12">정렬 파이프라인<a class="header-link" href="#_12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="mf">1.</span><span class="w"> </span><span class="n">SFT</span><span class="p">:</span><span class="w"> </span><span class="n">고품질</span><span class="w"> </span><span class="n">데이터로</span><span class="w"> </span><span class="n">기본</span><span class="w"> </span><span class="n">능력</span><span class="w"> </span><span class="n">학습</span>
+<span class="mf">2.</span><span class="w"> </span><span class="n">선호도</span><span class="w"> </span><span class="n">데이터</span><span class="w"> </span><span class="n">수집</span><span class="w"> </span><span class="p">(</span><span class="n">인간</span><span class="w"> </span><span class="n">또는</span><span class="w"> </span><span class="n">AI</span><span class="p">)</span>
+<span class="mf">3.</span><span class="w"> </span><span class="n">DPO</span><span class="o">/</span><span class="n">RLHF로</span><span class="w"> </span><span class="n">선호도</span><span class="w"> </span><span class="n">학습</span>
+<span class="mf">4.</span><span class="w"> </span><span class="n">안전성</span><span class="w"> </span><span class="n">평가</span><span class="w"> </span><span class="n">및</span><span class="w"> </span><span class="n">추가</span><span class="w"> </span><span class="n">정렬</span>
+<span class="mf">5.</span><span class="w"> </span><span class="n">배포</span><span class="w"> </span><span class="n">및</span><span class="w"> </span><span class="n">피드백</span><span class="w"> </span><span class="n">수집</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_13">다음 단계<a class="header-link" href="#_13" title="Permanent link">&para;</a></h2>
+<p><a href="./15_LLM_Agents.md">15_LLM_Agents.md</a>에서 도구 사용과 에이전트 시스템을 학습합니다.</p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/LLM_and_NLP/13_Model_Quantization.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">13. 모델 양자화 (Model Quantization)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/LLM_and_NLP/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/LLM_and_NLP/15_LLM_Agents.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">15. LLM 에이전트 (LLM Agents)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

@@ -1,0 +1,1393 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>동시성 및 병렬성(Concurrency & Parallelism) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Programming/">Programming</a>
+    <span class="separator">/</span>
+    <span class="current">동시성 및 병렬성(Concurrency & Parallelism)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>동시성 및 병렬성(Concurrency & Parallelism)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Programming/11_Debugging_and_Profiling.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">디버깅 및 프로파일링(Debugging & Profiling)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Programming/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Programming/13_API_Design.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">API 설계 원칙</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">소개</a></li>
+<li><a href="#vs">동시성 vs 병렬성</a><ul>
+<li><a href="#concurrency">동시성(Concurrency): 여러 일을 한 번에 다루기</a></li>
+<li><a href="#parallelism">병렬성(Parallelism): 여러 일을 동시에 하기</a></li>
+<li><a href="#rob-pike">Rob Pike: "동시성은 병렬성이 아니다"</a></li>
+</ul>
+</li>
+<li><a href="#_2">왜 동시성인가?</a><ul>
+<li><a href="#1-ui">1. 반응형 UI</a></li>
+<li><a href="#2-io">2. 효율적인 I/O</a></li>
+<li><a href="#3-cpu">3. 멀티 코어 CPU 활용</a></li>
+</ul>
+</li>
+<li><a href="#vs_1">프로세스 vs 스레드</a><ul>
+<li><a href="#process">프로세스(Process)</a></li>
+<li><a href="#thread">스레드(Thread)</a></li>
+<li><a href="#_3">그린 스레드 / 고루틴 / 가상 스레드</a></li>
+</ul>
+</li>
+<li><a href="#_4">스레드 기반 동시성</a><ul>
+<li><a href="#_5">공유 상태 문제</a></li>
+<li><a href="#_6">동기화: 뮤텍스/락</a></li>
+<li><a href="#semaphores">세마포어(Semaphores)</a></li>
+<li><a href="#deadlock">교착 상태(Deadlock)</a></li>
+<li><a href="#-producer-consumer-problem">생산자-소비자 문제(Producer-Consumer Problem)</a></li>
+<li><a href="#-reader-writer-problem">리더-라이터 문제(Reader-Writer Problem)</a></li>
+</ul>
+</li>
+<li><a href="#asyncawait">Async/Await 패턴</a><ul>
+<li><a href="#event-loop">이벤트 루프(Event Loop): 단일 스레드 동시성</a></li>
+<li><a href="#promisesfutures">프라미스/퓨처(Promises/Futures): 미래 값 표현</a></li>
+<li><a href="#asyncawait_1">Async/Await 구문</a></li>
+<li><a href="#async-vs">Async vs 스레드 언제 사용할까</a></li>
+</ul>
+</li>
+<li><a href="#message-passing">메시지 전달(Message Passing)</a><ul>
+<li><a href="#channels-go-rust">채널(Channels) (Go, Rust)</a></li>
+<li><a href="#actor-model-erlang-akka">액터 모델(Actor Model) (Erlang, Akka)</a></li>
+<li><a href="#csp-communicating-sequential-processes">CSP (통신 순차 프로세스, Communicating Sequential Processes)</a></li>
+</ul>
+</li>
+<li><a href="#parallel-patterns">병렬 패턴(Parallel Patterns)</a><ul>
+<li><a href="#-map-reduce">맵-리듀스(Map-Reduce)</a></li>
+<li><a href="#-fork-join">포크-조인(Fork-Join)</a></li>
+<li><a href="#pipeline">파이프라인(Pipeline)</a></li>
+<li><a href="#thread-pool-worker-pool">스레드 풀 / 워커 풀(Thread Pool / Worker Pool)</a></li>
+</ul>
+</li>
+<li><a href="#_7">일반적인 함정</a><ul>
+<li><a href="#1-check-then-act">1. 경쟁 조건 (확인-그다음-행동, Check-Then-Act)</a></li>
+<li><a href="#2-deadlock">2. 교착 상태(Deadlock)</a></li>
+<li><a href="#3-livelock">3. 라이브락(Livelock)</a></li>
+<li><a href="#4-starvation">4. 기아(Starvation)</a></li>
+<li><a href="#5-false-sharing">5. 거짓 공유(False Sharing) (캐시 라인)</a></li>
+</ul>
+</li>
+<li><a href="#immutability">동시성 전략으로서의 불변성(Immutability)</a></li>
+<li><a href="#lock-free-data-structures">락 프리 데이터 구조(Lock-Free Data Structures)</a></li>
+<li><a href="#_8">요약</a></li>
+<li><a href="#_9">연습 문제</a><ul>
+<li><a href="#1">연습 문제 1: 경쟁 조건 식별</a></li>
+<li><a href="#2-">연습 문제 2: 생산자-소비자 구현</a></li>
+<li><a href="#3-io-asyncawait">연습 문제 3: I/O용 Async/Await</a></li>
+<li><a href="#4-map-reduce">연습 문제 4: 병렬 Map-Reduce</a></li>
+<li><a href="#5">연습 문제 5: 교착 상태 시나리오</a></li>
+</ul>
+</li>
+<li><a href="#_10">내비게이션</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="concurrency-parallelism">동시성 및 병렬성(Concurrency &amp; Parallelism)<a class="header-link" href="#concurrency-parallelism" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>주제</strong>: Programming
+<strong>레슨</strong>: 16 중 12
+<strong>선수 지식</strong>: 함수와 메서드, 에러 처리, 디버깅 및 프로파일링
+<strong>목표</strong>: 동시성과 병렬성의 차이를 이해하고, 스레드와 async/await, 메시지 전달을 마스터하며, 병렬 패턴을 배우고, 경쟁 조건과 교착 상태 같은 일반적인 함정을 피합니다.</p>
+</blockquote>
+<hr />
+<h2 id="_1">소개<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<p>현대 애플리케이션은 많은 작업을 동시에 처리해야 합니다: 반응형 사용자 인터페이스, 네트워크 I/O, 데이터베이스 쿼리, 백그라운드 처리. 동시성과 병렬성은 이러한 시스템을 구축하는 필수 도구입니다.</p>
+<p>그러나 동시 프로그래밍은 악명 높게 어렵습니다. 경쟁 조건, 교착 상태, 데이터 손상은 일반적인 함정입니다. 이 레슨은 올바른 동시 코드를 작성하는 데 도움이 되는 정신 모델, 패턴, 실용적인 기법을 제공합니다.</p>
+<hr />
+<h2 id="vs">동시성 vs 병렬성<a class="header-link" href="#vs" title="Permanent link">&para;</a></h2>
+<p>이 용어들은 종종 혼동되지만, 다른 개념을 나타냅니다:</p>
+<h3 id="concurrency">동시성(Concurrency): 여러 일을 한 번에 다루기<a class="header-link" href="#concurrency" title="Permanent link">&para;</a></h3>
+<p><strong>동시성은 구조에 관한 것</strong> – 프로그램을 여러 작업을 처리하도록 조직하는 방법.</p>
+<p><strong>예제:</strong> 한 명의 셰프(하나의 CPU 코어)가 여러 요리를 준비:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">Chef</span><span class="w"> </span><span class="nv">switches</span><span class="w"> </span><span class="nv">between</span><span class="w"> </span><span class="nv">tasks</span>:
+<span class="mi">1</span>.<span class="w"> </span><span class="nv">Chop</span><span class="w"> </span><span class="nv">vegetables</span><span class="w"> </span><span class="ss">(</span><span class="k">pause</span><span class="w"> </span><span class="nv">to</span><span class="w"> </span><span class="nv">let</span><span class="w"> </span><span class="nv">water</span><span class="w"> </span><span class="nv">boil</span><span class="ss">)</span>
+<span class="mi">2</span>.<span class="w"> </span><span class="nv">Stir</span><span class="w"> </span><span class="nv">sauce</span><span class="w"> </span><span class="ss">(</span><span class="k">pause</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="nv">pasta</span><span class="w"> </span><span class="nv">cooks</span><span class="ss">)</span>
+<span class="mi">3</span>.<span class="w"> </span><span class="nv">Plate</span><span class="w"> </span><span class="nv">first</span><span class="w"> </span><span class="nv">dish</span><span class="w"> </span><span class="ss">(</span><span class="k">pause</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="nv">second</span><span class="w"> </span><span class="nv">dish</span><span class="w"> </span><span class="nv">cooks</span><span class="ss">)</span>
+
+<span class="nv">One</span><span class="w"> </span><span class="nv">chef</span>,<span class="w"> </span><span class="nv">many</span><span class="w"> </span><span class="nv">tasks</span>,<span class="w"> </span><span class="nv">context</span><span class="w"> </span><span class="nv">switching</span><span class="w"> </span><span class="nv">between</span><span class="w"> </span><span class="nv">them</span>
+</code></pre></div>
+
+<p><strong>코드에서:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Concurrent: Single thread handles multiple tasks by switching</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">make_coffee</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Grinding beans...&quot;</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># Wait for grinding (yield control)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Brewing...&quot;</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>  <span class="c1"># Wait for brewing (yield control)</span>
+    <span class="k">return</span> <span class="s2">&quot;Coffee ready&quot;</span>
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">make_toast</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Toasting bread...&quot;</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>  <span class="c1"># Wait for toasting (yield control)</span>
+    <span class="k">return</span> <span class="s2">&quot;Toast ready&quot;</span>
+
+<span class="c1"># Run concurrently: single thread switches between tasks during waits</span>
+<span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">make_coffee</span><span class="p">(),</span> <span class="n">make_toast</span><span class="p">())</span>
+</code></pre></div>
+
+<h3 id="parallelism">병렬성(Parallelism): 여러 일을 동시에 하기<a class="header-link" href="#parallelism" title="Permanent link">&para;</a></h3>
+<p><strong>병렬성은 실행에 관한 것</strong> – 여러 CPU 코어에서 실제로 여러 계산을 동시에 실행.</p>
+<p><strong>예제:</strong> 여러 셰프(여러 CPU 코어)가 동시에 요리를 준비:</p>
+<div class="highlight"><pre><span></span><code>Chef 1: Chops vegetables
+Chef 2: Stirs sauce          } All at the same time
+Chef 3: Plates dishes
+</code></pre></div>
+
+<p><strong>코드에서:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Parallel: Multiple processes run on multiple CPU cores</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">multiprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pool</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">expensive_computation</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">))</span>
+
+<span class="c1"># Run in parallel: multiple CPU cores work simultaneously</span>
+<span class="k">with</span> <span class="n">Pool</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">expensive_computation</span><span class="p">,</span> <span class="p">[</span><span class="mi">10</span><span class="o">**</span><span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="o">**</span><span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="o">**</span><span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="o">**</span><span class="mi">7</span><span class="p">])</span>
+</code></pre></div>
+
+<h3 id="rob-pike">Rob Pike: "동시성은 병렬성이 아니다"<a class="header-link" href="#rob-pike" title="Permanent link">&para;</a></h3>
+<p><a href="https://go.dev/blog/waza-talk">Rob Pike의 유명한 강연</a>은 설명합니다:
+- <strong>동시성(Concurrency):</strong> 프로그램을 구조화하는 방법 (설계)
+- <strong>병렬성(Parallelism):</strong> 동시 실행 (런타임)</p>
+<p>다음을 가질 수 있습니다:
+- <strong>병렬성 없는 동시성:</strong> 단일 코어, 컨텍스트 스위칭
+- <strong>동시성 없는 병렬성:</strong> SIMD 연산 (같은 명령, 여러 데이터)
+- <strong>둘 다:</strong> 멀티 코어 CPU에서의 멀티 스레드 프로그램</p>
+<hr />
+<h2 id="_2">왜 동시성인가?<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<h3 id="1-ui">1. 반응형 UI<a class="header-link" href="#1-ui" title="Permanent link">&para;</a></h3>
+<p>동시성 없이는 장시간 실행 작업이 UI를 멈추게 합니다:</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// BAD: Blocks UI thread</span>
+<span class="nx">button</span><span class="p">.</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s1">&#39;click&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">expensiveComputation</span><span class="p">();</span><span class="w">  </span><span class="c1">// UI freezes!</span>
+<span class="w">    </span><span class="nx">displayResult</span><span class="p">(</span><span class="nx">result</span><span class="p">);</span>
+<span class="p">});</span>
+
+<span class="c1">// GOOD: Offload to background</span>
+<span class="nx">button</span><span class="p">.</span><span class="nx">addEventListener</span><span class="p">(</span><span class="s1">&#39;click&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">runInBackground</span><span class="p">(</span><span class="nx">expensiveComputation</span><span class="p">);</span><span class="w">  </span><span class="c1">// UI stays responsive</span>
+<span class="w">    </span><span class="nx">displayResult</span><span class="p">(</span><span class="nx">result</span><span class="p">);</span>
+<span class="p">});</span>
+</code></pre></div>
+
+<h3 id="2-io">2. 효율적인 I/O<a class="header-link" href="#2-io" title="Permanent link">&para;</a></h3>
+<p>I/O(네트워크, 디스크, 데이터베이스)를 기다리는 동안 CPU는 다른 작업을 할 수 있습니다:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Sequential: Waits for each request (slow)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_all</span><span class="p">(</span><span class="n">urls</span><span class="p">):</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">urls</span><span class="p">:</span>
+        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fetch</span><span class="p">(</span><span class="n">url</span><span class="p">))</span>  <span class="c1"># Wait for response</span>
+    <span class="k">return</span> <span class="n">results</span>
+<span class="c1"># Total time: sum of all requests</span>
+
+<span class="c1"># Concurrent: Overlaps I/O waits (fast)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">fetch_all</span><span class="p">(</span><span class="n">urls</span><span class="p">):</span>
+    <span class="n">tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">fetch</span><span class="p">(</span><span class="n">url</span><span class="p">)</span> <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">urls</span><span class="p">]</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="o">*</span><span class="n">tasks</span><span class="p">)</span>  <span class="c1"># All requests in parallel</span>
+<span class="c1"># Total time: max of all requests (not sum!)</span>
+</code></pre></div>
+
+<h3 id="3-cpu">3. 멀티 코어 CPU 활용<a class="header-link" href="#3-cpu" title="Permanent link">&para;</a></h3>
+<p>현대 CPU는 여러 코어를 가지고 있습니다. 순차 코드는 하나의 코어만 사용합니다:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Uses 1 core</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">process_data</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">expensive_function</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">data</span><span class="p">]</span>
+
+<span class="c1"># Uses all cores</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">multiprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pool</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">process_data_parallel</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">Pool</span><span class="p">()</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">expensive_function</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="vs_1">프로세스 vs 스레드<a class="header-link" href="#vs_1" title="Permanent link">&para;</a></h2>
+<h3 id="process">프로세스(Process)<a class="header-link" href="#process" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>독립적인 메모리 공간</strong>: 각 프로세스는 자체 메모리를 가짐</li>
+<li><strong>더 무거움</strong>: 생성/파괴 비용이 높음</li>
+<li><strong>더 안전함</strong>: 한 프로세스의 충돌이 다른 프로세스에 영향을 주지 않음</li>
+<li><strong>통신</strong>: IPC(파이프, 소켓, 공유 메모리) 사용해야 함</li>
+</ul>
+<p><strong>예제: Python multiprocessing</strong></p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">multiprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Process</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">worker</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Worker </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> starting&quot;</span><span class="p">)</span>
+    <span class="c1"># Do work</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Worker </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> done&quot;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">p1</span> <span class="o">=</span> <span class="n">Process</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">worker</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;A&quot;</span><span class="p">,))</span>
+    <span class="n">p2</span> <span class="o">=</span> <span class="n">Process</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">worker</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;B&quot;</span><span class="p">,))</span>
+
+    <span class="n">p1</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">p2</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+    <span class="n">p1</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>  <span class="c1"># Wait for completion</span>
+    <span class="n">p2</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="thread">스레드(Thread)<a class="header-link" href="#thread" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>공유 메모리 공간</strong>: 모든 스레드가 같은 메모리를 봄</li>
+<li><strong>더 가벼움</strong>: 생성/파괴 비용이 낮음</li>
+<li><strong>위험함</strong>: 공유 상태는 동기화가 필요</li>
+<li><strong>통신</strong>: 직접 메모리 접근 (하지만 락이 필요)</li>
+</ul>
+<p><strong>예제: Python threading</strong></p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">threading</span><span class="w"> </span><span class="kn">import</span> <span class="n">Thread</span>
+
+<span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># Shared between threads!</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">worker</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="k">global</span> <span class="n">counter</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Worker </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> starting&quot;</span><span class="p">)</span>
+    <span class="c1"># Do work</span>
+    <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>  <span class="c1"># DANGER: Race condition!</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Worker </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> done&quot;</span><span class="p">)</span>
+
+<span class="n">t1</span> <span class="o">=</span> <span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">worker</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;A&quot;</span><span class="p">,))</span>
+<span class="n">t2</span> <span class="o">=</span> <span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">worker</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;B&quot;</span><span class="p">,))</span>
+
+<span class="n">t1</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="n">t2</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+<span class="n">t1</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+<span class="n">t2</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Counter: </span><span class="si">{</span><span class="n">counter</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># May be 1 instead of 2!</span>
+</code></pre></div>
+
+<p><strong>Java 스레드:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="kd">class</span> <span class="nc">Worker</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">Thread</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">name</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">Worker</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">name</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="nd">@Override</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">run</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;Worker &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&quot; starting&quot;</span><span class="p">);</span>
+<span class="w">        </span><span class="c1">// Do work</span>
+<span class="w">        </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;Worker &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&quot; done&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// Usage</span>
+<span class="n">Worker</span><span class="w"> </span><span class="n">w1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Worker</span><span class="p">(</span><span class="s">&quot;A&quot;</span><span class="p">);</span>
+<span class="n">Worker</span><span class="w"> </span><span class="n">w2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Worker</span><span class="p">(</span><span class="s">&quot;B&quot;</span><span class="p">);</span>
+<span class="n">w1</span><span class="p">.</span><span class="na">start</span><span class="p">();</span>
+<span class="n">w2</span><span class="p">.</span><span class="na">start</span><span class="p">();</span>
+<span class="n">w1</span><span class="p">.</span><span class="na">join</span><span class="p">();</span>
+<span class="n">w2</span><span class="p">.</span><span class="na">join</span><span class="p">();</span>
+</code></pre></div>
+
+<p><strong>C++ 스레드 (C++11):</strong></p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;iostream&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;thread&gt;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">worker</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Worker &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot; starting</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// Do work</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Worker &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot; done</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="w"> </span><span class="n">t1</span><span class="p">(</span><span class="n">worker</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;A&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="kr">thread</span><span class="w"> </span><span class="n">t2</span><span class="p">(</span><span class="n">worker</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;B&quot;</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">t1</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
+<span class="w">    </span><span class="n">t2</span><span class="p">.</span><span class="n">join</span><span class="p">();</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="_3">그린 스레드 / 고루틴 / 가상 스레드<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<p>일부 언어는 OS가 아닌 런타임이 스케줄하는 경량 스레드를 제공합니다:</p>
+<ul>
+<li><strong>Go:</strong> 고루틴(Goroutines) (몇 개의 OS 스레드에서 수천 개의 고루틴)</li>
+<li><strong>Erlang:</strong> 프로세스(Processes) (수백만 개의 경량 프로세스)</li>
+<li><strong>Java 21+:</strong> 가상 스레드(Virtual threads) (경량 스레드)</li>
+</ul>
+<p><strong>Go 예제:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">main</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="s">&quot;fmt&quot;</span>
+<span class="w">    </span><span class="s">&quot;time&quot;</span>
+<span class="p">)</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">worker</span><span class="p">(</span><span class="nx">name</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;Worker %s starting\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">name</span><span class="p">)</span>
+<span class="w">    </span><span class="nx">time</span><span class="p">.</span><span class="nx">Sleep</span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+<span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;Worker %s done\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">name</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">go</span><span class="w"> </span><span class="nx">worker</span><span class="p">(</span><span class="s">&quot;A&quot;</span><span class="p">)</span><span class="w">  </span><span class="c1">// Launch goroutine</span>
+<span class="w">    </span><span class="k">go</span><span class="w"> </span><span class="nx">worker</span><span class="p">(</span><span class="s">&quot;B&quot;</span><span class="p">)</span><span class="w">  </span><span class="c1">// Launch goroutine</span>
+
+<span class="w">    </span><span class="nx">time</span><span class="p">.</span><span class="nx">Sleep</span><span class="p">(</span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span><span class="w">  </span><span class="c1">// Wait for goroutines</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_4">스레드 기반 동시성<a class="header-link" href="#_4" title="Permanent link">&para;</a></h2>
+<h3 id="_5">공유 상태 문제<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<p><strong>경쟁 조건(Race condition):</strong> 여러 스레드가 동기화 없이 공유 데이터에 접근하여 예측할 수 없는 결과를 초래.</p>
+<p><strong>예제:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">increment</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">counter</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100000</span><span class="p">):</span>
+        <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>  <span class="c1"># Three operations: read, increment, write</span>
+
+<span class="c1"># Run two threads</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">threading</span><span class="w"> </span><span class="kn">import</span> <span class="n">Thread</span>
+<span class="n">t1</span> <span class="o">=</span> <span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">increment</span><span class="p">)</span>
+<span class="n">t2</span> <span class="o">=</span> <span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">increment</span><span class="p">)</span>
+<span class="n">t1</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="n">t2</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="n">t1</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+<span class="n">t2</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Counter: </span><span class="si">{</span><span class="n">counter</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># Expected: 200000, Actual: varies (e.g., 153421)</span>
+</code></pre></div>
+
+<p><strong>왜?</strong></p>
+<div class="highlight"><pre><span></span><code>Thread 1: read counter (0)
+Thread 2: read counter (0)
+Thread 1: increment (0 + 1 = 1)
+Thread 2: increment (0 + 1 = 1)
+Thread 1: write counter (1)
+Thread 2: write counter (1)  # Overwrites Thread 1&#39;s write!
+# Both increments happened, but counter is only 1
+</code></pre></div>
+
+<h3 id="_6">동기화: 뮤텍스/락<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<p><strong>뮤텍스(Mutex, Mutual Exclusion):</strong> 한 번에 한 스레드만 락을 보유할 수 있음.</p>
+<p><strong>Python:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">threading</span><span class="w"> </span><span class="kn">import</span> <span class="n">Thread</span><span class="p">,</span> <span class="n">Lock</span>
+
+<span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">lock</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">increment</span><span class="p">():</span>
+    <span class="k">global</span> <span class="n">counter</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100000</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">lock</span><span class="p">:</span>  <span class="c1"># Acquire lock</span>
+            <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="c1"># Lock released</span>
+
+<span class="n">t1</span> <span class="o">=</span> <span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">increment</span><span class="p">)</span>
+<span class="n">t2</span> <span class="o">=</span> <span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">increment</span><span class="p">)</span>
+<span class="n">t1</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="n">t2</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="n">t1</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+<span class="n">t2</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Counter: </span><span class="si">{</span><span class="n">counter</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># Always 200000</span>
+</code></pre></div>
+
+<p><strong>Java:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="kd">class</span> <span class="nc">Counter</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">Object</span><span class="w"> </span><span class="n">lock</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Object</span><span class="p">();</span>
+
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">increment</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kd">synchronized</span><span class="p">(</span><span class="n">lock</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">  </span><span class="c1">// Acquire lock</span>
+<span class="w">            </span><span class="n">count</span><span class="o">++</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span><span class="w">  </span><span class="c1">// Release lock</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="nf">getCount</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kd">synchronized</span><span class="p">(</span><span class="n">lock</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">count</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>C++:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;mutex&gt;</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="w"> </span><span class="n">mtx</span><span class="p">;</span>
+<span class="kt">int</span><span class="w"> </span><span class="n">counter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">increment</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">100000</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">std</span><span class="o">::</span><span class="n">lock_guard</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">mutex</span><span class="o">&gt;</span><span class="w"> </span><span class="n">lock</span><span class="p">(</span><span class="n">mtx</span><span class="p">);</span><span class="w">  </span><span class="c1">// RAII: acquires lock</span>
+<span class="w">        </span><span class="n">counter</span><span class="o">++</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span><span class="w">  </span><span class="c1">// Lock released when lock_guard goes out of scope</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="semaphores">세마포어(Semaphores)<a class="header-link" href="#semaphores" title="Permanent link">&para;</a></h3>
+<p><strong>세마포어(Semaphore):</strong> N개의 스레드가 동시에 리소스에 접근할 수 있도록 허용.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">threading</span><span class="w"> </span><span class="kn">import</span> <span class="n">Semaphore</span>
+
+<span class="c1"># Only 3 threads can access the resource at once</span>
+<span class="n">semaphore</span> <span class="o">=</span> <span class="n">Semaphore</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">worker</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="n">semaphore</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>  <span class="c1"># Wait if 3 threads are already inside</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">: Accessing resource&quot;</span><span class="p">)</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">: Done&quot;</span><span class="p">)</span>
+    <span class="n">semaphore</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>  <span class="c1"># Allow another thread to enter</span>
+
+<span class="c1"># Launch 10 threads, but only 3 run concurrently</span>
+<span class="n">threads</span> <span class="o">=</span> <span class="p">[</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">worker</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;T</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
+<span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">threads</span><span class="p">:</span>
+    <span class="n">t</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">threads</span><span class="p">:</span>
+    <span class="n">t</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="deadlock">교착 상태(Deadlock)<a class="header-link" href="#deadlock" title="Permanent link">&para;</a></h3>
+<p><strong>교착 상태(Deadlock):</strong> 두 개 이상의 스레드가 서로를 기다리고, 아무도 진행할 수 없음.</p>
+<p><strong>예제:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="n">lock1</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
+<span class="n">lock2</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">thread1</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">lock1</span><span class="p">:</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>  <span class="c1"># Give thread2 time to acquire lock2</span>
+        <span class="k">with</span> <span class="n">lock2</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Thread 1 got both locks&quot;</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">thread2</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">lock2</span><span class="p">:</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>  <span class="c1"># Give thread1 time to acquire lock1</span>
+        <span class="k">with</span> <span class="n">lock1</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Thread 2 got both locks&quot;</span><span class="p">)</span>
+
+<span class="c1"># Deadlock!</span>
+<span class="c1"># Thread 1: holds lock1, waits for lock2</span>
+<span class="c1"># Thread 2: holds lock2, waits for lock1</span>
+<span class="c1"># Neither can proceed</span>
+</code></pre></div>
+
+<p><strong>교착 상태의 네 가지 조건 (모두 참이어야 함):</strong>
+1. <strong>상호 배제(Mutual exclusion):</strong> 리소스를 공유할 수 없음
+2. <strong>보유 및 대기(Hold and wait):</strong> 스레드가 다른 것을 기다리는 동안 리소스를 보유
+3. <strong>선점 불가(No preemption):</strong> 리소스를 강제로 빼앗을 수 없음
+4. <strong>순환 대기(Circular wait):</strong> T1이 T2를 기다리고, T2가 T1을 기다림</p>
+<p><strong>방지 전략:</strong>
+- <strong>락 순서 지정</strong>: 항상 같은 순서로 락 획득
+- <strong>타임아웃</strong>: 타임아웃과 함께 <code>try_lock</code> 사용
+- <strong>여러 락 보유 피하기</strong>: 한 번에 하나의 락만 필요하도록 재설계</p>
+<p><strong>락 순서로 수정:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">thread1</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">lock1</span><span class="p">:</span>  <span class="c1"># Acquire lock1 first</span>
+        <span class="k">with</span> <span class="n">lock2</span><span class="p">:</span>  <span class="c1"># Then lock2</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Thread 1 got both locks&quot;</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">thread2</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">lock1</span><span class="p">:</span>  <span class="c1"># Acquire lock1 first (same order!)</span>
+        <span class="k">with</span> <span class="n">lock2</span><span class="p">:</span>  <span class="c1"># Then lock2</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Thread 2 got both locks&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="-producer-consumer-problem">생산자-소비자 문제(Producer-Consumer Problem)<a class="header-link" href="#-producer-consumer-problem" title="Permanent link">&para;</a></h3>
+<p><strong>문제:</strong> 생산자는 데이터를 생성하고, 소비자는 처리합니다. 스레드 안전 큐 필요.</p>
+<p><strong>Python:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">threading</span><span class="w"> </span><span class="kn">import</span> <span class="n">Thread</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">queue</span><span class="w"> </span><span class="kn">import</span> <span class="n">Queue</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="n">queue</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">producer</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>  <span class="c1"># Thread-safe: blocks if queue is full</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> produced </span><span class="si">{</span><span class="n">item</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">consumer</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>  <span class="c1"># Thread-safe: blocks if queue is empty</span>
+        <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># Poison pill to stop</span>
+            <span class="k">break</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> consumed </span><span class="si">{</span><span class="n">item</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.2</span><span class="p">)</span>
+        <span class="n">queue</span><span class="o">.</span><span class="n">task_done</span><span class="p">()</span>
+
+<span class="c1"># Start producers and consumers</span>
+<span class="n">producers</span> <span class="o">=</span> <span class="p">[</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">producer</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;P</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)]</span>
+<span class="n">consumers</span> <span class="o">=</span> <span class="p">[</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">consumer</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;C</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)]</span>
+
+<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">producers</span><span class="p">:</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">consumers</span><span class="p">:</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+<span class="c1"># Wait for producers</span>
+<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">producers</span><span class="p">:</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+<span class="c1"># Send poison pills to stop consumers</span>
+<span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">consumers</span><span class="p">:</span>
+    <span class="n">queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+
+<span class="c1"># Wait for consumers</span>
+<span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">consumers</span><span class="p">:</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="-reader-writer-problem">리더-라이터 문제(Reader-Writer Problem)<a class="header-link" href="#-reader-writer-problem" title="Permanent link">&para;</a></h3>
+<p><strong>문제:</strong> 여러 리더가 동시에 읽을 수 있지만, 라이터는 배타적 접근이 필요.</p>
+<p><strong>Python (threading.RLock 사용):</strong></p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">threading</span><span class="w"> </span><span class="kn">import</span> <span class="n">Thread</span><span class="p">,</span> <span class="n">RLock</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ReadWriteLock</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">readers</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lock</span> <span class="o">=</span> <span class="n">RLock</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_lock</span> <span class="o">=</span> <span class="n">RLock</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">acquire_read</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">lock</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">readers</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">readers</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_lock</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>  <span class="c1"># First reader blocks writers</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">release_read</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">lock</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">readers</span> <span class="o">-=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">readers</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">write_lock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>  <span class="c1"># Last reader unblocks writers</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">acquire_write</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_lock</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">release_write</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_lock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+
+<span class="c1"># Usage</span>
+<span class="n">data</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">rw_lock</span> <span class="o">=</span> <span class="n">ReadWriteLock</span><span class="p">()</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">reader</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+    <span class="n">rw_lock</span><span class="o">.</span><span class="n">acquire_read</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> reading: </span><span class="si">{</span><span class="n">data</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+    <span class="n">rw_lock</span><span class="o">.</span><span class="n">release_read</span><span class="p">()</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">writer</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="n">rw_lock</span><span class="o">.</span><span class="n">acquire_write</span><span class="p">()</span>
+    <span class="k">global</span> <span class="n">data</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> writing: </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+    <span class="n">rw_lock</span><span class="o">.</span><span class="n">release_write</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2 id="asyncawait">Async/Await 패턴<a class="header-link" href="#asyncawait" title="Permanent link">&para;</a></h2>
+<p>Async/await는 스레드 없이 동시성을 제공합니다: 단일 스레드가 I/O 대기 중에 양보하여 여러 작업을 처리합니다.</p>
+<h3 id="event-loop">이벤트 루프(Event Loop): 단일 스레드 동시성<a class="header-link" href="#event-loop" title="Permanent link">&para;</a></h3>
+<p><strong>이벤트 루프(Event loop):</strong> 한 번에 하나의 작업을 실행하지만, 작업이 대기할 때 전환합니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Conceptual event loop</span>
+<span class="n">tasks</span> <span class="o">=</span> <span class="p">[</span><span class="n">task1</span><span class="p">(),</span> <span class="n">task2</span><span class="p">(),</span> <span class="n">task3</span><span class="p">()]</span>
+<span class="k">while</span> <span class="n">tasks</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">tasks</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">is_waiting</span><span class="p">():</span>
+            <span class="k">continue</span>  <span class="c1"># Skip this task, it&#39;s waiting for I/O</span>
+        <span class="n">task</span><span class="o">.</span><span class="n">run_until_wait</span><span class="p">()</span>  <span class="c1"># Run until it waits again</span>
+        <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">is_done</span><span class="p">():</span>
+            <span class="n">tasks</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="promisesfutures">프라미스/퓨처(Promises/Futures): 미래 값 표현<a class="header-link" href="#promisesfutures" title="Permanent link">&para;</a></h3>
+<p><strong>프라미스(Promise) (JavaScript) / 퓨처(Future) (Python):</strong> 미래에 사용 가능할 값을 나타냄.</p>
+<p><strong>상태:</strong>
+- <strong>대기 중(Pending):</strong> 아직 해결되지 않음
+- <strong>이행됨(Fulfilled):</strong> 값으로 성공적으로 해결됨
+- <strong>거부됨(Rejected):</strong> 에러로 실패함</p>
+<h3 id="asyncawait_1">Async/Await 구문<a class="header-link" href="#asyncawait_1" title="Permanent link">&para;</a></h3>
+<p><strong>Python:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">fetch_data</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Fetching </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+    <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># Simulate network I/O (yields control)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Fetched </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Data from </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">&quot;</span>
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+    <span class="c1"># Sequential: 6 seconds</span>
+    <span class="n">data1</span> <span class="o">=</span> <span class="k">await</span> <span class="n">fetch_data</span><span class="p">(</span><span class="s2">&quot;http://example.com/1&quot;</span><span class="p">)</span>
+    <span class="n">data2</span> <span class="o">=</span> <span class="k">await</span> <span class="n">fetch_data</span><span class="p">(</span><span class="s2">&quot;http://example.com/2&quot;</span><span class="p">)</span>
+    <span class="n">data3</span> <span class="o">=</span> <span class="k">await</span> <span class="n">fetch_data</span><span class="p">(</span><span class="s2">&quot;http://example.com/3&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Concurrent: 2 seconds (all run together)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span>
+        <span class="n">fetch_data</span><span class="p">(</span><span class="s2">&quot;http://example.com/1&quot;</span><span class="p">),</span>
+        <span class="n">fetch_data</span><span class="p">(</span><span class="s2">&quot;http://example.com/2&quot;</span><span class="p">),</span>
+        <span class="n">fetch_data</span><span class="p">(</span><span class="s2">&quot;http://example.com/3&quot;</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+
+<span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</code></pre></div>
+
+<p><strong>JavaScript:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">async</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">fetchData</span><span class="p">(</span><span class="nx">url</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="sb">`Fetching </span><span class="si">${</span><span class="nx">url</span><span class="si">}</span><span class="sb">...`</span><span class="p">);</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nb">Promise</span><span class="p">(</span><span class="nx">resolve</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nx">setTimeout</span><span class="p">(</span><span class="nx">resolve</span><span class="p">,</span><span class="w"> </span><span class="mf">2000</span><span class="p">));</span><span class="w">  </span><span class="c1">// Simulate delay</span>
+<span class="w">    </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="sb">`Fetched </span><span class="si">${</span><span class="nx">url</span><span class="si">}</span><span class="sb">`</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="sb">`Data from </span><span class="si">${</span><span class="nx">url</span><span class="si">}</span><span class="sb">`</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">async</span><span class="w"> </span><span class="kd">function</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Sequential: 6 seconds</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">data1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetchData</span><span class="p">(</span><span class="s1">&#39;http://example.com/1&#39;</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">data2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetchData</span><span class="p">(</span><span class="s1">&#39;http://example.com/2&#39;</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">data3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nx">fetchData</span><span class="p">(</span><span class="s1">&#39;http://example.com/3&#39;</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// Concurrent: 2 seconds</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">results</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="nb">Promise</span><span class="p">.</span><span class="nx">all</span><span class="p">([</span>
+<span class="w">        </span><span class="nx">fetchData</span><span class="p">(</span><span class="s1">&#39;http://example.com/1&#39;</span><span class="p">),</span>
+<span class="w">        </span><span class="nx">fetchData</span><span class="p">(</span><span class="s1">&#39;http://example.com/2&#39;</span><span class="p">),</span>
+<span class="w">        </span><span class="nx">fetchData</span><span class="p">(</span><span class="s1">&#39;http://example.com/3&#39;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">]);</span>
+<span class="w">    </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">results</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="nx">main</span><span class="p">();</span>
+</code></pre></div>
+
+<p><strong>Rust:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">use</span><span class="w"> </span><span class="n">tokio</span><span class="p">::</span><span class="n">time</span><span class="p">::{</span><span class="n">sleep</span><span class="p">,</span><span class="w"> </span><span class="n">Duration</span><span class="p">};</span>
+
+<span class="k">async</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">fetch_data</span><span class="p">(</span><span class="n">url</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="kt">str</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">String</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Fetching {}...&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">url</span><span class="p">);</span>
+<span class="w">    </span><span class="n">sleep</span><span class="p">(</span><span class="n">Duration</span><span class="p">::</span><span class="n">from_secs</span><span class="p">(</span><span class="mi">2</span><span class="p">)).</span><span class="k">await</span><span class="p">;</span><span class="w">  </span><span class="c1">// Yields control</span>
+<span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Fetched {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">url</span><span class="p">);</span>
+<span class="w">    </span><span class="fm">format!</span><span class="p">(</span><span class="s">&quot;Data from {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">url</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="cp">#[tokio::main]</span>
+<span class="k">async</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Concurrent</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="p">(</span><span class="n">data1</span><span class="p">,</span><span class="w"> </span><span class="n">data2</span><span class="p">,</span><span class="w"> </span><span class="n">data3</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tokio</span><span class="p">::</span><span class="n">join</span><span class="o">!</span><span class="p">(</span>
+<span class="w">        </span><span class="n">fetch_data</span><span class="p">(</span><span class="s">&quot;http://example.com/1&quot;</span><span class="p">),</span>
+<span class="w">        </span><span class="n">fetch_data</span><span class="p">(</span><span class="s">&quot;http://example.com/2&quot;</span><span class="p">),</span>
+<span class="w">        </span><span class="n">fetch_data</span><span class="p">(</span><span class="s">&quot;http://example.com/3&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+
+<span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;{}, {}, {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">data1</span><span class="p">,</span><span class="w"> </span><span class="n">data2</span><span class="p">,</span><span class="w"> </span><span class="n">data3</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>C# (.NET):</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">using</span><span class="w"> </span><span class="nn">System</span><span class="p">;</span>
+<span class="k">using</span><span class="w"> </span><span class="nn">System.Threading.Tasks</span><span class="p">;</span>
+
+<span class="k">async</span><span class="w"> </span><span class="n">Task</span><span class="o">&lt;</span><span class="kt">string</span><span class="o">&gt;</span><span class="w"> </span><span class="n">FetchData</span><span class="p">(</span><span class="kt">string</span><span class="w"> </span><span class="n">url</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Console</span><span class="p">.</span><span class="n">WriteLine</span><span class="p">(</span><span class="s">$&quot;Fetching {url}...&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">await</span><span class="w"> </span><span class="n">Task</span><span class="p">.</span><span class="n">Delay</span><span class="p">(</span><span class="mi">2000</span><span class="p">);</span><span class="w">  </span><span class="c1">// Simulate delay</span>
+<span class="w">    </span><span class="n">Console</span><span class="p">.</span><span class="n">WriteLine</span><span class="p">(</span><span class="s">$&quot;Fetched {url}&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="s">$&quot;Data from {url}&quot;</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">async</span><span class="w"> </span><span class="n">Task</span><span class="w"> </span><span class="nf">Main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Concurrent</span>
+<span class="w">    </span><span class="kt">var</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="n">Task</span><span class="p">.</span><span class="n">WhenAll</span><span class="p">(</span>
+<span class="w">        </span><span class="n">FetchData</span><span class="p">(</span><span class="s">&quot;http://example.com/1&quot;</span><span class="p">),</span>
+<span class="w">        </span><span class="n">FetchData</span><span class="p">(</span><span class="s">&quot;http://example.com/2&quot;</span><span class="p">),</span>
+<span class="w">        </span><span class="n">FetchData</span><span class="p">(</span><span class="s">&quot;http://example.com/3&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">);</span>
+
+<span class="w">    </span><span class="k">foreach</span><span class="w"> </span><span class="p">(</span><span class="kt">var</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">results</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">Console</span><span class="p">.</span><span class="n">WriteLine</span><span class="p">(</span><span class="n">result</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h3 id="async-vs">Async vs 스레드 언제 사용할까<a class="header-link" href="#async-vs" title="Permanent link">&para;</a></h3>
+<p><strong>async/await 사용 시기:</strong>
+- I/O 바운드 작업 (네트워크, 디스크, 데이터베이스)
+- 많은 동시 작업을 처리해야 할 때 (수천 개의 연결)
+- 스레드 오버헤드를 피하고 싶을 때</p>
+<p><strong>스레드 사용 시기:</strong>
+- CPU 바운드 작업 (계산 집약적)
+- 진정한 병렬성이 필요할 때
+- 스레드 기반 API와 인터페이스할 때</p>
+<p><strong>예제: I/O 바운드 (async 승리)</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Fetching 1000 URLs</span>
+<span class="c1"># Threads: 1000 threads = high memory, context-switching overhead</span>
+<span class="c1"># Async: Single thread, 1000 concurrent tasks = low overhead</span>
+</code></pre></div>
+
+<p><strong>예제: CPU 바운드 (threads/processes 승리)</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Computing 1000 expensive calculations</span>
+<span class="c1"># Async: Single core, sequential execution</span>
+<span class="c1"># Threads/processes: Multiple cores, parallel execution</span>
+</code></pre></div>
+
+<hr />
+<h2 id="message-passing">메시지 전달(Message Passing)<a class="header-link" href="#message-passing" title="Permanent link">&para;</a></h2>
+<p>메모리를 공유하는 대신 (그리고 락을 다루는 대신), 스레드/프로세스는 메시지를 보내서 통신합니다.</p>
+<h3 id="channels-go-rust">채널(Channels) (Go, Rust)<a class="header-link" href="#channels-go-rust" title="Permanent link">&para;</a></h3>
+<p><strong>Go:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nx">main</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="s">&quot;fmt&quot;</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">producer</span><span class="p">(</span><span class="nx">ch</span><span class="w"> </span><span class="kd">chan</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="o">++</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nx">ch</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nx">i</span><span class="w">  </span><span class="c1">// Send to channel</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="nb">close</span><span class="p">(</span><span class="nx">ch</span><span class="p">)</span><span class="w">  </span><span class="c1">// Signal no more data</span>
+<span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">consumer</span><span class="p">(</span><span class="nx">ch</span><span class="w"> </span><span class="kd">chan</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">value</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">ch</span><span class="w"> </span><span class="p">{</span><span class="w">  </span><span class="c1">// Receive from channel</span>
+<span class="w">        </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;Received:&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">ch</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kd">chan</span><span class="w"> </span><span class="kt">int</span><span class="p">)</span>
+<span class="w">    </span><span class="k">go</span><span class="w"> </span><span class="nx">producer</span><span class="p">(</span><span class="nx">ch</span><span class="p">)</span>
+<span class="w">    </span><span class="nx">consumer</span><span class="p">(</span><span class="nx">ch</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>Rust:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">use</span><span class="w"> </span><span class="n">std</span><span class="p">::</span><span class="n">thread</span><span class="p">;</span>
+<span class="k">use</span><span class="w"> </span><span class="n">std</span><span class="p">::</span><span class="n">sync</span><span class="p">::</span><span class="n">mpsc</span><span class="p">;</span><span class="w">  </span><span class="c1">// Multiple Producer, Single Consumer</span>
+
+<span class="k">fn</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="p">(</span><span class="n">tx</span><span class="p">,</span><span class="w"> </span><span class="n">rx</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mpsc</span><span class="p">::</span><span class="n">channel</span><span class="p">();</span>
+
+<span class="w">    </span><span class="n">thread</span><span class="p">::</span><span class="n">spawn</span><span class="p">(</span><span class="k">move</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="mi">0</span><span class="o">..</span><span class="mi">5</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">tx</span><span class="p">.</span><span class="n">send</span><span class="p">(</span><span class="n">i</span><span class="p">).</span><span class="n">unwrap</span><span class="p">();</span><span class="w">  </span><span class="c1">// Send to channel</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">});</span>
+
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="n">received</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">rx</span><span class="w"> </span><span class="p">{</span><span class="w">  </span><span class="c1">// Receive from channel</span>
+<span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Received: {}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">received</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>이점:</strong>
+- 공유 상태 없음 → 락 불필요
+- 명확한 소유권 (Rust에서 채널이 데이터를 소유)
+- 추론하기 쉬움</p>
+<h3 id="actor-model-erlang-akka">액터 모델(Actor Model) (Erlang, Akka)<a class="header-link" href="#actor-model-erlang-akka" title="Permanent link">&para;</a></h3>
+<p><strong>액터(Actor):</strong> 격리된 엔터티로:
+- 개인 상태를 가짐
+- 메시지를 통해서만 통신
+- 메시지를 순차적으로 처리</p>
+<p><strong>Erlang 예제:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c">% Define an actor</span>
+<span class="nf">counter_actor</span><span class="p">()</span><span class="w"> </span><span class="o">-&gt;</span>
+<span class="w">    </span><span class="n">counter_loop</span><span class="p">(</span><span class="mi">0</span><span class="p">).</span>
+
+<span class="nf">counter_loop</span><span class="p">(</span><span class="nv">Count</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span>
+<span class="w">    </span><span class="k">receive</span>
+<span class="w">        </span><span class="p">{</span><span class="n">increment</span><span class="p">,</span><span class="w"> </span><span class="nv">From</span><span class="p">}</span><span class="w"> </span><span class="o">-&gt;</span>
+<span class="w">            </span><span class="nv">NewCount</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">Count</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nv">From</span><span class="w"> </span><span class="o">!</span><span class="w"> </span><span class="p">{</span><span class="n">count</span><span class="p">,</span><span class="w"> </span><span class="nv">NewCount</span><span class="p">},</span>
+<span class="w">            </span><span class="n">counter_loop</span><span class="p">(</span><span class="nv">NewCount</span><span class="p">);</span>
+<span class="w">        </span><span class="p">{</span><span class="nb">get</span><span class="p">,</span><span class="w"> </span><span class="nv">From</span><span class="p">}</span><span class="w"> </span><span class="o">-&gt;</span>
+<span class="w">            </span><span class="nv">From</span><span class="w"> </span><span class="o">!</span><span class="w"> </span><span class="p">{</span><span class="n">count</span><span class="p">,</span><span class="w"> </span><span class="nv">Count</span><span class="p">},</span>
+<span class="w">            </span><span class="n">counter_loop</span><span class="p">(</span><span class="nv">Count</span><span class="p">)</span>
+<span class="w">    </span><span class="k">end</span><span class="p">.</span>
+
+<span class="c">% Start the actor</span>
+<span class="nv">Pid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">spawn</span><span class="p">(</span><span class="k">fun</span><span class="w"> </span><span class="n">counter_actor</span><span class="o">/</span><span class="mi">0</span><span class="p">),</span>
+
+<span class="c">% Send messages</span>
+<span class="nv">Pid</span><span class="w"> </span><span class="o">!</span><span class="w"> </span><span class="p">{</span><span class="n">increment</span><span class="p">,</span><span class="w"> </span><span class="n">self</span><span class="p">()},</span>
+<span class="nv">Pid</span><span class="w"> </span><span class="o">!</span><span class="w"> </span><span class="p">{</span><span class="nb">get</span><span class="p">,</span><span class="w"> </span><span class="n">self</span><span class="p">()}.</span>
+</code></pre></div>
+
+<h3 id="csp-communicating-sequential-processes">CSP (통신 순차 프로세스, Communicating Sequential Processes)<a class="header-link" href="#csp-communicating-sequential-processes" title="Permanent link">&para;</a></h3>
+<p><strong>Go의 동시성 모델:</strong> 고루틴이 채널을 통해 통신 (CSP).</p>
+<p><strong>슬로건:</strong> "메모리를 공유하여 통신하지 마라; 통신하여 메모리를 공유하라."</p>
+<hr />
+<h2 id="parallel-patterns">병렬 패턴(Parallel Patterns)<a class="header-link" href="#parallel-patterns" title="Permanent link">&para;</a></h2>
+<h3 id="-map-reduce">맵-리듀스(Map-Reduce)<a class="header-link" href="#-map-reduce" title="Permanent link">&para;</a></h3>
+<p><strong>맵(Map):</strong> 각 요소에 함수 적용 (병렬로)
+<strong>리듀스(Reduce):</strong> 결과 집계</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">multiprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pool</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">square</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">x</span> <span class="o">*</span> <span class="n">x</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">sum_squares</span><span class="p">(</span><span class="n">numbers</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">Pool</span><span class="p">()</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+        <span class="c1"># Map: square each number in parallel</span>
+        <span class="n">squared</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">square</span><span class="p">,</span> <span class="n">numbers</span><span class="p">)</span>
+
+    <span class="c1"># Reduce: sum the results</span>
+    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">squared</span><span class="p">)</span>
+
+<span class="n">numbers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1000000</span><span class="p">))</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">sum_squares</span><span class="p">(</span><span class="n">numbers</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="-fork-join">포크-조인(Fork-Join)<a class="header-link" href="#-fork-join" title="Permanent link">&para;</a></h3>
+<p><strong>포크(Fork):</strong> 작업을 하위 작업으로 분할
+<strong>실행(Execute):</strong> 하위 작업을 병렬로 실행
+<strong>조인(Join):</strong> 결과 결합</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">merge_sort_parallel</span><span class="p">(</span><span class="n">arr</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">arr</span>
+
+    <span class="n">mid</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+    <span class="n">left</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[:</span><span class="n">mid</span><span class="p">]</span>
+    <span class="n">right</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="n">mid</span><span class="p">:]</span>
+
+    <span class="c1"># Fork: Create parallel tasks</span>
+    <span class="k">with</span> <span class="n">Pool</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+        <span class="n">sorted_left</span><span class="p">,</span> <span class="n">sorted_right</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">merge_sort_parallel</span><span class="p">,</span> <span class="p">[</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">])</span>
+
+    <span class="c1"># Join: Merge results</span>
+    <span class="k">return</span> <span class="n">merge</span><span class="p">(</span><span class="n">sorted_left</span><span class="p">,</span> <span class="n">sorted_right</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="pipeline">파이프라인(Pipeline)<a class="header-link" href="#pipeline" title="Permanent link">&para;</a></h3>
+<p><strong>파이프라인(Pipeline):</strong> 데이터가 단계를 통과하며, 각 단계가 병렬로 처리.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Stage 1: Read files</span>
+<span class="c1"># Stage 2: Parse data</span>
+<span class="c1"># Stage 3: Process data</span>
+<span class="c1"># Stage 4: Write results</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">queue</span><span class="w"> </span><span class="kn">import</span> <span class="n">Queue</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">threading</span><span class="w"> </span><span class="kn">import</span> <span class="n">Thread</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">stage1_read</span><span class="p">(</span><span class="n">output_queue</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">filenames</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">read_file</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>  <span class="c1"># Signal end</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">stage2_parse</span><span class="p">(</span><span class="n">input_queue</span><span class="p">,</span> <span class="n">output_queue</span><span class="p">):</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">input_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="n">parsed</span> <span class="o">=</span> <span class="n">parse</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">parsed</span><span class="p">)</span>
+    <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">stage3_process</span><span class="p">(</span><span class="n">input_queue</span><span class="p">,</span> <span class="n">output_queue</span><span class="p">):</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">input_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="n">processed</span> <span class="o">=</span> <span class="n">process</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">processed</span><span class="p">)</span>
+    <span class="n">output_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">stage4_write</span><span class="p">(</span><span class="n">input_queue</span><span class="p">):</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">input_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="n">write_result</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+<span class="c1"># Connect stages with queues</span>
+<span class="n">q1</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">()</span>
+<span class="n">q2</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">()</span>
+<span class="n">q3</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">()</span>
+
+<span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">stage1_read</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">q1</span><span class="p">,))</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">stage2_parse</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">q1</span><span class="p">,</span> <span class="n">q2</span><span class="p">))</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">stage3_process</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">q2</span><span class="p">,</span> <span class="n">q3</span><span class="p">))</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">stage4_write</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">q3</span><span class="p">,))</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="thread-pool-worker-pool">스레드 풀 / 워커 풀(Thread Pool / Worker Pool)<a class="header-link" href="#thread-pool-worker-pool" title="Permanent link">&para;</a></h3>
+<p><strong>아이디어:</strong> 스레드를 미리 생성하고, 큐에서 작업을 할당.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures</span><span class="w"> </span><span class="kn">import</span> <span class="n">ThreadPoolExecutor</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">task</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">n</span> <span class="o">*</span> <span class="n">n</span>
+
+<span class="c1"># Create thread pool with 4 workers</span>
+<span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
+    <span class="c1"># Submit tasks</span>
+    <span class="n">futures</span> <span class="o">=</span> <span class="p">[</span><span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">task</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">)]</span>
+
+    <span class="c1"># Get results</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span> <span class="k">for</span> <span class="n">future</span> <span class="ow">in</span> <span class="n">futures</span><span class="p">]</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_7">일반적인 함정<a class="header-link" href="#_7" title="Permanent link">&para;</a></h2>
+<h3 id="1-check-then-act">1. 경쟁 조건 (확인-그다음-행동, Check-Then-Act)<a class="header-link" href="#1-check-then-act" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># BAD: Race condition</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">file_exists</span><span class="p">(</span><span class="s2">&quot;output.txt&quot;</span><span class="p">):</span>  <span class="c1"># Thread 1 checks</span>
+    <span class="c1"># Thread 2 also checks (file still doesn&#39;t exist)</span>
+    <span class="n">create_file</span><span class="p">(</span><span class="s2">&quot;output.txt&quot;</span><span class="p">)</span>  <span class="c1"># Both threads create the file!</span>
+
+<span class="c1"># GOOD: Atomic operation</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">create_file_exclusive</span><span class="p">(</span><span class="s2">&quot;output.txt&quot;</span><span class="p">)</span>  <span class="c1"># Fails if file exists</span>
+<span class="k">except</span> <span class="ne">FileExistsError</span><span class="p">:</span>
+    <span class="k">pass</span>
+</code></pre></div>
+
+<h3 id="2-deadlock">2. 교착 상태(Deadlock)<a class="header-link" href="#2-deadlock" title="Permanent link">&para;</a></h3>
+<p>(이전 섹션 참조)</p>
+<h3 id="3-livelock">3. 라이브락(Livelock)<a class="header-link" href="#3-livelock" title="Permanent link">&para;</a></h3>
+<p><strong>라이브락(Livelock):</strong> 스레드가 서로에 대응하여 상태를 계속 변경하지만, 진전이 없음.</p>
+<p><strong>예제:</strong></p>
+<div class="highlight"><pre><span></span><code>Person A and Person B meet in a narrow hallway.
+A steps left to let B pass.
+B steps right to let A pass.
+Now they&#39;re blocking each other again.
+A steps right.
+B steps left.
+Repeat forever...
+</code></pre></div>
+
+<p><strong>방지:</strong> 재시도 로직에 무작위성 추가.</p>
+<h3 id="4-starvation">4. 기아(Starvation)<a class="header-link" href="#4-starvation" title="Permanent link">&para;</a></h3>
+<p><strong>기아(Starvation):</strong> 다른 것들이 계속 우선순위를 가져가서 스레드가 실행될 기회를 절대 얻지 못함.</p>
+<p><strong>예제:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># High-priority threads keep getting the lock</span>
+<span class="c1"># Low-priority thread waits forever</span>
+</code></pre></div>
+
+<p><strong>방지:</strong> 최종 접근을 보장하는 공정한 락 사용.</p>
+<h3 id="5-false-sharing">5. 거짓 공유(False Sharing) (캐시 라인)<a class="header-link" href="#5-false-sharing" title="Permanent link">&para;</a></h3>
+<p><strong>문제:</strong> 두 스레드가 다른 변수에 접근하지만, 같은 캐시 라인에 있어 캐시 무효화 발생.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// BAD: Both on same cache line (typically 64 bytes)</span>
+<span class="k">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">counter1</span><span class="p">;</span><span class="w">  </span><span class="c1">// Thread 1 modifies</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">counter2</span><span class="p">;</span><span class="w">  </span><span class="c1">// Thread 2 modifies</span>
+<span class="p">}</span><span class="w"> </span><span class="n">shared_data</span><span class="p">;</span>
+
+<span class="c1">// Every write by Thread 1 invalidates Thread 2&#39;s cache (and vice versa)</span>
+
+<span class="c1">// GOOD: Pad to separate cache lines</span>
+<span class="k">struct</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">counter1</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">padding</span><span class="p">[</span><span class="mi">60</span><span class="p">];</span><span class="w">  </span><span class="c1">// Ensure counter2 is on different cache line</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">counter2</span><span class="p">;</span>
+<span class="p">}</span><span class="w"> </span><span class="n">shared_data</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="immutability">동시성 전략으로서의 불변성(Immutability)<a class="header-link" href="#immutability" title="Permanent link">&para;</a></h2>
+<p><strong>불변 데이터는 락 없이 스레드 간에 안전하게 공유될 수 있습니다.</strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Mutable (requires locking)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Counter</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lock</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">increment</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">lock</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+<span class="c1"># Immutable (no locking needed)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ImmutableCounter</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">count</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_count</span> <span class="o">=</span> <span class="n">count</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">increment</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ImmutableCounter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_count</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Returns new instance</span>
+
+<span class="c1"># Usage</span>
+<span class="n">counter</span> <span class="o">=</span> <span class="n">ImmutableCounter</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">counter</span> <span class="o">=</span> <span class="n">counter</span><span class="o">.</span><span class="n">increment</span><span class="p">()</span>  <span class="c1"># New object, old one unchanged</span>
+</code></pre></div>
+
+<p><strong>함수형 프로그래밍 언어</strong> (Haskell, Clojure, Erlang)는 안전한 동시성을 위해 불변성을 광범위하게 사용합니다.</p>
+<hr />
+<h2 id="lock-free-data-structures">락 프리 데이터 구조(Lock-Free Data Structures)<a class="header-link" href="#lock-free-data-structures" title="Permanent link">&para;</a></h2>
+<p><strong>락 프리(Lock-free):</strong> 락 대신 원자적 연산(비교 후 교환) 사용.</p>
+<p><strong>예제: 원자적 카운터</strong></p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">threading</span><span class="w"> </span><span class="kn">import</span> <span class="n">Thread</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">ctypes</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">AtomicCounter</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_value</span> <span class="o">=</span> <span class="n">ctypes</span><span class="o">.</span><span class="n">c_int</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">increment</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># This is conceptual; Python doesn&#39;t have true CAS</span>
+        <span class="c1"># In C++: std::atomic&lt;int&gt;</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">old_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="o">.</span><span class="n">value</span>
+            <span class="n">new_value</span> <span class="o">=</span> <span class="n">old_value</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="c1"># Compare-and-swap: update only if value hasn&#39;t changed</span>
+            <span class="k">if</span> <span class="n">compare_and_swap</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="p">,</span> <span class="n">old_value</span><span class="p">,</span> <span class="n">new_value</span><span class="p">):</span>
+                <span class="k">break</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_value</span><span class="o">.</span><span class="n">value</span>
+</code></pre></div>
+
+<p><strong>C++ atomic 예제:</strong></p>
+<div class="highlight"><pre><span></span><code><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;atomic&gt;</span>
+
+<span class="n">std</span><span class="o">::</span><span class="n">atomic</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="w"> </span><span class="n">counter</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">increment</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">counter</span><span class="p">.</span><span class="n">fetch_add</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span><span class="w">  </span><span class="c1">// Atomic increment</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<p><strong>이점:</strong>
+- 락 없음 → 교착 상태 없음
+- 낮은 경쟁 시나리오에서 더 나은 성능</p>
+<p><strong>단점:</strong>
+- 올바르게 구현하기 복잡함
+- ABA 문제 (값이 A→B→A로 변경, CAS는 변경이 없다고 생각)</p>
+<hr />
+<h2 id="_8">요약<a class="header-link" href="#_8" title="Permanent link">&para;</a></h2>
+<p><strong>핵심 원칙:</strong></p>
+<ol>
+<li><strong>동시성 ≠ 병렬성</strong> – 구조 vs 실행</li>
+<li><strong>공유 상태는 위험함</strong> – 락 또는 불변성 필요</li>
+<li><strong>락은 복잡성을 도입</strong> – 교착 상태, 순서, 성능</li>
+<li><strong>메시지 전달 &gt; 공유 메모리</strong> – 많은 경우에</li>
+<li><strong>I/O에는 async, CPU에는 threads</strong> – 올바른 도구 선택</li>
+<li><strong>불변성이 도움</strong> – 락 불필요</li>
+<li><strong>철저히 테스트</strong> – 동시성 버그는 드물고 재현하기 어려움</li>
+</ol>
+<p><strong>정신 모델:</strong>
+- <strong>스레드(Threads):</strong> 공유 메모리, 동기화 필요, 병렬로 실행 가능
+- <strong>Async/await:</strong> 단일 스레드, 협력적 멀티태스킹, I/O 바운드
+- <strong>메시지 전달(Message passing):</strong> 공유 상태 없음, 격리된 액터/프로세스</p>
+<hr />
+<h2 id="_9">연습 문제<a class="header-link" href="#_9" title="Permanent link">&para;</a></h2>
+<h3 id="1">연습 문제 1: 경쟁 조건 식별<a class="header-link" href="#1" title="Permanent link">&para;</a></h3>
+<p>경쟁 조건을 찾아 수정하세요:</p>
+<div class="highlight"><pre><span></span><code><span class="n">balance</span> <span class="o">=</span> <span class="mi">1000</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">withdraw</span><span class="p">(</span><span class="n">amount</span><span class="p">):</span>
+    <span class="k">global</span> <span class="n">balance</span>
+    <span class="k">if</span> <span class="n">balance</span> <span class="o">&gt;=</span> <span class="n">amount</span><span class="p">:</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.01</span><span class="p">)</span>  <span class="c1"># Simulate processing time</span>
+        <span class="n">balance</span> <span class="o">-=</span> <span class="n">amount</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span>
+
+<span class="c1"># Two threads withdraw simultaneously</span>
+<span class="n">t1</span> <span class="o">=</span> <span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">withdraw</span><span class="p">(</span><span class="mi">600</span><span class="p">))</span>
+<span class="n">t2</span> <span class="o">=</span> <span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">withdraw</span><span class="p">(</span><span class="mi">600</span><span class="p">))</span>
+<span class="n">t1</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="n">t2</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="n">t1</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+<span class="n">t2</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Balance: </span><span class="si">{</span><span class="n">balance</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># Should be 1000 or 400, never -200!</span>
+</code></pre></div>
+
+<h3 id="2-">연습 문제 2: 생산자-소비자 구현<a class="header-link" href="#2-" title="Permanent link">&para;</a></h3>
+<p>다음과 같은 스레드 안전 생산자-소비자 시스템을 구현하세요:
+- 3개의 생산자가 난수(1-100) 생성
+- 2개의 소비자가 합계 계산
+- 모든 숫자가 처리된 후 최종 합계 출력</p>
+<p>큐와 적절한 동기화를 사용하세요.</p>
+<h3 id="3-io-asyncawait">연습 문제 3: I/O용 Async/Await<a class="header-link" href="#3-io-asyncawait" title="Permanent link">&para;</a></h3>
+<p>이 순차 코드를 async/await를 사용하도록 다시 작성하세요:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">fetch_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">):</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># Simulate network delay</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">user_id</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;User</span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_orders</span><span class="p">(</span><span class="n">user_id</span><span class="p">):</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># Simulate network delay</span>
+    <span class="k">return</span> <span class="p">[{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;total&quot;</span><span class="p">:</span> <span class="mi">100</span><span class="p">},</span> <span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;total&quot;</span><span class="p">:</span> <span class="mi">200</span><span class="p">}]</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">get_user_with_orders</span><span class="p">(</span><span class="n">user_id</span><span class="p">):</span>
+    <span class="n">user</span> <span class="o">=</span> <span class="n">fetch_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">)</span>
+    <span class="n">orders</span> <span class="o">=</span> <span class="n">fetch_orders</span><span class="p">(</span><span class="n">user_id</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;user&quot;</span><span class="p">:</span> <span class="n">user</span><span class="p">,</span> <span class="s2">&quot;orders&quot;</span><span class="p">:</span> <span class="n">orders</span><span class="p">}</span>
+
+<span class="c1"># Takes 2 seconds (sequential)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">get_user_with_orders</span><span class="p">(</span><span class="mi">123</span><span class="p">)</span>
+</code></pre></div>
+
+<p>asyncio를 사용하여 1초에 실행되도록 최적화하세요.</p>
+<h3 id="4-map-reduce">연습 문제 4: 병렬 Map-Reduce<a class="header-link" href="#4-map-reduce" title="Permanent link">&para;</a></h3>
+<p>병렬 단어 개수 세기를 구현하세요:
+- 입력: 텍스트 파일 목록
+- 출력: 단어 빈도 사전
+- 파일을 병렬로 처리하기 위해 multiprocessing 사용</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">word_count</span><span class="p">(</span><span class="n">files</span><span class="p">):</span>
+    <span class="c1"># Map: Count words in each file (parallel)</span>
+    <span class="c1"># Reduce: Combine counts</span>
+    <span class="k">pass</span>
+</code></pre></div>
+
+<h3 id="5">연습 문제 5: 교착 상태 시나리오<a class="header-link" href="#5" title="Permanent link">&para;</a></h3>
+<p>이 코드에 잠재적 교착 상태가 있습니다. 수정하세요:</p>
+<div class="highlight"><pre><span></span><code><span class="n">lock_a</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
+<span class="n">lock_b</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">transfer_a_to_b</span><span class="p">(</span><span class="n">amount</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">lock_a</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">lock_b</span><span class="p">:</span>
+            <span class="c1"># Transfer from A to B</span>
+            <span class="k">pass</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">transfer_b_to_a</span><span class="p">(</span><span class="n">amount</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">lock_b</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">lock_a</span><span class="p">:</span>
+            <span class="c1"># Transfer from B to A</span>
+            <span class="k">pass</span>
+
+<span class="c1"># If both run simultaneously, deadlock occurs</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_10">내비게이션<a class="header-link" href="#_10" title="Permanent link">&para;</a></h2>
+<p><strong>이전 레슨</strong>: <a href="11_Debugging_and_Profiling.md">11_Debugging_and_Profiling.md</a>
+<strong>다음 레슨</strong>: <a href="13_Performance_Optimization.md">13_Performance_Optimization.md</a></p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Programming/11_Debugging_and_Profiling.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">디버깅 및 프로파일링(Debugging & Profiling)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Programming/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Programming/13_API_Design.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">API 설계 원칙</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

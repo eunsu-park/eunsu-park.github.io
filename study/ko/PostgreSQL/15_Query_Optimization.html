@@ -1,0 +1,979 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>15. PostgreSQL 쿼리 최적화 심화 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/PostgreSQL/">PostgreSQL</a>
+    <span class="separator">/</span>
+    <span class="current">15. PostgreSQL 쿼리 최적화 심화</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>15. PostgreSQL 쿼리 최적화 심화</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/PostgreSQL/14_JSON_JSONB.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">14. PostgreSQL JSON/JSONB 기능</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/PostgreSQL/16_Replication_HA.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">16. 복제와 고가용성 (Replication & High Availability)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#_2">목차</a></li>
+<li><a href="#1-explain-analyze">1. EXPLAIN ANALYZE 심화</a><ul>
+<li><a href="#11-explain">1.1 EXPLAIN 옵션</a></li>
+<li><a href="#12">1.2 실행 계획 읽기</a></li>
+<li><a href="#13">1.3 주요 지표 해석</a></li>
+<li><a href="#14">1.4 문제 식별</a></li>
+</ul>
+</li>
+<li><a href="#2">2. 쿼리 플래너</a><ul>
+<li><a href="#21">2.1 플래너 동작</a></li>
+<li><a href="#22">2.2 플래너 설정</a></li>
+<li><a href="#23-pg_hint_plan">2.3 플래너 힌트 (pg_hint_plan)</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 인덱스 전략</a><ul>
+<li><a href="#31">3.1 인덱스 타입 선택</a></li>
+<li><a href="#32">3.2 복합 인덱스</a></li>
+<li><a href="#33">3.3 부분 인덱스</a></li>
+<li><a href="#34">3.4 인덱스 관리</a></li>
+</ul>
+</li>
+<li><a href="#4">4. 조인 최적화</a><ul>
+<li><a href="#41">4.1 조인 방식 비교</a></li>
+<li><a href="#42">4.2 조인 순서 최적화</a></li>
+<li><a href="#43">4.3 조인 성능 개선</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 통계와 비용 추정</a><ul>
+<li><a href="#51">5.1 통계 수집</a></li>
+<li><a href="#52">5.2 행 수 추정</a></li>
+<li><a href="#53">5.3 비용 계산</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 고급 최적화 기법</a><ul>
+<li><a href="#61">6.1 쿼리 리팩토링</a></li>
+<li><a href="#62-materialized-view">6.2 Materialized View</a></li>
+<li><a href="#63">6.3 파티셔닝</a></li>
+<li><a href="#64">6.4 쿼리 캐싱</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 연습 문제</a><ul>
+<li><a href="#1">연습 1: 실행 계획 분석</a></li>
+<li><a href="#2_1">연습 2: 인덱스 설계</a></li>
+<li><a href="#3_1">연습 3: 조인 최적화</a></li>
+<li><a href="#4_1">연습 4: 파티셔닝 설계</a></li>
+</ul>
+</li>
+<li><a href="#_3">다음 단계</a></li>
+<li><a href="#_4">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="15-postgresql">15. PostgreSQL 쿼리 최적화 심화<a class="header-link" href="#15-postgresql" title="Permanent link">&para;</a></h1>
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>EXPLAIN ANALYZE 출력 완전 이해</li>
+<li>쿼리 플래너 동작 원리 파악</li>
+<li>인덱스 선택 전략 수립</li>
+<li>복잡한 쿼리 최적화 기법</li>
+</ul>
+<h2 id="_2">목차<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-explain-analyze-심화">EXPLAIN ANALYZE 심화</a></li>
+<li><a href="#2-쿼리-플래너">쿼리 플래너</a></li>
+<li><a href="#3-인덱스-전략">인덱스 전략</a></li>
+<li><a href="#4-조인-최적화">조인 최적화</a></li>
+<li><a href="#5-통계와-비용-추정">통계와 비용 추정</a></li>
+<li><a href="#6-고급-최적화-기법">고급 최적화 기법</a></li>
+<li><a href="#7-연습-문제">연습 문제</a></li>
+</ol>
+<hr />
+<h2 id="1-explain-analyze">1. EXPLAIN ANALYZE 심화<a class="header-link" href="#1-explain-analyze" title="Permanent link">&para;</a></h2>
+<h3 id="11-explain">1.1 EXPLAIN 옵션<a class="header-link" href="#11-explain" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 기본 실행 계획</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+
+<span class="c1">-- 실제 실행 + 시간 측정</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="k">ANALYZE</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+
+<span class="c1">-- 버퍼 정보 포함</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span><span class="w"> </span><span class="n">BUFFERS</span><span class="p">)</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+
+<span class="c1">-- 상세 출력</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span><span class="w"> </span><span class="n">BUFFERS</span><span class="p">,</span><span class="w"> </span><span class="n">FORMAT</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">)</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="p">...;</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span><span class="w"> </span><span class="n">BUFFERS</span><span class="p">,</span><span class="w"> </span><span class="n">FORMAT</span><span class="w"> </span><span class="n">JSON</span><span class="p">)</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="p">...;</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span><span class="w"> </span><span class="n">BUFFERS</span><span class="p">,</span><span class="w"> </span><span class="n">FORMAT</span><span class="w"> </span><span class="n">YAML</span><span class="p">)</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="p">...;</span>
+
+<span class="c1">-- 실행 없이 계획만 (ANALYZE 없이)</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="n">COSTS</span><span class="p">,</span><span class="w"> </span><span class="k">VERBOSE</span><span class="p">)</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+
+<span class="c1">-- 타이밍 비활성화 (오버헤드 감소)</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span><span class="w"> </span><span class="n">TIMING</span><span class="w"> </span><span class="k">OFF</span><span class="p">)</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+
+<span class="c1">-- 설정 정보 포함</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span><span class="w"> </span><span class="n">SETTINGS</span><span class="p">)</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="12">1.2 실행 계획 읽기<a class="header-link" href="#12" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">EXPLAIN</span><span class="w"> </span><span class="p">(</span><span class="k">ANALYZE</span><span class="p">,</span><span class="w"> </span><span class="n">BUFFERS</span><span class="p">)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">id</span><span class="p">)</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span>
+<span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">name</span><span class="p">;</span>
+
+<span class="cm">/*</span>
+<span class="cm">HashAggregate  (cost=1234.56..1234.78 rows=100 width=40)</span>
+<span class="cm">               (actual time=45.123..45.456 loops=1)</span>
+<span class="cm">  Group Key: u.name</span>
+<span class="cm">  Batches: 1  Memory Usage: 24kB</span>
+<span class="cm">  Buffers: shared hit=500 read=100</span>
+<span class="cm">  -&gt;  Hash Right Join  (cost=100.00..1200.00 rows=5000 width=36)</span>
+<span class="cm">                       (actual time=5.123..40.456 loops=1)</span>
+<span class="cm">        Hash Cond: (o.user_id = u.id)</span>
+<span class="cm">        Buffers: shared hit=400 read=80</span>
+<span class="cm">        -&gt;  Seq Scan on orders o  (cost=0.00..800.00 rows=30000 width=8)</span>
+<span class="cm">                                  (actual time=0.015..15.123 loops=1)</span>
+<span class="cm">              Buffers: shared hit=300 read=50</span>
+<span class="cm">        -&gt;  Hash  (cost=80.00..80.00 rows=1000 width=36)</span>
+<span class="cm">                  (actual time=3.456..3.456 loops=1)</span>
+<span class="cm">              Buckets: 1024  Batches: 1  Memory Usage: 72kB</span>
+<span class="cm">              Buffers: shared hit=100 read=30</span>
+<span class="cm">              -&gt;  Index Scan using idx_users_created on users u</span>
+<span class="cm">                  (cost=0.29..80.00 rows=1000 width=36)</span>
+<span class="cm">                  (actual time=0.030..2.345 loops=1)</span>
+<span class="cm">                    Index Cond: (created_at &gt; &#39;2024-01-01&#39;)</span>
+<span class="cm">                    Buffers: shared hit=100 read=30</span>
+<span class="cm">Planning Time: 0.456 ms</span>
+<span class="cm">Execution Time: 46.789 ms</span>
+<span class="cm">*/</span>
+</code></pre></div>
+
+<h3 id="13">1.3 주요 지표 해석<a class="header-link" href="#13" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                   실행 계획 지표 해석                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  cost=시작비용..총비용                                      │
+│  • 시작비용: 첫 행 반환까지 비용                           │
+│  • 총비용: 모든 행 반환까지 비용                           │
+│  • 단위: 추상적 비용 단위                                   │
+│                                                             │
+│  rows=예상행수                                              │
+│  • 플래너가 추정한 행 수                                    │
+│                                                             │
+│  width=행너비                                               │
+│  • 행당 평균 바이트 수                                      │
+│                                                             │
+│  actual time=시작..종료                                     │
+│  • 실제 실행 시간 (밀리초)                                  │
+│                                                             │
+│  loops=반복횟수                                             │
+│  • 노드가 실행된 횟수                                       │
+│  • 실제 시간 = time × loops                                │
+│                                                             │
+│  Buffers:                                                   │
+│  • shared hit: 캐시에서 읽은 블록                          │
+│  • shared read: 디스크에서 읽은 블록                       │
+│  • shared written: 디스크에 쓴 블록                        │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="14">1.4 문제 식별<a class="header-link" href="#14" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 문제: 예상 vs 실제 행 수 차이</span>
+<span class="c1">-- 예상: rows=100, 실제: rows=10000</span>
+<span class="c1">-- 원인: 오래된 통계, ANALYZE 필요</span>
+
+<span class="k">ANALYZE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+
+<span class="c1">-- 문제: 높은 시작 비용</span>
+<span class="c1">-- Sort, Hash 등에서 발생</span>
+<span class="c1">-- 해결: 적절한 인덱스 추가</span>
+
+<span class="c1">-- 문제: loops가 큰 Nested Loop</span>
+<span class="c1">-- 해결: JOIN 방식 변경 또는 인덱스</span>
+
+<span class="c1">-- 문제: Seq Scan on 대형 테이블</span>
+<span class="c1">-- 해결: 적절한 인덱스 추가</span>
+</code></pre></div>
+
+<hr />
+<h2 id="2">2. 쿼리 플래너<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="21">2.1 플래너 동작<a class="header-link" href="#21" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    쿼리 플래너 과정                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  SQL Query                                                  │
+│      │                                                      │
+│      ▼                                                      │
+│  ┌─────────┐                                               │
+│  │ Parser  │ → 구문 분석 → Parse Tree                      │
+│  └─────────┘                                               │
+│      │                                                      │
+│      ▼                                                      │
+│  ┌─────────┐                                               │
+│  │Analyzer │ → 의미 분석 → Query Tree                      │
+│  └─────────┘                                               │
+│      │                                                      │
+│      ▼                                                      │
+│  ┌─────────┐                                               │
+│  │Rewriter │ → 규칙 적용 (VIEW 등)                        │
+│  └─────────┘                                               │
+│      │                                                      │
+│      ▼                                                      │
+│  ┌─────────┐    ┌──────────────┐                          │
+│  │Planner  │◄───│  Statistics  │                          │
+│  └─────────┘    └──────────────┘                          │
+│      │                                                      │
+│      ▼ 최적 실행 계획 선택                                 │
+│  ┌─────────┐                                               │
+│  │Executor │ → 실행 → 결과                                │
+│  └─────────┘                                               │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="22">2.2 플래너 설정<a class="header-link" href="#22" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 플래너 설정 확인</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">seq_page_cost</span><span class="p">;</span><span class="w">      </span><span class="c1">-- 순차 페이지 읽기 비용 (기본 1.0)</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">random_page_cost</span><span class="p">;</span><span class="w">   </span><span class="c1">-- 랜덤 페이지 읽기 비용 (기본 4.0)</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">cpu_tuple_cost</span><span class="p">;</span><span class="w">     </span><span class="c1">-- 튜플 처리 비용 (기본 0.01)</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">cpu_index_tuple_cost</span><span class="p">;</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">cpu_operator_cost</span><span class="p">;</span>
+
+<span class="c1">-- SSD에서는 random_page_cost 낮춤</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">random_page_cost</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">.</span><span class="mi">1</span><span class="p">;</span>
+
+<span class="c1">-- 특정 계획 비활성화 (테스트용)</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">enable_seqscan</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">off</span><span class="p">;</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">enable_indexscan</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">off</span><span class="p">;</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">enable_bitmapscan</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">off</span><span class="p">;</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">enable_hashjoin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">off</span><span class="p">;</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">enable_mergejoin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">off</span><span class="p">;</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">enable_nestloop</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">off</span><span class="p">;</span>
+
+<span class="c1">-- 병렬 쿼리 설정</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">max_parallel_workers_per_gather</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">parallel_tuple_cost</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">.</span><span class="mi">01</span><span class="p">;</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">parallel_setup_cost</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="23-pg_hint_plan">2.3 플래너 힌트 (pg_hint_plan)<a class="header-link" href="#23-pg_hint_plan" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- pg_hint_plan 확장 설치 필요</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="n">EXTENSION</span><span class="w"> </span><span class="n">pg_hint_plan</span><span class="p">;</span>
+
+<span class="c1">-- 인덱스 힌트</span>
+<span class="cm">/*+ IndexScan(users idx_users_email) */</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;test@example.com&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 조인 순서 힌트</span>
+<span class="cm">/*+ Leading(orders users) */</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="p">;</span>
+
+<span class="c1">-- 조인 방법 힌트</span>
+<span class="cm">/*+ HashJoin(users orders) */</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="p">;</span>
+
+<span class="cm">/*+ NestLoop(users orders) */</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="p">;</span>
+
+<span class="c1">-- Seq Scan 강제</span>
+<span class="cm">/*+ SeqScan(users) */</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span>
+
+<span class="c1">-- 병렬 쿼리 비활성화</span>
+<span class="cm">/*+ Parallel(users 0) */</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3">3. 인덱스 전략<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="31">3.1 인덱스 타입 선택<a class="header-link" href="#31" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- B-tree (기본, 대부분의 경우)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_email</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">email</span><span class="p">);</span>
+
+<span class="c1">-- 적합: =, &lt;, &gt;, &lt;=, &gt;=, BETWEEN, IN, IS NULL</span>
+<span class="c1">-- LIKE &#39;abc%&#39; (앞부분 매칭)</span>
+
+<span class="c1">-- Hash (동등 비교만)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_email_hash</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">HASH</span><span class="w"> </span><span class="p">(</span><span class="n">email</span><span class="p">);</span>
+<span class="c1">-- 적합: = 만</span>
+<span class="c1">-- PostgreSQL 10+ 에서 WAL 지원</span>
+
+<span class="c1">-- GiST (기하학, 범위, 전문 검색)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_locations_point</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">locations</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIST</span><span class="w"> </span><span class="p">(</span><span class="n">point</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_events_range</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIST</span><span class="w"> </span><span class="p">(</span><span class="n">time_range</span><span class="p">);</span>
+
+<span class="c1">-- GIN (배열, JSONB, 전문 검색)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_posts_tags</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">posts</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">tags</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_products_attrs</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">attributes</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_docs_search</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">documents</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">GIN</span><span class="w"> </span><span class="p">(</span><span class="n">to_tsvector</span><span class="p">(</span><span class="s1">&#39;english&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">content</span><span class="p">));</span>
+
+<span class="c1">-- BRIN (대용량 순차 데이터)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_logs_time</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">logs</span><span class="w"> </span><span class="k">USING</span><span class="w"> </span><span class="n">BRIN</span><span class="w"> </span><span class="p">(</span><span class="n">created_at</span><span class="p">);</span>
+<span class="c1">-- 적합: 물리적으로 정렬된 데이터 (시계열 등)</span>
+<span class="c1">-- 매우 작은 크기, 대용량 테이블에 효과적</span>
+</code></pre></div>
+
+<h3 id="32">3.2 복합 인덱스<a class="header-link" href="#32" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 복합 인덱스 순서 중요!</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_orders_user_date</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">orders</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="p">);</span>
+
+<span class="c1">-- 이 쿼리는 인덱스 사용 가능:</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 이 쿼리는 인덱스 사용 불가 (첫 번째 컬럼 없음):</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 정렬 최적화</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_orders_user_date_desc</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">orders</span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="k">DESC</span><span class="p">);</span>
+
+<span class="c1">-- INCLUDE (커버링 인덱스, PostgreSQL 11+)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_orders_covering</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">orders</span><span class="p">(</span><span class="n">user_id</span><span class="p">)</span>
+<span class="n">INCLUDE</span><span class="w"> </span><span class="p">(</span><span class="n">status</span><span class="p">,</span><span class="w"> </span><span class="n">total</span><span class="p">);</span>
+<span class="c1">-- 인덱스만으로 쿼리 가능 (Index Only Scan)</span>
+</code></pre></div>
+
+<h3 id="33">3.3 부분 인덱스<a class="header-link" href="#33" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 특정 조건에만 인덱스</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_orders_pending</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">orders</span><span class="p">(</span><span class="n">created_at</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;pending&#39;</span><span class="p">;</span>
+
+<span class="c1">-- NULL 제외</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_email_notnull</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">email</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span>
+
+<span class="c1">-- 최근 데이터만</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_logs_recent</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">logs</span><span class="p">(</span><span class="k">level</span><span class="p">,</span><span class="w"> </span><span class="n">message</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 삭제되지 않은 행만</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_active_products</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">products</span><span class="p">(</span><span class="n">category_id</span><span class="p">)</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">deleted_at</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="34">3.4 인덱스 관리<a class="header-link" href="#34" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 인덱스 사용 통계</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">schemaname</span><span class="p">,</span>
+<span class="w">    </span><span class="n">relname</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">table_name</span><span class="p">,</span>
+<span class="w">    </span><span class="n">indexrelname</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">index_name</span><span class="p">,</span>
+<span class="w">    </span><span class="n">idx_scan</span><span class="p">,</span>
+<span class="w">    </span><span class="n">idx_tup_read</span><span class="p">,</span>
+<span class="w">    </span><span class="n">idx_tup_fetch</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_user_indexes</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">idx_scan</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+
+<span class="c1">-- 사용되지 않는 인덱스 찾기</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">schemaname</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;.&#39;</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">relname</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">table</span><span class="p">,</span>
+<span class="w">    </span><span class="n">indexrelname</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">index</span><span class="p">,</span>
+<span class="w">    </span><span class="n">pg_size_pretty</span><span class="p">(</span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">i</span><span class="p">.</span><span class="n">indexrelid</span><span class="p">))</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">size</span><span class="p">,</span>
+<span class="w">    </span><span class="n">idx_scan</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_user_indexes</span><span class="w"> </span><span class="n">ui</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">pg_index</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">ui</span><span class="p">.</span><span class="n">indexrelid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="p">.</span><span class="n">indexrelid</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">idx_scan</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+<span class="k">AND</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="n">indisunique</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">pg_relation_size</span><span class="p">(</span><span class="n">i</span><span class="p">.</span><span class="n">indexrelid</span><span class="p">)</span><span class="w"> </span><span class="k">DESC</span><span class="p">;</span>
+
+<span class="c1">-- 중복 인덱스 찾기</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">a</span><span class="p">.</span><span class="n">indrelid</span><span class="p">::</span><span class="n">regclass</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">table_name</span><span class="p">,</span>
+<span class="w">    </span><span class="n">a</span><span class="p">.</span><span class="n">indexrelid</span><span class="p">::</span><span class="n">regclass</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">index1</span><span class="p">,</span>
+<span class="w">    </span><span class="n">b</span><span class="p">.</span><span class="n">indexrelid</span><span class="p">::</span><span class="n">regclass</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">index2</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_index</span><span class="w"> </span><span class="n">a</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">pg_index</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">indrelid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">indrelid</span>
+<span class="k">AND</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">indexrelid</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">indexrelid</span>
+<span class="k">AND</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">indkey</span><span class="p">::</span><span class="nb">text</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="n">b</span><span class="p">.</span><span class="n">indkey</span><span class="p">::</span><span class="nb">text</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;%&#39;</span><span class="p">)</span>
+<span class="w">    </span><span class="k">OR</span><span class="w"> </span><span class="p">(</span><span class="n">b</span><span class="p">.</span><span class="n">indkey</span><span class="p">::</span><span class="nb">text</span><span class="w"> </span><span class="k">LIKE</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="n">indkey</span><span class="p">::</span><span class="nb">text</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="s1">&#39;%&#39;</span><span class="p">)</span>
+<span class="p">);</span>
+
+<span class="c1">-- 인덱스 재구성</span>
+<span class="k">REINDEX</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_email</span><span class="p">;</span>
+<span class="k">REINDEX</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+<span class="k">REINDEX</span><span class="w"> </span><span class="k">DATABASE</span><span class="w"> </span><span class="n">mydb</span><span class="w"> </span><span class="n">CONCURRENTLY</span><span class="p">;</span><span class="w">  </span><span class="c1">-- PostgreSQL 12+</span>
+
+<span class="c1">-- 동시 인덱스 생성 (락 최소화)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">CONCURRENTLY</span><span class="w"> </span><span class="n">idx_users_email</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">email</span><span class="p">);</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4">4. 조인 최적화<a class="header-link" href="#4" title="Permanent link">&para;</a></h2>
+<h3 id="41">4.1 조인 방식 비교<a class="header-link" href="#41" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                      조인 방식 비교                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Nested Loop Join                                           │
+│  ─────────────────                                          │
+│  for each row in outer:                                     │
+│      for each row in inner:                                 │
+│          if match: emit                                     │
+│                                                             │
+│  • 적합: 소규모 테이블, 인덱스 있을 때                     │
+│  • 비용: O(N × M), 인덱스 시 O(N × log M)                  │
+│                                                             │
+│  Hash Join                                                  │
+│  ─────────────────                                          │
+│  build hash table from inner                                │
+│  for each row in outer:                                     │
+│      probe hash table                                       │
+│                                                             │
+│  • 적합: 대규모 테이블, 동등 조인                          │
+│  • 비용: O(N + M)                                          │
+│  • 메모리 필요 (work_mem)                                  │
+│                                                             │
+│  Merge Join                                                 │
+│  ─────────────────                                          │
+│  sort both tables                                           │
+│  merge sorted lists                                         │
+│                                                             │
+│  • 적합: 이미 정렬된 데이터, 범위 조인                     │
+│  • 비용: O(N log N + M log M + N + M)                      │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="42">4.2 조인 순서 최적화<a class="header-link" href="#42" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 조인 순서는 성능에 큰 영향</span>
+<span class="c1">-- 플래너가 자동 최적화하지만, 테이블 많으면 제한</span>
+
+<span class="c1">-- 조인 가능한 테이블 수 제한</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">join_collapse_limit</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 기본 8</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">from_collapse_limit</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 기본 8</span>
+
+<span class="c1">-- 많은 테이블 조인 시 순서 중요</span>
+<span class="c1">-- 작은 테이블/필터링 많은 테이블 먼저</span>
+
+<span class="c1">-- 좋은 예: 필터링 먼저</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;pending&#39;</span><span class="w">  </span><span class="c1">-- 필터링</span>
+<span class="k">AND</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 조인 순서 명시 (테스트용)</span>
+<span class="k">SET</span><span class="w"> </span><span class="n">join_collapse_limit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">t1</span><span class="p">,</span><span class="w"> </span><span class="n">t2</span><span class="p">,</span><span class="w"> </span><span class="n">t3</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">t1</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">t2</span><span class="p">.</span><span class="n">t1_id</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">t2</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">t3</span><span class="p">.</span><span class="n">t2_id</span><span class="p">;</span>
+<span class="k">RESET</span><span class="w"> </span><span class="n">join_collapse_limit</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="43">4.3 조인 성능 개선<a class="header-link" href="#43" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 적절한 인덱스</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_orders_user</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">orders</span><span class="p">(</span><span class="n">user_id</span><span class="p">);</span>
+
+<span class="c1">-- 조인 컬럼 타입 일치</span>
+<span class="c1">-- 나쁨: orders.user_id (int) JOIN users.id (bigint) → 형변환</span>
+<span class="c1">-- 좋음: 같은 타입 사용</span>
+
+<span class="c1">-- 불필요한 조인 제거</span>
+<span class="c1">-- 나쁨</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="p">;</span><span class="w">  </span><span class="c1">-- users에서 아무것도 안 가져옴</span>
+
+<span class="c1">-- 좋음 (조인 제거)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="p">);</span>
+
+<span class="c1">-- 서브쿼리 → 조인 변환</span>
+<span class="c1">-- 나쁨 (상관 서브쿼리)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="p">,</span>
+<span class="w">    </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">user_name</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span><span class="p">;</span>
+
+<span class="c1">-- 좋음</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">user_name</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 통계와 비용 추정<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="51">5.1 통계 수집<a class="header-link" href="#51" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 테이블 통계 수집</span>
+<span class="k">ANALYZE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+<span class="k">ANALYZE</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 전체 데이터베이스</span>
+
+<span class="c1">-- 자동 ANALYZE 설정</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">autovacuum_analyze_threshold</span><span class="p">;</span><span class="w">     </span><span class="c1">-- 기본 50</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">autovacuum_analyze_scale_factor</span><span class="p">;</span><span class="w">  </span><span class="c1">-- 기본 0.1</span>
+
+<span class="c1">-- 특정 컬럼 통계 상세도</span>
+<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">ALTER</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="k">STATISTICS</span><span class="w"> </span><span class="mi">1000</span><span class="p">;</span>
+<span class="c1">-- 기본 100, 최대 10000</span>
+<span class="k">ANALYZE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+
+<span class="c1">-- 통계 확인</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">attname</span><span class="p">,</span>
+<span class="w">    </span><span class="n">n_distinct</span><span class="p">,</span>
+<span class="w">    </span><span class="n">most_common_vals</span><span class="p">,</span>
+<span class="w">    </span><span class="n">most_common_freqs</span><span class="p">,</span>
+<span class="w">    </span><span class="n">histogram_bounds</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_stats</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">tablename</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;users&#39;</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="52">5.2 행 수 추정<a class="header-link" href="#52" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 테이블 행 수 추정</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">reltuples</span><span class="p">::</span><span class="nb">bigint</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">estimate</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">pg_class</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">relname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;users&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 정확한 행 수 (느림)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+
+<span class="c1">-- 조건부 행 수 추정</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;active&#39;</span><span class="p">;</span>
+<span class="c1">-- rows=xxx 확인</span>
+
+<span class="c1">-- 추정 정확도 개선</span>
+<span class="c1">-- 1. ANALYZE 실행</span>
+<span class="c1">-- 2. 통계 상세도 증가</span>
+<span class="c1">-- 3. 확장 통계 (PostgreSQL 10+)</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">STATISTICS</span><span class="w"> </span><span class="n">stts_user_country_status</span><span class="w"> </span><span class="p">(</span><span class="n">dependencies</span><span class="p">)</span>
+<span class="k">ON</span><span class="w"> </span><span class="n">country</span><span class="p">,</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+<span class="k">ANALYZE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="53">5.3 비용 계산<a class="header-link" href="#53" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 비용 = (페이지 수 × 페이지 비용) + (행 수 × 행 비용)</span>
+
+<span class="c1">-- 페이지 수 확인</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">relpages</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">pg_class</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">relname</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;users&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 비용 파라미터</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">seq_page_cost</span><span class="p">;</span><span class="w">        </span><span class="c1">-- 1.0</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">random_page_cost</span><span class="p">;</span><span class="w">     </span><span class="c1">-- 4.0</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">cpu_tuple_cost</span><span class="p">;</span><span class="w">       </span><span class="c1">-- 0.01</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">cpu_index_tuple_cost</span><span class="p">;</span><span class="w"> </span><span class="c1">-- 0.005</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">cpu_operator_cost</span><span class="p">;</span><span class="w">    </span><span class="c1">-- 0.0025</span>
+
+<span class="c1">-- Seq Scan 비용 계산 예</span>
+<span class="c1">-- cost = (relpages × seq_page_cost) + (reltuples × cpu_tuple_cost)</span>
+<span class="c1">-- cost = (1000 × 1.0) + (100000 × 0.01) = 2000</span>
+
+<span class="c1">-- Index Scan 비용은 더 복잡</span>
+<span class="c1">-- 선택도(selectivity)에 따라 다름</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 고급 최적화 기법<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="61">6.1 쿼리 리팩토링<a class="header-link" href="#61" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- OR → UNION (인덱스 활용)</span>
+<span class="c1">-- 나쁨</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">category_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="n">brand_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+
+<span class="c1">-- 좋음</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">category_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span>
+<span class="k">UNION</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">brand_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span>
+
+<span class="c1">-- IN → EXISTS (대량 데이터)</span>
+<span class="c1">-- 나쁨 (서브쿼리 결과 많을 때)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">1000</span><span class="p">);</span>
+
+<span class="c1">-- 좋음</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">SELECT</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span>
+<span class="w">    </span><span class="k">WHERE</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="k">AND</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">amount</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">1000</span>
+<span class="p">);</span>
+
+<span class="c1">-- NOT IN → NOT EXISTS (NULL 처리)</span>
+<span class="c1">-- NOT IN은 NULL 있으면 항상 빈 결과</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="p">);</span><span class="w">  </span><span class="c1">-- orders.user_id에 NULL 있으면 문제</span>
+
+<span class="c1">-- 안전한 방법</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="p">(</span><span class="k">SELECT</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="p">);</span>
+
+<span class="c1">-- DISTINCT → GROUP BY (인덱스 활용)</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="k">DISTINCT</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="p">;</span>
+<span class="c1">-- →</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">user_id</span><span class="p">;</span>
+</code></pre></div>
+
+<h3 id="62-materialized-view">6.2 Materialized View<a class="header-link" href="#62-materialized-view" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 복잡한 집계 결과 저장</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="n">MATERIALIZED</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">mv_daily_sales</span><span class="w"> </span><span class="k">AS</span>
+<span class="k">SELECT</span>
+<span class="w">    </span><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;day&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="k">day</span><span class="p">,</span>
+<span class="w">    </span><span class="k">COUNT</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">order_count</span><span class="p">,</span>
+<span class="w">    </span><span class="k">SUM</span><span class="p">(</span><span class="n">total</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="n">total_sales</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">orders</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">date_trunc</span><span class="p">(</span><span class="s1">&#39;day&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="p">);</span>
+
+<span class="c1">-- 인덱스 추가</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">UNIQUE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_mv_daily_sales_day</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">mv_daily_sales</span><span class="p">(</span><span class="k">day</span><span class="p">);</span>
+
+<span class="c1">-- 새로고침</span>
+<span class="n">REFRESH</span><span class="w"> </span><span class="n">MATERIALIZED</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">mv_daily_sales</span><span class="p">;</span>
+<span class="n">REFRESH</span><span class="w"> </span><span class="n">MATERIALIZED</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">CONCURRENTLY</span><span class="w"> </span><span class="n">mv_daily_sales</span><span class="p">;</span><span class="w">  </span><span class="c1">-- UNIQUE 인덱스 필요</span>
+
+<span class="c1">-- 자동 새로고침 (pg_cron 또는 트리거 사용)</span>
+</code></pre></div>
+
+<h3 id="63">6.3 파티셔닝<a class="header-link" href="#63" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 범위 파티셔닝</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">BIGSERIAL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">user_id</span><span class="w"> </span><span class="nb">INT</span><span class="p">,</span>
+<span class="w">    </span><span class="n">total</span><span class="w"> </span><span class="nb">DECIMAL</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+<span class="p">)</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">RANGE</span><span class="w"> </span><span class="p">(</span><span class="n">created_at</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders_2024_q1</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">orders</span>
+<span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-04-01&#39;</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders_2024_q2</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">orders</span>
+<span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-04-01&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;2024-07-01&#39;</span><span class="p">);</span>
+
+<span class="c1">-- 파티션 프루닝 확인</span>
+<span class="k">EXPLAIN</span><span class="w"> </span><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;2024-02-15&#39;</span><span class="p">;</span>
+<span class="c1">-- orders_2024_q1만 스캔</span>
+
+<span class="c1">-- 리스트 파티셔닝</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">logs</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">BIGSERIAL</span><span class="p">,</span>
+<span class="w">    </span><span class="k">level</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span>
+<span class="w">    </span><span class="n">message</span><span class="w"> </span><span class="nb">TEXT</span>
+<span class="p">)</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">LIST</span><span class="w"> </span><span class="p">(</span><span class="k">level</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">logs_error</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">logs</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;ERROR&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;FATAL&#39;</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">logs_info</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">logs</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">IN</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;INFO&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;DEBUG&#39;</span><span class="p">);</span>
+
+<span class="c1">-- 해시 파티셔닝</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">BIGSERIAL</span><span class="p">,</span>
+<span class="w">    </span><span class="n">user_id</span><span class="w"> </span><span class="nb">INT</span>
+<span class="p">)</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">HASH</span><span class="w"> </span><span class="p">(</span><span class="n">user_id</span><span class="p">);</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">events_p0</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="p">(</span><span class="n">MODULUS</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="n">REMAINDER</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">events_p1</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="p">(</span><span class="n">MODULUS</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="n">REMAINDER</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">events_p2</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="p">(</span><span class="n">MODULUS</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="n">REMAINDER</span><span class="w"> </span><span class="mi">2</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">events_p3</span><span class="w"> </span><span class="n">PARTITION</span><span class="w"> </span><span class="k">OF</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="k">FOR</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="k">WITH</span><span class="w"> </span><span class="p">(</span><span class="n">MODULUS</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="n">REMAINDER</span><span class="w"> </span><span class="mi">3</span><span class="p">);</span>
+</code></pre></div>
+
+<h3 id="64">6.4 쿼리 캐싱<a class="header-link" href="#64" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- Prepared Statement (쿼리 계획 캐싱)</span>
+<span class="k">PREPARE</span><span class="w"> </span><span class="n">get_user</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span><span class="w"> </span><span class="k">AS</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">$</span><span class="mi">1</span><span class="p">;</span>
+
+<span class="k">EXECUTE</span><span class="w"> </span><span class="n">get_user</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="k">EXECUTE</span><span class="w"> </span><span class="n">get_user</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+
+<span class="k">DEALLOCATE</span><span class="w"> </span><span class="n">get_user</span><span class="p">;</span>
+
+<span class="c1">-- PgBouncer 등 커넥션 풀러에서 prepared statement 주의</span>
+
+<span class="c1">-- 결과 캐싱 (애플리케이션 레벨)</span>
+<span class="c1">-- Redis, Memcached 사용 권장</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 연습 문제<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="1">연습 1: 실행 계획 분석<a class="header-link" href="#1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 다음 쿼리의 실행 계획 분석 및 최적화:</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">id</span><span class="p">),</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">total</span><span class="p">)</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span>
+<span class="k">LEFT</span><span class="w"> </span><span class="k">JOIN</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">country</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;US&#39;</span>
+<span class="k">AND</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">NOW</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">INTERVAL</span><span class="w"> </span><span class="s1">&#39;1 year&#39;</span>
+<span class="k">GROUP</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">name</span>
+<span class="k">HAVING</span><span class="w"> </span><span class="k">COUNT</span><span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">id</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">10</span>
+<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="k">SUM</span><span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">total</span><span class="p">)</span><span class="w"> </span><span class="k">DESC</span>
+<span class="k">LIMIT</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span>
+
+<span class="c1">-- 분석 및 개선 방안 제시:</span>
+</code></pre></div>
+
+<h3 id="2_1">연습 2: 인덱스 설계<a class="header-link" href="#2_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 다음 쿼리들을 위한 최적 인덱스 설계:</span>
+<span class="c1">-- 1. SELECT * FROM orders WHERE user_id = ? AND status = &#39;pending&#39; ORDER BY created_at DESC</span>
+<span class="c1">-- 2. SELECT * FROM products WHERE category_id = ? AND price BETWEEN ? AND ?</span>
+<span class="c1">-- 3. SELECT * FROM logs WHERE level = &#39;ERROR&#39; AND created_at &gt; NOW() - INTERVAL &#39;1 day&#39;</span>
+
+<span class="c1">-- 인덱스 생성문 작성:</span>
+</code></pre></div>
+
+<h3 id="3_1">연습 3: 조인 최적화<a class="header-link" href="#3_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 5개 테이블 조인 쿼리 최적화:</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span>
+<span class="k">FROM</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="n">o</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">u</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">u</span><span class="p">.</span><span class="n">id</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">products</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">product_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">id</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">categories</span><span class="w"> </span><span class="k">c</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">category_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">id</span>
+<span class="k">JOIN</span><span class="w"> </span><span class="n">suppliers</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">supplier_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">s</span><span class="p">.</span><span class="n">id</span>
+<span class="k">WHERE</span><span class="w"> </span><span class="k">c</span><span class="p">.</span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Electronics&#39;</span>
+<span class="k">AND</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">;</span>
+
+<span class="c1">-- 최적화 전략 수립:</span>
+</code></pre></div>
+
+<h3 id="4_1">연습 4: 파티셔닝 설계<a class="header-link" href="#4_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">-- 대용량 로그 테이블 파티셔닝:</span>
+<span class="c1">-- 요구사항:</span>
+<span class="c1">-- - 일별 데이터 100만 행</span>
+<span class="c1">-- - 3개월 보관</span>
+<span class="c1">-- - 자주 조회: level, created_at, user_id</span>
+
+<span class="c1">-- 파티션 설계:</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_3">다음 단계<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="16_Replication_HA.md">16_복제와_고가용성</a> - 읽기 분산</li>
+<li><a href="17_Window_Functions.md">17_윈도우_함수_분석</a> - 고급 분석</li>
+<li><a href="https://wiki.postgresql.org/wiki/Performance_Optimization">PostgreSQL Performance</a></li>
+</ul>
+<h2 id="_4">참고 자료<a class="header-link" href="#_4" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://www.postgresql.org/docs/current/using-explain.html">PostgreSQL EXPLAIN</a></li>
+<li><a href="https://www.postgresql.org/docs/current/planner-optimizer.html">Query Planning</a></li>
+<li><a href="https://www.postgresql.org/docs/current/indexes-types.html">Index Types</a></li>
+<li><a href="https://use-the-index-luke.com/">Use The Index, Luke</a></li>
+</ul>
+<hr />
+<p><a href="14_JSON_JSONB.md">← 이전: JSON/JSONB 기능</a> | <a href="16_Replication_HA.md">다음: 복제와 고가용성 →</a> | <a href="00_Overview.md">목차</a></p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/PostgreSQL/14_JSON_JSONB.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">14. PostgreSQL JSON/JSONB 기능</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/PostgreSQL/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/PostgreSQL/16_Replication_HA.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">16. 복제와 고가용성 (Replication & High Availability)</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

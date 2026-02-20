@@ -1,0 +1,1193 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>백업 및 복구 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Linux/">Linux</a>
+    <span class="separator">/</span>
+    <span class="current">백업 및 복구</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>백업 및 복구</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Linux/18_Log_Management.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">로그 관리</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Linux/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Linux/20_Kernel_Management.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">커널 관리</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_2">학습 목표</a></li>
+<li><a href="#_3">목차</a></li>
+<li><a href="#1">1. 백업 전략 개요</a><ul>
+<li><a href="#3-2-1">3-2-1 백업 규칙</a></li>
+<li><a href="#_4">백업 유형</a></li>
+<li><a href="#rto-rpo">RTO와 RPO</a></li>
+</ul>
+</li>
+<li><a href="#2-rsync">2. rsync 고급 사용법</a><ul>
+<li><a href="#_5">기본 문법</a></li>
+<li><a href="#_6">주요 옵션</a></li>
+<li><a href="#_7">제외 패턴</a></li>
+<li><a href="#_8">증분 백업 스크립트</a></li>
+<li><a href="#ssh">SSH 키 설정 (원격 백업용)</a></li>
+<li><a href="#_9">대역폭 제한</a></li>
+</ul>
+</li>
+<li><a href="#3-borg-backup">3. Borg Backup</a><ul>
+<li><a href="#borg">Borg 소개</a></li>
+<li><a href="#_10">저장소 초기화</a></li>
+<li><a href="#_11">백업 생성</a></li>
+<li><a href="#_12">압축 옵션</a></li>
+<li><a href="#_13">백업 관리</a></li>
+<li><a href="#_14">복구</a></li>
+<li><a href="#pruning">보존 정책 (Pruning)</a></li>
+<li><a href="#borg_1">Borg 백업 스크립트</a></li>
+</ul>
+</li>
+<li><a href="#4-tarcpio">4. tar/cpio 백업</a><ul>
+<li><a href="#tar">tar 백업</a></li>
+<li><a href="#cpio">cpio 백업</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 시스템 이미지 백업</a><ul>
+<li><a href="#dd">dd를 이용한 디스크 이미지</a></li>
+<li><a href="#clonezilla">Clonezilla</a></li>
+<li><a href="#lvm">LVM 스냅샷 백업</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 재해복구 전략</a><ul>
+<li><a href="#dr">DR 계획 구성요소</a></li>
+<li><a href="#_15">복구 체크리스트</a></li>
+<li><a href="#_16">베어메탈 복구 절차</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 자동화 및 모니터링</a><ul>
+<li><a href="#systemd">systemd 타이머를 이용한 자동화</a></li>
+<li><a href="#_17">백업 모니터링 스크립트</a></li>
+<li><a href="#prometheus">Prometheus 메트릭 수집</a></li>
+</ul>
+</li>
+<li><a href="#_18">연습 문제</a><ul>
+<li><a href="#1-rsync">문제 1: rsync 증분 백업</a></li>
+<li><a href="#2-borg">문제 2: Borg 복구</a></li>
+<li><a href="#3-dr">문제 3: DR 테스트</a></li>
+</ul>
+</li>
+<li><a href="#_19">정답</a><ul>
+<li><a href="#1_1">문제 1 정답</a></li>
+<li><a href="#2">문제 2 정답</a></li>
+<li><a href="#3">문제 3 정답</a></li>
+</ul>
+</li>
+<li><a href="#_20">다음 단계</a></li>
+<li><a href="#_21">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="_1">백업 및 복구<a class="header-link" href="#_1" title="Permanent link">&para;</a></h1>
+<h2 id="_2">학습 목표<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<p>이 문서를 통해 다음을 학습합니다:</p>
+<ul>
+<li>rsync를 활용한 효율적인 백업</li>
+<li>Borg Backup으로 중복 제거 백업</li>
+<li>시스템 이미지 백업과 복구</li>
+<li>재해복구(DR) 전략 수립</li>
+</ul>
+<p><strong>난이도</strong>: ⭐⭐⭐⭐ (고급)</p>
+<hr />
+<h2 id="_3">목차<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-백업-전략-개요">백업 전략 개요</a></li>
+<li><a href="#2-rsync-고급-사용법">rsync 고급 사용법</a></li>
+<li><a href="#3-borg-backup">Borg Backup</a></li>
+<li><a href="#4-tarcpio-백업">tar/cpio 백업</a></li>
+<li><a href="#5-시스템-이미지-백업">시스템 이미지 백업</a></li>
+<li><a href="#6-재해복구-전략">재해복구 전략</a></li>
+<li><a href="#7-자동화-및-모니터링">자동화 및 모니터링</a></li>
+</ol>
+<hr />
+<h2 id="1">1. 백업 전략 개요<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="3-2-1">3-2-1 백업 규칙<a class="header-link" href="#3-2-1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    3-2-1 백업 규칙                          │
+├─────────────────────────────────────────────────────────────┤
+│  3: 데이터 사본 3개 유지                                    │
+│     └── 원본 + 백업 2개                                     │
+│                                                             │
+│  2: 서로 다른 2종류의 저장 매체                             │
+│     └── 로컬 디스크 + 외장 디스크 또는 NAS                  │
+│                                                             │
+│  1: 1개는 오프사이트 (원격지)                               │
+│     └── 클라우드 또는 물리적 원격지                         │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_4">백업 유형<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>유형</th>
+<th>설명</th>
+<th>장점</th>
+<th>단점</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>전체 백업</strong></td>
+<td>모든 데이터 복사</td>
+<td>복구 간단</td>
+<td>시간/용량 많이 소요</td>
+</tr>
+<tr>
+<td><strong>증분 백업</strong></td>
+<td>마지막 백업 이후 변경분만</td>
+<td>빠르고 용량 적음</td>
+<td>복구 시 체인 필요</td>
+</tr>
+<tr>
+<td><strong>차등 백업</strong></td>
+<td>마지막 전체 백업 이후 변경분</td>
+<td>증분보다 복구 간단</td>
+<td>증분보다 용량 큼</td>
+</tr>
+<tr>
+<td><strong>스냅샷</strong></td>
+<td>특정 시점의 파일시스템 상태</td>
+<td>즉시 생성</td>
+<td>저장소 의존적</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rto-rpo">RTO와 RPO<a class="header-link" href="#rto-rpo" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│ RPO (Recovery Point Objective)                              │
+│ = 허용 가능한 데이터 손실 시간                              │
+│ = 마지막 백업 이후 얼마나 데이터를 잃어도 되는가?          │
+│                                                             │
+│ RTO (Recovery Time Objective)                               │
+│ = 서비스 복구까지 허용 가능한 시간                          │
+│ = 장애 발생 후 얼마 내에 복구해야 하는가?                   │
+└─────────────────────────────────────────────────────────────┘
+
+타임라인:
+──────────────────────────────────────────────────────────────
+     마지막 백업           장애 발생           복구 완료
+         │                    │                   │
+         │◄─────── RPO ──────►│◄────── RTO ──────►│
+         │    (데이터 손실)    │   (다운타임)      │
+</code></pre></div>
+
+<hr />
+<h2 id="2-rsync">2. rsync 고급 사용법<a class="header-link" href="#2-rsync" title="Permanent link">&para;</a></h2>
+<h3 id="_5">기본 문법<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>rsync<span class="w"> </span><span class="o">[</span>옵션<span class="o">]</span><span class="w"> </span>원본<span class="w"> </span>대상
+
+<span class="c1"># 로컬 복사</span>
+rsync<span class="w"> </span>-av<span class="w"> </span>/source/<span class="w"> </span>/backup/
+
+<span class="c1"># 원격 복사 (SSH)</span>
+rsync<span class="w"> </span>-av<span class="w"> </span>/source/<span class="w"> </span>user@server:/backup/
+rsync<span class="w"> </span>-av<span class="w"> </span>user@server:/source/<span class="w"> </span>/backup/
+</code></pre></div>
+
+<h3 id="_6">주요 옵션<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 기본 옵션 조합</span>
+rsync<span class="w"> </span>-avz<span class="w"> </span>--progress<span class="w"> </span>/source/<span class="w"> </span>/backup/
+
+<span class="c1"># 상세 옵션</span>
+-a,<span class="w"> </span>--archive<span class="w">       </span><span class="c1"># 아카이브 모드 (-rlptgoD와 동일)</span>
+-v,<span class="w"> </span>--verbose<span class="w">       </span><span class="c1"># 상세 출력</span>
+-z,<span class="w"> </span>--compress<span class="w">      </span><span class="c1"># 전송 중 압축</span>
+-P<span class="w">                  </span><span class="c1"># --progress --partial 조합</span>
+--progress<span class="w">          </span><span class="c1"># 진행 상황 표시</span>
+--partial<span class="w">           </span><span class="c1"># 부분 전송 파일 유지</span>
+
+<span class="c1"># 삭제 옵션</span>
+--delete<span class="w">            </span><span class="c1"># 대상에만 있는 파일 삭제</span>
+--delete-before<span class="w">     </span><span class="c1"># 전송 전 삭제</span>
+--delete-after<span class="w">      </span><span class="c1"># 전송 후 삭제</span>
+--delete-excluded<span class="w">   </span><span class="c1"># 제외된 파일도 삭제</span>
+
+<span class="c1"># 동기화 정밀 옵션</span>
+-c,<span class="w"> </span>--checksum<span class="w">      </span><span class="c1"># 체크섬으로 비교 (느림)</span>
+-u,<span class="w"> </span>--update<span class="w">        </span><span class="c1"># 대상이 더 새로우면 건너뛰기</span>
+--ignore-existing<span class="w">   </span><span class="c1"># 존재하는 파일 건너뛰기</span>
+</code></pre></div>
+
+<h3 id="_7">제외 패턴<a class="header-link" href="#_7" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 특정 패턴 제외</span>
+rsync<span class="w"> </span>-av<span class="w"> </span>--exclude<span class="o">=</span><span class="s1">&#39;*.log&#39;</span><span class="w"> </span>--exclude<span class="o">=</span><span class="s1">&#39;cache/&#39;</span><span class="w"> </span>/source/<span class="w"> </span>/backup/
+
+<span class="c1"># 제외 파일 사용</span>
+rsync<span class="w"> </span>-av<span class="w"> </span>--exclude-from<span class="o">=</span><span class="s1">&#39;exclude.txt&#39;</span><span class="w"> </span>/source/<span class="w"> </span>/backup/
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># exclude.txt 예시</span>
+*.log
+*.tmp
+*.cache
+.git/
+node_modules/
+__pycache__/
+.DS_Store
+Thumbs.db
+</code></pre></div>
+
+<h3 id="_8">증분 백업 스크립트<a class="header-link" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="c1"># incremental-backup.sh</span>
+
+<span class="c1"># 설정</span>
+<span class="nv">SOURCE</span><span class="o">=</span><span class="s2">&quot;/data&quot;</span>
+<span class="nv">BACKUP_BASE</span><span class="o">=</span><span class="s2">&quot;/backup&quot;</span>
+<span class="nv">LATEST_LINK</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$BACKUP_BASE</span><span class="s2">/latest&quot;</span>
+<span class="nv">DATE</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%Y-%m-%d_%H-%M-%S<span class="k">)</span>
+<span class="nv">BACKUP_PATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$BACKUP_BASE</span><span class="s2">/</span><span class="nv">$DATE</span><span class="s2">&quot;</span>
+
+<span class="c1"># 이전 백업이 있으면 하드링크 사용</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LATEST_LINK</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nv">LINK_DEST</span><span class="o">=</span><span class="s2">&quot;--link-dest=</span><span class="nv">$LATEST_LINK</span><span class="s2">&quot;</span>
+<span class="k">else</span>
+<span class="w">    </span><span class="nv">LINK_DEST</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+<span class="k">fi</span>
+
+<span class="c1"># rsync 실행</span>
+rsync<span class="w"> </span>-av<span class="w"> </span>--delete<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="nv">$LINK_DEST</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--exclude<span class="o">=</span><span class="s1">&#39;*.tmp&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--exclude<span class="o">=</span><span class="s1">&#39;cache/&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">/&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="s2">&quot;</span><span class="nv">$BACKUP_PATH</span><span class="s2">/&quot;</span>
+
+<span class="c1"># 최신 링크 업데이트</span>
+rm<span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LATEST_LINK</span><span class="s2">&quot;</span>
+ln<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BACKUP_PATH</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LATEST_LINK</span><span class="s2">&quot;</span>
+
+<span class="c1"># 30일 이상 된 백업 삭제</span>
+find<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BACKUP_BASE</span><span class="s2">&quot;</span><span class="w"> </span>-maxdepth<span class="w"> </span><span class="m">1</span><span class="w"> </span>-type<span class="w"> </span>d<span class="w"> </span>-mtime<span class="w"> </span>+30<span class="w"> </span>-exec<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span><span class="o">{}</span><span class="w"> </span><span class="se">\;</span>
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Backup completed: </span><span class="nv">$BACKUP_PATH</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<h3 id="ssh">SSH 키 설정 (원격 백업용)<a class="header-link" href="#ssh" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 백업 전용 키 생성</span>
+ssh-keygen<span class="w"> </span>-t<span class="w"> </span>ed25519<span class="w"> </span>-f<span class="w"> </span>~/.ssh/backup_key<span class="w"> </span>-N<span class="w"> </span><span class="s2">&quot;&quot;</span>
+
+<span class="c1"># 원격 서버에 키 복사</span>
+ssh-copy-id<span class="w"> </span>-i<span class="w"> </span>~/.ssh/backup_key.pub<span class="w"> </span>user@backup-server
+
+<span class="c1"># 자동화를 위한 config 설정</span>
+cat<span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.ssh/config<span class="w"> </span><span class="s">&lt;&lt; EOF</span>
+<span class="s">Host backup-server</span>
+<span class="s">    HostName 192.168.1.100</span>
+<span class="s">    User backupuser</span>
+<span class="s">    IdentityFile ~/.ssh/backup_key</span>
+<span class="s">    StrictHostKeyChecking no</span>
+<span class="s">EOF</span>
+
+<span class="c1"># 원격 백업 실행</span>
+rsync<span class="w"> </span>-avz<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;ssh -i ~/.ssh/backup_key&quot;</span><span class="w"> </span>/data/<span class="w"> </span>backup-server:/backup/
+</code></pre></div>
+
+<h3 id="_9">대역폭 제한<a class="header-link" href="#_9" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 10MB/s로 제한</span>
+rsync<span class="w"> </span>-av<span class="w"> </span>--bwlimit<span class="o">=</span><span class="m">10000</span><span class="w"> </span>/source/<span class="w"> </span>/backup/
+
+<span class="c1"># 업무 시간 외에만 빠른 속도</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="k">$(</span>date<span class="w"> </span>+%H<span class="k">)</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">18</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="k">$(</span>date<span class="w"> </span>+%H<span class="k">)</span><span class="w"> </span>-lt<span class="w"> </span><span class="m">8</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nv">BWLIMIT</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+<span class="k">else</span>
+<span class="w">    </span><span class="nv">BWLIMIT</span><span class="o">=</span><span class="s2">&quot;--bwlimit=5000&quot;</span>
+<span class="k">fi</span>
+rsync<span class="w"> </span>-av<span class="w"> </span><span class="nv">$BWLIMIT</span><span class="w"> </span>/source/<span class="w"> </span>/backup/
+</code></pre></div>
+
+<hr />
+<h2 id="3-borg-backup">3. Borg Backup<a class="header-link" href="#3-borg-backup" title="Permanent link">&para;</a></h2>
+<h3 id="borg">Borg 소개<a class="header-link" href="#borg" title="Permanent link">&para;</a></h3>
+<p>Borg Backup은 중복 제거, 압축, 암호화를 지원하는 백업 프로그램입니다.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 설치</span>
+<span class="c1"># Ubuntu/Debian</span>
+sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>borgbackup
+
+<span class="c1"># RHEL/CentOS</span>
+sudo<span class="w"> </span>yum<span class="w"> </span>install<span class="w"> </span>epel-release
+sudo<span class="w"> </span>yum<span class="w"> </span>install<span class="w"> </span>borgbackup
+
+<span class="c1"># pip로 설치</span>
+pip<span class="w"> </span>install<span class="w"> </span>borgbackup
+</code></pre></div>
+
+<h3 id="_10">저장소 초기화<a class="header-link" href="#_10" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 로컬 저장소 생성</span>
+borg<span class="w"> </span>init<span class="w"> </span>--encryption<span class="o">=</span>repokey<span class="w"> </span>/backup/borg-repo
+
+<span class="c1"># 원격 저장소 생성</span>
+borg<span class="w"> </span>init<span class="w"> </span>--encryption<span class="o">=</span>repokey<span class="w"> </span>user@server:/backup/borg-repo
+
+<span class="c1"># 암호화 옵션</span>
+<span class="c1"># none       - 암호화 없음</span>
+<span class="c1"># repokey    - 저장소에 키 저장 (권장)</span>
+<span class="c1"># keyfile    - 로컬 파일에 키 저장</span>
+<span class="c1"># repokey-blake2 - 더 빠른 해시</span>
+</code></pre></div>
+
+<h3 id="_11">백업 생성<a class="header-link" href="#_11" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 기본 백업</span>
+borg<span class="w"> </span>create<span class="w"> </span>/backup/borg-repo::backup-<span class="o">{</span>now<span class="o">}</span><span class="w"> </span>/data
+
+<span class="c1"># 옵션 사용</span>
+borg<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--verbose<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--progress<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--stats<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--compression<span class="w"> </span>lz4<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--exclude<span class="w"> </span><span class="s1">&#39;*.tmp&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--exclude<span class="w"> </span><span class="s1">&#39;cache/&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>/backup/borg-repo::backup-<span class="o">{</span>now:%Y-%m-%d_%H-%M<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>/home<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>/etc<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>/var/www
+</code></pre></div>
+
+<h3 id="_12">압축 옵션<a class="header-link" href="#_12" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>옵션</th>
+<th>설명</th>
+<th>속도</th>
+<th>압축률</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>none</code></td>
+<td>압축 없음</td>
+<td>가장 빠름</td>
+<td>없음</td>
+</tr>
+<tr>
+<td><code>lz4</code></td>
+<td>빠른 압축</td>
+<td>빠름</td>
+<td>낮음</td>
+</tr>
+<tr>
+<td><code>zstd</code></td>
+<td>균형잡힌 압축</td>
+<td>보통</td>
+<td>중간</td>
+</tr>
+<tr>
+<td><code>zlib</code></td>
+<td>gzip 호환</td>
+<td>느림</td>
+<td>높음</td>
+</tr>
+<tr>
+<td><code>lzma</code></td>
+<td>최대 압축</td>
+<td>매우 느림</td>
+<td>최고</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_13">백업 관리<a class="header-link" href="#_13" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 백업 목록</span>
+borg<span class="w"> </span>list<span class="w"> </span>/backup/borg-repo
+
+<span class="c1"># 백업 상세 정보</span>
+borg<span class="w"> </span>info<span class="w"> </span>/backup/borg-repo::backup-2024-01-15
+
+<span class="c1"># 백업 내용 확인</span>
+borg<span class="w"> </span>list<span class="w"> </span>/backup/borg-repo::backup-2024-01-15
+
+<span class="c1"># 특정 경로만 확인</span>
+borg<span class="w"> </span>list<span class="w"> </span>/backup/borg-repo::backup-2024-01-15<span class="w"> </span>/home/user/
+
+<span class="c1"># 백업 비교</span>
+borg<span class="w"> </span>diff<span class="w"> </span>/backup/borg-repo::backup-2024-01-14<span class="w"> </span>backup-2024-01-15
+</code></pre></div>
+
+<h3 id="_14">복구<a class="header-link" href="#_14" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 전체 복구</span>
+<span class="nb">cd</span><span class="w"> </span>/restore
+borg<span class="w"> </span>extract<span class="w"> </span>/backup/borg-repo::backup-2024-01-15
+
+<span class="c1"># 특정 파일/디렉토리 복구</span>
+borg<span class="w"> </span>extract<span class="w"> </span>/backup/borg-repo::backup-2024-01-15<span class="w"> </span>home/user/documents
+
+<span class="c1"># 원래 경로로 복구</span>
+<span class="nb">cd</span><span class="w"> </span>/
+borg<span class="w"> </span>extract<span class="w"> </span>/backup/borg-repo::backup-2024-01-15<span class="w"> </span>etc/nginx/
+
+<span class="c1"># 특정 시점으로 마운트 (FUSE)</span>
+mkdir<span class="w"> </span>/mnt/borg
+borg<span class="w"> </span>mount<span class="w"> </span>/backup/borg-repo::backup-2024-01-15<span class="w"> </span>/mnt/borg
+<span class="c1"># 파일 탐색 후</span>
+borg<span class="w"> </span>umount<span class="w"> </span>/mnt/borg
+</code></pre></div>
+
+<h3 id="pruning">보존 정책 (Pruning)<a class="header-link" href="#pruning" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 자동 정리</span>
+borg<span class="w"> </span>prune<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--keep-hourly<span class="o">=</span><span class="m">24</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--keep-daily<span class="o">=</span><span class="m">7</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--keep-weekly<span class="o">=</span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--keep-monthly<span class="o">=</span><span class="m">12</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--keep-yearly<span class="o">=</span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>/backup/borg-repo
+
+<span class="c1"># 드라이런 (실제 삭제 안 함)</span>
+borg<span class="w"> </span>prune<span class="w"> </span>--dry-run<span class="w"> </span>--list<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--keep-daily<span class="o">=</span><span class="m">7</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>/backup/borg-repo
+</code></pre></div>
+
+<h3 id="borg_1">Borg 백업 스크립트<a class="header-link" href="#borg_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="c1"># borg-backup.sh</span>
+
+<span class="c1"># 환경 변수 설정</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">BORG_REPO</span><span class="o">=</span><span class="s2">&quot;user@backup-server:/backup/borg-repo&quot;</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">BORG_PASSPHRASE</span><span class="o">=</span><span class="s2">&quot;your-secure-passphrase&quot;</span>
+
+<span class="c1"># 로그 파일</span>
+<span class="nv">LOG_FILE</span><span class="o">=</span><span class="s2">&quot;/var/log/borg-backup.log&quot;</span>
+
+<span class="c1"># 백업 함수</span>
+backup<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Starting backup: </span><span class="k">$(</span>date<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span>
+
+<span class="w">    </span>borg<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--verbose<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--filter<span class="w"> </span>AME<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--list<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--stats<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--compression<span class="w"> </span>lz4<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--exclude-caches<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--exclude<span class="w"> </span><span class="s1">&#39;/home/*/.cache&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--exclude<span class="w"> </span><span class="s1">&#39;/var/tmp/*&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--exclude<span class="w"> </span><span class="s1">&#39;/var/cache/*&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>::<span class="s1">&#39;{hostname}-{now:%Y-%m-%d_%H:%M}&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>/etc<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>/home<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>/var/www<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>/var/lib/mysql<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span><span class="m">2</span>&gt;&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span>
+
+<span class="w">    </span><span class="nv">backup_exit</span><span class="o">=</span><span class="nv">$?</span>
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Backup finished with exit code: </span><span class="nv">$backup_exit</span><span class="s2">&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span>
+<span class="o">}</span>
+
+<span class="c1"># 정리 함수</span>
+prune<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Starting prune: </span><span class="k">$(</span>date<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span>
+
+<span class="w">    </span>borg<span class="w"> </span>prune<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--list<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--keep-hourly<span class="o">=</span><span class="m">24</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--keep-daily<span class="o">=</span><span class="m">7</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--keep-weekly<span class="o">=</span><span class="m">4</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span>--keep-monthly<span class="o">=</span><span class="m">6</span><span class="w"> </span><span class="se">\</span>
+<span class="w">        </span><span class="m">2</span>&gt;&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span>
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Prune finished&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span>
+<span class="o">}</span>
+
+<span class="c1"># 저장소 정합성 검사 (주간)</span>
+check<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="k">$(</span>date<span class="w"> </span>+%u<span class="k">)</span><span class="w"> </span>-eq<span class="w"> </span><span class="m">7</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Starting check: </span><span class="k">$(</span>date<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span>
+<span class="w">        </span>borg<span class="w"> </span>check<span class="w"> </span><span class="m">2</span>&gt;&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Check finished&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOG_FILE</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">fi</span>
+<span class="o">}</span>
+
+<span class="c1"># 실행</span>
+backup
+prune
+check
+
+<span class="c1"># 알림 (실패 시)</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$backup_exit</span><span class="w"> </span>-ne<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Backup failed!&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>mail<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;Borg Backup Alert&quot;</span><span class="w"> </span>admin@example.com
+<span class="k">fi</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-tarcpio">4. tar/cpio 백업<a class="header-link" href="#4-tarcpio" title="Permanent link">&para;</a></h2>
+<h3 id="tar">tar 백업<a class="header-link" href="#tar" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 기본 압축 백업</span>
+tar<span class="w"> </span>-czvf<span class="w"> </span>backup.tar.gz<span class="w"> </span>/data
+
+<span class="c1"># 증분 백업 (snapshot 사용)</span>
+tar<span class="w"> </span>--create<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--gzip<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--listed-incremental<span class="o">=</span>/backup/snapshot.snar<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--file<span class="o">=</span>/backup/backup-<span class="k">$(</span>date<span class="w"> </span>+%Y%m%d<span class="k">)</span>.tar.gz<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>/data
+
+<span class="c1"># 복원</span>
+tar<span class="w"> </span>--extract<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--gzip<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--listed-incremental<span class="o">=</span>/dev/null<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--file<span class="o">=</span>/backup/backup-20240115.tar.gz<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-C<span class="w"> </span>/restore
+
+<span class="c1"># 제외 패턴</span>
+tar<span class="w"> </span>-czvf<span class="w"> </span>backup.tar.gz<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--exclude<span class="o">=</span><span class="s1">&#39;*.log&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--exclude<span class="o">=</span><span class="s1">&#39;cache&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>/data
+</code></pre></div>
+
+<h3 id="cpio">cpio 백업<a class="header-link" href="#cpio" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 백업 생성</span>
+find<span class="w"> </span>/data<span class="w"> </span>-print<span class="w"> </span><span class="p">|</span><span class="w"> </span>cpio<span class="w"> </span>-ov<span class="w"> </span>&gt;<span class="w"> </span>backup.cpio
+
+<span class="c1"># 압축 백업</span>
+find<span class="w"> </span>/data<span class="w"> </span>-print<span class="w"> </span><span class="p">|</span><span class="w"> </span>cpio<span class="w"> </span>-ov<span class="w"> </span><span class="p">|</span><span class="w"> </span>gzip<span class="w"> </span>&gt;<span class="w"> </span>backup.cpio.gz
+
+<span class="c1"># 복원</span>
+cpio<span class="w"> </span>-iv<span class="w"> </span>&lt;<span class="w"> </span>backup.cpio
+
+<span class="c1"># 압축 파일 복원</span>
+gunzip<span class="w"> </span>-c<span class="w"> </span>backup.cpio.gz<span class="w"> </span><span class="p">|</span><span class="w"> </span>cpio<span class="w"> </span>-iv
+
+<span class="c1"># 특정 파일만 복원</span>
+cpio<span class="w"> </span>-iv<span class="w"> </span><span class="s2">&quot;*.conf&quot;</span><span class="w"> </span>&lt;<span class="w"> </span>backup.cpio
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 시스템 이미지 백업<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="dd">dd를 이용한 디스크 이미지<a class="header-link" href="#dd" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 전체 디스크 백업</span>
+sudo<span class="w"> </span>dd<span class="w"> </span><span class="k">if</span><span class="o">=</span>/dev/sda<span class="w"> </span><span class="nv">of</span><span class="o">=</span>/backup/disk.img<span class="w"> </span><span class="nv">bs</span><span class="o">=</span>4M<span class="w"> </span><span class="nv">status</span><span class="o">=</span>progress
+
+<span class="c1"># 압축과 함께</span>
+sudo<span class="w"> </span>dd<span class="w"> </span><span class="k">if</span><span class="o">=</span>/dev/sda<span class="w"> </span><span class="nv">bs</span><span class="o">=</span>4M<span class="w"> </span><span class="nv">status</span><span class="o">=</span>progress<span class="w"> </span><span class="p">|</span><span class="w"> </span>gzip<span class="w"> </span>&gt;<span class="w"> </span>/backup/disk.img.gz
+
+<span class="c1"># 복원</span>
+sudo<span class="w"> </span>dd<span class="w"> </span><span class="k">if</span><span class="o">=</span>/backup/disk.img<span class="w"> </span><span class="nv">of</span><span class="o">=</span>/dev/sda<span class="w"> </span><span class="nv">bs</span><span class="o">=</span>4M<span class="w"> </span><span class="nv">status</span><span class="o">=</span>progress
+
+<span class="c1"># 압축된 이미지 복원</span>
+gunzip<span class="w"> </span>-c<span class="w"> </span>/backup/disk.img.gz<span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>dd<span class="w"> </span><span class="nv">of</span><span class="o">=</span>/dev/sda<span class="w"> </span><span class="nv">bs</span><span class="o">=</span>4M<span class="w"> </span><span class="nv">status</span><span class="o">=</span>progress
+
+<span class="c1"># 파티션만 백업</span>
+sudo<span class="w"> </span>dd<span class="w"> </span><span class="k">if</span><span class="o">=</span>/dev/sda1<span class="w"> </span><span class="nv">of</span><span class="o">=</span>/backup/partition.img<span class="w"> </span><span class="nv">bs</span><span class="o">=</span>4M<span class="w"> </span><span class="nv">status</span><span class="o">=</span>progress
+</code></pre></div>
+
+<h3 id="clonezilla">Clonezilla<a class="header-link" href="#clonezilla" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Clonezilla Live USB 생성 후</span>
+
+<span class="c1"># 디스크 이미지 생성 (명령줄)</span>
+/usr/sbin/ocs-sr<span class="w"> </span>-q2<span class="w"> </span>-c<span class="w"> </span>-j2<span class="w"> </span>-z1<span class="w"> </span>-i<span class="w"> </span><span class="m">4096</span><span class="w"> </span>-sfsck<span class="w"> </span>-senc<span class="w"> </span>-p<span class="w"> </span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>savedisk<span class="w"> </span>img_name<span class="w"> </span>sda
+
+<span class="c1"># 복원</span>
+/usr/sbin/ocs-sr<span class="w"> </span>-g<span class="w"> </span>auto<span class="w"> </span>-e1<span class="w"> </span>auto<span class="w"> </span>-e2<span class="w"> </span>-r<span class="w"> </span>-j2<span class="w"> </span>-c<span class="w"> </span>-scr<span class="w"> </span>-p<span class="w"> </span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>restoredisk<span class="w"> </span>img_name<span class="w"> </span>sda
+</code></pre></div>
+
+<h3 id="lvm">LVM 스냅샷 백업<a class="header-link" href="#lvm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 스냅샷 생성</span>
+sudo<span class="w"> </span>lvcreate<span class="w"> </span>-L<span class="w"> </span>10G<span class="w"> </span>-s<span class="w"> </span>-n<span class="w"> </span>data-snap<span class="w"> </span>/dev/vg0/data
+
+<span class="c1"># 스냅샷 마운트</span>
+sudo<span class="w"> </span>mkdir<span class="w"> </span>/mnt/snapshot
+sudo<span class="w"> </span>mount<span class="w"> </span>-o<span class="w"> </span>ro<span class="w"> </span>/dev/vg0/data-snap<span class="w"> </span>/mnt/snapshot
+
+<span class="c1"># 백업 수행</span>
+rsync<span class="w"> </span>-av<span class="w"> </span>/mnt/snapshot/<span class="w"> </span>/backup/data/
+
+<span class="c1"># 정리</span>
+sudo<span class="w"> </span>umount<span class="w"> </span>/mnt/snapshot
+sudo<span class="w"> </span>lvremove<span class="w"> </span>/dev/vg0/data-snap
+</code></pre></div>
+
+<hr />
+<h2 id="6">6. 재해복구 전략<a class="header-link" href="#6" title="Permanent link">&para;</a></h2>
+<h3 id="dr">DR 계획 구성요소<a class="header-link" href="#dr" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    재해복구 계획                            │
+├─────────────────────────────────────────────────────────────┤
+│  1. 리스크 평가                                             │
+│     - 잠재적 위협 식별                                      │
+│     - 비즈니스 영향 분석                                    │
+│                                                             │
+│  2. 복구 목표 설정                                          │
+│     - RTO/RPO 정의                                          │
+│     - 우선순위 결정                                         │
+│                                                             │
+│  3. 백업 전략                                               │
+│     - 백업 유형 및 주기                                     │
+│     - 저장 위치 (온사이트/오프사이트)                      │
+│                                                             │
+│  4. 복구 절차                                               │
+│     - 단계별 복구 가이드                                    │
+│     - 연락처 및 역할                                        │
+│                                                             │
+│  5. 테스트 및 유지보수                                      │
+│     - 정기적 복구 테스트                                    │
+│     - 문서 업데이트                                         │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="_15">복구 체크리스트<a class="header-link" href="#_15" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="c1"># disaster-recovery-checklist.sh</span>
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;=== 재해복구 체크리스트 ===&quot;</span>
+
+<span class="c1"># 1. 하드웨어 상태 확인</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;[1] 하드웨어 상태 확인&quot;</span>
+lsblk
+free<span class="w"> </span>-h
+cat<span class="w"> </span>/proc/cpuinfo<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;model name&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-1
+
+<span class="c1"># 2. 네트워크 연결 확인</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;[2] 네트워크 연결&quot;</span>
+ip<span class="w"> </span>addr<span class="w"> </span>show
+ping<span class="w"> </span>-c<span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="m">8</span>.8.8.8
+
+<span class="c1"># 3. 백업 저장소 접근 확인</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;[3] 백업 저장소 접근&quot;</span>
+<span class="c1"># 로컬 백업</span>
+ls<span class="w"> </span>-la<span class="w"> </span>/backup/
+<span class="c1"># 원격 백업</span>
+ssh<span class="w"> </span>backup-server<span class="w"> </span><span class="s2">&quot;ls -la /backup/&quot;</span>
+
+<span class="c1"># 4. 백업 무결성 검증</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;[4] 백업 무결성&quot;</span>
+<span class="c1"># Borg 검증</span>
+borg<span class="w"> </span>check<span class="w"> </span>/backup/borg-repo
+
+<span class="c1"># 5. 복구 테스트 (샘플)</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;[5] 샘플 파일 복구 테스트&quot;</span>
+mkdir<span class="w"> </span>-p<span class="w"> </span>/tmp/recovery-test
+borg<span class="w"> </span>extract<span class="w"> </span>/backup/borg-repo::latest<span class="w"> </span>etc/hostname<span class="w"> </span>-C<span class="w"> </span>/tmp/recovery-test
+diff<span class="w"> </span>/etc/hostname<span class="w"> </span>/tmp/recovery-test/etc/hostname
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;=== 체크리스트 완료 ===&quot;</span>
+</code></pre></div>
+
+<h3 id="_16">베어메탈 복구 절차<a class="header-link" href="#_16" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. 부팅 미디어로 부팅 (Ubuntu Live USB 등)</span>
+
+<span class="c1"># 2. 네트워크 설정</span>
+ip<span class="w"> </span>addr<span class="w"> </span>add<span class="w"> </span><span class="m">192</span>.168.1.100/24<span class="w"> </span>dev<span class="w"> </span>eth0
+ip<span class="w"> </span>route<span class="w"> </span>add<span class="w"> </span>default<span class="w"> </span>via<span class="w"> </span><span class="m">192</span>.168.1.1
+
+<span class="c1"># 3. 디스크 파티셔닝</span>
+parted<span class="w"> </span>/dev/sda<span class="w"> </span>mklabel<span class="w"> </span>gpt
+parted<span class="w"> </span>/dev/sda<span class="w"> </span>mkpart<span class="w"> </span>primary<span class="w"> </span>ext4<span class="w"> </span>1MiB<span class="w"> </span>512MiB<span class="w">    </span><span class="c1"># /boot</span>
+parted<span class="w"> </span>/dev/sda<span class="w"> </span>mkpart<span class="w"> </span>primary<span class="w"> </span>ext4<span class="w"> </span>512MiB<span class="w"> </span><span class="m">100</span>%<span class="w">    </span><span class="c1"># /</span>
+mkfs.ext4<span class="w"> </span>/dev/sda1
+mkfs.ext4<span class="w"> </span>/dev/sda2
+
+<span class="c1"># 4. 마운트</span>
+mount<span class="w"> </span>/dev/sda2<span class="w"> </span>/mnt
+mkdir<span class="w"> </span>/mnt/boot
+mount<span class="w"> </span>/dev/sda1<span class="w"> </span>/mnt/boot
+
+<span class="c1"># 5. 백업에서 복원</span>
+<span class="c1"># rsync 사용</span>
+rsync<span class="w"> </span>-av<span class="w"> </span>backup-server:/backup/latest/<span class="w"> </span>/mnt/
+
+<span class="c1"># 또는 Borg 사용</span>
+borg<span class="w"> </span>extract<span class="w"> </span>backup-server:/backup/borg-repo::latest<span class="w"> </span>-C<span class="w"> </span>/mnt
+
+<span class="c1"># 6. chroot로 부트로더 설치</span>
+mount<span class="w"> </span>--bind<span class="w"> </span>/dev<span class="w"> </span>/mnt/dev
+mount<span class="w"> </span>--bind<span class="w"> </span>/proc<span class="w"> </span>/mnt/proc
+mount<span class="w"> </span>--bind<span class="w"> </span>/sys<span class="w"> </span>/mnt/sys
+chroot<span class="w"> </span>/mnt
+
+grub-install<span class="w"> </span>/dev/sda
+update-grub
+
+<span class="nb">exit</span>
+
+<span class="c1"># 7. 정리 및 재부팅</span>
+umount<span class="w"> </span>-R<span class="w"> </span>/mnt
+reboot
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 자동화 및 모니터링<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="systemd">systemd 타이머를 이용한 자동화<a class="header-link" href="#systemd" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/systemd/system/backup.service</span>
+<span class="o">[</span>Unit<span class="o">]</span>
+<span class="nv">Description</span><span class="o">=</span>Daily<span class="w"> </span>Backup<span class="w"> </span>Service
+<span class="nv">After</span><span class="o">=</span>network-online.target
+
+<span class="o">[</span>Service<span class="o">]</span>
+<span class="nv">Type</span><span class="o">=</span>oneshot
+<span class="nv">ExecStart</span><span class="o">=</span>/usr/local/bin/backup.sh
+<span class="nv">User</span><span class="o">=</span>root
+<span class="nv">Nice</span><span class="o">=</span><span class="m">19</span>
+<span class="nv">IOSchedulingClass</span><span class="o">=</span>idle
+
+<span class="o">[</span>Install<span class="o">]</span>
+<span class="nv">WantedBy</span><span class="o">=</span>multi-user.target
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># /etc/systemd/system/backup.timer</span>
+<span class="o">[</span>Unit<span class="o">]</span>
+<span class="nv">Description</span><span class="o">=</span>Run<span class="w"> </span>backup<span class="w"> </span>daily
+
+<span class="o">[</span>Timer<span class="o">]</span>
+<span class="nv">OnCalendar</span><span class="o">=</span>*-*-*<span class="w"> </span><span class="m">02</span>:00:00
+<span class="nv">RandomizedDelaySec</span><span class="o">=</span><span class="m">1800</span>
+<span class="nv">Persistent</span><span class="o">=</span><span class="nb">true</span>
+
+<span class="o">[</span>Install<span class="o">]</span>
+<span class="nv">WantedBy</span><span class="o">=</span>timers.target
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># 타이머 활성화</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>--now<span class="w"> </span>backup.timer
+
+<span class="c1"># 상태 확인</span>
+systemctl<span class="w"> </span>list-timers<span class="w"> </span>--all<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>backup
+</code></pre></div>
+
+<h3 id="_17">백업 모니터링 스크립트<a class="header-link" href="#_17" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="c1"># backup-monitor.sh</span>
+
+<span class="nv">BACKUP_DIR</span><span class="o">=</span><span class="s2">&quot;/backup&quot;</span>
+<span class="nv">MAX_AGE_HOURS</span><span class="o">=</span><span class="m">26</span>
+<span class="nv">ALERT_EMAIL</span><span class="o">=</span><span class="s2">&quot;admin@example.com&quot;</span>
+<span class="nv">LOGFILE</span><span class="o">=</span><span class="s2">&quot;/var/log/backup-monitor.log&quot;</span>
+
+check_backup_age<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">newest</span><span class="o">=</span><span class="k">$(</span>find<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BACKUP_DIR</span><span class="s2">&quot;</span><span class="w"> </span>-maxdepth<span class="w"> </span><span class="m">1</span><span class="w"> </span>-type<span class="w"> </span>d<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;20*&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sort<span class="w"> </span>-r<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-1<span class="k">)</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-z<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$newest</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;ERROR: No backup found&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOGFILE</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">age_seconds</span><span class="o">=</span><span class="k">$(($(</span>date<span class="w"> </span>+%s<span class="k">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="k">$(</span>stat<span class="w"> </span>-c<span class="w"> </span>%Y<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$newest</span><span class="s2">&quot;</span><span class="k">)))</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">age_hours</span><span class="o">=</span><span class="k">$((</span><span class="nv">age_seconds</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="m">3600</span><span class="k">))</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$age_hours</span><span class="w"> </span>-gt<span class="w"> </span><span class="nv">$MAX_AGE_HOURS</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;WARNING: Latest backup is </span><span class="nv">$age_hours</span><span class="s2"> hours old&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOGFILE</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;OK: Latest backup is </span><span class="nv">$age_hours</span><span class="s2"> hours old (</span><span class="nv">$newest</span><span class="s2">)&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOGFILE</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="o">}</span>
+
+check_backup_size<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">today</span><span class="o">=</span><span class="k">$(</span>find<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BACKUP_DIR</span><span class="s2">&quot;</span><span class="w"> </span>-maxdepth<span class="w"> </span><span class="m">1</span><span class="w"> </span>-type<span class="w"> </span>d<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>date<span class="w"> </span>+%Y-%m-%d<span class="k">)</span><span class="s2">*&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-1<span class="k">)</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">yesterday</span><span class="o">=</span><span class="k">$(</span>find<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BACKUP_DIR</span><span class="s2">&quot;</span><span class="w"> </span>-maxdepth<span class="w"> </span><span class="m">1</span><span class="w"> </span>-type<span class="w"> </span>d<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>date<span class="w"> </span>-d<span class="w"> </span>yesterday<span class="w"> </span>+%Y-%m-%d<span class="k">)</span><span class="s2">*&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-1<span class="k">)</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$today</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$yesterday</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">local</span><span class="w"> </span><span class="nv">size_today</span><span class="o">=</span><span class="k">$(</span>du<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$today</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="k">)</span>
+<span class="w">        </span><span class="nb">local</span><span class="w"> </span><span class="nv">size_yesterday</span><span class="o">=</span><span class="k">$(</span>du<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$yesterday</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="k">)</span>
+
+<span class="w">        </span><span class="c1"># 50% 이상 차이나면 경고</span>
+<span class="w">        </span><span class="nb">local</span><span class="w"> </span><span class="nv">diff</span><span class="o">=</span><span class="k">$((</span><span class="nv">size_today</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nv">size_yesterday</span><span class="k">))</span>
+<span class="w">        </span><span class="nb">local</span><span class="w"> </span><span class="nv">threshold</span><span class="o">=</span><span class="k">$((</span><span class="nv">size_yesterday</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="m">2</span><span class="k">))</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">diff</span><span class="p">#-</span><span class="si">}</span><span class="w"> </span>-gt<span class="w"> </span><span class="nv">$threshold</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">            </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;WARNING: Significant size change: </span><span class="nv">$size_yesterday</span><span class="s2"> -&gt; </span><span class="nv">$size_today</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOGFILE</span><span class="s2">&quot;</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">        </span><span class="k">fi</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="o">}</span>
+
+check_disk_space<span class="o">()</span><span class="w"> </span><span class="o">{</span>
+<span class="w">    </span><span class="nb">local</span><span class="w"> </span><span class="nv">usage</span><span class="o">=</span><span class="k">$(</span>df<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BACKUP_DIR</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;NR==2 {print $5}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tr<span class="w"> </span>-d<span class="w"> </span><span class="s1">&#39;%&#39;</span><span class="k">)</span>
+
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$usage</span><span class="w"> </span>-gt<span class="w"> </span><span class="m">90</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;CRITICAL: Backup disk usage at </span><span class="si">${</span><span class="nv">usage</span><span class="si">}</span><span class="s2">%&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOGFILE</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">elif</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$usage</span><span class="w"> </span>-gt<span class="w"> </span><span class="m">80</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;WARNING: Backup disk usage at </span><span class="si">${</span><span class="nv">usage</span><span class="si">}</span><span class="s2">%&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOGFILE</span><span class="s2">&quot;</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="m">1</span>
+<span class="w">    </span><span class="k">fi</span>
+
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;OK: Backup disk usage at </span><span class="si">${</span><span class="nv">usage</span><span class="si">}</span><span class="s2">%&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOGFILE</span><span class="s2">&quot;</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="m">0</span>
+<span class="o">}</span>
+
+<span class="c1"># 메인 실행</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;=== Backup Monitor: </span><span class="k">$(</span>date<span class="k">)</span><span class="s2"> ===&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOGFILE</span><span class="s2">&quot;</span>
+<span class="nv">ERRORS</span><span class="o">=</span><span class="m">0</span>
+
+check_backup_age<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">((</span>ERRORS++<span class="o">))</span>
+check_backup_size<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">((</span>ERRORS++<span class="o">))</span>
+check_disk_space<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="o">((</span>ERRORS++<span class="o">))</span>
+
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$ERRORS</span><span class="w"> </span>-gt<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span>tail<span class="w"> </span>-20<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LOGFILE</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>mail<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;Backup Monitor Alert&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$ALERT_EMAIL</span><span class="s2">&quot;</span>
+<span class="k">fi</span>
+
+<span class="nb">exit</span><span class="w"> </span><span class="nv">$ERRORS</span>
+</code></pre></div>
+
+<h3 id="prometheus">Prometheus 메트릭 수집<a class="header-link" href="#prometheus" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+<span class="c1"># backup-metrics.sh (node_exporter textfile collector용)</span>
+
+<span class="nv">METRICS_FILE</span><span class="o">=</span><span class="s2">&quot;/var/lib/node_exporter/textfile_collector/backup.prom&quot;</span>
+<span class="nv">BACKUP_DIR</span><span class="o">=</span><span class="s2">&quot;/backup&quot;</span>
+
+<span class="c1"># 최신 백업 시간</span>
+<span class="nv">newest</span><span class="o">=</span><span class="k">$(</span>find<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BACKUP_DIR</span><span class="s2">&quot;</span><span class="w"> </span>-maxdepth<span class="w"> </span><span class="m">1</span><span class="w"> </span>-type<span class="w"> </span>d<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;20*&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sort<span class="w"> </span>-r<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-1<span class="k">)</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-n<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$newest</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nv">backup_timestamp</span><span class="o">=</span><span class="k">$(</span>stat<span class="w"> </span>-c<span class="w"> </span>%Y<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$newest</span><span class="s2">&quot;</span><span class="k">)</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;backup_last_success_timestamp </span><span class="nv">$backup_timestamp</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$METRICS_FILE</span><span class="s2">&quot;</span>
+<span class="k">fi</span>
+
+<span class="c1"># 백업 크기</span>
+<span class="nv">backup_size</span><span class="o">=</span><span class="k">$(</span>du<span class="w"> </span>-sb<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$newest</span><span class="s2">&quot;</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $1}&#39;</span><span class="k">)</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;backup_size_bytes </span><span class="nv">$backup_size</span><span class="s2">&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$METRICS_FILE</span><span class="s2">&quot;</span>
+
+<span class="c1"># 디스크 사용량</span>
+<span class="nv">disk_usage</span><span class="o">=</span><span class="k">$(</span>df<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BACKUP_DIR</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;NR==2 {print $3}&#39;</span><span class="k">)</span>
+<span class="nv">disk_total</span><span class="o">=</span><span class="k">$(</span>df<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BACKUP_DIR</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;NR==2 {print $2}&#39;</span><span class="k">)</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;backup_disk_used_bytes </span><span class="k">$((</span><span class="nv">disk_usage</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="m">1024</span><span class="k">))</span><span class="s2">&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$METRICS_FILE</span><span class="s2">&quot;</span>
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;backup_disk_total_bytes </span><span class="k">$((</span><span class="nv">disk_total</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="m">1024</span><span class="k">))</span><span class="s2">&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$METRICS_FILE</span><span class="s2">&quot;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="_18">연습 문제<a class="header-link" href="#_18" title="Permanent link">&para;</a></h2>
+<h3 id="1-rsync">문제 1: rsync 증분 백업<a class="header-link" href="#1-rsync" title="Permanent link">&para;</a></h3>
+<p>하드링크를 이용한 rsync 증분 백업 스크립트를 작성하세요:
+- 원본: <code>/home/user</code>
+- 백업 위치: <code>/backup/home</code>
+- 일일 백업, 최신 백업을 <code>latest</code> 심볼릭 링크로 연결
+- 30일 이상 된 백업 자동 삭제</p>
+<h3 id="2-borg">문제 2: Borg 복구<a class="header-link" href="#2-borg" title="Permanent link">&para;</a></h3>
+<p>Borg 저장소에서 특정 날짜의 백업 중 <code>/etc/nginx/</code> 디렉토리만 복구하는 명령을 작성하세요.</p>
+<h3 id="3-dr">문제 3: DR 테스트<a class="header-link" href="#3-dr" title="Permanent link">&para;</a></h3>
+<p>분기별 재해복구 테스트 절차를 작성하세요. 포함해야 할 항목:
+- 백업 무결성 검증
+- 샘플 데이터 복구 테스트
+- 전체 시스템 복구 테스트 (가능하면)</p>
+<hr />
+<h2 id="_19">정답<a class="header-link" href="#_19" title="Permanent link">&para;</a></h2>
+<h3 id="1_1">문제 1 정답<a class="header-link" href="#1_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/bash</span>
+
+<span class="nv">SOURCE</span><span class="o">=</span><span class="s2">&quot;/home/user&quot;</span>
+<span class="nv">BACKUP_BASE</span><span class="o">=</span><span class="s2">&quot;/backup/home&quot;</span>
+<span class="nv">DATE</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%Y-%m-%d<span class="k">)</span>
+<span class="nv">BACKUP_PATH</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$BACKUP_BASE</span><span class="s2">/</span><span class="nv">$DATE</span><span class="s2">&quot;</span>
+<span class="nv">LATEST</span><span class="o">=</span><span class="s2">&quot;</span><span class="nv">$BACKUP_BASE</span><span class="s2">/latest&quot;</span>
+
+<span class="c1"># 하드링크 옵션</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>-d<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LATEST</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nv">LINK</span><span class="o">=</span><span class="s2">&quot;--link-dest=</span><span class="nv">$LATEST</span><span class="s2">&quot;</span>
+<span class="k">else</span>
+<span class="w">    </span><span class="nv">LINK</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+<span class="k">fi</span>
+
+<span class="c1"># 백업 실행</span>
+rsync<span class="w"> </span>-av<span class="w"> </span>--delete<span class="w"> </span><span class="nv">$LINK</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$SOURCE</span><span class="s2">/&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BACKUP_PATH</span><span class="s2">/&quot;</span>
+
+<span class="c1"># 최신 링크 업데이트</span>
+rm<span class="w"> </span>-f<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LATEST</span><span class="s2">&quot;</span>
+ln<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BACKUP_PATH</span><span class="s2">&quot;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$LATEST</span><span class="s2">&quot;</span>
+
+<span class="c1"># 30일 이상 된 백업 삭제</span>
+find<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$BACKUP_BASE</span><span class="s2">&quot;</span><span class="w"> </span>-maxdepth<span class="w"> </span><span class="m">1</span><span class="w"> </span>-type<span class="w"> </span>d<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;20*&quot;</span><span class="w"> </span>-mtime<span class="w"> </span>+30<span class="w"> </span>-exec<span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span><span class="o">{}</span><span class="w"> </span><span class="se">\;</span>
+</code></pre></div>
+
+<h3 id="2">문제 2 정답<a class="header-link" href="#2" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 백업 목록 확인</span>
+borg<span class="w"> </span>list<span class="w"> </span>/backup/borg-repo
+
+<span class="c1"># 특정 날짜 백업에서 nginx 설정 복구</span>
+borg<span class="w"> </span>extract<span class="w"> </span>/backup/borg-repo::backup-2024-01-15<span class="w"> </span>etc/nginx
+
+<span class="c1"># 다른 경로로 복구</span>
+mkdir<span class="w"> </span>/tmp/restore
+<span class="nb">cd</span><span class="w"> </span>/tmp/restore
+borg<span class="w"> </span>extract<span class="w"> </span>/backup/borg-repo::backup-2024-01-15<span class="w"> </span>etc/nginx
+</code></pre></div>
+
+<h3 id="3">문제 3 정답<a class="header-link" href="#3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="gh"># 분기별 DR 테스트 절차</span>
+
+<span class="gu">## 1. 백업 무결성 검증 (매 분기)</span>
+<span class="k">- [ ]</span> Borg check 실행: <span class="sb">`borg check /backup/borg-repo`</span>
+<span class="k">- [ ]</span> 백업 목록 검토: <span class="sb">`borg list /backup/borg-repo`</span>
+<span class="k">- [ ]</span> 최근 백업 상세 확인: <span class="sb">`borg info /backup/borg-repo::latest`</span>
+
+<span class="gu">## 2. 샘플 데이터 복구 테스트 (매 분기)</span>
+<span class="k">- [ ]</span> 테스트 디렉토리 생성
+<span class="k">- [ ]</span> 설정 파일 복구 테스트 (/etc/)
+<span class="k">- [ ]</span> 데이터 파일 복구 테스트 (/var/www/)
+<span class="k">- [ ]</span> 복구된 파일 무결성 확인 (diff 또는 checksum)
+
+<span class="gu">## 3. 전체 시스템 복구 테스트 (반기)</span>
+<span class="k">- [ ]</span> 테스트 VM 또는 물리 서버 준비
+<span class="k">- [ ]</span> 베어메탈 복구 절차 실행
+<span class="k">- [ ]</span> 부팅 확인
+<span class="k">- [ ]</span> 서비스 정상 동작 확인
+<span class="k">- [ ]</span> 데이터 무결성 검증
+
+<span class="gu">## 4. 문서화 및 개선</span>
+<span class="k">- [ ]</span> 테스트 결과 문서화
+<span class="k">- [ ]</span> 발견된 문제점 기록
+<span class="k">- [ ]</span> 절차 개선 사항 반영
+<span class="k">- [ ]</span> RTO/RPO 달성 여부 확인
+</code></pre></div>
+
+<hr />
+<h2 id="_20">다음 단계<a class="header-link" href="#_20" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./20_Kernel_Management.md">20_Kernel_Management.md</a> - 커널 컴파일, 모듈, GRUB 설정</li>
+</ul>
+<hr />
+<h2 id="_21">참고 자료<a class="header-link" href="#_21" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://rsync.samba.org/documentation.html">rsync Manual</a></li>
+<li><a href="https://borgbackup.readthedocs.io/">Borg Backup Documentation</a></li>
+<li><a href="https://clonezilla.org/">Clonezilla</a></li>
+<li><code>man rsync</code>, <code>man tar</code>, <code>man dd</code>, <code>man borg</code></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Linux/18_Log_Management.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">로그 관리</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Linux/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Linux/20_Kernel_Management.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">커널 관리</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

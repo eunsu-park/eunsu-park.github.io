@@ -1,0 +1,1303 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>슈퍼스칼라와 비순차 실행 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Computer_Architecture/">Computer Architecture</a>
+    <span class="separator">/</span>
+    <span class="current">슈퍼스칼라와 비순차 실행</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>슈퍼스칼라와 비순차 실행</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Computer_Architecture/12_Branch_Prediction.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">분기 예측 (Branch Prediction)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Computer_Architecture/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Computer_Architecture/14_Memory_Hierarchy.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">메모리 계층 구조</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_2">개요</a></li>
+<li><a href="#_3">목차</a></li>
+<li><a href="#1-ilp">1. 명령어 수준 병렬성 (ILP)</a><ul>
+<li><a href="#11-ilp">1.1 ILP의 개념</a></li>
+<li><a href="#12-data-dependence">1.2 데이터 의존성 (Data Dependence)</a><ul>
+<li><a href="#raw-read-after-write-">RAW (Read After Write) - 진정한 의존성</a></li>
+<li><a href="#war-write-after-read-">WAR (Write After Read) - 반의존성</a></li>
+<li><a href="#waw-write-after-write-">WAW (Write After Write) - 출력 의존성</a></li>
+</ul>
+</li>
+<li><a href="#13">1.3 의존성 그래프</a></li>
+<li><a href="#14">1.4 제어 의존성</a></li>
+</ul>
+</li>
+<li><a href="#2">2. 슈퍼스칼라 프로세서</a><ul>
+<li><a href="#21">2.1 슈퍼스칼라의 개념</a></li>
+<li><a href="#22">2.2 슈퍼스칼라 구조</a></li>
+<li><a href="#23-issue">2.3 Issue 정책</a><ul>
+<li><a href="#in-order-issue">In-Order Issue</a></li>
+<li><a href="#out-of-order-issue">Out-of-Order Issue</a></li>
+</ul>
+</li>
+<li><a href="#24">2.4 실행 유닛의 다양화</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 비순차 실행의 필요성</a><ul>
+<li><a href="#31">3.1 순차 실행의 한계</a></li>
+<li><a href="#32-ooo-3">3.2 OoO 실행의 3단계</a></li>
+</ul>
+</li>
+<li><a href="#4">4. 레지스터 리네이밍</a><ul>
+<li><a href="#41">4.1 리네이밍의 필요성</a></li>
+<li><a href="#42">4.2 리네이밍 동작</a></li>
+<li><a href="#43-register-alias-table-rat">4.3 Register Alias Table (RAT)</a></li>
+<li><a href="#44">4.4 리네이밍 알고리즘</a></li>
+</ul>
+</li>
+<li><a href="#5-tomasulo">5. Tomasulo 알고리즘</a><ul>
+<li><a href="#51">5.1 배경</a></li>
+<li><a href="#52">5.2 핵심 구성 요소</a></li>
+<li><a href="#53-reservation-station">5.3 Reservation Station 구조</a></li>
+<li><a href="#54">5.4 동작 과정</a></li>
+<li><a href="#55-tomasulo">5.5 예제: Tomasulo 실행 추적</a></li>
+</ul>
+</li>
+<li><a href="#6-reorder-buffer-rob">6. Reorder Buffer (ROB)</a><ul>
+<li><a href="#61-rob">6.1 ROB의 필요성</a></li>
+<li><a href="#62-rob">6.2 ROB 구조</a></li>
+<li><a href="#63-rob-tomasulo">6.3 ROB와 Tomasulo 통합</a></li>
+<li><a href="#64">6.4 커밋 과정</a></li>
+<li><a href="#65">6.5 분기 예측 실패 복구</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 현대 프로세서의 실제 구현</a><ul>
+<li><a href="#71-intel-core-skylake">7.1 Intel Core 아키텍처 (Skylake 기준)</a></li>
+<li><a href="#72-arm-cortex-a77">7.2 ARM Cortex-A77 아키텍처</a></li>
+<li><a href="#73">7.3 성능 비교</a></li>
+<li><a href="#74-ilp">7.4 ILP의 한계</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 연습 문제</a><ul>
+<li><a href="#_4">기초 문제</a></li>
+<li><a href="#_5">중급 문제</a></li>
+<li><a href="#_6">심화 문제</a></li>
+</ul>
+</li>
+<li><a href="#_7">다음 단계</a></li>
+<li><a href="#_8">참고 자료</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="_1">슈퍼스칼라와 비순차 실행<a class="header-link" href="#_1" title="Permanent link">&para;</a></h1>
+<h2 id="_2">개요<a class="header-link" href="#_2" title="Permanent link">&para;</a></h2>
+<p>현대 고성능 프로세서는 단순히 클럭 속도를 높이는 것만으로는 성능 향상에 한계가 있습니다. 슈퍼스칼라(Superscalar)와 비순차 실행(Out-of-Order Execution)은 명령어 수준 병렬성(ILP)을 활용하여 한 사이클에 여러 명령어를 동시에 실행하는 기술입니다. 이 레슨에서는 ILP의 개념, 슈퍼스칼라 아키텍처, 비순차 실행의 원리와 구현 방법을 학습합니다.</p>
+<p><strong>난이도</strong>: ⭐⭐⭐⭐</p>
+<p><strong>선수 지식</strong>: 파이프라이닝, 분기 예측, CPU 구조 기초</p>
+<hr />
+<h2 id="_3">목차<a class="header-link" href="#_3" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-명령어-수준-병렬성-ilp">명령어 수준 병렬성 (ILP)</a></li>
+<li><a href="#2-슈퍼스칼라-프로세서">슈퍼스칼라 프로세서</a></li>
+<li><a href="#3-비순차-실행의-필요성">비순차 실행의 필요성</a></li>
+<li><a href="#4-레지스터-리네이밍">레지스터 리네이밍</a></li>
+<li><a href="#5-tomasulo-알고리즘">Tomasulo 알고리즘</a></li>
+<li><a href="#6-reorder-buffer-rob">Reorder Buffer (ROB)</a></li>
+<li><a href="#7-현대-프로세서의-실제-구현">현대 프로세서의 실제 구현</a></li>
+<li><a href="#8-연습-문제">연습 문제</a></li>
+</ol>
+<hr />
+<h2 id="1-ilp">1. 명령어 수준 병렬성 (ILP)<a class="header-link" href="#1-ilp" title="Permanent link">&para;</a></h2>
+<h3 id="11-ilp">1.1 ILP의 개념<a class="header-link" href="#11-ilp" title="Permanent link">&para;</a></h3>
+<p>명령어 수준 병렬성(Instruction-Level Parallelism, ILP)은 프로그램 내에서 동시에 실행 가능한 명령어들의 잠재적 병렬성을 의미합니다.</p>
+<div class="highlight"><pre><span></span><code>순차 실행 vs 병렬 실행:
+
+순차 실행:
+  시간 →
+  t1    t2    t3    t4    t5    t6
+  ├─────┼─────┼─────┼─────┼─────┼─────┤
+  │ I1  │ I2  │ I3  │ I4  │ I5  │ I6  │
+  └─────┴─────┴─────┴─────┴─────┴─────┘
+  총 6사이클
+
+병렬 실행 (ILP = 2):
+  시간 →
+  t1    t2    t3
+  ├─────┼─────┼─────┤
+  │ I1  │ I3  │ I5  │
+  │ I2  │ I4  │ I6  │
+  └─────┴─────┴─────┘
+  총 3사이클
+</code></pre></div>
+
+<h3 id="12-data-dependence">1.2 데이터 의존성 (Data Dependence)<a class="header-link" href="#12-data-dependence" title="Permanent link">&para;</a></h3>
+<p>ILP를 제한하는 가장 중요한 요소는 데이터 의존성입니다.</p>
+<h4 id="raw-read-after-write-">RAW (Read After Write) - 진정한 의존성<a class="header-link" href="#raw-read-after-write-" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="n">I1</span><span class="o">:</span><span class="w"> </span><span class="n">ADD</span><span class="w"> </span><span class="n">R1</span><span class="o">,</span><span class="w"> </span><span class="n">R2</span><span class="o">,</span><span class="w"> </span><span class="n">R3</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="n">R1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">R2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">R3</span>
+<span class="n">I2</span><span class="o">:</span><span class="w"> </span><span class="n">SUB</span><span class="w"> </span><span class="n">R4</span><span class="o">,</span><span class="w"> </span><span class="n">R1</span><span class="o">,</span><span class="w"> </span><span class="n">R5</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="n">R4</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">R1</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">R5</span><span class="w">  </span><span class="o">(</span><span class="n">R1</span><span class="w"> </span><span class="err">사용</span><span class="o">,</span><span class="w"> </span><span class="n">I1</span><span class="w"> </span><span class="err">결과</span><span class="w"> </span><span class="err">필요</span><span class="o">)</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>I1 ────────→ I2
+   R1 의존성
+
+I2는 I1이 R1에 쓴 후에만 실행 가능
+</code></pre></div>
+
+<h4 id="war-write-after-read-">WAR (Write After Read) - 반의존성<a class="header-link" href="#war-write-after-read-" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="n">I1</span><span class="o">:</span><span class="w"> </span><span class="n">ADD</span><span class="w"> </span><span class="n">R1</span><span class="o">,</span><span class="w"> </span><span class="n">R2</span><span class="o">,</span><span class="w"> </span><span class="n">R3</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="n">R2</span><span class="w"> </span><span class="err">읽기</span>
+<span class="n">I2</span><span class="o">:</span><span class="w"> </span><span class="n">SUB</span><span class="w"> </span><span class="n">R2</span><span class="o">,</span><span class="w"> </span><span class="n">R4</span><span class="o">,</span><span class="w"> </span><span class="n">R5</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="n">R2</span><span class="w"> </span><span class="err">쓰기</span><span class="w"> </span><span class="o">(</span><span class="n">I1이</span><span class="w"> </span><span class="n">R2를</span><span class="w"> </span><span class="err">읽은</span><span class="w"> </span><span class="err">후에</span><span class="w"> </span><span class="err">써야</span><span class="w"> </span><span class="err">함</span><span class="o">)</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>I1이 R2를 읽기 전에 I2가 R2를 덮어쓰면 안 됨
+→ 레지스터 리네이밍으로 해결 가능
+</code></pre></div>
+
+<h4 id="waw-write-after-write-">WAW (Write After Write) - 출력 의존성<a class="header-link" href="#waw-write-after-write-" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="n">I1</span><span class="o">:</span><span class="w"> </span><span class="n">ADD</span><span class="w"> </span><span class="n">R1</span><span class="o">,</span><span class="w"> </span><span class="n">R2</span><span class="o">,</span><span class="w"> </span><span class="n">R3</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="n">R1</span><span class="w"> </span><span class="err">쓰기</span>
+<span class="n">I2</span><span class="o">:</span><span class="w"> </span><span class="n">SUB</span><span class="w"> </span><span class="n">R1</span><span class="o">,</span><span class="w"> </span><span class="n">R4</span><span class="o">,</span><span class="w"> </span><span class="n">R5</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="n">R1</span><span class="w"> </span><span class="err">쓰기</span><span class="w"> </span><span class="o">(</span><span class="err">같은</span><span class="w"> </span><span class="err">레지스터에</span><span class="w"> </span><span class="err">쓰기</span><span class="o">)</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>I2가 I1보다 먼저 완료되면 최종 R1 값이 틀려짐
+→ 레지스터 리네이밍으로 해결 가능
+</code></pre></div>
+
+<h3 id="13">1.3 의존성 그래프<a class="header-link" href="#13" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">프로그램</span><span class="o">:</span>
+<span class="n">I1</span><span class="o">:</span><span class="w"> </span><span class="n">LD</span><span class="w">   </span><span class="n">R1</span><span class="o">,</span><span class="w"> </span><span class="mi">0</span><span class="o">(</span><span class="n">R10</span><span class="o">)</span><span class="w">     </span><span class="o">;</span><span class="w"> </span><span class="err">메모리에서</span><span class="w"> </span><span class="err">로드</span>
+<span class="n">I2</span><span class="o">:</span><span class="w"> </span><span class="n">ADD</span><span class="w">  </span><span class="n">R2</span><span class="o">,</span><span class="w"> </span><span class="n">R1</span><span class="o">,</span><span class="w"> </span><span class="n">R3</span><span class="w">     </span><span class="o">;</span><span class="w"> </span><span class="n">RAW</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">R1</span>
+<span class="n">I3</span><span class="o">:</span><span class="w"> </span><span class="n">LD</span><span class="w">   </span><span class="n">R4</span><span class="o">,</span><span class="w"> </span><span class="mi">8</span><span class="o">(</span><span class="n">R10</span><span class="o">)</span><span class="w">     </span><span class="o">;</span><span class="w"> </span><span class="err">독립적</span>
+<span class="n">I4</span><span class="o">:</span><span class="w"> </span><span class="n">MUL</span><span class="w">  </span><span class="n">R5</span><span class="o">,</span><span class="w"> </span><span class="n">R4</span><span class="o">,</span><span class="w"> </span><span class="n">R6</span><span class="w">     </span><span class="o">;</span><span class="w"> </span><span class="n">RAW</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">R4</span>
+<span class="n">I5</span><span class="o">:</span><span class="w"> </span><span class="n">ADD</span><span class="w">  </span><span class="n">R7</span><span class="o">,</span><span class="w"> </span><span class="n">R2</span><span class="o">,</span><span class="w"> </span><span class="n">R5</span><span class="w">     </span><span class="o">;</span><span class="w"> </span><span class="n">RAW</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">R2</span><span class="o">,</span><span class="w"> </span><span class="n">R5</span>
+<span class="n">I6</span><span class="o">:</span><span class="w"> </span><span class="n">ST</span><span class="w">   </span><span class="n">R7</span><span class="o">,</span><span class="w"> </span><span class="mi">16</span><span class="o">(</span><span class="n">R10</span><span class="o">)</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="n">RAW</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">R7</span>
+
+<span class="err">의존성</span><span class="w"> </span><span class="err">그래프</span><span class="o">:</span>
+<span class="w">        </span><span class="n">I1</span><span class="w">          </span><span class="n">I3</span>
+<span class="w">         </span><span class="err">│</span><span class="w">           </span><span class="err">│</span>
+<span class="w">         </span><span class="err">▼</span><span class="w">           </span><span class="err">▼</span>
+<span class="w">        </span><span class="n">I2</span><span class="w">          </span><span class="n">I4</span>
+<span class="w">         </span><span class="err">│</span><span class="w">           </span><span class="err">│</span>
+<span class="w">         </span><span class="err">└─────┬─────┘</span>
+<span class="w">               </span><span class="err">│</span>
+<span class="w">               </span><span class="err">▼</span>
+<span class="w">              </span><span class="n">I5</span>
+<span class="w">               </span><span class="err">│</span>
+<span class="w">               </span><span class="err">▼</span>
+<span class="w">              </span><span class="n">I6</span>
+
+<span class="err">병렬</span><span class="w"> </span><span class="err">실행</span><span class="w"> </span><span class="err">가능한</span><span class="w"> </span><span class="err">그룹</span><span class="o">:</span>
+<span class="o">-</span><span class="w"> </span><span class="err">레벨</span><span class="w"> </span><span class="mi">1</span><span class="o">:</span><span class="w"> </span><span class="n">I1</span><span class="o">,</span><span class="w"> </span><span class="n">I3</span><span class="w"> </span><span class="o">(</span><span class="err">동시</span><span class="w"> </span><span class="err">실행</span><span class="w"> </span><span class="err">가능</span><span class="o">)</span>
+<span class="o">-</span><span class="w"> </span><span class="err">레벨</span><span class="w"> </span><span class="mi">2</span><span class="o">:</span><span class="w"> </span><span class="n">I2</span><span class="o">,</span><span class="w"> </span><span class="n">I4</span><span class="w"> </span><span class="o">(</span><span class="err">동시</span><span class="w"> </span><span class="err">실행</span><span class="w"> </span><span class="err">가능</span><span class="o">)</span>
+<span class="o">-</span><span class="w"> </span><span class="err">레벨</span><span class="w"> </span><span class="mi">3</span><span class="o">:</span><span class="w"> </span><span class="n">I5</span>
+<span class="o">-</span><span class="w"> </span><span class="err">레벨</span><span class="w"> </span><span class="mi">4</span><span class="o">:</span><span class="w"> </span><span class="n">I6</span>
+
+<span class="err">최소</span><span class="w"> </span><span class="err">실행</span><span class="w"> </span><span class="err">시간</span><span class="o">:</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="err">레벨</span><span class="w"> </span><span class="o">(</span><span class="mi">4</span><span class="err">사이클</span><span class="o">)</span><span class="w"> </span><span class="n">vs</span><span class="w"> </span><span class="err">순차</span><span class="w"> </span><span class="err">실행</span><span class="o">:</span><span class="w"> </span><span class="mi">6</span><span class="err">사이클</span>
+<span class="n">ILP</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">6</span><span class="o">/</span><span class="mi">4</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.5</span>
+</code></pre></div>
+
+<h3 id="14">1.4 제어 의존성<a class="header-link" href="#14" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="w">      </span><span class="nt">BEQ</span><span class="w">  </span><span class="nt">R1</span><span class="o">,</span><span class="w"> </span><span class="nt">R2</span><span class="o">,</span><span class="w"> </span><span class="nt">LABEL</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="nt">분기</span><span class="w"> </span><span class="nt">명령어</span>
+<span class="w">      </span><span class="nt">ADD</span><span class="w">  </span><span class="nt">R3</span><span class="o">,</span><span class="w"> </span><span class="nt">R4</span><span class="o">,</span><span class="w"> </span><span class="nt">R5</span><span class="w">       </span><span class="o">;</span><span class="w"> </span><span class="nt">분기</span><span class="w"> </span><span class="nt">안</span><span class="w"> </span><span class="nt">취할</span><span class="w"> </span><span class="nt">때</span><span class="w"> </span><span class="nt">실행</span>
+<span class="w">      </span><span class="o">...</span>
+<span class="nt">LABEL</span><span class="o">:</span>
+<span class="w">      </span><span class="nt">SUB</span><span class="w">  </span><span class="nt">R6</span><span class="o">,</span><span class="w"> </span><span class="nt">R7</span><span class="o">,</span><span class="w"> </span><span class="nt">R8</span><span class="w">       </span><span class="o">;</span><span class="w"> </span><span class="nt">분기</span><span class="w"> </span><span class="nt">취할</span><span class="w"> </span><span class="nt">때</span><span class="w"> </span><span class="nt">실행</span>
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>분기 결과가 나오기 전에는 어떤 명령어를 실행할지 모름
+→ 분기 예측으로 해결
+</code></pre></div>
+
+<hr />
+<h2 id="2">2. 슈퍼스칼라 프로세서<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="21">2.1 슈퍼스칼라의 개념<a class="header-link" href="#21" title="Permanent link">&para;</a></h3>
+<p>슈퍼스칼라 프로세서는 매 사이클마다 여러 개의 명령어를 페치, 디코드, 실행할 수 있는 프로세서입니다.</p>
+<div class="highlight"><pre><span></span><code>스칼라<span class="w"> </span><span class="nv">vs</span><span class="w"> </span>슈퍼스칼라:
+
+스칼라<span class="w"> </span>파이프라인<span class="w"> </span><span class="ss">(</span><span class="nv">IPC</span><span class="w"> </span>≤<span class="w"> </span><span class="mi">1</span><span class="ss">)</span>:
+┌─────┬─────┬─────┬─────┬─────┐
+│<span class="w"> </span><span class="k">IF</span><span class="w">  </span>│<span class="w"> </span><span class="nv">ID</span><span class="w">  </span>│<span class="w"> </span><span class="nv">EX</span><span class="w">  </span>│<span class="w"> </span><span class="nv">MEM</span><span class="w"> </span>│<span class="w"> </span><span class="nv">WB</span><span class="w">  </span>│<span class="w"> </span><span class="nv">I1</span>
+└─────┴─────┴─────┴─────┴─────┘
+<span class="w">      </span>┌─────┬─────┬─────┬─────┬─────┐
+<span class="w">      </span>│<span class="w"> </span><span class="k">IF</span><span class="w">  </span>│<span class="w"> </span><span class="nv">ID</span><span class="w">  </span>│<span class="w"> </span><span class="nv">EX</span><span class="w">  </span>│<span class="w"> </span><span class="nv">MEM</span><span class="w"> </span>│<span class="w"> </span><span class="nv">WB</span><span class="w">  </span>│<span class="w"> </span><span class="nv">I2</span>
+<span class="w">      </span>└─────┴─────┴─────┴─────┴─────┘
+
+<span class="mi">2</span><span class="o">-</span><span class="nv">way</span><span class="w"> </span>슈퍼스칼라<span class="w"> </span><span class="ss">(</span><span class="nv">IPC</span><span class="w"> </span>≤<span class="w"> </span><span class="mi">2</span><span class="ss">)</span>:
+┌─────┬─────┬─────┬─────┬─────┐
+│<span class="w"> </span><span class="k">IF</span><span class="w">  </span>│<span class="w"> </span><span class="nv">ID</span><span class="w">  </span>│<span class="w"> </span><span class="nv">EX</span><span class="w">  </span>│<span class="w"> </span><span class="nv">MEM</span><span class="w"> </span>│<span class="w"> </span><span class="nv">WB</span><span class="w">  </span>│<span class="w"> </span><span class="nv">I1</span>
+├─────┼─────┼─────┼─────┼─────┤
+│<span class="w"> </span><span class="k">IF</span><span class="w">  </span>│<span class="w"> </span><span class="nv">ID</span><span class="w">  </span>│<span class="w"> </span><span class="nv">EX</span><span class="w">  </span>│<span class="w"> </span><span class="nv">MEM</span><span class="w"> </span>│<span class="w"> </span><span class="nv">WB</span><span class="w">  </span>│<span class="w"> </span><span class="nv">I2</span>
+└─────┴─────┴─────┴─────┴─────┘
+<span class="w">      </span>┌─────┬─────┬─────┬─────┬─────┐
+<span class="w">      </span>│<span class="w"> </span><span class="k">IF</span><span class="w">  </span>│<span class="w"> </span><span class="nv">ID</span><span class="w">  </span>│<span class="w"> </span><span class="nv">EX</span><span class="w">  </span>│<span class="w"> </span><span class="nv">MEM</span><span class="w"> </span>│<span class="w"> </span><span class="nv">WB</span><span class="w">  </span>│<span class="w"> </span><span class="nv">I3</span>
+<span class="w">      </span>├─────┼─────┼─────┼─────┼─────┤
+<span class="w">      </span>│<span class="w"> </span><span class="k">IF</span><span class="w">  </span>│<span class="w"> </span><span class="nv">ID</span><span class="w">  </span>│<span class="w"> </span><span class="nv">EX</span><span class="w">  </span>│<span class="w"> </span><span class="nv">MEM</span><span class="w"> </span>│<span class="w"> </span><span class="nv">WB</span><span class="w">  </span>│<span class="w"> </span><span class="nv">I4</span>
+<span class="w">      </span>└─────┴─────┴─────┴─────┴─────┘
+</code></pre></div>
+
+<h3 id="22">2.2 슈퍼스칼라 구조<a class="header-link" href="#22" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                     4-way 슈퍼스칼라 프로세서                      │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │              Instruction Fetch Unit                       │   │
+│  │  ┌──────────┐    ┌──────────────────────────────────┐    │   │
+│  │  │    PC    │───→│  Instruction Cache (I-Cache)      │    │   │
+│  │  └──────────┘    └──────────────────────────────────┘    │   │
+│  │                              │                            │   │
+│  │                    4개 명령어/사이클                       │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                │                                 │
+│                                ▼                                 │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │              Instruction Decode Unit                      │   │
+│  │  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐         │   │
+│  │  │Decoder1│  │Decoder2│  │Decoder3│  │Decoder4│         │   │
+│  │  └────────┘  └────────┘  └────────┘  └────────┘         │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                │                                 │
+│                                ▼                                 │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                    Issue Unit                             │   │
+│  │          (의존성 검사 및 실행 유닛 할당)                    │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                │                                 │
+│        ┌───────────┬──────────┼──────────┬───────────┐         │
+│        ▼           ▼          ▼          ▼           ▼         │
+│  ┌──────────┐┌──────────┐┌──────────┐┌──────────┐┌──────────┐  │
+│  │  ALU 1   ││  ALU 2   ││  FPU     ││  Load    ││  Store   │  │
+│  │          ││          ││          ││  Unit    ││  Unit    │  │
+│  └──────────┘└──────────┘└──────────┘└──────────┘└──────────┘  │
+│        │           │          │          │           │         │
+│        └───────────┴──────────┴──────────┴───────────┘         │
+│                                │                                 │
+│                                ▼                                 │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │              Write-back / Commit                          │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="23-issue">2.3 Issue 정책<a class="header-link" href="#23-issue" title="Permanent link">&para;</a></h3>
+<h4 id="in-order-issue">In-Order Issue<a class="header-link" href="#in-order-issue" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="nt">명령어가</span><span class="w"> </span><span class="nt">프로그램</span><span class="w"> </span><span class="nt">순서대로</span><span class="w"> </span><span class="nt">실행</span><span class="w"> </span><span class="nt">유닛에</span><span class="w"> </span><span class="nt">발행됨</span>
+
+<span class="nt">프로그램</span><span class="o">:</span>
+<span class="nt">I1</span><span class="o">:</span><span class="w"> </span><span class="nt">ADD</span><span class="w"> </span><span class="nt">R1</span><span class="o">,</span><span class="w"> </span><span class="nt">R2</span><span class="o">,</span><span class="w"> </span><span class="nt">R3</span>
+<span class="nt">I2</span><span class="o">:</span><span class="w"> </span><span class="nt">MUL</span><span class="w"> </span><span class="nt">R4</span><span class="o">,</span><span class="w"> </span><span class="nt">R1</span><span class="o">,</span><span class="w"> </span><span class="nt">R5</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="nt">I1</span><span class="w"> </span><span class="nt">의존</span><span class="w"> </span><span class="o">(</span><span class="nt">stall</span><span class="o">)</span>
+<span class="nt">I3</span><span class="o">:</span><span class="w"> </span><span class="nt">SUB</span><span class="w"> </span><span class="nt">R6</span><span class="o">,</span><span class="w"> </span><span class="nt">R7</span><span class="o">,</span><span class="w"> </span><span class="nt">R8</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="nt">독립적이지만</span><span class="w"> </span><span class="nt">I2</span><span class="w"> </span><span class="nt">뒤에</span><span class="w"> </span><span class="nt">대기</span>
+
+<span class="nt">시간</span><span class="w"> </span><span class="nt">흐름</span><span class="o">:</span>
+<span class="nt">사이클</span><span class="w"> </span><span class="nt">1</span><span class="o">:</span><span class="w"> </span><span class="nt">Issue</span><span class="w"> </span><span class="nt">I1</span>
+<span class="nt">사이클</span><span class="w"> </span><span class="nt">2</span><span class="o">:</span><span class="w"> </span><span class="nt">I1</span><span class="w"> </span><span class="nt">실행</span><span class="w"> </span><span class="nt">중</span><span class="o">,</span><span class="w"> </span><span class="nt">I2</span><span class="w"> </span><span class="nt">대기</span><span class="w"> </span><span class="o">(</span><span class="nt">RAW</span><span class="w"> </span><span class="nt">hazard</span><span class="o">)</span>
+<span class="nt">사이클</span><span class="w"> </span><span class="nt">3</span><span class="o">:</span><span class="w"> </span><span class="nt">Issue</span><span class="w"> </span><span class="nt">I2</span><span class="w"> </span><span class="o">(</span><span class="nt">I1</span><span class="w"> </span><span class="nt">완료</span><span class="w"> </span><span class="nt">후</span><span class="o">)</span>
+<span class="nt">사이클</span><span class="w"> </span><span class="nt">4</span><span class="o">:</span><span class="w"> </span><span class="nt">Issue</span><span class="w"> </span><span class="nt">I3</span>
+
+<span class="nt">문제</span><span class="o">:</span><span class="w"> </span><span class="nt">I3는</span><span class="w"> </span><span class="nt">독립적인데</span><span class="w"> </span><span class="nt">I2</span><span class="w"> </span><span class="nt">때문에</span><span class="w"> </span><span class="nt">지연</span>
+</code></pre></div>
+
+<h4 id="out-of-order-issue">Out-of-Order Issue<a class="header-link" href="#out-of-order-issue" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="nt">의존성이</span><span class="w"> </span><span class="nt">없는</span><span class="w"> </span><span class="nt">명령어는</span><span class="w"> </span><span class="nt">순서에</span><span class="w"> </span><span class="nt">관계없이</span><span class="w"> </span><span class="nt">발행</span>
+
+<span class="nt">프로그램</span><span class="o">:</span>
+<span class="nt">I1</span><span class="o">:</span><span class="w"> </span><span class="nt">ADD</span><span class="w"> </span><span class="nt">R1</span><span class="o">,</span><span class="w"> </span><span class="nt">R2</span><span class="o">,</span><span class="w"> </span><span class="nt">R3</span>
+<span class="nt">I2</span><span class="o">:</span><span class="w"> </span><span class="nt">MUL</span><span class="w"> </span><span class="nt">R4</span><span class="o">,</span><span class="w"> </span><span class="nt">R1</span><span class="o">,</span><span class="w"> </span><span class="nt">R5</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="nt">I1</span><span class="w"> </span><span class="nt">의존</span>
+<span class="nt">I3</span><span class="o">:</span><span class="w"> </span><span class="nt">SUB</span><span class="w"> </span><span class="nt">R6</span><span class="o">,</span><span class="w"> </span><span class="nt">R7</span><span class="o">,</span><span class="w"> </span><span class="nt">R8</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="nt">독립적</span>
+
+<span class="nt">시간</span><span class="w"> </span><span class="nt">흐름</span><span class="o">:</span>
+<span class="nt">사이클</span><span class="w"> </span><span class="nt">1</span><span class="o">:</span><span class="w"> </span><span class="nt">Issue</span><span class="w"> </span><span class="nt">I1</span><span class="o">,</span><span class="w"> </span><span class="nt">I3</span><span class="w"> </span><span class="o">(</span><span class="nt">동시</span><span class="w"> </span><span class="nt">발행</span><span class="o">)</span>
+<span class="nt">사이클</span><span class="w"> </span><span class="nt">2</span><span class="o">:</span><span class="w"> </span><span class="nt">I1</span><span class="w"> </span><span class="nt">완료</span><span class="o">,</span><span class="w"> </span><span class="nt">Issue</span><span class="w"> </span><span class="nt">I2</span>
+<span class="nt">사이클</span><span class="w"> </span><span class="nt">3</span><span class="o">:</span><span class="w"> </span><span class="nt">I2</span><span class="w"> </span><span class="nt">실행</span>
+
+<span class="nt">성능</span><span class="w"> </span><span class="nt">향상</span><span class="o">:</span><span class="w"> </span><span class="nt">I3가</span><span class="w"> </span><span class="nt">I2를</span><span class="w"> </span><span class="nt">기다리지</span><span class="w"> </span><span class="nt">않음</span>
+</code></pre></div>
+
+<h3 id="24">2.4 실행 유닛의 다양화<a class="header-link" href="#24" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>현대 프로세서의 실행 유닛 예시:
+
+┌─────────────────────────────────────────────────┐
+│           Execution Units (Intel Core)           │
+├────────────────┬────────────────────────────────┤
+│ Port 0         │ ALU, FP MUL, FP DIV, Branch    │
+├────────────────┼────────────────────────────────┤
+│ Port 1         │ ALU, FP ADD, LEA               │
+├────────────────┼────────────────────────────────┤
+│ Port 2         │ Load (Address Gen)             │
+├────────────────┼────────────────────────────────┤
+│ Port 3         │ Load (Address Gen)             │
+├────────────────┼────────────────────────────────┤
+│ Port 4         │ Store Data                     │
+├────────────────┼────────────────────────────────┤
+│ Port 5         │ ALU, Vector Shuffle, Branch    │
+├────────────────┼────────────────────────────────┤
+│ Port 6         │ ALU, Branch                    │
+├────────────────┼────────────────────────────────┤
+│ Port 7         │ Store (Address Gen)            │
+└────────────────┴────────────────────────────────┘
+
+총: 8개 포트, 사이클당 최대 8개 마이크로 연산 실행 가능
+</code></pre></div>
+
+<hr />
+<h2 id="3">3. 비순차 실행의 필요성<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="31">3.1 순차 실행의 한계<a class="header-link" href="#31" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">프로그램</span><span class="o">:</span>
+<span class="n">I1</span><span class="o">:</span><span class="w"> </span><span class="n">LD</span><span class="w">   </span><span class="n">R1</span><span class="o">,</span><span class="w"> </span><span class="mi">0</span><span class="o">(</span><span class="n">R10</span><span class="o">)</span><span class="w">     </span><span class="o">;</span><span class="w"> </span><span class="err">캐시</span><span class="w"> </span><span class="err">미스</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="err">사이클</span><span class="w"> </span><span class="err">소요</span>
+<span class="n">I2</span><span class="o">:</span><span class="w"> </span><span class="n">ADD</span><span class="w">  </span><span class="n">R2</span><span class="o">,</span><span class="w"> </span><span class="n">R1</span><span class="o">,</span><span class="w"> </span><span class="n">R3</span><span class="w">     </span><span class="o">;</span><span class="w"> </span><span class="n">I1</span><span class="w"> </span><span class="err">의존</span>
+<span class="n">I3</span><span class="o">:</span><span class="w"> </span><span class="n">LD</span><span class="w">   </span><span class="n">R4</span><span class="o">,</span><span class="w"> </span><span class="mi">8</span><span class="o">(</span><span class="n">R10</span><span class="o">)</span><span class="w">     </span><span class="o">;</span><span class="w"> </span><span class="err">독립적</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="err">캐시</span><span class="w"> </span><span class="err">히트</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="err">사이클</span>
+<span class="n">I4</span><span class="o">:</span><span class="w"> </span><span class="n">MUL</span><span class="w">  </span><span class="n">R5</span><span class="o">,</span><span class="w"> </span><span class="n">R4</span><span class="o">,</span><span class="w"> </span><span class="n">R6</span><span class="w">     </span><span class="o">;</span><span class="w"> </span><span class="n">I3</span><span class="w"> </span><span class="err">의존</span>
+<span class="n">I5</span><span class="o">:</span><span class="w"> </span><span class="n">ADD</span><span class="w">  </span><span class="n">R7</span><span class="o">,</span><span class="w"> </span><span class="n">R8</span><span class="o">,</span><span class="w"> </span><span class="n">R9</span><span class="w">     </span><span class="o">;</span><span class="w"> </span><span class="err">완전히</span><span class="w"> </span><span class="err">독립적</span>
+
+<span class="err">순차</span><span class="w"> </span><span class="err">실행</span><span class="w"> </span><span class="o">(</span><span class="n">In</span><span class="o">-</span><span class="n">Order</span><span class="o">):</span>
+<span class="err">사이클</span><span class="w"> </span><span class="mi">1</span><span class="o">-</span><span class="mi">100</span><span class="o">:</span><span class="w"> </span><span class="n">I1</span><span class="w"> </span><span class="err">실행</span><span class="w"> </span><span class="o">(</span><span class="err">캐시</span><span class="w"> </span><span class="err">미스</span><span class="w"> </span><span class="err">대기</span><span class="o">)</span>
+<span class="err">사이클</span><span class="w"> </span><span class="mi">101</span><span class="o">:</span><span class="w">   </span><span class="n">I2</span><span class="w"> </span><span class="err">실행</span>
+<span class="err">사이클</span><span class="w"> </span><span class="mi">102</span><span class="o">-</span><span class="mi">105</span><span class="o">:</span><span class="w"> </span><span class="n">I3</span><span class="w"> </span><span class="err">실행</span>
+<span class="err">사이클</span><span class="w"> </span><span class="mi">106</span><span class="o">:</span><span class="w">   </span><span class="n">I4</span><span class="w"> </span><span class="err">실행</span>
+<span class="err">사이클</span><span class="w"> </span><span class="mi">107</span><span class="o">:</span><span class="w">   </span><span class="n">I5</span><span class="w"> </span><span class="err">실행</span>
+
+<span class="err">총</span><span class="o">:</span><span class="w"> </span><span class="mi">107</span><span class="w"> </span><span class="err">사이클</span>
+
+<span class="err">비순차</span><span class="w"> </span><span class="err">실행</span><span class="w"> </span><span class="o">(</span><span class="n">Out</span><span class="o">-</span><span class="n">of</span><span class="o">-</span><span class="n">Order</span><span class="o">):</span>
+<span class="err">사이클</span><span class="w"> </span><span class="mi">1</span><span class="o">:</span><span class="w">     </span><span class="n">I1</span><span class="w"> </span><span class="err">시작</span><span class="w"> </span><span class="o">(</span><span class="err">캐시</span><span class="w"> </span><span class="err">미스</span><span class="o">)</span>
+<span class="err">사이클</span><span class="w"> </span><span class="mi">2</span><span class="o">-</span><span class="mi">5</span><span class="o">:</span><span class="w">   </span><span class="n">I3</span><span class="w"> </span><span class="err">실행</span><span class="w"> </span><span class="o">(</span><span class="n">I1과</span><span class="w"> </span><span class="err">병렬</span><span class="o">)</span>
+<span class="err">사이클</span><span class="w"> </span><span class="mi">6</span><span class="o">:</span><span class="w">     </span><span class="n">I4</span><span class="w"> </span><span class="err">실행</span>
+<span class="err">사이클</span><span class="w"> </span><span class="mi">7</span><span class="o">:</span><span class="w">     </span><span class="n">I5</span><span class="w"> </span><span class="err">실행</span>
+<span class="o">...</span>
+<span class="err">사이클</span><span class="w"> </span><span class="mi">100</span><span class="o">:</span><span class="w">   </span><span class="n">I1</span><span class="w"> </span><span class="err">완료</span>
+<span class="err">사이클</span><span class="w"> </span><span class="mi">101</span><span class="o">:</span><span class="w">   </span><span class="n">I2</span><span class="w"> </span><span class="err">실행</span>
+
+<span class="err">총</span><span class="o">:</span><span class="w"> </span><span class="mi">101</span><span class="w"> </span><span class="err">사이클</span>
+
+<span class="err">성능</span><span class="w"> </span><span class="err">향상</span><span class="o">:</span><span class="w"> </span><span class="mi">107</span><span class="o">/</span><span class="mi">101</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.06</span><span class="n">x</span><span class="w"> </span><span class="o">(</span><span class="err">단순</span><span class="w"> </span><span class="err">예시</span><span class="o">)</span>
+<span class="err">실제로는</span><span class="w"> </span><span class="err">더</span><span class="w"> </span><span class="err">큰</span><span class="w"> </span><span class="err">차이</span><span class="w"> </span><span class="err">발생</span>
+</code></pre></div>
+
+<h3 id="32-ooo-3">3.2 OoO 실행의 3단계<a class="header-link" href="#32-ooo-3" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│<span class="w">              </span><span class="nv">Out</span><span class="o">-</span><span class="nv">of</span><span class="o">-</span><span class="nv">Order</span><span class="w"> </span><span class="nv">Execution</span><span class="w"> </span><span class="nv">Pipeline</span><span class="w">                 </span>│
+├─────────────────────────────────────────────────────────────┤
+│<span class="w">                                                              </span>│
+│<span class="w">   </span><span class="nv">In</span><span class="o">-</span><span class="nv">Order</span><span class="w">       </span><span class="nv">Out</span><span class="o">-</span><span class="nv">of</span><span class="o">-</span><span class="nv">Order</span><span class="w">       </span><span class="nv">In</span><span class="o">-</span><span class="nv">Order</span><span class="w">                </span>│
+│<span class="w">   </span><span class="nv">Front</span><span class="o">-</span><span class="k">end</span><span class="w">      </span><span class="nv">Execution</span><span class="w">          </span><span class="nv">Back</span><span class="o">-</span><span class="k">end</span><span class="w">                </span>│
+│<span class="w">                                                              </span>│
+│<span class="w">  </span>┌─────────┐<span class="w">    </span>┌─────────────┐<span class="w">    </span>┌─────────────┐<span class="w">         </span>│
+│<span class="w">  </span>│<span class="w"> </span><span class="nv">Fetch</span><span class="w">   </span>│<span class="w">    </span>│<span class="w"> </span><span class="nv">Issue</span><span class="o">/</span><span class="w">      </span>│<span class="w">    </span>│<span class="w"> </span><span class="nv">Commit</span><span class="o">/</span><span class="w">     </span>│<span class="w">         </span>│
+│<span class="w">  </span>│<span class="w"> </span><span class="nv">Decode</span><span class="w">  </span>│───→│<span class="w"> </span><span class="nv">Execute</span><span class="w">     </span>│───→│<span class="w"> </span><span class="nv">Retire</span><span class="w">      </span>│<span class="w">         </span>│
+│<span class="w">  </span>│<span class="w"> </span><span class="nv">Rename</span><span class="w">  </span>│<span class="w">    </span>│<span class="w"> </span><span class="ss">(</span>비순차<span class="ss">)</span><span class="w">     </span>│<span class="w">    </span>│<span class="w"> </span><span class="ss">(</span>순차<span class="ss">)</span><span class="w">       </span>│<span class="w">         </span>│
+│<span class="w">  </span>└─────────┘<span class="w">    </span>└─────────────┘<span class="w">    </span>└─────────────┘<span class="w">         </span>│
+│<span class="w">                                                              </span>│
+│<span class="w">  </span>프로그램<span class="w"> </span>순서<span class="w">    </span>데이터<span class="w"> </span>흐름<span class="w"> </span>순서<span class="w">    </span>프로그램<span class="w"> </span>순서<span class="w">            </span>│
+│<span class="w">                                                              </span>│
+└─────────────────────────────────────────────────────────────┘
+
+<span class="mi">1</span>단계:<span class="w"> </span><span class="nv">Front</span><span class="o">-</span><span class="k">end</span><span class="w"> </span><span class="ss">(</span><span class="nv">In</span><span class="o">-</span><span class="nv">Order</span><span class="ss">)</span>
+<span class="o">-</span><span class="w"> </span>명령어<span class="w"> </span>페치,<span class="w"> </span>디코드
+<span class="o">-</span><span class="w"> </span>레지스터<span class="w"> </span>리네이밍
+<span class="o">-</span><span class="w"> </span>명령어를<span class="w"> </span><span class="nv">Issue</span><span class="w"> </span><span class="nv">Queue</span>에<span class="w"> </span>삽입
+
+<span class="mi">2</span>단계:<span class="w"> </span><span class="nv">Execution</span><span class="w"> </span><span class="ss">(</span><span class="nv">Out</span><span class="o">-</span><span class="nv">of</span><span class="o">-</span><span class="nv">Order</span><span class="ss">)</span>
+<span class="o">-</span><span class="w"> </span>피연산자가<span class="w"> </span>준비된<span class="w"> </span>명령어부터<span class="w"> </span>실행
+<span class="o">-</span><span class="w"> </span>데이터<span class="w"> </span>의존성에<span class="w"> </span>따라<span class="w"> </span>실행<span class="w"> </span>순서<span class="w"> </span>결정
+<span class="o">-</span><span class="w"> </span>여러<span class="w"> </span>실행<span class="w"> </span>유닛에서<span class="w"> </span>병렬<span class="w"> </span>실행
+
+<span class="mi">3</span>단계:<span class="w"> </span><span class="nv">Back</span><span class="o">-</span><span class="k">end</span><span class="w"> </span><span class="ss">(</span><span class="nv">In</span><span class="o">-</span><span class="nv">Order</span><span class="ss">)</span>
+<span class="o">-</span><span class="w"> </span>프로그램<span class="w"> </span>순서대로<span class="w"> </span>결과<span class="w"> </span>커밋
+<span class="o">-</span><span class="w"> </span>정확한<span class="w"> </span>예외<span class="w"> </span>처리<span class="w"> </span>보장
+<span class="o">-</span><span class="w"> </span>아키텍처<span class="w"> </span>레지스터<span class="w"> </span>갱신
+</code></pre></div>
+
+<hr />
+<h2 id="4">4. 레지스터 리네이밍<a class="header-link" href="#4" title="Permanent link">&para;</a></h2>
+<h3 id="41">4.1 리네이밍의 필요성<a class="header-link" href="#41" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">프로그램</span><span class="o">:</span>
+<span class="n">I1</span><span class="o">:</span><span class="w"> </span><span class="n">ADD</span><span class="w"> </span><span class="n">R1</span><span class="o">,</span><span class="w"> </span><span class="n">R2</span><span class="o">,</span><span class="w"> </span><span class="n">R3</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="n">R1</span><span class="w"> </span><span class="err">쓰기</span>
+<span class="n">I2</span><span class="o">:</span><span class="w"> </span><span class="n">MUL</span><span class="w"> </span><span class="n">R4</span><span class="o">,</span><span class="w"> </span><span class="n">R1</span><span class="o">,</span><span class="w"> </span><span class="n">R5</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="n">R1</span><span class="w"> </span><span class="err">읽기</span><span class="w"> </span><span class="o">(</span><span class="n">RAW</span><span class="o">)</span>
+<span class="n">I3</span><span class="o">:</span><span class="w"> </span><span class="n">ADD</span><span class="w"> </span><span class="n">R1</span><span class="o">,</span><span class="w"> </span><span class="n">R6</span><span class="o">,</span><span class="w"> </span><span class="n">R7</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="n">R1</span><span class="w"> </span><span class="err">쓰기</span><span class="w"> </span><span class="o">(</span><span class="n">WAW</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">I1</span><span class="o">)</span>
+<span class="n">I4</span><span class="o">:</span><span class="w"> </span><span class="n">SUB</span><span class="w"> </span><span class="n">R8</span><span class="o">,</span><span class="w"> </span><span class="n">R1</span><span class="o">,</span><span class="w"> </span><span class="n">R9</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="n">R1</span><span class="w"> </span><span class="err">읽기</span><span class="w"> </span><span class="o">(</span><span class="n">RAW</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">I3</span><span class="o">)</span>
+
+<span class="err">문제</span><span class="o">:</span>
+<span class="o">-</span><span class="w"> </span><span class="n">I3는</span><span class="w"> </span><span class="n">I1</span><span class="o">,</span><span class="w"> </span><span class="n">I2와</span><span class="w"> </span><span class="err">독립적으로</span><span class="w"> </span><span class="err">실행</span><span class="w"> </span><span class="err">가능해야</span><span class="w"> </span><span class="err">함</span>
+<span class="o">-</span><span class="w"> </span><span class="err">하지만</span><span class="w"> </span><span class="n">R1을</span><span class="w"> </span><span class="err">공유하므로</span><span class="w"> </span><span class="n">WAW</span><span class="w"> </span><span class="err">의존성</span><span class="w"> </span><span class="err">발생</span>
+<span class="o">-</span><span class="w"> </span><span class="n">I3가</span><span class="w"> </span><span class="n">I1보다</span><span class="w"> </span><span class="err">먼저</span><span class="w"> </span><span class="err">완료되면</span><span class="w"> </span><span class="n">I2가</span><span class="w"> </span><span class="err">잘못된</span><span class="w"> </span><span class="err">값</span><span class="w"> </span><span class="err">읽음</span>
+</code></pre></div>
+
+<h3 id="42">4.2 리네이밍 동작<a class="header-link" href="#42" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nt">Architectural</span><span class="w"> </span><span class="nt">Registers</span><span class="o">:</span><span class="w"> </span><span class="nt">R1-R8</span><span class="w"> </span><span class="o">(</span><span class="nt">프로그래머가</span><span class="w"> </span><span class="nt">보는</span><span class="w"> </span><span class="nt">레지스터</span><span class="o">)</span>
+<span class="nt">Physical</span><span class="w"> </span><span class="nt">Registers</span><span class="o">:</span><span class="w"> </span><span class="nt">P1-P64</span><span class="w"> </span><span class="o">(</span><span class="nt">실제</span><span class="w"> </span><span class="nt">하드웨어</span><span class="w"> </span><span class="nt">레지스터</span><span class="o">)</span>
+
+<span class="nt">리네이밍</span><span class="w"> </span><span class="nt">전</span><span class="o">:</span>
+<span class="nt">I1</span><span class="o">:</span><span class="w"> </span><span class="nt">ADD</span><span class="w"> </span><span class="nt">R1</span><span class="o">,</span><span class="w"> </span><span class="nt">R2</span><span class="o">,</span><span class="w"> </span><span class="nt">R3</span>
+<span class="nt">I2</span><span class="o">:</span><span class="w"> </span><span class="nt">MUL</span><span class="w"> </span><span class="nt">R4</span><span class="o">,</span><span class="w"> </span><span class="nt">R1</span><span class="o">,</span><span class="w"> </span><span class="nt">R5</span>
+<span class="nt">I3</span><span class="o">:</span><span class="w"> </span><span class="nt">ADD</span><span class="w"> </span><span class="nt">R1</span><span class="o">,</span><span class="w"> </span><span class="nt">R6</span><span class="o">,</span><span class="w"> </span><span class="nt">R7</span>
+<span class="nt">I4</span><span class="o">:</span><span class="w"> </span><span class="nt">SUB</span><span class="w"> </span><span class="nt">R8</span><span class="o">,</span><span class="w"> </span><span class="nt">R1</span><span class="o">,</span><span class="w"> </span><span class="nt">R9</span>
+
+<span class="nt">리네이밍</span><span class="w"> </span><span class="nt">후</span><span class="o">:</span>
+<span class="nt">I1</span><span class="o">:</span><span class="w"> </span><span class="nt">ADD</span><span class="w"> </span><span class="nt">P10</span><span class="o">,</span><span class="w"> </span><span class="nt">P2</span><span class="o">,</span><span class="w"> </span><span class="nt">P3</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="nt">R1</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nt">P10</span>
+<span class="nt">I2</span><span class="o">:</span><span class="w"> </span><span class="nt">MUL</span><span class="w"> </span><span class="nt">P11</span><span class="o">,</span><span class="w"> </span><span class="nt">P10</span><span class="o">,</span><span class="w"> </span><span class="nt">P5</span><span class="w">   </span><span class="o">;</span><span class="w"> </span><span class="nt">R4</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nt">P11</span><span class="o">,</span><span class="w"> </span><span class="nt">R1</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nt">P10</span>
+<span class="nt">I3</span><span class="o">:</span><span class="w"> </span><span class="nt">ADD</span><span class="w"> </span><span class="nt">P12</span><span class="o">,</span><span class="w"> </span><span class="nt">P6</span><span class="o">,</span><span class="w"> </span><span class="nt">P7</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="nt">R1</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nt">P12</span><span class="w"> </span><span class="o">(</span><span class="nt">새로운</span><span class="w"> </span><span class="nt">물리</span><span class="w"> </span><span class="nt">레지스터</span><span class="o">!)</span>
+<span class="nt">I4</span><span class="o">:</span><span class="w"> </span><span class="nt">SUB</span><span class="w"> </span><span class="nt">P13</span><span class="o">,</span><span class="w"> </span><span class="nt">P12</span><span class="o">,</span><span class="w"> </span><span class="nt">P9</span><span class="w">   </span><span class="o">;</span><span class="w"> </span><span class="nt">R8</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nt">P13</span><span class="o">,</span><span class="w"> </span><span class="nt">R1</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nt">P12</span>
+
+<span class="nt">결과</span><span class="o">:</span>
+<span class="nt">-</span><span class="w"> </span><span class="nt">I1과</span><span class="w"> </span><span class="nt">I3의</span><span class="w"> </span><span class="nt">WAW</span><span class="w"> </span><span class="nt">의존성</span><span class="w"> </span><span class="nt">제거</span><span class="w"> </span><span class="o">(</span><span class="nt">다른</span><span class="w"> </span><span class="nt">물리</span><span class="w"> </span><span class="nt">레지스터</span><span class="w"> </span><span class="nt">사용</span><span class="o">)</span>
+<span class="nt">-</span><span class="w"> </span><span class="nt">I2는</span><span class="w"> </span><span class="nt">P10</span><span class="w"> </span><span class="nt">읽음</span><span class="w"> </span><span class="o">(</span><span class="nt">I1의</span><span class="w"> </span><span class="nt">결과</span><span class="o">)</span>
+<span class="nt">-</span><span class="w"> </span><span class="nt">I4는</span><span class="w"> </span><span class="nt">P12</span><span class="w"> </span><span class="nt">읽음</span><span class="w"> </span><span class="o">(</span><span class="nt">I3의</span><span class="w"> </span><span class="nt">결과</span><span class="o">)</span>
+<span class="nt">-</span><span class="w"> </span><span class="nt">I1과</span><span class="w"> </span><span class="nt">I3는</span><span class="w"> </span><span class="nt">병렬</span><span class="w"> </span><span class="nt">실행</span><span class="w"> </span><span class="nt">가능</span><span class="o">!</span>
+</code></pre></div>
+
+<h3 id="43-register-alias-table-rat">4.3 Register Alias Table (RAT)<a class="header-link" href="#43-register-alias-table-rat" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────┐
+│              Register Alias Table (RAT)                  │
+├─────────────────────────────────────────────────────────┤
+│  Architectural Reg  │  Physical Reg  │  Valid           │
+├─────────────────────┼────────────────┼──────────────────┤
+│        R0           │      P0        │    1             │
+│        R1           │      P12       │    0 (pending)   │
+│        R2           │      P2        │    1             │
+│        R3           │      P3        │    1             │
+│        R4           │      P11       │    0 (pending)   │
+│        R5           │      P5        │    1             │
+│        R6           │      P6        │    1             │
+│        R7           │      P7        │    1             │
+│        R8           │      P13       │    0 (pending)   │
+│        ...          │      ...       │    ...           │
+└─────────────────────┴────────────────┴──────────────────┘
+
+Free List: P14, P15, P16, ...  (사용 가능한 물리 레지스터)
+</code></pre></div>
+
+<h3 id="44">4.4 리네이밍 알고리즘<a class="header-link" href="#44" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">리네이밍</span><span class="w"> </span><span class="n">과정</span><span class="w"> </span><span class="p">(</span><span class="nl">명령어</span><span class="p">:</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="n">Rd</span><span class="p">,</span><span class="w"> </span><span class="n">Rs1</span><span class="p">,</span><span class="w"> </span><span class="n">Rs2</span><span class="p">)</span><span class="err">:</span>
+
+<span class="mf">1.</span><span class="w"> </span><span class="n">소스</span><span class="w"> </span><span class="n">레지스터</span><span class="w"> </span><span class="nl">리네이밍</span><span class="p">:</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">RAT에서</span><span class="w"> </span><span class="n">Rs1</span><span class="p">,</span><span class="w"> </span><span class="n">Rs2에</span><span class="w"> </span><span class="n">대응하는</span><span class="w"> </span><span class="n">물리</span><span class="w"> </span><span class="n">레지스터</span><span class="w"> </span><span class="n">조회</span>
+
+<span class="mf">2.</span><span class="w"> </span><span class="n">목적지</span><span class="w"> </span><span class="n">레지스터</span><span class="w"> </span><span class="nl">리네이밍</span><span class="p">:</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="k">Free</span><span class="w"> </span><span class="n">List에서</span><span class="w"> </span><span class="n">새로운</span><span class="w"> </span><span class="n">물리</span><span class="w"> </span><span class="n">레지스터</span><span class="w"> </span><span class="n">할당</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">RAT에서</span><span class="w"> </span><span class="n">Rd의</span><span class="w"> </span><span class="n">매핑을</span><span class="w"> </span><span class="n">새</span><span class="w"> </span><span class="n">물리</span><span class="w"> </span><span class="n">레지스터로</span><span class="w"> </span><span class="n">갱신</span>
+
+<span class="mf">3.</span><span class="w"> </span><span class="n">의존성</span><span class="w"> </span><span class="n">정보</span><span class="w"> </span><span class="nl">기록</span><span class="p">:</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">소스</span><span class="w"> </span><span class="n">물리</span><span class="w"> </span><span class="n">레지스터가</span><span class="w"> </span><span class="n">아직</span><span class="w"> </span><span class="n">생성</span><span class="w"> </span><span class="n">중인지</span><span class="w"> </span><span class="n">확인</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">생산자</span><span class="w"> </span><span class="n">명령어에</span><span class="w"> </span><span class="n">대한</span><span class="w"> </span><span class="n">링크</span><span class="w"> </span><span class="n">설정</span>
+
+<span class="nl">예시</span><span class="p">:</span>
+<span class="nl">명령어</span><span class="p">:</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="n">R1</span><span class="p">,</span><span class="w"> </span><span class="n">R2</span><span class="p">,</span><span class="w"> </span><span class="n">R3</span>
+
+<span class="k">Before</span><span class="err">:</span>
+<span class="w">  </span><span class="n">RAT</span><span class="o">[</span><span class="n">R1</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">P5</span><span class="p">,</span><span class="w"> </span><span class="n">RAT</span><span class="o">[</span><span class="n">R2</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">P2</span><span class="p">,</span><span class="w"> </span><span class="n">RAT</span><span class="o">[</span><span class="n">R3</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">P3</span>
+<span class="w">  </span><span class="k">Free</span><span class="w"> </span><span class="nl">List</span><span class="p">:</span><span class="w"> </span><span class="n">P10</span><span class="p">,</span><span class="w"> </span><span class="n">P11</span><span class="p">,</span><span class="w"> </span><span class="n">P12</span><span class="p">,</span><span class="w"> </span><span class="p">...</span>
+
+<span class="nl">리네이밍</span><span class="p">:</span>
+<span class="w">  </span><span class="mf">1.</span><span class="w"> </span><span class="n">Rs1</span><span class="p">(</span><span class="n">R2</span><span class="p">)</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">P2</span><span class="p">,</span><span class="w"> </span><span class="n">Rs2</span><span class="p">(</span><span class="n">R3</span><span class="p">)</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">P3</span>
+<span class="w">  </span><span class="mf">2.</span><span class="w"> </span><span class="n">Rd</span><span class="p">(</span><span class="n">R1</span><span class="p">)</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">P10</span><span class="w"> </span><span class="p">(</span><span class="n">새</span><span class="w"> </span><span class="n">할당</span><span class="p">)</span>
+<span class="w">  </span><span class="mf">3.</span><span class="w"> </span><span class="n">RAT</span><span class="o">[</span><span class="n">R1</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">P10</span>
+
+<span class="k">After</span><span class="err">:</span>
+<span class="w">  </span><span class="n">RAT</span><span class="o">[</span><span class="n">R1</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">P10</span><span class="p">,</span><span class="w"> </span><span class="n">RAT</span><span class="o">[</span><span class="n">R2</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">P2</span><span class="p">,</span><span class="w"> </span><span class="n">RAT</span><span class="o">[</span><span class="n">R3</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">P3</span>
+<span class="w">  </span><span class="k">Free</span><span class="w"> </span><span class="nl">List</span><span class="p">:</span><span class="w"> </span><span class="n">P11</span><span class="p">,</span><span class="w"> </span><span class="n">P12</span><span class="p">,</span><span class="w"> </span><span class="p">...</span>
+
+<span class="n">리네이밍된</span><span class="w"> </span><span class="nl">명령어</span><span class="p">:</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="n">P10</span><span class="p">,</span><span class="w"> </span><span class="n">P2</span><span class="p">,</span><span class="w"> </span><span class="n">P3</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-tomasulo">5. Tomasulo 알고리즘<a class="header-link" href="#5-tomasulo" title="Permanent link">&para;</a></h2>
+<h3 id="51">5.1 배경<a class="header-link" href="#51" title="Permanent link">&para;</a></h3>
+<p>1967년 IBM 360/91의 부동소수점 유닛을 위해 Robert Tomasulo가 개발한 알고리즘입니다. 현대 비순차 실행 프로세서의 기초가 됩니다.</p>
+<h3 id="52">5.2 핵심 구성 요소<a class="header-link" href="#52" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│                  Tomasulo Architecture                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                   Instruction Queue                       │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                              │                                   │
+│                              ▼                                   │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                   Issue Logic                             │   │
+│  │            (Reservation Station 할당)                     │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                              │                                   │
+│            ┌─────────────────┴─────────────────┐                │
+│            ▼                                   ▼                │
+│  ┌──────────────────────┐          ┌──────────────────────┐    │
+│  │  Reservation Stations │          │  Reservation Stations│    │
+│  │      (Add/Sub)        │          │      (Mul/Div)       │    │
+│  ├──────────────────────┤          ├──────────────────────┤    │
+│  │ RS1: Op Vj Vk Qj Qk  │          │ RS4: Op Vj Vk Qj Qk  │    │
+│  │ RS2: Op Vj Vk Qj Qk  │          │ RS5: Op Vj Vk Qj Qk  │    │
+│  │ RS3: Op Vj Vk Qj Qk  │          │ RS6: Op Vj Vk Qj Qk  │    │
+│  └──────────┬───────────┘          └──────────┬───────────┘    │
+│             │                                  │                │
+│             ▼                                  ▼                │
+│  ┌──────────────────────┐          ┌──────────────────────┐    │
+│  │      FP Adder        │          │     FP Multiplier    │    │
+│  │    (2 cycles)        │          │     (10 cycles)      │    │
+│  └──────────┬───────────┘          └──────────┬───────────┘    │
+│             │                                  │                │
+│             └─────────────────┬────────────────┘                │
+│                               │                                  │
+│                               ▼                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                   Common Data Bus (CDB)                   │   │
+│  │               (결과 브로드캐스트)                           │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                               │                                  │
+│                               ▼                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                   Register File                           │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="53-reservation-station">5.3 Reservation Station 구조<a class="header-link" href="#53-reservation-station" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│              Reservation Station Entry                       │
+├──────┬──────┬──────┬──────┬──────┬──────┬──────┬───────────┤
+│ Busy │  Op  │  Vj  │  Vk  │  Qj  │  Qk  │  A   │   Dest    │
+├──────┼──────┼──────┼──────┼──────┼──────┼──────┼───────────┤
+│  1   │ ADD  │ 3.5  │  -   │  -   │ RS4  │  -   │    F2     │
+└──────┴──────┴──────┴──────┴──────┴──────┴──────┴───────────┘
+
+필드 설명:
+- Busy: 엔트리 사용 중 여부
+- Op: 수행할 연산
+- Vj, Vk: 소스 피연산자 값 (이미 사용 가능한 경우)
+- Qj, Qk: 값을 생산할 Reservation Station (아직 준비 안 된 경우)
+- A: 메모리 주소 (Load/Store용)
+- Dest: 결과가 저장될 레지스터
+</code></pre></div>
+
+<h3 id="54">5.4 동작 과정<a class="header-link" href="#54" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="mf">3</span><span class="n">단계</span><span class="w"> </span><span class="n">처리</span><span class="p">:</span>
+
+<span class="mf">1.</span><span class="w"> </span><span class="n">Issue</span><span class="w"> </span><span class="p">(</span><span class="n">발행</span><span class="p">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Instruction</span><span class="w"> </span><span class="n">Queue에서</span><span class="w"> </span><span class="n">명령어</span><span class="w"> </span><span class="n">가져옴</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">적절한</span><span class="w"> </span><span class="n">Reservation</span><span class="w"> </span><span class="n">Station</span><span class="w"> </span><span class="n">할당</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">피연산자</span><span class="w"> </span><span class="n">값</span><span class="w"> </span><span class="n">또는</span><span class="w"> </span><span class="n">생산자</span><span class="w"> </span><span class="n">RS</span><span class="w"> </span><span class="n">태그</span><span class="w"> </span><span class="n">기록</span>
+
+<span class="mf">2.</span><span class="w"> </span><span class="n">Execute</span><span class="w"> </span><span class="p">(</span><span class="n">실행</span><span class="p">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">모든</span><span class="w"> </span><span class="n">피연산자가</span><span class="w"> </span><span class="n">준비되면</span><span class="w"> </span><span class="n">실행</span><span class="w"> </span><span class="n">시작</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Qj</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="ow">AND</span><span class="w"> </span><span class="n">Qk</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0</span><span class="w"> </span><span class="n">일</span><span class="w"> </span><span class="n">때</span><span class="w"> </span><span class="n">실행</span><span class="w"> </span><span class="n">가능</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">실행</span><span class="w"> </span><span class="n">유닛에서</span><span class="w"> </span><span class="n">연산</span><span class="w"> </span><span class="n">수행</span>
+
+<span class="mf">3.</span><span class="w"> </span><span class="n">Write</span><span class="w"> </span><span class="n">Result</span><span class="w"> </span><span class="p">(</span><span class="n">결과</span><span class="w"> </span><span class="n">쓰기</span><span class="p">)</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">CDB를</span><span class="w"> </span><span class="n">통해</span><span class="w"> </span><span class="n">결과</span><span class="w"> </span><span class="n">브로드캐스트</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">대기</span><span class="w"> </span><span class="n">중인</span><span class="w"> </span><span class="n">RS들이</span><span class="w"> </span><span class="n">결과</span><span class="w"> </span><span class="n">수신</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Register</span><span class="w"> </span><span class="n">File</span><span class="w"> </span><span class="n">갱신</span>
+</code></pre></div>
+
+<h3 id="55-tomasulo">5.5 예제: Tomasulo 실행 추적<a class="header-link" href="#55-tomasulo" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nl">프로그램</span><span class="p">:</span>
+<span class="nl">I1</span><span class="p">:</span><span class="w"> </span><span class="n">LD</span><span class="w">   </span><span class="n">F6</span><span class="p">,</span><span class="w"> </span><span class="mi">34</span><span class="p">(</span><span class="n">R2</span><span class="p">)</span>
+<span class="nl">I2</span><span class="p">:</span><span class="w"> </span><span class="n">LD</span><span class="w">   </span><span class="n">F2</span><span class="p">,</span><span class="w"> </span><span class="mi">45</span><span class="p">(</span><span class="n">R3</span><span class="p">)</span>
+<span class="nl">I3</span><span class="p">:</span><span class="w"> </span><span class="n">MUL</span><span class="w">  </span><span class="n">F0</span><span class="p">,</span><span class="w"> </span><span class="n">F2</span><span class="p">,</span><span class="w"> </span><span class="n">F4</span>
+<span class="nl">I4</span><span class="p">:</span><span class="w"> </span><span class="n">SUB</span><span class="w">  </span><span class="n">F8</span><span class="p">,</span><span class="w"> </span><span class="n">F6</span><span class="p">,</span><span class="w"> </span><span class="n">F2</span>
+<span class="nl">I5</span><span class="p">:</span><span class="w"> </span><span class="n">DIV</span><span class="w">  </span><span class="n">F10</span><span class="p">,</span><span class="w"> </span><span class="n">F0</span><span class="p">,</span><span class="w"> </span><span class="n">F6</span>
+<span class="nl">I6</span><span class="p">:</span><span class="w"> </span><span class="k">ADD</span><span class="w">  </span><span class="n">F6</span><span class="p">,</span><span class="w"> </span><span class="n">F8</span><span class="p">,</span><span class="w"> </span><span class="n">F2</span>
+
+<span class="n">초기</span><span class="w"> </span><span class="nl">상태</span><span class="p">:</span>
+<span class="w">  </span><span class="n">F4</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">2.5</span><span class="w"> </span><span class="p">(</span><span class="n">사용</span><span class="w"> </span><span class="n">가능</span><span class="p">)</span>
+<span class="w">  </span><span class="k">Load</span><span class="err">:</span><span class="w"> </span><span class="mi">2</span><span class="n">사이클</span><span class="p">,</span><span class="w"> </span><span class="nl">Mul</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="n">사이클</span><span class="p">,</span><span class="w"> </span><span class="k">Add</span><span class="o">/</span><span class="nl">Sub</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="n">사이클</span><span class="p">,</span><span class="w"> </span><span class="nl">Div</span><span class="p">:</span><span class="w"> </span><span class="mi">40</span><span class="n">사이클</span>
+
+<span class="o">===</span><span class="w"> </span><span class="n">사이클</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">===</span>
+<span class="n">Issue</span><span class="w"> </span><span class="nl">I1</span><span class="p">:</span><span class="w"> </span><span class="n">LD</span><span class="w"> </span><span class="n">F6</span><span class="p">,</span><span class="w"> </span><span class="mi">34</span><span class="p">(</span><span class="n">R2</span><span class="p">)</span>
+<span class="w">  </span><span class="nl">Load1</span><span class="p">:</span><span class="w"> </span><span class="n">Busy</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">A</span><span class="o">=</span><span class="mi">34</span><span class="o">+</span><span class="n">R2</span><span class="p">,</span><span class="w"> </span><span class="n">Dest</span><span class="o">=</span><span class="n">F6</span>
+<span class="w">  </span><span class="n">Register</span><span class="o">[</span><span class="n">F6</span><span class="o">]</span><span class="err">:</span><span class="w"> </span><span class="n">Qi</span><span class="o">=</span><span class="n">Load1</span>
+
+<span class="o">===</span><span class="w"> </span><span class="n">사이클</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">===</span>
+<span class="n">Issue</span><span class="w"> </span><span class="nl">I2</span><span class="p">:</span><span class="w"> </span><span class="n">LD</span><span class="w"> </span><span class="n">F2</span><span class="p">,</span><span class="w"> </span><span class="mi">45</span><span class="p">(</span><span class="n">R3</span><span class="p">)</span>
+<span class="w">  </span><span class="nl">Load2</span><span class="p">:</span><span class="w"> </span><span class="n">Busy</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">A</span><span class="o">=</span><span class="mi">45</span><span class="o">+</span><span class="n">R3</span><span class="p">,</span><span class="w"> </span><span class="n">Dest</span><span class="o">=</span><span class="n">F2</span>
+<span class="w">  </span><span class="n">Register</span><span class="o">[</span><span class="n">F2</span><span class="o">]</span><span class="err">:</span><span class="w"> </span><span class="n">Qi</span><span class="o">=</span><span class="n">Load2</span>
+<span class="k">Execute</span><span class="w"> </span><span class="nl">I1</span><span class="p">:</span><span class="w"> </span><span class="n">메모리</span><span class="w"> </span><span class="n">접근</span><span class="w"> </span><span class="n">시작</span>
+
+<span class="o">===</span><span class="w"> </span><span class="n">사이클</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">===</span>
+<span class="n">Issue</span><span class="w"> </span><span class="nl">I3</span><span class="p">:</span><span class="w"> </span><span class="n">MUL</span><span class="w"> </span><span class="n">F0</span><span class="p">,</span><span class="w"> </span><span class="n">F2</span><span class="p">,</span><span class="w"> </span><span class="n">F4</span>
+<span class="w">  </span><span class="nl">Mult1</span><span class="p">:</span><span class="w"> </span><span class="n">Busy</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">Op</span><span class="o">=</span><span class="n">MUL</span><span class="p">,</span><span class="w"> </span><span class="n">Vk</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span><span class="w"> </span><span class="n">Qj</span><span class="o">=</span><span class="n">Load2</span><span class="p">,</span><span class="w"> </span><span class="n">Dest</span><span class="o">=</span><span class="n">F0</span>
+<span class="w">  </span><span class="n">Register</span><span class="o">[</span><span class="n">F0</span><span class="o">]</span><span class="err">:</span><span class="w"> </span><span class="n">Qi</span><span class="o">=</span><span class="n">Mult1</span>
+<span class="k">Execute</span><span class="w"> </span><span class="nl">I2</span><span class="p">:</span><span class="w"> </span><span class="n">메모리</span><span class="w"> </span><span class="n">접근</span><span class="w"> </span><span class="n">시작</span>
+<span class="k">Write</span><span class="w"> </span><span class="nl">I1</span><span class="p">:</span><span class="w"> </span><span class="n">CDB에</span><span class="w"> </span><span class="n">F6</span><span class="w"> </span><span class="n">값</span><span class="w"> </span><span class="n">브로드캐스트</span>
+<span class="w">  </span><span class="nl">Load1</span><span class="p">:</span><span class="w"> </span><span class="n">Busy</span><span class="o">=</span><span class="mi">0</span>
+<span class="w">  </span><span class="n">Register</span><span class="o">[</span><span class="n">F6</span><span class="o">]</span><span class="err">:</span><span class="w"> </span><span class="n">Qi</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="k">Value</span><span class="o">=</span><span class="n">M</span><span class="o">[</span><span class="n">34+R2</span><span class="o">]</span>
+
+<span class="o">===</span><span class="w"> </span><span class="n">사이클</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="o">===</span>
+<span class="n">Issue</span><span class="w"> </span><span class="nl">I4</span><span class="p">:</span><span class="w"> </span><span class="n">SUB</span><span class="w"> </span><span class="n">F8</span><span class="p">,</span><span class="w"> </span><span class="n">F6</span><span class="p">,</span><span class="w"> </span><span class="n">F2</span>
+<span class="w">  </span><span class="nl">Add1</span><span class="p">:</span><span class="w"> </span><span class="n">Busy</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">Op</span><span class="o">=</span><span class="n">SUB</span><span class="p">,</span><span class="w"> </span><span class="n">Vj</span><span class="o">=</span><span class="n">M</span><span class="o">[</span><span class="n">34+R2</span><span class="o">]</span><span class="p">,</span><span class="w"> </span><span class="n">Qk</span><span class="o">=</span><span class="n">Load2</span><span class="p">,</span><span class="w"> </span><span class="n">Dest</span><span class="o">=</span><span class="n">F8</span>
+<span class="k">Write</span><span class="w"> </span><span class="nl">I2</span><span class="p">:</span><span class="w"> </span><span class="n">CDB에</span><span class="w"> </span><span class="n">F2</span><span class="w"> </span><span class="n">값</span><span class="w"> </span><span class="n">브로드캐스트</span>
+<span class="w">  </span><span class="nl">Mult1</span><span class="p">:</span><span class="w"> </span><span class="n">Vj</span><span class="o">=</span><span class="n">M</span><span class="o">[</span><span class="n">45+R3</span><span class="o">]</span><span class="p">,</span><span class="w"> </span><span class="n">Qj</span><span class="o">=</span><span class="mi">0</span><span class="w">  </span><span class="p">(</span><span class="n">값</span><span class="w"> </span><span class="n">수신</span><span class="p">)</span>
+<span class="w">  </span><span class="nl">Add1</span><span class="p">:</span><span class="w"> </span><span class="n">Vk</span><span class="o">=</span><span class="n">M</span><span class="o">[</span><span class="n">45+R3</span><span class="o">]</span><span class="p">,</span><span class="w"> </span><span class="n">Qk</span><span class="o">=</span><span class="mi">0</span><span class="w">   </span><span class="p">(</span><span class="n">값</span><span class="w"> </span><span class="n">수신</span><span class="p">)</span>
+
+<span class="o">===</span><span class="w"> </span><span class="n">사이클</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="o">===</span>
+<span class="n">Issue</span><span class="w"> </span><span class="nl">I5</span><span class="p">:</span><span class="w"> </span><span class="n">DIV</span><span class="w"> </span><span class="n">F10</span><span class="p">,</span><span class="w"> </span><span class="n">F0</span><span class="p">,</span><span class="w"> </span><span class="n">F6</span>
+<span class="w">  </span><span class="nl">Mult2</span><span class="p">:</span><span class="w"> </span><span class="n">Busy</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">Op</span><span class="o">=</span><span class="n">DIV</span><span class="p">,</span><span class="w"> </span><span class="n">Vk</span><span class="o">=</span><span class="n">M</span><span class="o">[</span><span class="n">34+R2</span><span class="o">]</span><span class="p">,</span><span class="w"> </span><span class="n">Qj</span><span class="o">=</span><span class="n">Mult1</span><span class="p">,</span><span class="w"> </span><span class="n">Dest</span><span class="o">=</span><span class="n">F10</span>
+<span class="k">Execute</span><span class="w"> </span><span class="nl">I3</span><span class="p">:</span><span class="w"> </span><span class="n">MUL</span><span class="w"> </span><span class="n">시작</span><span class="w"> </span><span class="p">(</span><span class="n">Vj</span><span class="p">,</span><span class="w"> </span><span class="n">Vk</span><span class="w"> </span><span class="n">준비됨</span><span class="p">)</span>
+<span class="k">Execute</span><span class="w"> </span><span class="nl">I4</span><span class="p">:</span><span class="w"> </span><span class="n">SUB</span><span class="w"> </span><span class="n">시작</span><span class="w"> </span><span class="p">(</span><span class="n">Vj</span><span class="p">,</span><span class="w"> </span><span class="n">Vk</span><span class="w"> </span><span class="n">준비됨</span><span class="p">)</span>
+
+<span class="o">===</span><span class="w"> </span><span class="n">사이클</span><span class="w"> </span><span class="mi">6</span><span class="w"> </span><span class="o">===</span>
+<span class="n">Issue</span><span class="w"> </span><span class="nl">I6</span><span class="p">:</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="n">F6</span><span class="p">,</span><span class="w"> </span><span class="n">F8</span><span class="p">,</span><span class="w"> </span><span class="n">F2</span>
+<span class="w">  </span><span class="nl">Add2</span><span class="p">:</span><span class="w"> </span><span class="n">Busy</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">Op</span><span class="o">=</span><span class="k">ADD</span><span class="p">,</span><span class="w"> </span><span class="n">Vk</span><span class="o">=</span><span class="n">M</span><span class="o">[</span><span class="n">45+R3</span><span class="o">]</span><span class="p">,</span><span class="w"> </span><span class="n">Qj</span><span class="o">=</span><span class="n">Add1</span><span class="p">,</span><span class="w"> </span><span class="n">Dest</span><span class="o">=</span><span class="n">F6</span>
+<span class="w">  </span><span class="n">Register</span><span class="o">[</span><span class="n">F6</span><span class="o">]</span><span class="err">:</span><span class="w"> </span><span class="n">Qi</span><span class="o">=</span><span class="n">Add2</span>
+
+<span class="o">===</span><span class="w"> </span><span class="n">사이클</span><span class="w"> </span><span class="mi">7</span><span class="w"> </span><span class="o">===</span>
+<span class="k">Write</span><span class="w"> </span><span class="nl">I4</span><span class="p">:</span><span class="w"> </span><span class="n">CDB에</span><span class="w"> </span><span class="n">F8</span><span class="w"> </span><span class="n">값</span><span class="w"> </span><span class="n">브로드캐스트</span>
+<span class="w">  </span><span class="nl">Add2</span><span class="p">:</span><span class="w"> </span><span class="n">Vj</span><span class="o">=</span><span class="p">(</span><span class="n">F6</span><span class="o">-</span><span class="n">F2</span><span class="p">),</span><span class="w"> </span><span class="n">Qj</span><span class="o">=</span><span class="mi">0</span><span class="w">  </span><span class="p">(</span><span class="n">값</span><span class="w"> </span><span class="n">수신</span><span class="p">)</span>
+
+<span class="o">===</span><span class="w"> </span><span class="n">사이클</span><span class="w"> </span><span class="mi">8</span><span class="w"> </span><span class="o">===</span>
+<span class="k">Execute</span><span class="w"> </span><span class="nl">I6</span><span class="p">:</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="n">시작</span>
+
+<span class="p">...</span><span class="w"> </span><span class="p">(</span><span class="n">계속</span><span class="p">)</span>
+
+<span class="o">===</span><span class="w"> </span><span class="n">사이클</span><span class="w"> </span><span class="mi">15</span><span class="w"> </span><span class="o">===</span>
+<span class="k">Write</span><span class="w"> </span><span class="nl">I3</span><span class="p">:</span><span class="w"> </span><span class="n">MUL</span><span class="w"> </span><span class="n">완료</span><span class="w"> </span><span class="p">(</span><span class="n">사이클</span><span class="w"> </span><span class="mi">5</span><span class="o">+</span><span class="mi">10</span><span class="p">)</span>
+<span class="w">  </span><span class="nl">Mult2</span><span class="p">:</span><span class="w"> </span><span class="n">Vj</span><span class="o">=</span><span class="p">(</span><span class="n">F2</span><span class="o">*</span><span class="n">F4</span><span class="p">),</span><span class="w"> </span><span class="n">Qj</span><span class="o">=</span><span class="mi">0</span><span class="w">  </span><span class="p">(</span><span class="n">값</span><span class="w"> </span><span class="n">수신</span><span class="p">)</span>
+
+<span class="o">===</span><span class="w"> </span><span class="n">사이클</span><span class="w"> </span><span class="mi">16</span><span class="w"> </span><span class="o">===</span>
+<span class="k">Execute</span><span class="w"> </span><span class="nl">I5</span><span class="p">:</span><span class="w"> </span><span class="n">DIV</span><span class="w"> </span><span class="n">시작</span>
+
+<span class="o">===</span><span class="w"> </span><span class="n">사이클</span><span class="w"> </span><span class="mi">56</span><span class="w"> </span><span class="o">===</span>
+<span class="k">Write</span><span class="w"> </span><span class="nl">I5</span><span class="p">:</span><span class="w"> </span><span class="n">DIV</span><span class="w"> </span><span class="n">완료</span><span class="w"> </span><span class="p">(</span><span class="n">사이클</span><span class="w"> </span><span class="mi">16</span><span class="o">+</span><span class="mi">40</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-reorder-buffer-rob">6. Reorder Buffer (ROB)<a class="header-link" href="#6-reorder-buffer-rob" title="Permanent link">&para;</a></h2>
+<h3 id="61-rob">6.1 ROB의 필요성<a class="header-link" href="#61-rob" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">문제</span><span class="o">:</span><span class="w"> </span><span class="err">비순차</span><span class="w"> </span><span class="err">실행</span><span class="w"> </span><span class="err">시</span><span class="w"> </span><span class="err">정확한</span><span class="w"> </span><span class="err">예외</span><span class="w"> </span><span class="err">처리</span><span class="w"> </span><span class="err">불가</span>
+
+<span class="err">예시</span><span class="o">:</span>
+<span class="n">I1</span><span class="o">:</span><span class="w"> </span><span class="n">LD</span><span class="w">   </span><span class="n">R1</span><span class="o">,</span><span class="w"> </span><span class="mi">0</span><span class="o">(</span><span class="n">R2</span><span class="o">)</span><span class="w">     </span><span class="o">;</span><span class="w"> </span><span class="err">페이지</span><span class="w"> </span><span class="err">폴트</span><span class="w"> </span><span class="err">발생</span><span class="w"> </span><span class="err">가능</span>
+<span class="n">I2</span><span class="o">:</span><span class="w"> </span><span class="n">ADD</span><span class="w">  </span><span class="n">R3</span><span class="o">,</span><span class="w"> </span><span class="n">R4</span><span class="o">,</span><span class="w"> </span><span class="n">R5</span><span class="w">    </span><span class="o">;</span><span class="w"> </span><span class="n">I1보다</span><span class="w"> </span><span class="err">먼저</span><span class="w"> </span><span class="err">완료</span>
+
+<span class="err">만약</span><span class="w"> </span><span class="n">I2가</span><span class="w"> </span><span class="err">먼저</span><span class="w"> </span><span class="err">완료되고</span><span class="w"> </span><span class="n">I1에서</span><span class="w"> </span><span class="err">페이지</span><span class="w"> </span><span class="err">폴트</span><span class="o">:</span>
+<span class="o">-</span><span class="w"> </span><span class="n">I2의</span><span class="w"> </span><span class="err">결과가</span><span class="w"> </span><span class="err">이미</span><span class="w"> </span><span class="n">R3에</span><span class="w"> </span><span class="err">기록됨</span>
+<span class="o">-</span><span class="w"> </span><span class="err">예외</span><span class="w"> </span><span class="err">처리</span><span class="w"> </span><span class="err">후</span><span class="w"> </span><span class="err">프로그램</span><span class="w"> </span><span class="err">재시작</span><span class="w"> </span><span class="err">시</span><span class="w"> </span><span class="err">상태</span><span class="w"> </span><span class="err">불일치</span>
+
+<span class="err">해결</span><span class="o">:</span><span class="w"> </span><span class="n">Reorder</span><span class="w"> </span><span class="n">Buffer</span>
+<span class="o">-</span><span class="w"> </span><span class="err">결과를</span><span class="w"> </span><span class="err">임시</span><span class="w"> </span><span class="err">저장</span>
+<span class="o">-</span><span class="w"> </span><span class="err">프로그램</span><span class="w"> </span><span class="err">순서대로</span><span class="w"> </span><span class="err">커밋</span>
+<span class="o">-</span><span class="w"> </span><span class="err">예외</span><span class="w"> </span><span class="err">시</span><span class="w"> </span><span class="err">커밋되지</span><span class="w"> </span><span class="err">않은</span><span class="w"> </span><span class="err">결과</span><span class="w"> </span><span class="err">폐기</span>
+</code></pre></div>
+
+<h3 id="62-rob">6.2 ROB 구조<a class="header-link" href="#62-rob" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────┐
+│                    Reorder Buffer                            │
+├─────┬─────────┬──────────┬─────────┬────────┬──────────────┤
+│Entry│  Busy   │  State   │  Dest   │ Value  │ Instruction  │
+├─────┼─────────┼──────────┼─────────┼────────┼──────────────┤
+│  1  │    1    │ Commit   │   F6    │  10.5  │ LD F6,34(R2) │
+│  2  │    1    │ Commit   │   F2    │   5.0  │ LD F2,45(R3) │
+│  3  │    1    │ Execute  │   F0    │   -    │ MUL F0,F2,F4 │
+│  4  │    1    │ Write    │   F8    │   5.5  │ SUB F8,F6,F2 │
+│  5  │    1    │ Issue    │  F10    │   -    │ DIV F10,F0,F6│
+│  6  │    1    │ Issue    │   F6    │   -    │ ADD F6,F8,F2 │
+│  7  │    0    │   -      │   -     │   -    │      -       │
+│  8  │    0    │   -      │   -     │   -    │      -       │
+└─────┴─────────┴──────────┴─────────┴────────┴──────────────┘
+      ↑                                                ↑
+    Head                                             Tail
+  (Commit)                                         (Issue)
+
+State:
+- Issue: 발행됨, 실행 대기
+- Execute: 실행 중
+- Write: 실행 완료, 결과 기록됨
+- Commit: 커밋 준비 완료
+</code></pre></div>
+
+<h3 id="63-rob-tomasulo">6.3 ROB와 Tomasulo 통합<a class="header-link" href="#63-rob-tomasulo" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│            Modern Out-of-Order Processor                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                  Instruction Fetch/Decode                   │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                              │                                   │
+│                              ▼                                   │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                    Register Rename                          │ │
+│  │              (RAT + Physical Register File)                 │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                              │                                   │
+│                              ▼                                   │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │              Reorder Buffer (ROB) Allocation               │ │
+│  │                  (Entry 할당, 순서 추적)                     │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                              │                                   │
+│                              ▼                                   │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │              Issue Queue / Reservation Stations             │ │
+│  │                  (의존성 대기, 발행 제어)                     │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                              │                                   │
+│         ┌────────────────────┼────────────────────┐             │
+│         ▼                    ▼                    ▼             │
+│  ┌────────────┐      ┌────────────┐      ┌────────────┐        │
+│  │ Execution  │      │ Execution  │      │   Memory   │        │
+│  │  Unit 1    │      │  Unit 2    │      │   Unit     │        │
+│  └─────┬──────┘      └─────┬──────┘      └─────┬──────┘        │
+│        │                   │                   │                │
+│        └───────────────────┼───────────────────┘                │
+│                            │                                    │
+│                            ▼                                    │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │              Write Back to ROB                              │ │
+│  │              (결과를 ROB에 기록)                              │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                            │                                    │
+│                            ▼                                    │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │              Commit (In-Order)                              │ │
+│  │     (ROB Head부터 순서대로 아키텍처 레지스터 갱신)            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="64">6.4 커밋 과정<a class="header-link" href="#64" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Commit 규칙:
+1. ROB Head의 명령어만 커밋 가능
+2. 명령어가 완료 상태여야 함
+3. 이전 명령어가 모두 커밋되어야 함
+4. 예외가 없어야 함
+
+예외 발생 시:
+┌──────────────────────────────────────────────────┐
+│  I1  │  I2  │  I3  │  I4  │  I5  │  I6  │       │
+│ Done │ Done │ Done │ Exc! │ Done │ Done │       │
+└──────────────────────────────────────────────────┘
+   ↑
+ Head
+
+I4에서 예외 발생:
+1. I1, I2, I3 커밋 완료
+2. I4에서 예외 감지
+3. I5, I6 결과 폐기 (아직 커밋 안 됨)
+4. I4 주소에서 예외 핸들러로 점프
+5. 정확한 예외 상태 유지
+</code></pre></div>
+
+<h3 id="65">6.5 분기 예측 실패 복구<a class="header-link" href="#65" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>분기 예측 실패 시 복구:
+
+ROB 상태:
+┌────────────────────────────────────────────────────┐
+│  I1  │  I2  │  BR  │  I4  │  I5  │  I6  │         │
+│ Done │ Done │Mis-P│ Done │ Done │ Done │         │
+└────────────────────────────────────────────────────┘
+   ↑           ↑
+ Head        분기
+
+BR에서 분기 예측 실패 확인:
+1. I1, I2 커밋
+2. BR에서 예측 실패 감지
+3. I4, I5, I6 플러시 (투기적 실행 결과)
+4. RAT를 BR 시점으로 복원 (체크포인트 또는 ROB 역순회)
+5. 올바른 분기 대상으로 페치 재시작
+
+복구 메커니즘:
+- 체크포인트: 분기마다 RAT 스냅샷 저장
+- 점진적 복구: ROB를 역순회하며 RAT 복원
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 현대 프로세서의 실제 구현<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="71-intel-core-skylake">7.1 Intel Core 아키텍처 (Skylake 기준)<a class="header-link" href="#71-intel-core-skylake" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│<span class="w">                </span><span class="nv">Intel</span><span class="w"> </span><span class="nv">Skylake</span><span class="w"> </span><span class="nv">Microarchitecture</span><span class="w">                   </span>│
+├─────────────────────────────────────────────────────────────────┤
+│<span class="w">                                                                  </span>│
+│<span class="w">  </span><span class="nv">Front</span><span class="o">-</span><span class="k">end</span><span class="w"> </span><span class="ss">(</span><span class="nv">In</span><span class="o">-</span><span class="nv">Order</span><span class="ss">)</span><span class="w">                                           </span>│
+│<span class="w">  </span>┌────────────────────────────────────────────────────────────┐<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span>분기<span class="w"> </span>예측:<span class="w"> </span><span class="mi">32</span><span class="nv">KB</span><span class="w"> </span>방향<span class="w"> </span>예측기,<span class="w"> </span>약<span class="w"> </span><span class="mi">4</span><span class="nv">K</span><span class="w"> </span>항목<span class="w"> </span><span class="nv">BTB</span><span class="w">              </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">L1</span><span class="w"> </span><span class="nv">I</span><span class="o">-</span><span class="nv">Cache</span>:<span class="w"> </span><span class="mi">32</span><span class="nv">KB</span>,<span class="w"> </span><span class="mi">8</span><span class="o">-</span><span class="nv">way</span><span class="w">                                 </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Decode</span>:<span class="w"> </span><span class="mi">4</span><span class="o">-</span><span class="nv">wide</span><span class="w"> </span><span class="ss">(</span>복잡한<span class="w"> </span>명령어는<span class="w"> </span><span class="nv">micro</span><span class="o">-</span><span class="nv">op</span>으로<span class="w"> </span>분해<span class="ss">)</span><span class="w">       </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Micro</span><span class="o">-</span><span class="nv">op</span><span class="w"> </span><span class="nv">Cache</span>:<span class="w"> </span><span class="o">~</span><span class="mi">1</span>.<span class="mi">5</span><span class="nv">K</span><span class="w"> </span><span class="nv">micro</span><span class="o">-</span><span class="nv">ops</span><span class="w">                         </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span>할당:<span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="nv">micro</span><span class="o">-</span><span class="nv">ops</span><span class="o">/</span><span class="nv">cycle</span><span class="w">                                 </span>│<span class="w"> </span>│
+│<span class="w">  </span>└────────────────────────────────────────────────────────────┘<span class="w"> </span>│
+│<span class="w">                                                                  </span>│
+│<span class="w">  </span><span class="nv">Out</span><span class="o">-</span><span class="nv">of</span><span class="o">-</span><span class="nv">Order</span><span class="w"> </span><span class="nv">Engine</span><span class="w">                                            </span>│
+│<span class="w">  </span>┌────────────────────────────────────────────────────────────┐<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">ROB</span>:<span class="w"> </span><span class="mi">224</span><span class="w"> </span><span class="nv">entries</span><span class="w">                                        </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span>스케줄러:<span class="w"> </span><span class="mi">97</span><span class="w"> </span><span class="nv">entries</span><span class="w">                                    </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Physical</span><span class="w"> </span><span class="nv">Registers</span>:<span class="w"> </span><span class="mi">180</span><span class="w"> </span>정수<span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">168</span><span class="w"> </span>벡터<span class="w">                 </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Load</span><span class="w"> </span><span class="nv">Buffer</span>:<span class="w"> </span><span class="mi">72</span><span class="w"> </span><span class="nv">entries</span><span class="w">                                 </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Store</span><span class="w"> </span><span class="nv">Buffer</span>:<span class="w"> </span><span class="mi">56</span><span class="w"> </span><span class="nv">entries</span><span class="w">                                </span>│<span class="w"> </span>│
+│<span class="w">  </span>└────────────────────────────────────────────────────────────┘<span class="w"> </span>│
+│<span class="w">                                                                  </span>│
+│<span class="w">  </span><span class="nv">Execution</span><span class="w"> </span><span class="nv">Units</span><span class="w"> </span><span class="ss">(</span><span class="mi">8</span><span class="w"> </span><span class="nv">Ports</span><span class="ss">)</span><span class="w">                                      </span>│
+│<span class="w">  </span>┌────────────────────────────────────────────────────────────┐<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="nv">Port</span><span class="w"> </span><span class="mi">0</span>:<span class="w"> </span><span class="nv">ALU</span>,<span class="w"> </span><span class="nv">FMA</span>,<span class="w"> </span><span class="nv">FP</span><span class="w"> </span><span class="nv">Div</span><span class="o">/</span><span class="nv">Sqrt</span>,<span class="w"> </span><span class="nv">Branch</span><span class="w">                     </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="nv">Port</span><span class="w"> </span><span class="mi">1</span>:<span class="w"> </span><span class="nv">ALU</span>,<span class="w"> </span><span class="nv">FMA</span>,<span class="w"> </span><span class="nv">AES</span><span class="w">                                     </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="nv">Port</span><span class="w"> </span><span class="mi">2</span>:<span class="w"> </span><span class="nv">Load</span><span class="w"> </span><span class="nv">AGU</span><span class="w">                                          </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="nv">Port</span><span class="w"> </span><span class="mi">3</span>:<span class="w"> </span><span class="nv">Load</span><span class="w"> </span><span class="nv">AGU</span><span class="w">                                          </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="nv">Port</span><span class="w"> </span><span class="mi">4</span>:<span class="w"> </span><span class="nv">Store</span><span class="w"> </span><span class="nv">Data</span><span class="w">                                        </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="nv">Port</span><span class="w"> </span><span class="mi">5</span>:<span class="w"> </span><span class="nv">ALU</span>,<span class="w"> </span><span class="nv">Shuffle</span>,<span class="w"> </span><span class="nv">Branch</span><span class="w">                              </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="nv">Port</span><span class="w"> </span><span class="mi">6</span>:<span class="w"> </span><span class="nv">ALU</span>,<span class="w"> </span><span class="nv">Branch</span><span class="w">                                       </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="nv">Port</span><span class="w"> </span><span class="mi">7</span>:<span class="w"> </span><span class="nv">Store</span><span class="w"> </span><span class="nv">AGU</span><span class="w">                                         </span>│<span class="w"> </span>│
+│<span class="w">  </span>└────────────────────────────────────────────────────────────┘<span class="w"> </span>│
+│<span class="w">                                                                  </span>│
+│<span class="w">  </span><span class="nv">Memory</span><span class="w"> </span><span class="nv">Subsystem</span><span class="w">                                               </span>│
+│<span class="w">  </span>┌────────────────────────────────────────────────────────────┐<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">L1</span><span class="w"> </span><span class="nv">D</span><span class="o">-</span><span class="nv">Cache</span>:<span class="w"> </span><span class="mi">32</span><span class="nv">KB</span>,<span class="w"> </span><span class="mi">8</span><span class="o">-</span><span class="nv">way</span>,<span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="nv">cycles</span><span class="w">                       </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">L2</span><span class="w"> </span><span class="nv">Cache</span>:<span class="w"> </span><span class="mi">256</span><span class="nv">KB</span>,<span class="w"> </span><span class="mi">4</span><span class="o">-</span><span class="nv">way</span>,<span class="w"> </span><span class="mi">12</span><span class="w"> </span><span class="nv">cycles</span><span class="w">                       </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">L3</span><span class="w"> </span><span class="nv">Cache</span>:<span class="w"> </span><span class="mi">2</span><span class="nv">MB</span><span class="o">/</span><span class="nv">core</span>,<span class="w"> </span><span class="mi">16</span><span class="o">-</span><span class="nv">way</span>,<span class="w"> </span><span class="o">~</span><span class="mi">40</span><span class="w"> </span><span class="nv">cycles</span><span class="w">                  </span>│<span class="w"> </span>│
+│<span class="w">  </span>└────────────────────────────────────────────────────────────┘<span class="w"> </span>│
+│<span class="w">                                                                  </span>│
+│<span class="w">  </span>성능<span class="w"> </span>지표<span class="w">                                                       </span>│
+│<span class="w">  </span>┌────────────────────────────────────────────────────────────┐<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span>이론적<span class="w"> </span>최대:<span class="w"> </span><span class="mi">6</span><span class="w"> </span><span class="nv">micro</span><span class="o">-</span><span class="nv">ops</span><span class="w"> </span>실행<span class="o">/</span><span class="nv">cycle</span><span class="w">                      </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span>실제<span class="w"> </span><span class="nv">IPC</span>:<span class="w"> </span>워크로드에<span class="w"> </span>따라<span class="w"> </span><span class="mi">2</span><span class="o">-</span><span class="mi">4</span><span class="w">                            </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span>파이프라인<span class="w"> </span>깊이:<span class="w"> </span><span class="mi">14</span><span class="o">-</span><span class="mi">19</span><span class="w"> </span>단계<span class="w">                              </span>│<span class="w"> </span>│
+│<span class="w">  </span>└────────────────────────────────────────────────────────────┘<span class="w"> </span>│
+│<span class="w">                                                                  </span>│
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="72-arm-cortex-a77">7.2 ARM Cortex-A77 아키텍처<a class="header-link" href="#72-arm-cortex-a77" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│<span class="w">                 </span><span class="nv">ARM</span><span class="w"> </span><span class="nv">Cortex</span><span class="o">-</span><span class="nv">A77</span><span class="w"> </span><span class="nv">Microarchitecture</span><span class="w">                 </span>│
+├─────────────────────────────────────────────────────────────────┤
+│<span class="w">                                                                  </span>│
+│<span class="w">  </span><span class="nv">Front</span><span class="o">-</span><span class="k">end</span><span class="w">                                                      </span>│
+│<span class="w">  </span>┌────────────────────────────────────────────────────────────┐<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Fetch</span>:<span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="nv">instructions</span><span class="o">/</span><span class="nv">cycle</span><span class="w">                             </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Decode</span>:<span class="w"> </span><span class="mi">4</span><span class="o">-</span><span class="nv">wide</span><span class="w">                                          </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Macro</span><span class="o">-</span><span class="nv">op</span><span class="w"> </span><span class="nv">Cache</span>:<span class="w"> </span><span class="mi">1</span>.<span class="mi">5</span><span class="nv">K</span><span class="w"> </span><span class="nv">entries</span><span class="w">                            </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span>분기<span class="w"> </span>예측:<span class="w"> </span><span class="nv">TAGE</span><span class="w"> </span>기반<span class="w">                                     </span>│<span class="w"> </span>│
+│<span class="w">  </span>└────────────────────────────────────────────────────────────┘<span class="w"> </span>│
+│<span class="w">                                                                  </span>│
+│<span class="w">  </span><span class="nv">Out</span><span class="o">-</span><span class="nv">of</span><span class="o">-</span><span class="nv">Order</span><span class="w"> </span><span class="nv">Engine</span><span class="w">                                            </span>│
+│<span class="w">  </span>┌────────────────────────────────────────────────────────────┐<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">ROB</span>:<span class="w"> </span><span class="mi">160</span><span class="w"> </span><span class="nv">entries</span><span class="w">                                        </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Dispatch</span>:<span class="w"> </span><span class="mi">6</span><span class="w"> </span><span class="nv">micro</span><span class="o">-</span><span class="nv">ops</span><span class="o">/</span><span class="nv">cycle</span><span class="w">                             </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nv">Issue</span><span class="w"> </span><span class="nv">Queue</span>:<span class="w"> </span><span class="mi">120</span><span class="w"> </span><span class="nv">entries</span><span class="w">                                </span>│<span class="w"> </span>│
+│<span class="w">  </span>└────────────────────────────────────────────────────────────┘<span class="w"> </span>│
+│<span class="w">                                                                  </span>│
+│<span class="w">  </span><span class="nv">Execution</span><span class="w"> </span><span class="nv">Units</span><span class="w"> </span><span class="ss">(</span><span class="mi">10</span><span class="w"> </span><span class="nv">pipelines</span><span class="ss">)</span><span class="w">                                 </span>│
+│<span class="w">  </span>┌────────────────────────────────────────────────────────────┐<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="mi">2</span><span class="nv">x</span><span class="w"> </span><span class="nv">Branch</span><span class="w">                                               </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="mi">3</span><span class="nv">x</span><span class="w"> </span><span class="nv">Integer</span><span class="w"> </span><span class="nv">ALU</span><span class="w">                                          </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="mi">2</span><span class="nv">x</span><span class="w"> </span><span class="nv">Integer</span><span class="w"> </span><span class="nv">Multi</span><span class="o">-</span><span class="nv">Cycle</span><span class="w">                                  </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="mi">2</span><span class="nv">x</span><span class="w"> </span><span class="nv">FP</span><span class="o">/</span><span class="nv">NEON</span><span class="w">                                              </span>│<span class="w"> </span>│
+│<span class="w">  </span>│<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="mi">2</span><span class="nv">x</span><span class="w"> </span><span class="nv">Load</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="nv">x</span><span class="w"> </span><span class="nv">Store</span><span class="w">                                      </span>│<span class="w"> </span>│
+│<span class="w">  </span>└────────────────────────────────────────────────────────────┘<span class="w"> </span>│
+│<span class="w">                                                                  </span>│
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="73">7.3 성능 비교<a class="header-link" href="#73" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌──────────────────────────────────────────────────────────────────┐
+│         현대 고성능 프로세서 비교 (2024년 기준)                      │
+├───────────────┬────────────────┬────────────────┬────────────────┤
+│     특성       │  Intel Golden  │   AMD Zen 4   │  Apple M2 P-core│
+│               │    Cove        │               │               │
+├───────────────┼────────────────┼────────────────┼────────────────┤
+│  Decode Width │     6-wide     │    4-wide     │     8-wide    │
+├───────────────┼────────────────┼────────────────┼────────────────┤
+│  ROB Size     │    512 entry   │   320 entry   │   ~600 entry  │
+├───────────────┼────────────────┼────────────────┼────────────────┤
+│  Issue Width  │    12 ports    │    10 ports   │   ~13 ports   │
+├───────────────┼────────────────┼────────────────┼────────────────┤
+│  L1 I-Cache   │     32KB       │     32KB      │    192KB      │
+├───────────────┼────────────────┼────────────────┼────────────────┤
+│  L1 D-Cache   │     48KB       │     32KB      │    128KB      │
+├───────────────┼────────────────┼────────────────┼────────────────┤
+│  L2 Cache     │    1.25MB      │     1MB       │     16MB      │
+├───────────────┼────────────────┼────────────────┼────────────────┤
+│ 실제 IPC (avg)│     ~3-4       │     ~3-4      │     ~4-5      │
+└───────────────┴────────────────┴────────────────┴────────────────┘
+</code></pre></div>
+
+<h3 id="74-ilp">7.4 ILP의 한계<a class="header-link" href="#74-ilp" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>ILP 활용의 제한 요소:
+
+1. 진정한 데이터 의존성 (RAW)
+   - 리네이밍으로 해결 불가
+   - 실행 시간이 길어지면 의존 체인이 성능 결정
+
+2. 제어 의존성
+   - 분기 예측 정확도 한계 (~95-97%)
+   - 예측 실패 시 파이프라인 플러시
+
+3. 메모리 의존성
+   - Load-Store 의존성 탐지 어려움
+   - 메모리 명령어 재정렬 제한
+
+4. 윈도우 크기 제한
+   - ROB, Issue Queue 크기 한계
+   - 멀리 떨어진 ILP 활용 불가
+
+실제 프로그램의 ILP:
+
+┌────────────────────────────────────────────────────┐
+│  프로그램 유형       │  평균 ILP   │  제한 요소      │
+├────────────────────────────────────────────────────┤
+│  정수 연산 (SPEC INT)│   1.5-2.5  │  의존성 체인    │
+│  부동소수점 (SPEC FP)│   2.0-4.0  │  메모리 대역폭  │
+│  미디어 처리         │   3.0-6.0  │  SIMD 활용도   │
+│  데이터베이스        │   1.0-2.0  │  분기 예측     │
+│  웹 브라우저         │   1.5-2.5  │  제어 흐름     │
+└────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="8">8. 연습 문제<a class="header-link" href="#8" title="Permanent link">&para;</a></h2>
+<h3 id="_4">기초 문제<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p>다음 데이터 의존성의 유형을 분류하시오:
+   <code>assembly
+   I1: ADD R1, R2, R3
+   I2: SUB R4, R1, R5
+   I3: MUL R1, R6, R7
+   I4: DIV R8, R1, R9</code></p>
+</li>
+<li>
+<p>3-way 슈퍼스칼라 프로세서에서 이론적 최대 IPC는 얼마인가?</p>
+</li>
+<li>
+<p>레지스터 리네이밍이 해결할 수 있는 의존성 유형은?</p>
+</li>
+<li>(a) RAW</li>
+<li>(b) WAR</li>
+<li>(c) WAW</li>
+<li>(d) Control</li>
+</ol>
+<h3 id="_5">중급 문제<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p>다음 프로그램에 레지스터 리네이밍을 적용하시오:
+   <code>assembly
+   I1: ADD R1, R2, R3
+   I2: MUL R4, R1, R5
+   I3: ADD R1, R6, R7
+   I4: SUB R8, R1, R4</code>
+   (물리 레지스터 P10부터 사용)</p>
+</li>
+<li>
+<p>ROB가 필요한 이유 3가지를 설명하시오.</p>
+</li>
+<li>
+<p>Tomasulo 알고리즘에서 CDB(Common Data Bus)의 역할은?</p>
+</li>
+</ol>
+<h3 id="_6">심화 문제<a class="header-link" href="#_6" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p>다음 상황에서 Tomasulo 알고리즘의 Reservation Station 상태를 추적하시오:
+   <code>assembly
+   I1: LD   F2, 0(R1)     ; 3 사이클
+   I2: MUL  F4, F2, F0    ; 5 사이클
+   I3: ADD  F6, F4, F2    ; 2 사이클</code>
+   (초기: F0 = 2.0, RS 3개 (Load1, Mult1, Add1), 사이클 1~10 추적)</p>
+</li>
+<li>
+<p>분기 예측 실패 시 ROB를 사용한 복구 과정을 설명하시오.</p>
+</li>
+<li>
+<p>Intel Skylake의 ROB가 224 엔트리인 이유는 무엇일까요? 더 크거나 작으면 어떤 영향이 있을까요?</p>
+</li>
+</ol>
+<details>
+<summary>정답</summary>
+
+1. 의존성 분류:
+   - I1→I2: RAW (R1)
+   - I1→I3: WAW (R1)
+   - I2→I3: WAR (R1 - I2가 읽고 I3가 씀)
+   - I3→I4: RAW (R1)
+
+2. 3-way 슈퍼스칼라의 이론적 최대 IPC = 3
+
+3. (b) WAR, (c) WAW
+   - RAW는 진정한 의존성이므로 해결 불가
+   - Control은 분기 예측으로 해결
+
+4. 레지스터 리네이밍:
+   ```assembly
+   I1: ADD P10, P2, P3    ; R1 → P10
+   I2: MUL P11, P10, P5   ; R4 → P11
+   I3: ADD P12, P6, P7    ; R1 → P12 (새 레지스터)
+   I4: SUB P13, P12, P11  ; R8 → P13
+   ```
+   I1과 I3는 이제 병렬 실행 가능
+
+5. ROB 필요 이유:
+   - 정확한 예외 처리 (순서대로 커밋)
+   - 분기 예측 실패 복구
+   - 정확한 인터럽트 처리
+
+6. CDB 역할:
+   - 실행 완료된 결과를 모든 RS에 브로드캐스트
+   - 대기 중인 명령어들이 피연산자 수신
+   - 레지스터 파일 갱신
+
+7. Tomasulo 실행 추적:
+   ```
+   사이클 1: Issue I1 → Load1
+   사이클 2: Execute I1, Issue I2 → Mult1 (Qj=Load1)
+   사이클 3: Execute I1 계속, Issue I3 → Add1 (Qj=Mult1, Qk=Load1)
+   사이클 4: Write I1, Mult1: Vj 업데이트, Add1: Vk 업데이트
+   사이클 5: Execute I2 시작
+   ...
+   사이클 9: Write I2, Add1: Vj 업데이트
+   사이클 10: Execute I3 시작
+   사이클 11-12: Execute I3 완료
+   ```
+
+8. 분기 예측 실패 복구:
+   - ROB에서 분기 이후 명령어들의 결과 무효화
+   - RAT를 분기 시점 상태로 복원
+   - 올바른 분기 대상으로 페치 재시작
+   - 파이프라인 플러시
+
+9. ROB 크기 트레이드오프:
+   - 더 크면: 더 많은 ILP 활용 가능, 긴 메모리 지연 허용
+   - 더 작으면: 면적/전력 감소, 복구 시간 단축
+   - 224는 메모리 지연(~100사이클)과 6-wide 발행의 균형점
+
+</details>
+
+<hr />
+<h2 id="_7">다음 단계<a class="header-link" href="#_7" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="./14_Memory_Hierarchy.md">14_Memory_Hierarchy.md</a> - 메모리 시스템의 계층 구조와 지역성 원리</li>
+</ul>
+<hr />
+<h2 id="_8">참고 자료<a class="header-link" href="#_8" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Computer Architecture: A Quantitative Approach (Hennessy &amp; Patterson)</li>
+<li><a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel Optimization Manual</a></li>
+<li><a href="https://en.wikichip.org/wiki/WikiChip">WikiChip - Microarchitectures</a></li>
+<li><a href="https://www.agner.org/optimize/">Agner Fog's microarchitecture</a></li>
+<li>Tomasulo, R.M. "An Efficient Algorithm for Exploiting Multiple Arithmetic Units" (1967)</li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Computer_Architecture/12_Branch_Prediction.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">분기 예측 (Branch Prediction)</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Computer_Architecture/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Computer_Architecture/14_Memory_Hierarchy.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">메모리 계층 구조</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

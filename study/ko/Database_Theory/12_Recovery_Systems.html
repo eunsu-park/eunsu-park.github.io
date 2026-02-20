@@ -1,0 +1,1445 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>12. 복구 시스템 - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/ko/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/ko/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/ko/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" >
+                        English
+                    </option>
+                    
+                    <option value="ko" selected>
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/ko/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/ko/Database_Theory/">Database Theory</a>
+    <span class="separator">/</span>
+    <span class="current">12. 복구 시스템</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>12. 복구 시스템</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Database_Theory/11_Concurrency_Control.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">11. 동시성 제어</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Database_Theory/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Database_Theory/13_NoSQL_Data_Models.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">NoSQL 데이터 모델</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#_1">학습 목표</a></li>
+<li><a href="#1">1. 실패 분류</a><ul>
+<li><a href="#11">1.1 트랜잭션 실패</a></li>
+<li><a href="#12_1">1.2 시스템 실패 (충돌)</a></li>
+<li><a href="#13">1.3 디스크 실패 (미디어 실패)</a></li>
+<li><a href="#14">1.4 실패 요약</a></li>
+</ul>
+</li>
+<li><a href="#2">2. 저장 유형</a><ul>
+<li><a href="#21">2.1 저장 계층</a></li>
+<li><a href="#22">2.2 안정 저장소</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 로그 기반 복구</a><ul>
+<li><a href="#31">3.1 로그</a></li>
+<li><a href="#32">3.2 로그 속성</a></li>
+<li><a href="#33">3.3 지연 데이터베이스 수정</a></li>
+<li><a href="#34">3.4 즉시 데이터베이스 수정</a></li>
+</ul>
+</li>
+<li><a href="#4-wal">4. 선행 기록 로깅 (WAL) 프로토콜</a><ul>
+<li><a href="#41-wal">4.1 WAL 규칙</a></li>
+<li><a href="#42-force-at-commit">4.2 커밋 규칙 (Force-at-Commit)</a></li>
+<li><a href="#43">4.3 그룹 커밋</a></li>
+<li><a href="#44-postgresql-wal">4.4 PostgreSQL의 WAL</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 체크포인트</a><ul>
+<li><a href="#51">5.1 체크포인트가 필요한 이유?</a></li>
+<li><a href="#52">5.2 단순 (정지) 체크포인트</a></li>
+<li><a href="#53-">5.3 비-정지 (활성) 체크포인트</a></li>
+<li><a href="#54">5.4 퍼지 체크포인트</a></li>
+</ul>
+</li>
+<li><a href="#6-aries">6. ARIES 복구 알고리즘</a><ul>
+<li><a href="#61">6.1 개요</a></li>
+<li><a href="#62">6.2 주요 데이터 구조</a></li>
+<li><a href="#63-clr">6.3 보상 로그 레코드 (CLR)</a></li>
+<li><a href="#64">6.4 세 단계</a></li>
+<li><a href="#65-1">6.5 단계 1: 분석</a></li>
+<li><a href="#66-2">6.6 단계 2: 재실행 (역사 반복)</a></li>
+<li><a href="#67-3">6.7 단계 3: 취소</a></li>
+<li><a href="#68-aries">6.8 완전한 ARIES 예</a></li>
+<li><a href="#69">6.9 복구 중 충돌</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 그림자 페이징</a><ul>
+<li><a href="#71">7.1 개념</a></li>
+<li><a href="#72-vs-wal">7.2 그림자 페이징 vs. WAL</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 버퍼 관리 정책</a><ul>
+<li><a href="#81">8.1 네 가지 조합</a></li>
+<li><a href="#82-stealno-force">8.2 Steal/No-Force가 최고인 이유</a></li>
+<li><a href="#83">8.3 복구와의 상호작용</a></li>
+</ul>
+</li>
+<li><a href="#9">9. 미디어 복구와 백업 전략</a><ul>
+<li><a href="#91">9.1 백업의 필요성</a></li>
+<li><a href="#92">9.2 백업 유형</a></li>
+<li><a href="#93-postgresql">9.3 PostgreSQL 백업 명령어</a></li>
+<li><a href="#94-vs">9.4 논리적 vs. 물리적 백업</a></li>
+<li><a href="#95">9.5 백업 모범 사례</a></li>
+</ul>
+</li>
+<li><a href="#10">10. 현대 시스템의 복구</a><ul>
+<li><a href="#101">10.1 복구와 복제</a></li>
+<li><a href="#102">10.2 성능 고려사항</a></li>
+<li><a href="#103">10.3 병렬 복구</a></li>
+</ul>
+</li>
+<li><a href="#11_1">11. 연습문제</a><ul>
+<li><a href="#_2">개념적 질문</a></li>
+<li><a href="#_3">로그 기반 복구</a></li>
+<li><a href="#aries">ARIES 알고리즘</a></li>
+<li><a href="#_4">버퍼 관리</a></li>
+<li><a href="#_5">백업과 미디어 복구</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="12">12. 복구 시스템<a class="header-link" href="#12" title="Permanent link">&para;</a></h1>
+<p><strong>이전</strong>: <a href="./11_Concurrency_Control.md">동시성 제어</a> | <strong>다음</strong>: <a href="./13_NoSQL_and_NewSQL.md">NoSQL와 NewSQL</a></p>
+<hr />
+<h2 id="_1">학습 목표<a class="header-link" href="#_1" title="Permanent link">&para;</a></h2>
+<ul>
+<li>실패 유형을 분류하고 저장 계층 이해</li>
+<li>로그 기반 복구 기법 마스터: 지연 및 즉시 수정</li>
+<li>선행 기록 로깅(WAL) 프로토콜과 그것이 필수적인 이유 이해</li>
+<li>퍼지 체크포인트를 포함한 체크포인트 메커니즘 학습</li>
+<li>ARIES 복구 알고리즘 상세 학습: 분석, 재실행, 취소 단계</li>
+<li>복구 접근 비교: 그림자 페이징 vs. WAL 기반 복구</li>
+<li>버퍼 관리 정책 이해: force/no-force, steal/no-steal</li>
+<li>미디어 복구와 백업 전략 학습</li>
+</ul>
+<hr />
+<h2 id="1">1. 실패 분류<a class="header-link" href="#1" title="Permanent link">&para;</a></h2>
+<p>데이터베이스 시스템은 다양한 유형의 실패를 우아하게 처리해야 한다. 실패 유형을 이해하는 것은 적절한 복구 메커니즘을 설계하는 데 필수적이다.</p>
+<h3 id="11">1.1 트랜잭션 실패<a class="header-link" href="#11" title="Permanent link">&para;</a></h3>
+<p>단일 트랜잭션 내의 실패. 시스템의 나머지는 영향을 받지 않는다.</p>
+<p><strong>논리적 오류:</strong>
+- 0으로 나누기
+- 제약 위반 (예: 고유 키, 외래 키)
+- 응용 프로그램 수준 단언 실패
+- 사용자가 시작한 중단 (ROLLBACK)</p>
+<p><strong>트랜잭션에 영향을 미치는 시스템 오류:</strong>
+- 데드락 희생자 선택 (데드락을 깨기 위해 트랜잭션이 중단됨)
+- 타임아웃 만료
+- 트랜잭션 작업 영역의 메모리 부족</p>
+<div class="highlight"><pre><span></span><code>트랜잭션 실패 복구:
+  T₁: read(A) write(A) read(B) ← 제약 위반!
+      ↓
+  T₁의 A에 대한 쓰기를 취소
+  T₁의 잠금 해제
+  T₁이 중단 상태로 들어감
+</code></pre></div>
+
+<h3 id="12_1">1.2 시스템 실패 (충돌)<a class="header-link" href="#12_1" title="Permanent link">&para;</a></h3>
+<p>전체 시스템이 예기치 않게 정지. 휘발성 저장소(주 메모리, 버퍼 풀)가 손실되지만 디스크 내용은 생존.</p>
+<p><strong>원인:</strong>
+- 운영 체제 충돌
+- 정전 (UPS 없이)
+- 하드웨어 실패 (CPU, 메모리)
+- DBMS의 소프트웨어 버그</p>
+<div class="highlight"><pre><span></span><code>시스템 실패:
+┌──────────────────────────────────┐
+│  주 메모리 (손실됨)               │
+│  ┌────────────┐ ┌────────────┐  │
+│  │ 버퍼 풀    │ │ 잠금 테이블 │  │
+│  │ (더티      │ │ (모든 잠금  │  │
+│  │  페이지)   │ │  손실됨)    │  │
+│  └────────────┘ └────────────┘  │
+└──────────────────────────────────┘
+         ↕  충돌  ↕
+┌──────────────────────────────────┐
+│  디스크 (생존함)                  │
+│  ┌────────────┐ ┌────────────┐  │
+│  │ 데이터베이스│ │ 로그 파일  │  │
+│  │ 파일       │ │ (WAL)      │  │
+│  └────────────┘ └────────────┘  │
+└──────────────────────────────────┘
+
+복구 후:
+- 커밋된 트랜잭션: 재실행 (효과가 지속되어야 함)
+- 커밋되지 않은 트랜잭션: 취소 (효과가 역전되어야 함)
+</code></pre></div>
+
+<h3 id="13">1.3 디스크 실패 (미디어 실패)<a class="header-link" href="#13" title="Permanent link">&para;</a></h3>
+<p>디스크 저장소의 물리적 파괴. 영향받은 디스크의 데이터가 손실됨.</p>
+<p><strong>원인:</strong>
+- 디스크 헤드 충돌
+- 컨트롤러 실패
+- 화재, 홍수, 또는 다른 물리적 손상</p>
+<div class="highlight"><pre><span></span><code>디스크 실패 복구:
+  주 디스크 파괴됨
+      ↓
+  백업에서 복원 (테이프, 원격 복제본)
+      ↓
+  백업 시점부터 실패 시점까지 로그 재생
+      ↓
+  데이터베이스가 일관된 상태로 복원됨
+</code></pre></div>
+
+<h3 id="14">1.4 실패 요약<a class="header-link" href="#14" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>실패 유형</th>
+<th>손실된 것</th>
+<th>복구 방법</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>트랜잭션</td>
+<td>트랜잭션의 부분 작업</td>
+<td>로그를 사용한 취소 (롤백)</td>
+</tr>
+<tr>
+<td>시스템 (충돌)</td>
+<td>휘발성 저장소 (버퍼 풀)</td>
+<td>커밋됨 재실행 + 커밋 안 됨 취소</td>
+</tr>
+<tr>
+<td>디스크 (미디어)</td>
+<td>디스크 내용</td>
+<td>백업에서 복원 + 로그 재생</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2">2. 저장 유형<a class="header-link" href="#2" title="Permanent link">&para;</a></h2>
+<h3 id="21">2.1 저장 계층<a class="header-link" href="#21" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>저장 계층:
+
+┌─────────────────────┐
+│   휘발성 저장소      │  CPU 레지스터, 캐시, 주 메모리
+│   (빠름, 정전 시     │  접근: 나노초
+│    손실됨)           │
+└─────────┬───────────┘
+          │
+┌─────────┴───────────┐
+│  비휘발성 저장소     │  SSD, HDD, 플래시
+│  (정전은 견디지만,   │  접근: 마이크로초 (SSD) ~ 밀리초 (HDD)
+│   디스크 실패는      │
+│   견디지 못함)       │
+└─────────┬───────────┘
+          │
+┌─────────┴───────────┐
+│   안정 저장소        │  미러링 디스크, RAID, 원격 복제본, 테이프
+│  (이상적으로 모든    │  접근: 밀리초 ~ 시간
+│   실패를 견딤)       │
+└─────────────────────┘
+</code></pre></div>
+
+<h3 id="22">2.2 안정 저장소<a class="header-link" href="#22" title="Permanent link">&para;</a></h3>
+<p>진정한 안정 저장소는 이상화다 -- 실제 저장소는 모든 가능한 실패를 견디지 못한다. 실제로, 다음을 사용하여 안정 저장소를 근사한다:</p>
+<ol>
+<li><strong>RAID</strong> (Redundant Array of Independent Disks):</li>
+<li>RAID 1: 미러링 (모든 블록의 두 복사본)</li>
+<li>
+<p>RAID 5/6: 패리티 기반 중복성</p>
+</li>
+<li>
+<p><strong>원격 복제</strong>: 지리적으로 분리된 위치에 쓰기</p>
+</li>
+<li>
+<p><strong>다중 복사본</strong>: 다른 미디어에 복사본 유지 (디스크 + 테이프 + 클라우드)</p>
+</li>
+</ol>
+<p><strong>로그 파일</strong>의 경우, 가장 강한 내구성 보장이 필요하므로, 로그는 일반적으로 사용 가능한 가장 신뢰할 수 있는 저장소에 저장된다.</p>
+<hr />
+<h2 id="3">3. 로그 기반 복구<a class="header-link" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="31">3.1 로그<a class="header-link" href="#31" title="Permanent link">&para;</a></h3>
+<p><strong>로그(Log)</strong> (또는 <strong>저널(Journal)</strong> 또는 <strong>선행 기록 로그(Write-Ahead Log)</strong>)는 모든 데이터베이스 수정의 순차적 기록이다. 이는 복구의 기초다.</p>
+<div class="highlight"><pre><span></span><code>로그 레코드 유형:
+
+┌──────────────────────────────────────────────────────────┐
+│ &lt;T_i, start&gt;           트랜잭션 T_i가 시작됨            │
+│ &lt;T_i, X, V_old, V_new&gt; T_i가 X를 V_old에서 V_new로 변경│
+│ &lt;T_i, commit&gt;          트랜잭션 T_i가 커밋됨            │
+│ &lt;T_i, abort&gt;           트랜잭션 T_i가 중단됨            │
+│ &lt;checkpoint L&gt;          활성 트랜잭션 목록 L과 체크포인트│
+└──────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<p><strong>예시 로그:</strong></p>
+<div class="highlight"><pre><span></span><code>LSN  로그 레코드
+───  ─────────────────────────────
+1    &lt;T₁, start&gt;
+2    &lt;T₁, A, 100, 50&gt;           T₁이 A를 100에서 50으로 변경
+3    &lt;T₁, B, 200, 250&gt;          T₁이 B를 200에서 250으로 변경
+4    &lt;T₂, start&gt;
+5    &lt;T₂, C, 300, 400&gt;          T₂가 C를 300에서 400으로 변경
+6    &lt;T₁, commit&gt;
+7    &lt;T₂, D, 500, 600&gt;          T₂가 D를 500에서 600으로 변경
+                                  ← 충돌 (T₂ 커밋 안 됨)
+</code></pre></div>
+
+<h3 id="32">3.2 로그 속성<a class="header-link" href="#32" title="Permanent link">&para;</a></h3>
+<p><strong>주요 속성:</strong>
+1. <strong>추가 전용</strong>: 새 레코드는 항상 끝에 추가됨
+2. <strong>순차 쓰기</strong>: 디스크 I/O에 효율적
+3. <strong>선행 기록</strong>: 로그 레코드가 대응하는 데이터 수정 전에 기록됨 (WAL 규칙)
+4. <strong>커밋 시 강제</strong>: 트랜잭션의 로그 레코드가 커밋이 완료되기 전에 안정 저장소에 있어야 함</p>
+<h3 id="33">3.3 지연 데이터베이스 수정<a class="header-link" href="#33" title="Permanent link">&para;</a></h3>
+<p><strong>지연 수정(Deferred Modification)</strong> 방식에서, 모든 쓰기는 트랜잭션이 커밋할 때까지 지연된다. 실행 중에, 수정은 로그에만 기록된다.</p>
+<div class="highlight"><pre><span></span><code>지연 수정:
+
+T₁ 실행:
+  로그: &lt;T₁, start&gt;
+  로그: &lt;T₁, A, <span class="ge">_, 50&gt;           쓰기 의도 기록 (오래된 값 불필요)</span>
+<span class="ge">  로그: &lt;T₁, B, _</span>, 250&gt;          쓰기 의도 기록
+  로그: &lt;T₁, commit&gt;
+  ── 이제 데이터베이스에 쓰기 적용 ──
+  데이터베이스: A = 50, B = 250
+
+복구는 재실행만 필요 (취소 불필요 왜냐하면 커밋되지 않은
+트랜잭션은 절대 데이터베이스에 쓰지 않았기 때문).
+</code></pre></div>
+
+<p><strong>충돌 후 복구:</strong>
+- <strong>커밋된 트랜잭션</strong>: 모든 쓰기를 재실행 (로그에서)
+- <strong>커밋되지 않은 트랜잭션</strong>: 무시 (데이터베이스를 절대 수정하지 않았음)</p>
+<p><strong>장점:</strong>
+- 취소 불필요 (더 간단한 복구)
+- 데이터베이스에 더티 데이터 없음</p>
+<p><strong>단점:</strong>
+- 모든 쓰기가 커밋까지 메모리에 맞아야 함
+- 긴 트랜잭션은 큰 버퍼 필요
+- 잠금을 조기에 해제할 수 없음 (커밋 + 쓰기까지 모든 잠금 보유해야 함)</p>
+<h3 id="34">3.4 즉시 데이터베이스 수정<a class="header-link" href="#34" title="Permanent link">&para;</a></h3>
+<p><strong>즉시 수정(Immediate Modification)</strong> 방식에서, 쓰기는 발생 시 데이터베이스에 적용된다 (커밋 전에 가능). 이는 모든 주요 데이터베이스 시스템이 사용하는 접근이다.</p>
+<div class="highlight"><pre><span></span><code>즉시 수정:
+
+T₁ 실행:
+  로그: &lt;T₁, start&gt;
+  로그: &lt;T₁, A, 100, 50&gt;         오래된 값과 새 값 모두 기록
+  데이터베이스: A = 50               ← 즉시 데이터베이스에 씀
+  로그: &lt;T₁, B, 200, 250&gt;
+  데이터베이스: B = 250              ← 즉시 데이터베이스에 씀
+  로그: &lt;T₁, commit&gt;
+
+복구는 재실행과 취소 모두 필요할 수 있음.
+</code></pre></div>
+
+<p><strong>충돌 후 복구:</strong>
+- <strong>커밋된 트랜잭션</strong>: 쓰기를 재실행 (변경사항이 지속되도록 보장)
+- <strong>커밋되지 않은 트랜잭션</strong>: 쓰기를 취소 (부분 변경사항을 역전)</p>
+<div class="highlight"><pre><span></span><code>예시 로그에서 복구:
+
+LSN  로그 레코드
+───  ─────────────────────
+1    &lt;T₁, start&gt;
+2    &lt;T₁, A, 100, 50&gt;
+3    &lt;T₁, B, 200, 250&gt;
+4    &lt;T₂, start&gt;
+5    &lt;T₂, C, 300, 400&gt;
+6    &lt;T₁, commit&gt;
+7    &lt;T₂, D, 500, 600&gt;
+     ← 충돌
+
+복구:
+  T₁ 커밋됨 (&lt;T₁, commit&gt; 발견) → 재실행:
+    A = 50   (로그 레코드 2에서)
+    B = 250  (로그 레코드 3에서)
+
+  T₂ 커밋 안 됨 (&lt;T₂, commit&gt; 없음) → 취소:
+    D = 500  (로그 레코드 7 역전: 오래된 값 복원)
+    C = 300  (로그 레코드 5 역전: 오래된 값 복원)
+
+  재실행은 순방향 (커밋된 트랜잭션에 대해 가장 오래된 것부터 최신까지)
+  취소는 역방향 (커밋되지 않은 트랜잭션에 대해 최신에서 가장 오래된 것으로)
+</code></pre></div>
+
+<p><strong>왜 커밋된 트랜잭션에도 재실행이 필요한가:</strong>
+커밋된 트랜잭션의 쓰기가 충돌이 발생했을 때 여전히 버퍼 풀(휘발성 메모리)에 있고 디스크에 플러시되지 않았을 수 있기 때문.</p>
+<p><strong>왜 커밋되지 않은 트랜잭션에 취소가 필요한가:</strong>
+커밋되지 않은 트랜잭션의 쓰기가 충돌 전에 (버퍼 관리자에 의해) 디스크에 플러시되었을 수 있기 때문.</p>
+<hr />
+<h2 id="4-wal">4. 선행 기록 로깅 (WAL) 프로토콜<a class="header-link" href="#4-wal" title="Permanent link">&para;</a></h2>
+<h3 id="41-wal">4.1 WAL 규칙<a class="header-link" href="#41-wal" title="Permanent link">&para;</a></h3>
+<p><strong>선행 기록 로깅(Write-Ahead Logging, WAL)</strong> 프로토콜은 로그 기반 복구가 작동하게 하는 기본 규칙이다:</p>
+<p><strong>WAL 규칙</strong>: 수정된 데이터 페이지가 버퍼 풀에서 디스크로 기록되기 전에, <strong>그 페이지에 관련된 모든 로그 레코드가 안정 저장소로 플러시되어야 한다</strong>.</p>
+<div class="highlight"><pre><span></span><code>WAL 프로토콜:
+
+단계 1: 로그 레코드를 로그 버퍼(메모리)에 쓰기
+단계 2: 로그 레코드를 디스크(안정 저장소)로 플러시
+단계 3: 그 다음(그 다음에만) 수정된 데이터를 디스크에 쓰기
+
+올바른 순서:
+  로그 버퍼: &lt;T₁, A, 100, 50&gt; → 디스크의 로그: &lt;T₁, A, 100, 50&gt; → 디스크의 데이터: A=50
+                                                    ↑
+                                          데이터 쓰기 전에 일어나야 함
+
+왜? 로그 레코드가 기록되기 전에 데이터가 먼저 기록되고 시스템이
+충돌하면, 변경사항을 취소할 수 없음 (오래된 값을 모름).
+</code></pre></div>
+
+<h3 id="42-force-at-commit">4.2 커밋 규칙 (Force-at-Commit)<a class="header-link" href="#42-force-at-commit" title="Permanent link">&para;</a></h3>
+<p>트랜잭션이 커밋할 때, 모든 로그 레코드가 커밋이 사용자에게 확인되기 <strong>전에</strong> 안정 저장소로 플러시되어야 한다:</p>
+<div class="highlight"><pre><span></span><code>커밋 프로토콜:
+
+T₁: ... 연산 ...
+로그: &lt;T₁, commit&gt;
+
+단계 1: T₁의 모든 로그 레코드를 디스크로 플러시 (&lt;T₁, commit&gt; 포함)
+단계 2: 사용자에게 커밋 확인 (&quot;트랜잭션 커밋됨&quot;)
+단계 3: 수정된 데이터 페이지는 나중에 플러시될 수 있음 (지연)
+
+단계 1 후이지만 단계 3 전에 충돌이 발생하면:
+  로그가 디스크에 &lt;T₁, commit&gt; 있음 → 복구 중 T₁의 변경사항 재실행 ✓
+
+단계 1 전에 충돌이 발생하면:
+  디스크에 &lt;T₁, commit&gt; 없음 → 복구 중 T₁의 변경사항 취소 ✓
+</code></pre></div>
+
+<h3 id="43">4.3 그룹 커밋<a class="header-link" href="#43" title="Permanent link">&para;</a></h3>
+<p>모든 단일 커밋에 대해 로그를 디스크로 플러시하는 것은 비싸다. <strong>그룹 커밋(Group Commit)</strong>은 여러 커밋을 단일 디스크 쓰기로 일괄 처리한다:</p>
+<div class="highlight"><pre><span></span><code>그룹 커밋 없이:
+  T₁ 커밋 → 플러시 → 확인
+  T₂ 커밋 → 플러시 → 확인
+  T₃ 커밋 → 플러시 → 확인
+  = 3번의 디스크 플러시 (각각 HDD의 경우 ~5-10ms)
+
+그룹 커밋과 함께:
+  T₁ 커밋 → 버퍼
+  T₂ 커밋 → 버퍼     → 단일 플러시 → T₁, T₂, T₃ 확인
+  T₃ 커밋 → 버퍼
+  = 1번의 디스크 플러시
+
+트레이드오프: 개별 커밋에 대해 약간 더 높은 지연시간,
+하지만 훨씬 더 높은 처리량 (초당 더 많은 커밋).
+</code></pre></div>
+
+<p>PostgreSQL은 기본적으로 그룹 커밋을 사용한다 (<code>commit_delay</code>와 <code>commit_siblings</code> 설정).</p>
+<h3 id="44-postgresql-wal">4.4 PostgreSQL의 WAL<a class="header-link" href="#44-postgresql-wal" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>PostgreSQL WAL 아키텍처:
+
+┌──────────────────────────────────────────┐
+│  공유 버퍼 (버퍼 풀)                      │
+│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐       │
+│  │Page1│ │Page2│ │Page3│ │Page4│  ...   │
+│  │더티 │ │깨끗 │ │더티 │ │깨끗 │        │
+│  └─────┘ └─────┘ └─────┘ └─────┘       │
+└────────────────┬─────────────────────────┘
+                 │
+                 │  더티 페이지가 기록되기 전에
+                 │  WAL이 플러시되어야 함
+                 ↓
+┌──────────────────────────────────────────┐
+│  WAL 버퍼 → WAL 세그먼트 파일             │
+│  ┌─────────────┐   ┌────────────────────┐│
+│  │ WAL 버퍼    │ → │ 000000010000000042 ││
+│  │ (메모리에)  │   │ 000000010000000043 ││
+│  └─────────────┘   │ ... (각 16MB)      ││
+│                     └────────────────────┘│
+└──────────────────────────────────────────┘
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1">-- PostgreSQL WAL 구성</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">wal_level</span><span class="p">;</span><span class="w">           </span><span class="c1">-- minimal, replica, logical</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">max_wal_size</span><span class="p">;</span><span class="w">        </span><span class="c1">-- 체크포인트 전 최대 WAL 크기 (기본: 1GB)</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">wal_buffers</span><span class="p">;</span><span class="w">         </span><span class="c1">-- WAL 버퍼 크기 (기본: ~16MB)</span>
+<span class="k">SHOW</span><span class="w"> </span><span class="n">synchronous_commit</span><span class="p">;</span><span class="w">  </span><span class="c1">-- on (기본), off (비동기), remote_write, 등</span>
+
+<span class="c1">-- WAL 통계 보기</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">pg_stat_wal</span><span class="p">;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5">5. 체크포인트<a class="header-link" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="51">5.1 체크포인트가 필요한 이유?<a class="header-link" href="#51" title="Permanent link">&para;</a></h3>
+<p>체크포인트 없이, 복구는 <strong>전체 로그</strong>를 처음부터 스캔하여 어떤 트랜잭션을 재실행하고 취소할지 결정해야 한다. 몇 달간 실행된 데이터베이스의 경우, 이는 시간이 걸릴 수 있다.</p>
+<p><strong>체크포인트(Checkpoint)</strong>는 알려진 좋은 상태를 설정하여, 복구가 얼마나 뒤로 스캔해야 하는지를 제한한다.</p>
+<h3 id="52">5.2 단순 (정지) 체크포인트<a class="header-link" href="#52" title="Permanent link">&para;</a></h3>
+<p>가장 간단한 체크포인트 프로토콜:</p>
+<div class="highlight"><pre><span></span><code>SIMPLE-CHECKPOINT():
+    1. 새 트랜잭션 수락을 일시적으로 중단
+    2. 모든 활성 트랜잭션이 완료(커밋 또는 중단)될 때까지 대기
+    3. 버퍼 풀의 모든 더티 페이지를 디스크로 플러시
+    4. 로그에 &lt;checkpoint&gt; 레코드 쓰기
+    5. 로그를 디스크로 플러시
+    6. 트랜잭션 수락 재개
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>단순 체크포인트가 있는 로그:
+
+... &lt;T₁,start&gt; &lt;T₁,A,100,50&gt; &lt;T₁,commit&gt; &lt;checkpoint&gt; &lt;T₂,start&gt; ...
+                                     ↑
+                            모든 이전 트랜잭션이
+                            디스크에 완전히 반영됨.
+                            복구는 여기서 시작.
+</code></pre></div>
+
+<p><strong>문제</strong>: 모든 트랜잭션을 중단해야 함 -- 프로덕션 시스템에 허용 불가.</p>
+<h3 id="53-">5.3 비-정지 (활성) 체크포인트<a class="header-link" href="#53-" title="Permanent link">&para;</a></h3>
+<p>모든 트랜잭션을 중단할 필요가 없는 더 실용적인 체크포인트:</p>
+<div class="highlight"><pre><span></span><code>ACTIVE-CHECKPOINT():
+    1. 로그에 &lt;checkpoint L&gt; 쓰기, 여기서 L = 활성 트랜잭션 목록
+    2. 버퍼 풀의 모든 더티 페이지를 디스크로 플러시
+       (이 플러시 중에 새 트랜잭션과 쓰기가 계속될 수 있음)
+    3. 플러시가 완료되면 로그에 &lt;end_checkpoint&gt; 쓰기
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>활성 체크포인트가 있는 로그:
+
+&lt;T₁,start&gt; &lt;T₁,A,100,50&gt; &lt;checkpoint {T₁,T₂}&gt; &lt;T₂,B,200,300&gt;
+                                ↑
+                       T₁과 T₂가 체크포인트 시작 시
+                       활성이었음
+
+복구:
+  L에서 트랜잭션의 가장 이른 시작까지 스캔해야 함
+  (즉, &lt;T₁,start&gt; T₁이 활성 목록에 있기 때문)
+</code></pre></div>
+
+<h3 id="54">5.4 퍼지 체크포인트<a class="header-link" href="#54" title="Permanent link">&para;</a></h3>
+<p><strong>퍼지 체크포인트(Fuzzy Checkpoint)</strong>는 ARIES와 대부분의 현대 시스템이 사용하는 가장 실용적인 접근이다:</p>
+<div class="highlight"><pre><span></span><code>FUZZY-CHECKPOINT():
+    1. 로그에 &lt;begin_checkpoint&gt; 쓰기
+    2. 기록:
+       <span class="k">-</span> 활성 트랜잭션 테이블 (ATT): 모든 활성 트랜잭션과 그 상태
+       <span class="k">-</span> 더티 페이지 테이블 (DPT): 버퍼 풀의 모든 더티 페이지
+    3. 로그에 &lt;end_checkpoint ATT, DPT&gt; 쓰기
+    4. 로그를 안정 저장소로 플러시
+    5. 마스터 레코드(디스크에)를 &lt;begin_checkpoint&gt;를 가리키도록 업데이트
+
+    참고: 더티 페이지는 체크포인트 중에 플러시되지 않음!
+    백그라운드 쓰기자에 의해 비동기적으로 플러시됨.
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code>퍼지 체크포인트 내용:
+
+&lt;begin_checkpoint&gt;
+&lt;end_checkpoint&gt;
+  활성 트랜잭션 테이블:
+    ┌─────────┬──────────┬────────────────┐
+    │ TxnID   │ Status   │ LastLSN        │
+    ├─────────┼──────────┼────────────────┤
+    │ T₁      │ Active   │ LSN 150        │
+    │ T₂      │ Active   │ LSN 180        │
+    └─────────┴──────────┴────────────────┘
+
+  더티 페이지 테이블:
+    ┌─────────┬────────────────┐
+    │ PageID  │ RecoveryLSN    │
+    ├─────────┼────────────────┤
+    │ Page 5  │ LSN 120        │
+    │ Page 12 │ LSN 145        │
+    │ Page 8  │ LSN 170        │
+    └─────────┴────────────────┘
+</code></pre></div>
+
+<p><strong>퍼지 체크포인트의 장점:</strong>
+- 트랜잭션 중단 없음
+- 체크포인트 중에 페이지 플러시 강제 없음
+- 매우 빠른 체크포인트 연산
+- 복구는 체크포인트 테이블을 사용하여 시작 지점 결정</p>
+<hr />
+<h2 id="6-aries">6. ARIES 복구 알고리즘<a class="header-link" href="#6-aries" title="Permanent link">&para;</a></h2>
+<h3 id="61">6.1 개요<a class="header-link" href="#61" title="Permanent link">&para;</a></h3>
+<p><strong>ARIES</strong> (Algorithm for Recovery and Isolation Exploiting Semantics)는 가장 널리 사용되는 복구 알고리즘이다. 1990년대 초 IBM Research의 C. Mohan 등이 개발했으며, DB2, SQL Server, PostgreSQL (적응됨) 및 많은 다른 시스템에서 복구의 기반이다.</p>
+<p><strong>핵심 원칙:</strong>
+1. <strong>선행 기록 로깅 (WAL)</strong>: 데이터 전에 로그
+2. <strong>재실행 중 역사 반복</strong>: (커밋되지 않은 트랜잭션의 것을 포함한) 모든 작업을 재실행하여 충돌 전 정확한 상태 복원
+3. <strong>취소 중 변경사항 로깅</strong>: 보상 로그 레코드(CLR)를 취소 중에 기록하여 취소 연산이 멱등성을 보장</p>
+<h3 id="62">6.2 주요 데이터 구조<a class="header-link" href="#62" title="Permanent link">&para;</a></h3>
+<p><strong>로그 시퀀스 번호(Log Sequence Number, LSN):</strong>
+모든 로그 레코드는 고유하고 단조 증가하는 LSN을 가진다. 각 데이터 페이지는 그것을 수정한 가장 최근 로그 레코드의 LSN을 저장한다 (<strong>pageLSN</strong>).</p>
+<div class="highlight"><pre><span></span><code>로그 레코드:
+┌───────┬──────┬────────┬────────────┬──────────┐
+│  LSN  │ TxnID│ Type   │ PageID     │ PrevLSN  │
+│       │      │(update,│            │(동일     │
+│       │      │ commit,│            │ 트랜잭션의│
+│       │      │ CLR,...│            │ 이전     │
+│       │      │)       │            │ 로그 레코드│
+├───────┴──────┴────────┴────────────┴──────────┤
+│  Before Image (오래된 값)                      │
+│  After Image (새 값)                           │
+│  UndoNextLSN (CLR만 해당)                     │
+└────────────────────────────────────────────────┘
+</code></pre></div>
+
+<p><strong>트랜잭션 테이블(Transaction Table, ATT - Active Transaction Table):</strong>
+메모리에 유지. 각 활성 트랜잭션에 대해:
+- TransID
+- Status (활성, 커밋 중, 중단 중)
+- LastLSN: 이 트랜잭션의 가장 최근 로그 레코드의 LSN</p>
+<p><strong>더티 페이지 테이블(Dirty Page Table, DPT):</strong>
+메모리에 유지. 버퍼 풀의 각 더티 페이지에 대해:
+- PageID
+- RecoveryLSN (recLSN): 마지막 플러시 이후 이 페이지를 더럽힌 <strong>첫 번째</strong> 로그 레코드의 LSN</p>
+<div class="highlight"><pre><span></span><code>트랜잭션 테이블:           더티 페이지 테이블:
+┌─────────┬────────┬───────┐ ┌────────┬──────────┐
+│ TransID │ Status │LastLSN│ │ PageID │ recLSN   │
+├─────────┼────────┼───────┤ ├────────┼──────────┤
+│ T₁      │ active │  45   │ │ P5     │  20      │
+│ T₂      │ active │  60   │ │ P3     │  35      │
+│ T₃      │commit  │  55   │ │ P8     │  42      │
+└─────────┴────────┴───────┘ └────────┴──────────┘
+</code></pre></div>
+
+<h3 id="63-clr">6.3 보상 로그 레코드 (CLR)<a class="header-link" href="#63-clr" title="Permanent link">&para;</a></h3>
+<p><strong>CLR</strong>은 취소 단계 중에 기록되는 특별한 로그 레코드다. 이전 업데이트의 취소를 기록하고 다음 취소할 로그 레코드에 대한 포인터(<strong>UndoNextLSN</strong>)를 포함한다.</p>
+<div class="highlight"><pre><span></span><code>CLR 구조:
+
+┌──────────────────────────────────────────────┐
+│ LSN: 100                                     │
+│ TransID: T₁                                  │
+│ Type: CLR                                    │
+│ UndoNextLSN: 30  (← 다음 취소할 레코드)     │
+│ Redo info: &quot;A를 오래된 값 50으로 복원&quot;       │
+│ PrevLSN: 80                                  │
+└──────────────────────────────────────────────┘
+
+목적:
+- 시스템이 복구 중(취소 중)에 충돌하면,
+  CLR은 동일한 연산을 두 번 취소하지 않도록 보장.
+- CLR은 재실행 전용 (절대 그 자체로 취소되지 않음).
+</code></pre></div>
+
+<h3 id="64">6.4 세 단계<a class="header-link" href="#64" title="Permanent link">&para;</a></h3>
+<p>ARIES 복구는 세 단계로 진행된다:</p>
+<div class="highlight"><pre><span></span><code>로그 타임라인:
+─────────────────────────────────────────────────────────→
+│                │              │                    │
+│                │              │                    │
+│           체크포인트 시작    │              충돌   │
+│                │              │                    │
+│                │         체크포인트 끝             │
+│                │              │                    │
+│    ┌───────────┴──────────────┴────────────────────┤
+│    │                                               │
+│    │         ← 단계 1: 분석 →                      │
+│    │           (체크포인트부터 순방향 스캔)        │
+│    │                                               │
+│    │    ← 단계 2: 재실행 ──────────────────→       │
+│    │      (DPT의 최소 recLSN부터, 순방향)         │
+│    │                                               │
+│    │    ← 단계 3: 취소 ──────────────────→         │
+│    │      (로그 끝부터, 역방향)                    │
+│    │                                               │
+</code></pre></div>
+
+<h3 id="65-1">6.5 단계 1: 분석<a class="header-link" href="#65-1" title="Permanent link">&para;</a></h3>
+<p><strong>목표</strong>: 충돌 시점에 어떤 트랜잭션이 활성이었고 어떤 페이지가 더러웠는지 정확히 결정.</p>
+<div class="highlight"><pre><span></span><code><span class="n">ANALYSIS</span><span class="o">-</span><span class="n">PHASE</span><span class="p">()</span><span class="err">:</span>
+<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="n">가장</span><span class="w"> </span><span class="n">최근</span><span class="w"> </span><span class="n">체크포인트부터</span><span class="w"> </span><span class="n">시작</span>
+<span class="w">    </span><span class="k">Read</span><span class="w"> </span><span class="o">&lt;</span><span class="n">end_checkpoint</span><span class="w"> </span><span class="n">ATT</span><span class="p">,</span><span class="w"> </span><span class="n">DPT</span><span class="o">&gt;</span>
+<span class="w">    </span><span class="k">Initialize</span><span class="w"> </span><span class="n">ATT</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">DPT</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="k">checkpoint</span><span class="w"> </span><span class="k">data</span>
+
+<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="n">체크포인트부터</span><span class="w"> </span><span class="n">로그</span><span class="w"> </span><span class="n">끝까지</span><span class="w"> </span><span class="n">순방향</span><span class="w"> </span><span class="n">스캔</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="k">each</span><span class="w"> </span><span class="nf">log</span><span class="w"> </span><span class="n">record</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">forward</span><span class="w"> </span><span class="k">order</span><span class="err">:</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">record</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="o">&lt;</span><span class="n">T_i</span><span class="p">,</span><span class="w"> </span><span class="k">start</span><span class="o">&gt;</span><span class="err">:</span>
+<span class="w">            </span><span class="k">Add</span><span class="w"> </span><span class="n">T_i</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">ATT</span><span class="w"> </span><span class="p">(</span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">active</span><span class="p">)</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">record</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">an</span><span class="w"> </span><span class="k">UPDATE</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="nl">CLR</span><span class="p">:</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="n">T_i</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nl">ATT</span><span class="p">:</span>
+<span class="w">                </span><span class="k">Add</span><span class="w"> </span><span class="n">T_i</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">ATT</span>
+<span class="w">            </span><span class="n">ATT</span><span class="o">[</span><span class="n">T_i</span><span class="o">]</span><span class="p">.</span><span class="n">LastLSN</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">record</span><span class="p">.</span><span class="n">LSN</span>
+
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="n">record</span><span class="p">.</span><span class="n">PageID</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nl">DPT</span><span class="p">:</span>
+<span class="w">                </span><span class="k">Add</span><span class="w"> </span><span class="n">page</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">DPT</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">recLSN</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">record</span><span class="p">.</span><span class="n">LSN</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">record</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="o">&lt;</span><span class="n">T_i</span><span class="p">,</span><span class="w"> </span><span class="k">commit</span><span class="o">&gt;</span><span class="err">:</span>
+<span class="w">            </span><span class="n">ATT</span><span class="o">[</span><span class="n">T_i</span><span class="o">]</span><span class="p">.</span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">committed</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">record</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="o">&lt;</span><span class="n">T_i</span><span class="p">,</span><span class="w"> </span><span class="n">abort</span><span class="o">&gt;</span><span class="err">:</span>
+<span class="w">            </span><span class="n">ATT</span><span class="o">[</span><span class="n">T_i</span><span class="o">]</span><span class="p">.</span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">aborting</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">record</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="o">&lt;</span><span class="n">T_i</span><span class="p">,</span><span class="w"> </span><span class="k">end</span><span class="o">&gt;</span><span class="err">:</span>
+<span class="w">            </span><span class="n">Remove</span><span class="w"> </span><span class="n">T_i</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">ATT</span>
+
+<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="n">분석</span><span class="w"> </span><span class="nl">후</span><span class="p">:</span>
+<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="n">ATT는</span><span class="w"> </span><span class="n">충돌</span><span class="w"> </span><span class="n">시점에</span><span class="w"> </span><span class="n">활성이었던</span><span class="w"> </span><span class="n">모든</span><span class="w"> </span><span class="n">트랜잭션을</span><span class="w"> </span><span class="n">포함</span>
+<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="n">DPT는</span><span class="w"> </span><span class="n">충돌</span><span class="w"> </span><span class="n">시점에</span><span class="w"> </span><span class="n">더러웠을</span><span class="w"> </span><span class="n">수</span><span class="w"> </span><span class="n">있는</span><span class="w"> </span><span class="n">모든</span><span class="w"> </span><span class="n">페이지를</span><span class="w"> </span><span class="n">포함</span>
+</code></pre></div>
+
+<h3 id="66-2">6.6 단계 2: 재실행 (역사 반복)<a class="header-link" href="#66-2" title="Permanent link">&para;</a></h3>
+<p><strong>목표</strong>: 데이터베이스를 충돌 순간의 정확한 상태로 복원. 이는 커밋되지 않은 트랜잭션의 것을 포함한 모든 수정을 재실행하는 것을 포함한다.</p>
+<div class="highlight"><pre><span></span><code>REDO-PHASE():
+    // DPT의 가장 작은 recLSN부터 시작
+    start_LSN = min(recLSN for all pages in DPT)
+
+    // start_LSN부터 로그 끝까지 순방향 스캔
+    for each UPDATE or CLR log record with LSN ≥ start_LSN:
+
+        // 재실행을 건너뛸 세 가지 조건:
+        if record.PageID not in DPT:
+            skip (페이지가 깨끗함)
+
+        if DPT[record.PageID].recLSN &gt; record.LSN:
+            skip (이 업데이트 후 페이지가 이미 플러시됨)
+
+        // 디스크에서 페이지 읽기
+        page = read_page(record.PageID)
+        if page.pageLSN ≥ record.LSN:
+            skip (이 업데이트가 페이지에 이미 반영됨)
+
+        // 재실행 적용
+        Apply the REDO information from the log record to the page
+        page.pageLSN = record.LSN
+
+    // 재실행 후:
+    // 데이터베이스가 정확한 충돌 전 상태에 있음
+    // (커밋되지 않은 트랜잭션의 효과 포함)
+</code></pre></div>
+
+<p><strong>왜 커밋되지 않은 트랜잭션을 재실행하는가?</strong>
+ARIES는 취소 단계가 올바르게 작동하도록 "역사를 반복"한다. 취소 단계는 데이터베이스가 모든 트랜잭션의 모든 효과를 포함한 정확한 충돌 전 상태에 있다고 가정한다(커밋됨과 커밋 안 됨).</p>
+<h3 id="67-3">6.7 단계 3: 취소<a class="header-link" href="#67-3" title="Permanent link">&para;</a></h3>
+<p><strong>목표</strong>: 충돌 시점에 활성이었던 (커밋되지 않은) 모든 트랜잭션을 롤백.</p>
+<div class="highlight"><pre><span></span><code><span class="n">UNDO</span><span class="o">-</span><span class="n">PHASE</span><span class="p">()</span><span class="err">:</span>
+<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="n">취소</span><span class="w"> </span><span class="n">목록</span><span class="w"> </span><span class="nl">구축</span><span class="p">:</span><span class="w"> </span><span class="n">ATT의</span><span class="w"> </span><span class="n">모든</span><span class="w"> </span><span class="n">커밋되지</span><span class="w"> </span><span class="n">않은</span><span class="w"> </span><span class="n">트랜잭션</span>
+<span class="w">    </span><span class="n">undo_list</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">{</span><span class="n">T_i</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">ATT</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">committed</span><span class="err">}</span>
+
+<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="n">취소할</span><span class="w"> </span><span class="n">각</span><span class="w"> </span><span class="n">트랜잭션의</span><span class="w"> </span><span class="n">LastLSN</span><span class="w"> </span><span class="n">수집</span>
+<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="n">로그</span><span class="w"> </span><span class="n">끝에서</span><span class="w"> </span><span class="n">역방향으로</span><span class="w"> </span><span class="n">처리</span>
+<span class="w">    </span><span class="n">ToUndo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="err">{</span><span class="n">ATT</span><span class="o">[</span><span class="n">T_i</span><span class="o">]</span><span class="p">.</span><span class="n">LastLSN</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">T_i</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">undo_list</span><span class="err">}</span>
+
+<span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="n">ToUndo</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="nl">empty</span><span class="p">:</span>
+<span class="w">        </span><span class="o">//</span><span class="w"> </span><span class="n">가장</span><span class="w"> </span><span class="n">큰</span><span class="w"> </span><span class="n">LSN</span><span class="w"> </span><span class="n">선택</span><span class="w"> </span><span class="p">(</span><span class="n">가장</span><span class="w"> </span><span class="n">최근</span><span class="w"> </span><span class="n">연산</span><span class="p">)</span>
+<span class="w">        </span><span class="n">lsn</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">max</span><span class="p">(</span><span class="n">ToUndo</span><span class="p">)</span>
+<span class="w">        </span><span class="n">record</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">log_record</span><span class="w"> </span><span class="k">at</span><span class="w"> </span><span class="n">lsn</span>
+<span class="w">        </span><span class="n">T_i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">record</span><span class="p">.</span><span class="n">TransID</span>
+
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">record</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="nl">CLR</span><span class="p">:</span>
+<span class="w">            </span><span class="o">//</span><span class="w"> </span><span class="n">CLR은</span><span class="w"> </span><span class="n">취소되지</span><span class="w"> </span><span class="n">않음</span><span class="p">;</span><span class="w"> </span><span class="n">UndoNextLSN을</span><span class="w"> </span><span class="n">따름</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="n">record</span><span class="p">.</span><span class="n">UndoNextLSN</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="k">null</span><span class="err">:</span>
+<span class="w">                </span><span class="nf">replace</span><span class="w"> </span><span class="n">lsn</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">ToUndo</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">record</span><span class="p">.</span><span class="n">UndoNextLSN</span>
+<span class="w">            </span><span class="k">else</span><span class="err">:</span>
+<span class="w">                </span><span class="o">//</span><span class="w"> </span><span class="n">T_i의</span><span class="w"> </span><span class="n">모든</span><span class="w"> </span><span class="n">업데이트가</span><span class="w"> </span><span class="n">취소됨</span>
+<span class="w">                </span><span class="k">Write</span><span class="w"> </span><span class="o">&lt;</span><span class="n">T_i</span><span class="p">,</span><span class="w"> </span><span class="k">end</span><span class="o">&gt;</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="nf">log</span>
+<span class="w">                </span><span class="n">Remove</span><span class="w"> </span><span class="n">T_i</span><span class="s1">&#39;s entries from ToUndo</span>
+
+<span class="s1">        else if record is an UPDATE:</span>
+<span class="s1">            // 이 업데이트를 취소</span>
+<span class="s1">            // 단계 1: CLR 쓰기</span>
+<span class="s1">            CLR = create_CLR(</span>
+<span class="s1">                TransID = T_i,</span>
+<span class="s1">                UndoNextLSN = record.PrevLSN,</span>
+<span class="s1">                Redo_info = &quot;before-image로 복원&quot;</span>
+<span class="s1">            )</span>
+<span class="s1">            Write CLR to log</span>
+
+<span class="s1">            // 단계 2: 취소 적용 (before-image 복원)</span>
+<span class="s1">            Restore the page to its before-image value</span>
+
+<span class="s1">            // 단계 3: 체인 따르기</span>
+<span class="s1">            if record.PrevLSN != null:</span>
+<span class="s1">                replace lsn in ToUndo with record.PrevLSN</span>
+<span class="s1">            else:</span>
+<span class="s1">                Write &lt;T_i, end&gt; to log</span>
+<span class="s1">                Remove T_i&#39;</span><span class="n">s</span><span class="w"> </span><span class="n">entries</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">ToUndo</span>
+</code></pre></div>
+
+<h3 id="68-aries">6.8 완전한 ARIES 예<a class="header-link" href="#68-aries" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>충돌 시점의 로그:
+
+LSN  Record                              PrevLSN  UndoNextLSN
+───  ────────────────────────────────     ───────  ───────────
+10   &lt;T₁, start&gt;                           -
+20   &lt;T₁, P5, A: 10→20&gt;                   10
+30   &lt;T₂, start&gt;                           -
+40   &lt;T₂, P3, B: 30→40&gt;                   30
+50   &lt;begin_checkpoint&gt;
+55   &lt;end_checkpoint ATT={T₁,T₂}, DPT={P5:20, P3:40}&gt;
+60   &lt;T₂, P3, B: 40→50&gt;                   40
+70   &lt;T₃, start&gt;                           -
+80   &lt;T₁, P5, C: 60→70&gt;                   20
+90   &lt;T₃, P8, D: 80→90&gt;                   70
+100  &lt;T₁, commit&gt;
+110  &lt;T₃, P8, E: 15→25&gt;                   90
+     ← 충돌
+
+단계 1: 분석 (LSN 55부터 110까지 스캔)
+  LSN 60: T₂ update → ATT: T₂.LastLSN=60
+  LSN 70: T₃ start → ATT adds T₃
+  LSN 80: T₁ update → ATT: T₁.LastLSN=80, DPT: P5.recLSN stays 20
+  LSN 90: T₃ update → ATT: T₃.LastLSN=90, DPT adds P8.recLSN=90
+  LSN 100: T₁ commit → ATT: T₁.status=committed
+  LSN 110: T₃ update → ATT: T₃.LastLSN=110
+
+  결과:
+    ATT = {T₁(committed, LSN=80), T₂(active, LSN=60), T₃(active, LSN=110)}
+    DPT = {P5(recLSN=20), P3(recLSN=40), P8(recLSN=90)}
+
+단계 2: 재실행 (최소 recLSN = 20부터)
+  LSN 20: P5 in DPT, recLSN=20 ≤ 20, pageLSN 확인 → 필요시 재실행
+  LSN 40: P3 in DPT, recLSN=40 ≤ 40, pageLSN 확인 → 필요시 재실행
+  LSN 60: P3 in DPT, recLSN=40 ≤ 60, pageLSN 확인 → 필요시 재실행
+  LSN 80: P5 in DPT, recLSN=20 ≤ 80, pageLSN 확인 → 필요시 재실행
+  LSN 90: P8 in DPT, recLSN=90 ≤ 90, pageLSN 확인 → 필요시 재실행
+  LSN 110: P8 in DPT, recLSN=90 ≤ 110, pageLSN 확인 → 필요시 재실행
+
+단계 3: 취소 (커밋 안 됨: T₂, T₃)
+  ToUndo = {60 (T₂), 110 (T₃)}
+
+  단계 1: LSN 110 취소 (T₃, P8, E: 15→25)
+    CLR 쓰기: &lt;LSN=120, T₃, CLR, UndoNext=90&gt;
+    E를 15로 복원
+    ToUndo = {60, 90}
+
+  단계 2: LSN 90 취소 (T₃, P8, D: 80→90)
+    CLR 쓰기: &lt;LSN=130, T₃, CLR, UndoNext=70&gt;
+    D를 80으로 복원
+    ToUndo = {60, 70}
+
+  단계 3: LSN 70 취소 → &lt;T₃, start&gt;임
+    실제로 LSN 70은 start 레코드이므로, T₃가 70에서 PrevLSN 없음.
+    LSN 90의 PrevLSN을 통해 추적 → 70은 start.
+    &lt;T₃, end&gt; 쓰기
+    ToUndo = {60}
+
+  단계 4: LSN 60 취소 (T₂, P3, B: 40→50)
+    CLR 쓰기: &lt;LSN=140, T₂, CLR, UndoNext=40&gt;
+    B를 40으로 복원
+    ToUndo = {40}
+
+  단계 5: LSN 40 취소 (T₂, P3, B: 30→40)
+    CLR 쓰기: &lt;LSN=150, T₂, CLR, UndoNext=30&gt;
+    B를 30으로 복원
+    ToUndo = {30}
+
+  단계 6: LSN 30은 &lt;T₂, start&gt;
+    &lt;T₂, end&gt; 쓰기
+    ToUndo = {} → 완료
+
+최종 상태:
+  T₁의 변경사항 지속 (커밋됨)
+  T₂의 변경사항 취소됨 (B가 30으로 복원)
+  T₃의 변경사항 취소됨 (D가 80으로, E가 15로 복원)
+</code></pre></div>
+
+<h3 id="69">6.9 복구 중 충돌<a class="header-link" href="#69" title="Permanent link">&para;</a></h3>
+<p>ARIES의 주요 강점 중 하나는 <strong>복구 중 충돌</strong>을 처리하는 것이다:</p>
+<div class="highlight"><pre><span></span><code><span class="err">시나리오</span><span class="o">:</span><span class="w"> </span><span class="err">취소</span><span class="w"> </span><span class="err">단계</span><span class="w"> </span><span class="err">중에</span><span class="w"> </span><span class="err">시스템</span><span class="w"> </span><span class="err">충돌</span>
+
+<span class="err">원래</span><span class="w"> </span><span class="err">충돌</span><span class="w"> </span><span class="err">복구가</span><span class="w"> </span><span class="err">단계</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">(</span><span class="err">취소</span><span class="o">)</span><span class="err">에</span><span class="w"> </span><span class="err">있었음</span><span class="o">:</span>
+<span class="w">  </span><span class="n">LSN</span><span class="w"> </span><span class="mi">110</span><span class="w"> </span><span class="err">취소</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">CLR</span><span class="w"> </span><span class="err">썼음</span><span class="w"> </span><span class="o">(</span><span class="n">LSN</span><span class="w"> </span><span class="mi">120</span><span class="o">)</span>
+<span class="w">  </span><span class="n">LSN</span><span class="w"> </span><span class="mi">90</span><span class="w"> </span><span class="err">취소</span><span class="w">  </span><span class="err">→</span><span class="w"> </span><span class="n">CLR</span><span class="w"> </span><span class="err">썼음</span><span class="w"> </span><span class="o">(</span><span class="n">LSN</span><span class="w"> </span><span class="mi">130</span><span class="o">)</span>
+<span class="w">  </span><span class="err">←</span><span class="w"> </span><span class="err">다시</span><span class="w"> </span><span class="err">충돌</span>
+
+<span class="err">두</span><span class="w"> </span><span class="err">번째</span><span class="w"> </span><span class="err">복구</span><span class="o">:</span>
+<span class="w">  </span><span class="err">단계</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">(</span><span class="err">분석</span><span class="o">):</span><span class="w"> </span><span class="n">T₂</span><span class="o">,</span><span class="w"> </span><span class="n">T₃가</span><span class="w"> </span><span class="err">여전히</span><span class="w"> </span><span class="err">활성임을</span><span class="w"> </span><span class="err">발견</span>
+<span class="w">  </span><span class="err">단계</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">(</span><span class="err">재실행</span><span class="o">):</span><span class="w"> </span><span class="n">LSN</span><span class="w"> </span><span class="mi">120</span><span class="o">,</span><span class="w"> </span><span class="mi">130</span><span class="err">의</span><span class="w"> </span><span class="n">CLR을</span><span class="w"> </span><span class="err">포함한</span><span class="w"> </span><span class="err">모든</span><span class="w"> </span><span class="err">로그</span><span class="w"> </span><span class="err">레코드</span><span class="w"> </span><span class="err">재실행</span>
+<span class="w">                  </span><span class="o">(</span><span class="err">이것이</span><span class="w"> </span><span class="err">취소</span><span class="w"> </span><span class="err">연산을</span><span class="w"> </span><span class="err">재적용</span><span class="o">)</span>
+<span class="w">  </span><span class="err">단계</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">(</span><span class="err">취소</span><span class="o">):</span><span class="w"> </span><span class="n">T₃에</span><span class="w"> </span><span class="err">대해</span><span class="o">,</span><span class="w"> </span><span class="n">LSN</span><span class="w"> </span><span class="mi">130</span><span class="err">의</span><span class="w"> </span><span class="n">CLR을</span><span class="w"> </span><span class="err">따름</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">UndoNextLSN</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">70</span>
+<span class="w">                   </span><span class="n">T₃의</span><span class="w"> </span><span class="n">LSN</span><span class="w"> </span><span class="mi">110</span><span class="err">과</span><span class="w"> </span><span class="mi">90</span><span class="err">은</span><span class="w"> </span><span class="err">다시</span><span class="w"> </span><span class="err">취소되지</span><span class="w"> </span><span class="err">않음</span><span class="w"> </span><span class="o">(</span><span class="n">CLR이</span><span class="w"> </span><span class="err">건너뜀</span><span class="o">)</span>
+
+<span class="n">CLR</span><span class="w"> </span><span class="err">체인이</span><span class="w"> </span><span class="err">취소</span><span class="w"> </span><span class="err">연산이</span><span class="w"> </span><span class="err">멱등임을</span><span class="w"> </span><span class="err">보장</span><span class="o">.</span>
+<span class="err">복구가</span><span class="w"> </span><span class="err">몇</span><span class="w"> </span><span class="err">번</span><span class="w"> </span><span class="err">충돌하든</span><span class="w"> </span><span class="err">작업이</span><span class="w"> </span><span class="err">반복되지</span><span class="w"> </span><span class="err">않음</span><span class="o">.</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7">7. 그림자 페이징<a class="header-link" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="71">7.1 개념<a class="header-link" href="#71" title="Permanent link">&para;</a></h3>
+<p><strong>그림자 페이징(Shadow Paging)</strong>은 WAL 기반 복구의 대안이다. 변경사항을 로깅하는 대신, 두 페이지 테이블을 유지한다:</p>
+<div class="highlight"><pre><span></span><code>그림자 페이징:
+
+현재 페이지 테이블:          그림자 페이지 테이블 (디스크에):
+┌───┬──────┐                 ┌───┬──────┐
+│ 1 │ → P1&#39;│ (수정됨)        │ 1 │ → P1 │ (원본)
+│ 2 │ → P2 │ (변경 없음)     │ 2 │ → P2 │
+│ 3 │ → P3&#39;│ (수정됨)        │ 3 │ → P3 │ (원본)
+│ 4 │ → P4 │ (변경 없음)     │ 4 │ → P4 │
+└───┴──────┘                 └───┴──────┘
+
+커밋 시: 그림자 페이지 테이블을 현재 페이지 테이블로 교체
+중단 시:  현재 페이지 테이블을 버리고, 그림자로 되돌림
+</code></pre></div>
+
+<h3 id="72-vs-wal">7.2 그림자 페이징 vs. WAL<a class="header-link" href="#72-vs-wal" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>측면</th>
+<th>그림자 페이징</th>
+<th>WAL (ARIES)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>복구 속도</td>
+<td>빠름 (그냥 그림자 사용)</td>
+<td>느림 (세 단계)</td>
+</tr>
+<tr>
+<td>정상 작동</td>
+<td>느림 (copy-on-write)</td>
+<td>빠름 (제자리 업데이트)</td>
+</tr>
+<tr>
+<td>동시 트랜잭션</td>
+<td>지원 어려움</td>
+<td>자연스럽게 지원</td>
+</tr>
+<tr>
+<td>단편화</td>
+<td>높음 (흩어진 페이지)</td>
+<td>낮음</td>
+</tr>
+<tr>
+<td>커밋 오버헤드</td>
+<td>원자적 페이지 테이블 교환</td>
+<td>로그 플러시</td>
+</tr>
+<tr>
+<td>사용처</td>
+<td>SQLite (저널 모드), CouchDB</td>
+<td>PostgreSQL, MySQL, Oracle, SQL Server</td>
+</tr>
+</tbody>
+</table>
+<p>그림자 페이징은 동시 트랜잭션에 대한 나쁜 지원과 페이지 단편화 때문에 현대 다중 사용자 데이터베이스 시스템에서 거의 사용되지 않는다.</p>
+<hr />
+<h2 id="8">8. 버퍼 관리 정책<a class="header-link" href="#8" title="Permanent link">&para;</a></h2>
+<h3 id="81">8.1 네 가지 조합<a class="header-link" href="#81" title="Permanent link">&para;</a></h3>
+<p>버퍼 관리 정책은 더티 페이지가 디스크에 기록될 때를 결정한다:</p>
+<p><strong>Steal 정책</strong>: 버퍼 관리자가 커밋되지 않은 트랜잭션에 속한 더티 페이지를 플러시할 수 있는가?
+- <strong>Steal</strong>: 예, 더티 페이지가 언제든지 플러시될 수 있음 (취소 능력 필요)
+- <strong>No-Steal</strong>: 아니오, 커밋되지 않은 트랜잭션의 더티 페이지는 버퍼에 유지됨</p>
+<p><strong>Force 정책</strong>: 트랜잭션의 모든 더티 페이지가 커밋 시점에 디스크로 플러시되어야 하는가?
+- <strong>Force</strong>: 예, 커밋 시 모든 더티 페이지 플러시 (충돌 후 재실행 불필요)
+- <strong>No-Force</strong>: 아니오, 더티 페이지가 나중에 플러시될 수 있음 (재실행 능력 필요)</p>
+<div class="highlight"><pre><span></span><code>           │ No-Steal          │ Steal
+───────────┼───────────────────┼─────────────────────
+Force      │ 취소 없음, 재실행│ 취소, 재실행 없음
+           │ 없음 (가장 단순한│ (실제로 드묾)
+           │  복구이지만       │
+           │  최악의 성능)     │
+───────────┼───────────────────┼─────────────────────
+No-Force   │ 취소 없음, 재실행│ 취소와 재실행
+           │ (지연 수정)       │ (ARIES, 대부분 시스템)
+           │                   │ ← 최고 성능
+</code></pre></div>
+
+<h3 id="82-stealno-force">8.2 Steal/No-Force가 최고인 이유<a class="header-link" href="#82-stealno-force" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Steal 장점:
+  Steal 없이: 커밋되지 않은 트랜잭션의 더티 페이지가 버퍼에 유지되어야 함
+  → 큰 트랜잭션이 버퍼 풀을 고갈시킬 수 있음
+  → 동시 트랜잭션 수 제한
+
+  Steal과 함께: 버퍼 관리자가 필요에 따라 어떤 페이지든 축출 가능
+  → 더 나은 버퍼 활용
+  → 더 큰 트랜잭션 지원
+
+No-Force 장점:
+  No-force 없이: 커밋 시 모든 더티 페이지 플러시
+  → 매우 느린 커밋 (특히 많은 페이지가 수정된 경우)
+  → 랜덤 I/O 패턴 (흩어진 더티 페이지)
+
+  No-force와 함께: 백그라운드 쓰기자가 지연하여 페이지 플러시
+  → 빠른 커밋 (로그만 플러시)
+  → 로그에 대한 순차 I/O
+  → 페이지가 배치로 플러시됨 (더 효율적)
+</code></pre></div>
+
+<h3 id="83">8.3 복구와의 상호작용<a class="header-link" href="#83" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>정책</th>
+<th>취소 필요?</th>
+<th>재실행 필요?</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Steal</td>
+<td>예</td>
+<td>-</td>
+<td>축출된 페이지가 디스크에 커밋되지 않은 데이터를 가질 수 있음</td>
+</tr>
+<tr>
+<td>No-Steal</td>
+<td>아니오</td>
+<td>-</td>
+<td>커밋되지 않은 데이터가 절대 디스크에 도달하지 않음</td>
+</tr>
+<tr>
+<td>Force</td>
+<td>-</td>
+<td>아니오</td>
+<td>모든 커밋된 데이터가 커밋 시 디스크에 있음</td>
+</tr>
+<tr>
+<td>No-Force</td>
+<td>-</td>
+<td>예</td>
+<td>커밋된 데이터가 여전히 버퍼에만 있을 수 있음</td>
+</tr>
+</tbody>
+</table>
+<p>ARIES는 <strong>Steal + No-Force</strong>를 사용하며, 이는 취소와 재실행 능력 모두를 필요로 하지만 -- 최고의 런타임 성능을 제공한다.</p>
+<hr />
+<h2 id="9">9. 미디어 복구와 백업 전략<a class="header-link" href="#9" title="Permanent link">&para;</a></h2>
+<h3 id="91">9.1 백업의 필요성<a class="header-link" href="#91" title="Permanent link">&para;</a></h3>
+<p>WAL 기반 복구는 트랜잭션 실패와 시스템 충돌을 처리하지만, 미디어 실패(디스크 파괴)는 처리하지 <strong>않는다</strong>. 미디어 복구를 위해 <strong>백업</strong>이 필요하다.</p>
+<div class="highlight"><pre><span></span><code>미디어 복구:
+
+시간: ─────────────────────────────────────────────→
+      │         │              │              │
+   전체 백업   │          증분           디스크 실패
+      B₁        │          백업 B₂          ↓
+                 │              │           B₁ 복원
+              로그 계속        │           B₂ 적용
+                 │              │           B₂부터 실패까지 로그 재생
+                 │              │              ↓
+                 │              │           데이터베이스 복구됨!
+</code></pre></div>
+
+<h3 id="92">9.2 백업 유형<a class="header-link" href="#92" title="Permanent link">&para;</a></h3>
+<p><strong>전체 백업 (기본 백업):</strong>
+- 전체 데이터베이스의 완전한 복사본
+- 자체 포함: 이것만으로 복원 가능
+- 큰 크기, 시간 소모
+- 일반적으로 주간 또는 월간 수행</p>
+<p><strong>증분 백업:</strong>
+- 마지막 백업 이후 변경된 페이지/블록만
+- 전체 백업보다 작고 빠름
+- 복원하려면 기본 백업 + 모든 증분 필요
+- 일반적으로 매일 수행</p>
+<p><strong>연속 아카이빙 (WAL 아카이빙):</strong>
+- WAL 세그먼트를 완료되면 아카이브
+- 기본 백업과 결합하여 <strong>시점 복구(Point-in-Time Recovery, PITR)</strong> 허용</p>
+<div class="highlight"><pre><span></span><code>PostgreSQL 백업 전략:
+
+┌─────────────────────────────────────────────────────┐
+│  일요일: 전체 기본 백업 (pg_basebackup)             │
+│  월-토: 연속 WAL 아카이빙                           │
+│                                                     │
+│  수요일 오후 3:00로 복원하려면:                     │
+│  1. 일요일 기본 백업 복원                           │
+│  2. 일요일부터 수요일 오후 3:00까지 WAL 재생        │
+│  3. 데이터베이스가 수요일 오후 3:00의 정확한 상태에 │
+└─────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="93-postgresql">9.3 PostgreSQL 백업 명령어<a class="header-link" href="#93-postgresql" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># 전체 기본 백업</span>
+pg_basebackup<span class="w"> </span>-D<span class="w"> </span>/backup/base<span class="w"> </span>-Ft<span class="w"> </span>-z<span class="w"> </span>-P
+
+<span class="c1"># WAL 아카이빙 구성 (postgresql.conf에서)</span>
+<span class="c1"># archive_mode = on</span>
+<span class="c1"># archive_command = &#39;cp %p /backup/wal/%f&#39;</span>
+
+<span class="c1"># 시점 복구</span>
+<span class="c1"># 1. PostgreSQL 중지</span>
+<span class="c1"># 2. 기본 백업을 데이터 디렉토리로 복원</span>
+<span class="c1"># 3. recovery.signal 파일 생성</span>
+<span class="c1"># 4. postgresql.conf에서 restore_command와 recovery_target_time 설정</span>
+<span class="c1"># restore_command = &#39;cp /backup/wal/%f %p&#39;</span>
+<span class="c1"># recovery_target_time = &#39;2025-03-15 15:00:00&#39;</span>
+<span class="c1"># 5. PostgreSQL 시작 → 대상 시간으로 자동 복구</span>
+</code></pre></div>
+
+<h3 id="94-vs">9.4 논리적 vs. 물리적 백업<a class="header-link" href="#94-vs" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>물리적 백업 (pg_basebackup):
+┌────────────────────────────────────────────┐
+│ 원시 데이터 파일 복사 (바이너리)            │
+│ + 빠른 백업 및 복원                        │
+│ + WAL 아카이빙과 함께 PITR 지원            │
+│ - 동일한 PostgreSQL 주 버전 필요           │
+│ - 동일한 아키텍처 (OS, 엔디언)             │
+└────────────────────────────────────────────┘
+
+논리적 백업 (pg_dump):
+┌────────────────────────────────────────────┐
+│ SQL 문이나 사용자 지정 형식 내보내기       │
+│ + 버전 독립적                              │
+│ + 다른 아키텍처로 복원 가능                │
+│ + 선택적으로 테이블 복원 가능              │
+│ - 느린 백업 및 복원                       │
+│ - PITR 없음 (시점 스냅샷만)                │
+└────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="95">9.5 백업 모범 사례<a class="header-link" href="#95" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="mf">3</span><span class="o">-</span><span class="mf">2</span><span class="o">-</span><span class="mf">1</span><span class="w"> </span><span class="n">규칙</span><span class="p">:</span>
+<span class="w">  </span><span class="mf">3</span><span class="w"> </span><span class="n">데이터</span><span class="w"> </span><span class="n">복사본</span><span class="w"> </span><span class="p">(</span><span class="n">원본</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mf">2</span><span class="w"> </span><span class="n">백업</span><span class="p">)</span>
+<span class="w">  </span><span class="mf">2</span><span class="w"> </span><span class="n">다른</span><span class="w"> </span><span class="n">저장</span><span class="w"> </span><span class="n">미디어</span><span class="w"> </span><span class="p">(</span><span class="n">디스크</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">테이프</span><span class="o">/</span><span class="n">클라우드</span><span class="p">)</span>
+<span class="w">  </span><span class="mf">1</span><span class="w"> </span><span class="n">오프사이트</span><span class="w"> </span><span class="n">복사본</span><span class="w"> </span><span class="p">(</span><span class="n">다른</span><span class="w"> </span><span class="n">물리적</span><span class="w"> </span><span class="n">위치</span><span class="p">)</span>
+
+<span class="n">추가</span><span class="w"> </span><span class="n">지침</span><span class="p">:</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">정기적으로</span><span class="w"> </span><span class="n">복원</span><span class="w"> </span><span class="n">테스트</span><span class="w"> </span><span class="p">(</span><span class="n">테스트되지</span><span class="w"> </span><span class="n">않은</span><span class="w"> </span><span class="n">백업</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">백업</span><span class="w"> </span><span class="n">없음</span><span class="p">)</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">WAL</span><span class="w"> </span><span class="n">아카이빙</span><span class="w"> </span><span class="n">모니터링</span><span class="w"> </span><span class="p">(</span><span class="n">갭은</span><span class="w"> </span><span class="n">데이터</span><span class="w"> </span><span class="n">손실</span><span class="w"> </span><span class="n">위험을</span><span class="w"> </span><span class="n">의미</span><span class="p">)</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">보존</span><span class="w"> </span><span class="n">정책</span><span class="p">:</span><span class="w"> </span><span class="n">규제</span><span class="w"> </span><span class="n">기간</span><span class="w"> </span><span class="n">동안</span><span class="w"> </span><span class="n">백업</span><span class="w"> </span><span class="n">보관</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">백업</span><span class="w"> </span><span class="n">암호화</span><span class="w"> </span><span class="p">(</span><span class="n">특히</span><span class="w"> </span><span class="n">오프사이트</span><span class="p">)</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">복구</span><span class="w"> </span><span class="n">절차</span><span class="w"> </span><span class="n">문서화</span>
+</code></pre></div>
+
+<hr />
+<h2 id="10">10. 현대 시스템의 복구<a class="header-link" href="#10" title="Permanent link">&para;</a></h2>
+<h3 id="101">10.1 복구와 복제<a class="header-link" href="#101" title="Permanent link">&para;</a></h3>
+<p>현대 시스템은 종종 복구와 <strong>복제(Replication)</strong>를 결합하여 내구성과 고가용성 모두를 위해:</p>
+<div class="highlight"><pre><span></span><code>동기 복제:
+
+주 ──WAL──→ 대기
+   │                │
+   │   대기가 WAL 수신 확인 후에만
+   │   커밋
+   │                │
+   ▼                ▼
+ 데이터 파일       데이터 파일
+
+주가 실패하면:
+  대기가 이미 모든 커밋된 WAL을 가짐
+  대기를 주로 승격 (초 단위)
+  데이터 손실 없음 (RPO = 0)
+</code></pre></div>
+
+<h3 id="102">10.2 성능 고려사항<a class="header-link" href="#102" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>복구 시간 구성요소:
+
+┌────────────────────────────────────────┐
+│ 분석 단계: 빠름 (로그를 한 번 스캔)    │
+│ 시간: 마지막 체크포인트 이후           │
+│       로그에 비례                      │
+├────────────────────────────────────────┤
+│ 재실행 단계: 느릴 수 있음              │
+│ 시간: DPT의 min(recLSN) 이후          │
+│       로그 레코드 수에 비례            │
+│ 최적화: 페이지별 병렬 재실행           │
+├────────────────────────────────────────┤
+│ 취소 단계: 보통 빠름                   │
+│ 시간: 커밋되지 않은 트랜잭션의         │
+│       업데이트 수에 비례               │
+│ 참고: 지연 가능 (지연 취소)            │
+└────────────────────────────────────────┘
+
+복구 시간을 최소화하려면:
+  - 빈번한 체크포인트 (재실행할 것이 적음)
+  - 짧은 트랜잭션 (취소할 것이 적음)
+  - 충분한 WAL 버퍼 (강제 플러시 감소)
+</code></pre></div>
+
+<h3 id="103">10.3 병렬 복구<a class="header-link" href="#103" title="Permanent link">&para;</a></h3>
+<p>현대 시스템은 병렬로 재실행을 수행한다:</p>
+<div class="highlight"><pre><span></span><code>병렬 재실행:
+
+로그 레코드: [P1, P3, P1, P2, P3, P1, P2, ...]
+
+스레드 1 (페이지 P1): [LSN1, LSN3, LSN6, ...] 재실행
+스레드 2 (페이지 P2): [LSN4, LSN7, ...] 재실행
+스레드 3 (페이지 P3): [LSN2, LSN5, ...] 재실행
+
+동일한 페이지의 레코드는 순서대로 적용되어야 함.
+다른 페이지의 레코드는 병렬로 적용 가능.
+</code></pre></div>
+
+<hr />
+<h2 id="11_1">11. 연습문제<a class="header-link" href="#11_1" title="Permanent link">&para;</a></h2>
+<h3 id="_2">개념적 질문<a class="header-link" href="#_2" title="Permanent link">&para;</a></h3>
+<p><strong>연습문제 1</strong>: 다음 각 실패를 분류하고 적절한 복구 조치를 설명하라:
+(a) 트랜잭션이 0으로 나눔
+(b) 정전 발생
+(c) 디스크 헤드 충돌, 데이터 디스크 파괴
+(d) 데드락 감지됨
+(e) 운영 체제 커널 패닉</p>
+<p><strong>연습문제 2</strong>: 휘발성, 비휘발성, 안정 저장소의 차이를 설명하라. 왜 "진정한" 안정 저장소가 실제로 달성 불가능한가? 실제 시스템은 어떻게 근사하는가?</p>
+<p><strong>연습문제 3</strong>: WAL (선행 기록 로깅) 프로토콜이 대응하는 데이터 페이지 전에 로그 레코드를 안정 저장소로 플러시하도록 요구하는 이유를 설명하라. 데이터 페이지가 먼저 플러시되면 무엇이 잘못될 수 있는가?</p>
+<h3 id="_3">로그 기반 복구<a class="header-link" href="#_3" title="Permanent link">&para;</a></h3>
+<p><strong>연습문제 4</strong>: 다음 로그가 주어졌다 (체크포인트 없음):</p>
+<div class="highlight"><pre><span></span><code>LSN  Record
+1    &lt;T₁, start&gt;
+2    &lt;T₁, A, 10, 20&gt;
+3    &lt;T₂, start&gt;
+4    &lt;T₂, B, 30, 40&gt;
+5    &lt;T₁, C, 50, 60&gt;
+6    &lt;T₁, commit&gt;
+7    &lt;T₂, D, 70, 80&gt;
+8    &lt;T₃, start&gt;
+9    &lt;T₃, A, 20, 30&gt;
+10   &lt;T₃, commit&gt;
+     ← 충돌
+</code></pre></div>
+
+<p>(a) 어떤 트랜잭션을 재실행해야 하는가? 어떤 것을 취소해야 하는가?
+(b) 복구 후 A, B, C, D의 최종 값은?
+(c) 완전한 복구 과정을 단계별로 보여라.</p>
+<p><strong>연습문제 5</strong>: 연습문제 4를 반복하되, LSN 6과 LSN 7 사이에 체크포인트 <code>&lt;checkpoint {T₂}&gt;</code>가 삽입된 경우. 체크포인트가 복구 과정을 어떻게 변경하는가?</p>
+<h3 id="aries">ARIES 알고리즘<a class="header-link" href="#aries" title="Permanent link">&para;</a></h3>
+<p><strong>연습문제 6</strong>: 퍼지 체크포인트가 있는 다음 로그가 주어졌다:</p>
+<div class="highlight"><pre><span></span><code>LSN  Record                              PrevLSN
+10   &lt;T₁, start&gt;                           -
+20   &lt;T₁, P1, X: 5→10&gt;                    10
+30   &lt;T₂, start&gt;                           -
+40   &lt;T₂, P2, Y: 15→25&gt;                   30
+50   &lt;begin_checkpoint&gt;
+55   &lt;end_checkpoint ATT={T₁(20),T₂(40)}, DPT={P1:20, P2:40}&gt;
+60   &lt;T₁, P3, Z: 35→45&gt;                   20
+70   &lt;T₂, commit&gt;
+80   &lt;T₃, start&gt;                           -
+90   &lt;T₃, P1, X: 10→20&gt;                   80
+100  &lt;T₁, P2, W: 50→60&gt;                   60
+     ← 충돌
+</code></pre></div>
+
+<p>(a) 분석 단계를 수행하라. 최종 ATT와 DPT를 보여라.
+(b) 재실행 단계의 시작 LSN을 결정하라.
+(c) 재실행 단계를 수행하라. 재실행된 로그 레코드를 나열하라 (모든 페이지가 재실행 필요하다고 가정).
+(d) 취소 단계를 수행하라. 각 단계에서 기록된 모든 CLR과 최종 ToUndo 집합을 보여라.
+(e) 복구 후 X, Y, Z, W의 최종 값은?</p>
+<p><strong>연습문제 7</strong>: ARIES가 재실행 단계 중 "역사를 반복"하는 이유를 설명하라 (즉, 커밋되지 않은 트랜잭션의 업데이트도 재실행). 왜 커밋된 것만 재실행하고 커밋되지 않은 트랜잭션의 업데이트는 건너뛰지 않는가?</p>
+<p><strong>연습문제 8</strong>: 시스템이 ARIES 복구의 취소 단계 중에 충돌한다. 두 번째 충돌 시점에, 일부 (전부는 아닌) 취소 연산에 대한 CLR이 기록되었다. 두 번째 복구 시도 중 단계별로 무슨 일이 일어나는지 설명하라. 왜 작업이 반복되지 않는가?</p>
+<h3 id="_4">버퍼 관리<a class="header-link" href="#_4" title="Permanent link">&para;</a></h3>
+<p><strong>연습문제 9</strong>: steal/no-steal과 force/no-force 정책의 각 조합에 대해 설명하라:
+(a) 취소 능력이 필요한지와 그 이유
+(b) 재실행 능력이 필요한지와 그 이유
+(c) 런타임 성능에 미치는 영향 (커밋 지연시간, 버퍼 활용)
+(d) 이 조합이 적절한 시스템이나 컨텍스트</p>
+<p><strong>연습문제 10</strong>: 트랜잭션 T가 1000개 페이지를 수정한다. force 정책 하에서, 모든 1000개 페이지가 커밋 시점에 디스크로 플러시되어야 한다. no-force 정책 하에서, 로그 레코드만 (~10 KB) 플러시하면 된다. 각 페이지 플러시가 5ms (랜덤 I/O) 걸리고 로그 플러시가 2ms (순차 I/O) 걸린다면:</p>
+<p>(a) force vs. no-force 정책 하의 커밋 지연시간 계산
+(b) 시스템이 초당 100개의 그런 트랜잭션을 처리하면, 각 정책 하의 I/O 대역폭 요구사항은?
+(c) 왜 거의 모든 현대 데이터베이스 시스템이 no-force를 사용하는가?</p>
+<h3 id="_5">백업과 미디어 복구<a class="header-link" href="#_5" title="Permanent link">&para;</a></h3>
+<p><strong>연습문제 11</strong>: PostgreSQL 데이터베이스가 다음 백업 일정을 가진다:
+- 매주 일요일 오전 2:00에 전체 기본 백업
+- 연속 WAL 아카이빙</p>
+<p>수요일 오후 4:00에, 주니어 DBA가 실수로 <code>DROP TABLE orders;</code>를 실행하고 커밋한다. 오류가 오후 5:00에 발견된다. 수요일 오후 3:59 (DROP TABLE 1분 전)로 데이터베이스를 복원하는 단계별 시점 복구 과정을 설명하라.</p>
+<p><strong>연습문제 12</strong>: 다음을 가진 시스템에서 세 실패 시나리오에 대한 복구 시간 목표를 비교하라:
+- 5분마다 체크포인트
+- 매주 기본 백업
+- WAL 연속 아카이브
+- 동기 대기 복제본</p>
+<p>(a) 트랜잭션 실패 (단일 트랜잭션 중단): 예상 복구 시간?
+(b) 시스템 실패 (서버 충돌): 예상 복구 시간?
+(c) 디스크 실패 (주 데이터 디스크 파괴됨): 예상 복구 시간? 대기를 승격하는 것과 백업에서 복원하는 것의 차이는?</p>
+<hr />
+<p><strong>이전</strong>: <a href="./11_Concurrency_Control.md">동시성 제어</a> | <strong>다음</strong>: <a href="./13_NoSQL_and_NewSQL.md">NoSQL와 NewSQL</a></p>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/ko/Database_Theory/11_Concurrency_Control.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">11. 동시성 제어</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/ko/Database_Theory/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/ko/Database_Theory/13_NoSQL_Data_Models.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">NoSQL 데이터 모델</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'ko';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

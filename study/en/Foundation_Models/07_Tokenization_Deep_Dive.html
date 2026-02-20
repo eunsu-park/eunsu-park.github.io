@@ -1,0 +1,1214 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>07. Tokenization Deep Dive - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/en/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/en/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/en/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" selected>
+                        English
+                    </option>
+                    
+                    <option value="ko" >
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/en/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/en/Foundation_Models/">Foundation Models</a>
+    <span class="separator">/</span>
+    <span class="current">07. Tokenization Deep Dive</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>07. Tokenization Deep Dive</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/Foundation_Models/06_Pretraining_Infrastructure.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">06. Pre-training Infrastructure</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/Foundation_Models/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/Foundation_Models/08_LLaMA_Family.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">LLaMA Family</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#1-tokenization-paradigms">1. Tokenization Paradigms</a><ul>
+<li><a href="#11-historical-evolution">1.1 Historical Evolution</a></li>
+<li><a href="#12-major-algorithm-comparison">1.2 Major Algorithm Comparison</a></li>
+</ul>
+</li>
+<li><a href="#2-bpe-byte-pair-encoding">2. BPE (Byte-Pair Encoding)</a><ul>
+<li><a href="#21-algorithm">2.1 Algorithm</a></li>
+<li><a href="#22-implementation">2.2 Implementation</a></li>
+</ul>
+</li>
+<li><a href="#3-wordpiece">3. WordPiece</a><ul>
+<li><a href="#31-differences-from-bpe">3.1 Differences from BPE</a></li>
+<li><a href="#32-implementation">3.2 Implementation</a></li>
+</ul>
+</li>
+<li><a href="#4-unigram-lm">4. Unigram LM</a><ul>
+<li><a href="#41-concept">4.1 Concept</a></li>
+<li><a href="#42-use-with-sentencepiece">4.2 Use with SentencePiece</a></li>
+</ul>
+</li>
+<li><a href="#5-byte-level-bpe">5. Byte-Level BPE</a><ul>
+<li><a href="#51-gpt-234-style">5.1 GPT-2/3/4 Style</a></li>
+<li><a href="#52-huggingface-tokenizers">5.2 HuggingFace Tokenizers</a></li>
+</ul>
+</li>
+<li><a href="#6-multilingual-tokenization">6. Multilingual Tokenization</a><ul>
+<li><a href="#61-challenges">6.1 Challenges</a></li>
+<li><a href="#62-building-multilingual-tokenizer">6.2 Building Multilingual Tokenizer</a></li>
+</ul>
+</li>
+<li><a href="#7-tokenizer-free-models">7. Tokenizer-Free Models</a><ul>
+<li><a href="#71-byt5-byte-level-t5">7.1 ByT5 (Byte-level T5)</a></li>
+<li><a href="#72-megabyte">7.2 MEGABYTE</a></li>
+</ul>
+</li>
+<li><a href="#8-code-tokenization">8. Code Tokenization</a><ul>
+<li><a href="#81-code-specific-strategies">8.1 Code-Specific Strategies</a></li>
+</ul>
+</li>
+<li><a href="#9-practice-tokenizer-analysis">9. Practice: Tokenizer Analysis</a></li>
+<li><a href="#references">References</a><ul>
+<li><a href="#papers">Papers</a></li>
+<li><a href="#tools">Tools</a></li>
+<li><a href="#related-lessons">Related Lessons</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="07-tokenization-deep-dive">07. Tokenization Deep Dive<a class="header-link" href="#07-tokenization-deep-dive" title="Permanent link">&para;</a></h1>
+<h2 id="overview">Overview<a class="header-link" href="#overview" title="Permanent link">&para;</a></h2>
+<p>Tokenization is the process of converting text into token sequences that models can process. It's a critical preprocessing step that directly impacts Foundation Model performance and efficiency.</p>
+<hr />
+<h2 id="1-tokenization-paradigms">1. Tokenization Paradigms<a class="header-link" href="#1-tokenization-paradigms" title="Permanent link">&para;</a></h2>
+<h3 id="11-historical-evolution">1.1 Historical Evolution<a class="header-link" href="#11-historical-evolution" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌──────────────────────────────────────────────────────────────────┐
+│                   Tokenization Evolution                         │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Word-level (Traditional)                                        │
+│  &quot;I love NLP&quot; → [&quot;I&quot;, &quot;love&quot;, &quot;NLP&quot;]                            │
+│  Problem: OOV (Out-of-Vocabulary), huge vocab size              │
+│                                                                  │
+│       ↓                                                          │
+│                                                                  │
+│  Character-level                                                 │
+│  &quot;I love NLP&quot; → [&quot;I&quot;, &quot; &quot;, &quot;l&quot;, &quot;o&quot;, &quot;v&quot;, &quot;e&quot;, &quot; &quot;, ...]        │
+│  Problem: Too long sequences, loss of semantic units            │
+│                                                                  │
+│       ↓                                                          │
+│                                                                  │
+│  Subword (Current mainstream)                                    │
+│  &quot;I love NLP&quot; → [&quot;I&quot;, &quot;Ġlove&quot;, &quot;ĠN&quot;, &quot;LP&quot;]                      │
+│  Advantages: No OOV, reasonable sequence length, preserves       │
+│  morphological meaning                                           │
+│                                                                  │
+│       ↓ (Future)                                                 │
+│                                                                  │
+│  Byte-level / Tokenizer-free                                    │
+│  Process raw bytes or without learned tokenization               │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="12-major-algorithm-comparison">1.2 Major Algorithm Comparison<a class="header-link" href="#12-major-algorithm-comparison" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Algorithm</th>
+<th>Approach</th>
+<th>Representative Models</th>
+<th>Features</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>BPE</strong></td>
+<td>Frequency-based merging</td>
+<td>GPT, RoBERTa, LLaMA</td>
+<td>Most widely used</td>
+</tr>
+<tr>
+<td><strong>WordPiece</strong></td>
+<td>Likelihood-based merging</td>
+<td>BERT, DistilBERT</td>
+<td>Probabilistic selection</td>
+</tr>
+<tr>
+<td><strong>Unigram</strong></td>
+<td>Probabilistic model</td>
+<td>T5, ALBERT, XLNet</td>
+<td>Optimal segmentation search</td>
+</tr>
+<tr>
+<td><strong>SentencePiece</strong></td>
+<td>Language-independent</td>
+<td>Multilingual models</td>
+<td>BPE/Unigram implementation</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-bpe-byte-pair-encoding">2. BPE (Byte-Pair Encoding)<a class="header-link" href="#2-bpe-byte-pair-encoding" title="Permanent link">&para;</a></h2>
+<h3 id="21-algorithm">2.1 Algorithm<a class="header-link" href="#21-algorithm" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nv">BPE</span><span class="w"> </span><span class="nv">Training</span><span class="w"> </span><span class="nv">Process</span>:
+
+<span class="mi">1</span>.<span class="w"> </span><span class="nv">Initial</span><span class="w"> </span><span class="nv">vocabulary</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nv">all</span><span class="w"> </span><span class="nv">characters</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nv">special</span><span class="w"> </span><span class="nv">tokens</span>
+<span class="mi">2</span>.<span class="w"> </span><span class="nv">Repeat</span>:
+<span class="w">   </span><span class="nv">a</span>.<span class="w"> </span><span class="nv">Find</span><span class="w"> </span><span class="nv">most</span><span class="w"> </span><span class="nv">frequent</span><span class="w"> </span><span class="nv">adjacent</span><span class="w"> </span><span class="nv">token</span><span class="w"> </span><span class="nv">pair</span>
+<span class="w">   </span><span class="nv">b</span>.<span class="w"> </span><span class="nv">Merge</span><span class="w"> </span><span class="nv">the</span><span class="w"> </span><span class="nv">pair</span><span class="w"> </span><span class="nv">into</span><span class="w"> </span><span class="nv">a</span><span class="w"> </span><span class="nv">new</span><span class="w"> </span><span class="nv">token</span>
+<span class="w">   </span><span class="nv">c</span>.<span class="w"> </span><span class="nv">Add</span><span class="w"> </span><span class="nv">to</span><span class="w"> </span><span class="nv">vocabulary</span>
+<span class="mi">3</span>.<span class="w"> </span><span class="nv">Repeat</span><span class="w"> </span><span class="k">until</span><span class="w"> </span><span class="nv">target</span><span class="w"> </span><span class="nv">vocabulary</span><span class="w"> </span><span class="nv">size</span>
+
+<span class="nv">Example</span>:
+<span class="nv">Initial</span>:<span class="w"> </span>[<span class="s1">&#39;l&#39;</span>,<span class="w"> </span><span class="s1">&#39;o&#39;</span>,<span class="w"> </span><span class="s1">&#39;w&#39;</span>,<span class="w"> </span><span class="s1">&#39;e&#39;</span>,<span class="w"> </span><span class="s1">&#39;r&#39;</span>,<span class="w"> </span><span class="s1">&#39;n&#39;</span>,<span class="w"> </span><span class="s1">&#39;i&#39;</span>,<span class="w"> </span><span class="s1">&#39;g&#39;</span>,<span class="w"> </span><span class="s1">&#39;h&#39;</span>,<span class="w"> </span><span class="s1">&#39;t&#39;</span>]
+
+<span class="nv">Step</span><span class="w"> </span><span class="mi">1</span>:<span class="w"> </span><span class="s1">&#39;l&#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;o&#39;</span><span class="w"> </span>→<span class="w"> </span><span class="s1">&#39;lo&#39;</span><span class="w"> </span><span class="ss">(</span><span class="nv">most</span><span class="w"> </span><span class="nv">frequent</span><span class="ss">)</span>
+<span class="nv">Step</span><span class="w"> </span><span class="mi">2</span>:<span class="w"> </span><span class="s1">&#39;lo&#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;w&#39;</span><span class="w"> </span>→<span class="w"> </span><span class="s1">&#39;low&#39;</span>
+<span class="nv">Step</span><span class="w"> </span><span class="mi">3</span>:<span class="w"> </span><span class="s1">&#39;e&#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;r&#39;</span><span class="w"> </span>→<span class="w"> </span><span class="s1">&#39;er&#39;</span>
+<span class="nv">Step</span><span class="w"> </span><span class="mi">4</span>:<span class="w"> </span><span class="s1">&#39;n&#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;i&#39;</span><span class="w"> </span>→<span class="w"> </span><span class="s1">&#39;ni&#39;</span>
+<span class="nv">Step</span><span class="w"> </span><span class="mi">5</span>:<span class="w"> </span><span class="s1">&#39;ni&#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;g&#39;</span><span class="w"> </span>→<span class="w"> </span><span class="s1">&#39;nig&#39;</span>
+<span class="nv">Step</span><span class="w"> </span><span class="mi">6</span>:<span class="w"> </span><span class="s1">&#39;nig&#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;h&#39;</span><span class="w"> </span>→<span class="w"> </span><span class="s1">&#39;nigh&#39;</span>
+<span class="nv">Step</span><span class="w"> </span><span class="mi">7</span>:<span class="w"> </span><span class="s1">&#39;nigh&#39;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s1">&#39;t&#39;</span><span class="w"> </span>→<span class="w"> </span><span class="s1">&#39;night&#39;</span>
+...
+
+<span class="nv">Final</span>:<span class="w"> </span><span class="s2">&quot;lower&quot;</span><span class="w"> </span>→<span class="w"> </span>[<span class="s1">&#39;low&#39;</span>,<span class="w"> </span><span class="s1">&#39;er&#39;</span>],<span class="w"> </span><span class="s2">&quot;night&quot;</span><span class="w"> </span>→<span class="w"> </span>[<span class="s1">&#39;night&#39;</span>]
+</code></pre></div>
+
+<h3 id="22-implementation">2.2 Implementation<a class="header-link" href="#22-implementation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Counter</span><span class="p">,</span> <span class="n">defaultdict</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">BPETokenizer</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Byte-Pair Encoding Tokenizer&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vocab_size</span> <span class="o">=</span> <span class="n">vocab_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vocab</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">merges</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">special_tokens</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;&lt;pad&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;unk&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;bos&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;eos&gt;&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">texts</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Train BPE&quot;&quot;&quot;</span>
+        <span class="c1"># 1. Count word frequencies</span>
+        <span class="n">word_freqs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_count_words</span><span class="p">(</span><span class="n">texts</span><span class="p">)</span>
+
+        <span class="c1"># 2. Initial vocabulary (character level)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vocab</span> <span class="o">=</span> <span class="p">{</span><span class="n">char</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">char</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">special_tokens</span><span class="p">)}</span>
+        <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">word_freqs</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">word</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">char</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">[</span><span class="n">char</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">)</span>
+
+        <span class="c1"># 3. Split words into character lists</span>
+        <span class="n">splits</span> <span class="o">=</span> <span class="p">{</span><span class="n">word</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">word</span><span class="p">)</span> <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">word_freqs</span><span class="p">}</span>
+
+        <span class="c1"># 4. Merge iterations</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">vocab_size</span><span class="p">:</span>
+            <span class="c1"># Find most frequent pair</span>
+            <span class="n">pair_freqs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_count_pairs</span><span class="p">(</span><span class="n">splits</span><span class="p">,</span> <span class="n">word_freqs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">pair_freqs</span><span class="p">:</span>
+                <span class="k">break</span>
+
+            <span class="n">best_pair</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">pair_freqs</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">pair_freqs</span><span class="o">.</span><span class="n">get</span><span class="p">)</span>
+
+            <span class="c1"># Merge</span>
+            <span class="n">splits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_merge_pair</span><span class="p">(</span><span class="n">splits</span><span class="p">,</span> <span class="n">best_pair</span><span class="p">)</span>
+
+            <span class="c1"># Add to vocabulary</span>
+            <span class="n">new_token</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">best_pair</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">[</span><span class="n">new_token</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">merges</span><span class="p">[</span><span class="n">best_pair</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_token</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">)</span> <span class="o">%</span> <span class="mi">1000</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Vocab size: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_count_words</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">texts</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Count word frequencies&quot;&quot;&quot;</span>
+        <span class="n">word_freqs</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">texts</span><span class="p">:</span>
+            <span class="n">words</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="n">word_freqs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">word_freqs</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_count_pairs</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">splits</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+        <span class="n">word_freqs</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Count adjacent token pair frequencies&quot;&quot;&quot;</span>
+        <span class="n">pair_freqs</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">word</span><span class="p">,</span> <span class="n">freq</span> <span class="ow">in</span> <span class="n">word_freqs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">split</span> <span class="o">=</span> <span class="n">splits</span><span class="p">[</span><span class="n">word</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">split</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">pair</span> <span class="o">=</span> <span class="p">(</span><span class="n">split</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">split</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+                <span class="n">pair_freqs</span><span class="p">[</span><span class="n">pair</span><span class="p">]</span> <span class="o">+=</span> <span class="n">freq</span>
+        <span class="k">return</span> <span class="n">pair_freqs</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_merge_pair</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">splits</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+        <span class="n">pair</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Merge pair&quot;&quot;&quot;</span>
+        <span class="n">new_splits</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">word</span><span class="p">,</span> <span class="n">split</span> <span class="ow">in</span> <span class="n">splits</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">new_split</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">split</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">split</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">and</span> <span class="p">(</span><span class="n">split</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">split</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span> <span class="o">==</span> <span class="n">pair</span><span class="p">:</span>
+                    <span class="n">new_split</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">split</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">split</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+                    <span class="n">i</span> <span class="o">+=</span> <span class="mi">2</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">new_split</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">split</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">new_splits</span><span class="p">[</span><span class="n">word</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_split</span>
+        <span class="k">return</span> <span class="n">new_splits</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Text → Token IDs&quot;&quot;&quot;</span>
+        <span class="n">words</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="n">ids</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">words</span><span class="p">:</span>
+            <span class="c1"># Split into characters</span>
+            <span class="n">tokens</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+
+            <span class="c1"># Apply learned merges</span>
+            <span class="k">for</span> <span class="n">pair</span><span class="p">,</span> <span class="n">merged</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">merges</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">tokens</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">tokens</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span> <span class="o">==</span> <span class="n">pair</span><span class="p">:</span>
+                        <span class="n">tokens</span> <span class="o">=</span> <span class="n">tokens</span><span class="p">[:</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">merged</span><span class="p">]</span> <span class="o">+</span> <span class="n">tokens</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">:]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="c1"># Convert to IDs</span>
+            <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">tokens</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">token</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">:</span>
+                    <span class="n">ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">[</span><span class="n">token</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">[</span><span class="s1">&#39;&lt;unk&gt;&#39;</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">ids</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">decode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Token IDs → Text&quot;&quot;&quot;</span>
+        <span class="n">id_to_token</span> <span class="o">=</span> <span class="p">{</span><span class="n">v</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">tokens</span> <span class="o">=</span> <span class="p">[</span><span class="n">id_to_token</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="s1">&#39;&lt;unk&gt;&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="n">ids</span><span class="p">]</span>
+        <span class="k">return</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span>
+
+
+<span class="c1"># Usage example</span>
+<span class="n">tokenizer</span> <span class="o">=</span> <span class="n">BPETokenizer</span><span class="p">(</span><span class="n">vocab_size</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
+
+<span class="n">texts</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;the quick brown fox jumps over the lazy dog&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;machine learning is transforming the world&quot;</span><span class="p">,</span>
+    <span class="c1"># ... more text</span>
+<span class="p">]</span>
+
+<span class="n">tokenizer</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">texts</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>  <span class="c1"># Repeat to ensure sufficient frequency</span>
+
+<span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;the transformer model&quot;</span>
+<span class="n">ids</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+<span class="n">decoded</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Original: </span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;IDs: </span><span class="si">{</span><span class="n">ids</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Decoded: </span><span class="si">{</span><span class="n">decoded</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-wordpiece">3. WordPiece<a class="header-link" href="#3-wordpiece" title="Permanent link">&para;</a></h2>
+<h3 id="31-differences-from-bpe">3.1 Differences from BPE<a class="header-link" href="#31-differences-from-bpe" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">BPE</span><span class="o">:</span><span class="w"> </span><span class="n">Frequency</span><span class="o">-</span><span class="n">based</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Merge</span><span class="w"> </span><span class="n">most</span><span class="w"> </span><span class="n">frequent</span><span class="w"> </span><span class="n">pair</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Select</span><span class="w"> </span><span class="o">(</span><span class="n">a</span><span class="o">,</span><span class="w"> </span><span class="n">b</span><span class="o">)</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">maximum</span><span class="w"> </span><span class="n">count</span><span class="o">(</span><span class="n">ab</span><span class="o">)</span>
+
+<span class="n">WordPiece</span><span class="o">:</span><span class="w"> </span><span class="n">Likelihood</span><span class="o">-</span><span class="n">based</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Select</span><span class="w"> </span><span class="n">pair</span><span class="w"> </span><span class="n">that</span><span class="w"> </span><span class="n">maximizes</span><span class="w"> </span><span class="n">overall</span><span class="w"> </span><span class="n">likelihood</span><span class="w"> </span><span class="n">when</span><span class="w"> </span><span class="n">merged</span>
+<span class="o">-</span><span class="w"> </span><span class="n">score</span><span class="o">(</span><span class="n">a</span><span class="o">,</span><span class="w"> </span><span class="n">b</span><span class="o">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">count</span><span class="o">(</span><span class="n">ab</span><span class="o">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="o">(</span><span class="n">count</span><span class="o">(</span><span class="n">a</span><span class="o">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">count</span><span class="o">(</span><span class="n">b</span><span class="o">))</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Rare</span><span class="w"> </span><span class="n">pairs</span><span class="w"> </span><span class="n">can</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">selected</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">components</span><span class="w"> </span><span class="n">are</span><span class="w"> </span><span class="n">rare</span>
+</code></pre></div>
+
+<h3 id="32-implementation">3.2 Implementation<a class="header-link" href="#32-implementation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">WordPieceTokenizer</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;WordPiece Tokenizer (BERT style)&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">30000</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vocab_size</span> <span class="o">=</span> <span class="n">vocab_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vocab</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prefix</span> <span class="o">=</span> <span class="s2">&quot;##&quot;</span>  <span class="c1"># Indicates within-word token</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">texts</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Train WordPiece&quot;&quot;&quot;</span>
+        <span class="n">word_freqs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_count_words</span><span class="p">(</span><span class="n">texts</span><span class="p">)</span>
+
+        <span class="c1"># Initial vocabulary: characters + ## prefix versions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vocab</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;[PAD]&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;[UNK]&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;[CLS]&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;[SEP]&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span> <span class="s1">&#39;[MASK]&#39;</span><span class="p">:</span> <span class="mi">4</span><span class="p">}</span>
+
+        <span class="n">chars</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">word_freqs</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">char</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">word</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">chars</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">char</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">chars</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span> <span class="o">+</span> <span class="n">char</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">chars</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">[</span><span class="n">char</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">)</span>
+
+        <span class="c1"># Initialize splits</span>
+        <span class="n">splits</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">word_freqs</span><span class="p">:</span>
+            <span class="n">split</span> <span class="o">=</span> <span class="p">[</span><span class="n">word</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">+</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span> <span class="o">+</span> <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">word</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span>
+            <span class="n">splits</span><span class="p">[</span><span class="n">word</span><span class="p">]</span> <span class="o">=</span> <span class="n">split</span>
+
+        <span class="c1"># Merge (likelihood-based)</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">vocab_size</span><span class="p">:</span>
+            <span class="n">pair_scores</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_pair_scores</span><span class="p">(</span><span class="n">splits</span><span class="p">,</span> <span class="n">word_freqs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">pair_scores</span><span class="p">:</span>
+                <span class="k">break</span>
+
+            <span class="n">best_pair</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">pair_scores</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">pair_scores</span><span class="o">.</span><span class="n">get</span><span class="p">)</span>
+            <span class="n">splits</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_merge_pair</span><span class="p">(</span><span class="n">splits</span><span class="p">,</span> <span class="n">best_pair</span><span class="p">)</span>
+
+            <span class="n">new_token</span> <span class="o">=</span> <span class="n">best_pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">best_pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">[</span><span class="n">new_token</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_compute_pair_scores</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">splits</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+        <span class="n">word_freqs</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute WordPiece scores&quot;&quot;&quot;</span>
+        <span class="c1"># Individual token frequencies</span>
+        <span class="n">token_freqs</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">word</span><span class="p">,</span> <span class="n">freq</span> <span class="ow">in</span> <span class="n">word_freqs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">splits</span><span class="p">[</span><span class="n">word</span><span class="p">]:</span>
+                <span class="n">token_freqs</span><span class="p">[</span><span class="n">token</span><span class="p">]</span> <span class="o">+=</span> <span class="n">freq</span>
+
+        <span class="c1"># Pair frequencies</span>
+        <span class="n">pair_freqs</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">word</span><span class="p">,</span> <span class="n">freq</span> <span class="ow">in</span> <span class="n">word_freqs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">split</span> <span class="o">=</span> <span class="n">splits</span><span class="p">[</span><span class="n">word</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">split</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">pair</span> <span class="o">=</span> <span class="p">(</span><span class="n">split</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">split</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+                <span class="n">pair_freqs</span><span class="p">[</span><span class="n">pair</span><span class="p">]</span> <span class="o">+=</span> <span class="n">freq</span>
+
+        <span class="c1"># Score: count(ab) / (count(a) * count(b))</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">pair</span><span class="p">,</span> <span class="n">freq</span> <span class="ow">in</span> <span class="n">pair_freqs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">score</span> <span class="o">=</span> <span class="n">freq</span> <span class="o">/</span> <span class="p">(</span><span class="n">token_freqs</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">*</span> <span class="n">token_freqs</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+            <span class="n">scores</span><span class="p">[</span><span class="n">pair</span><span class="p">]</span> <span class="o">=</span> <span class="n">score</span>
+
+        <span class="k">return</span> <span class="n">scores</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_merge_pair</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">splits</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+        <span class="n">pair</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Merge pair&quot;&quot;&quot;</span>
+        <span class="n">new_splits</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">merged</span> <span class="o">=</span> <span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">word</span><span class="p">,</span> <span class="n">split</span> <span class="ow">in</span> <span class="n">splits</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">new_split</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">split</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">split</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">and</span> <span class="p">(</span><span class="n">split</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">split</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span> <span class="o">==</span> <span class="n">pair</span><span class="p">:</span>
+                    <span class="n">new_split</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">merged</span><span class="p">)</span>
+                    <span class="n">i</span> <span class="o">+=</span> <span class="mi">2</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">new_split</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">split</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">new_splits</span><span class="p">[</span><span class="n">word</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_split</span>
+
+        <span class="k">return</span> <span class="n">new_splits</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Greedy longest-match tokenization&quot;&quot;&quot;</span>
+        <span class="n">words</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="n">ids</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">words</span><span class="p">:</span>
+            <span class="n">tokens</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tokenize_word</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">tokens</span><span class="p">:</span>
+                <span class="n">ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">[</span><span class="s1">&#39;[UNK]&#39;</span><span class="p">]))</span>
+
+        <span class="k">return</span> <span class="n">ids</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_tokenize_word</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">word</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Split word into WordPiece tokens&quot;&quot;&quot;</span>
+        <span class="n">tokens</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">while</span> <span class="n">start</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">word</span><span class="p">):</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">word</span><span class="p">)</span>
+            <span class="n">found</span> <span class="o">=</span> <span class="kc">False</span>
+
+            <span class="k">while</span> <span class="n">start</span> <span class="o">&lt;</span> <span class="n">end</span><span class="p">:</span>
+                <span class="n">substr</span> <span class="o">=</span> <span class="n">word</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">start</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">substr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prefix</span> <span class="o">+</span> <span class="n">substr</span>
+
+                <span class="k">if</span> <span class="n">substr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">vocab</span><span class="p">:</span>
+                    <span class="n">tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">substr</span><span class="p">)</span>
+                    <span class="n">found</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">break</span>
+
+                <span class="n">end</span> <span class="o">-=</span> <span class="mi">1</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+                <span class="n">tokens</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;[UNK]&#39;</span><span class="p">)</span>
+                <span class="n">start</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="n">end</span>
+
+        <span class="k">return</span> <span class="n">tokens</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-unigram-lm">4. Unigram LM<a class="header-link" href="#4-unigram-lm" title="Permanent link">&para;</a></h2>
+<h3 id="41-concept">4.1 Concept<a class="header-link" href="#41-concept" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">Unigram</span><span class="o">:</span><span class="w"> </span><span class="n">Probabilistic</span><span class="w"> </span><span class="n">tokenization</span>
+
+<span class="mi">1</span><span class="o">.</span><span class="w"> </span><span class="n">Start</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">large</span><span class="w"> </span><span class="n">initial</span><span class="w"> </span><span class="n">vocabulary</span><span class="w"> </span><span class="o">(</span><span class="n">substrings</span><span class="o">)</span>
+<span class="mi">2</span><span class="o">.</span><span class="w"> </span><span class="n">Estimate</span><span class="w"> </span><span class="n">probability</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="k">each</span><span class="w"> </span><span class="n">token</span><span class="o">:</span><span class="w"> </span><span class="n">P</span><span class="o">(</span><span class="n">token</span><span class="o">)</span>
+<span class="mi">3</span><span class="o">.</span><span class="w"> </span><span class="n">Find</span><span class="w"> </span><span class="n">optimal</span><span class="w"> </span><span class="n">segmentation</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">Viterbi</span><span class="w"> </span><span class="n">algorithm</span><span class="o">:</span>
+<span class="w">   </span><span class="n">argmax</span><span class="w"> </span><span class="n">P</span><span class="o">(</span><span class="n">x_1</span><span class="o">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">P</span><span class="o">(</span><span class="n">x_2</span><span class="o">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="o">...</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">P</span><span class="o">(</span><span class="n">x_n</span><span class="o">)</span>
+<span class="mi">4</span><span class="o">.</span><span class="w"> </span><span class="n">Reduce</span><span class="w"> </span><span class="n">vocabulary</span><span class="o">:</span><span class="w"> </span><span class="n">remove</span><span class="w"> </span><span class="n">tokens</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">small</span><span class="w"> </span><span class="n">loss</span>
+<span class="mi">5</span><span class="o">.</span><span class="w"> </span><span class="n">Repeat</span><span class="w"> </span><span class="n">until</span><span class="w"> </span><span class="n">target</span><span class="w"> </span><span class="n">size</span>
+
+<span class="n">Advantages</span><span class="o">:</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Unlike</span><span class="w"> </span><span class="n">BPE</span><span class="o">/</span><span class="n">WordPiece</span><span class="o">,</span><span class="w"> </span><span class="n">can</span><span class="w"> </span><span class="n">sample</span><span class="w"> </span><span class="n">multiple</span><span class="w"> </span><span class="n">segmentation</span><span class="w"> </span><span class="n">candidates</span>
+<span class="o">-</span><span class="w"> </span><span class="n">More</span><span class="w"> </span><span class="n">robust</span><span class="w"> </span><span class="n">tokenization</span>
+</code></pre></div>
+
+<h3 id="42-use-with-sentencepiece">4.2 Use with SentencePiece<a class="header-link" href="#42-use-with-sentencepiece" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">sentencepiece</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">spm</span>
+
+<span class="c1"># Train SentencePiece (BPE or Unigram)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">train_sentencepiece</span><span class="p">(</span>
+    <span class="n">input_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">model_prefix</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">vocab_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">32000</span><span class="p">,</span>
+    <span class="n">model_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;unigram&#39;</span>  <span class="c1"># &#39;bpe&#39; or &#39;unigram&#39;</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Train SentencePiece model&quot;&quot;&quot;</span>
+    <span class="n">spm</span><span class="o">.</span><span class="n">SentencePieceTrainer</span><span class="o">.</span><span class="n">train</span><span class="p">(</span>
+        <span class="nb">input</span><span class="o">=</span><span class="n">input_file</span><span class="p">,</span>
+        <span class="n">model_prefix</span><span class="o">=</span><span class="n">model_prefix</span><span class="p">,</span>
+        <span class="n">vocab_size</span><span class="o">=</span><span class="n">vocab_size</span><span class="p">,</span>
+        <span class="n">model_type</span><span class="o">=</span><span class="n">model_type</span><span class="p">,</span>
+        <span class="n">character_coverage</span><span class="o">=</span><span class="mf">0.9995</span><span class="p">,</span>  <span class="c1"># For multilingual</span>
+        <span class="n">num_threads</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>
+        <span class="n">split_digits</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># Split digits</span>
+        <span class="n">byte_fallback</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># Handle OOV with bytes</span>
+        <span class="c1"># Special tokens</span>
+        <span class="n">pad_id</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">unk_id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">bos_id</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="n">eos_id</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="n">pad_piece</span><span class="o">=</span><span class="s1">&#39;&lt;pad&gt;&#39;</span><span class="p">,</span>
+        <span class="n">unk_piece</span><span class="o">=</span><span class="s1">&#39;&lt;unk&gt;&#39;</span><span class="p">,</span>
+        <span class="n">bos_piece</span><span class="o">=</span><span class="s1">&#39;&lt;s&gt;&#39;</span><span class="p">,</span>
+        <span class="n">eos_piece</span><span class="o">=</span><span class="s1">&#39;&lt;/s&gt;&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="c1"># Usage</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">use_sentencepiece</span><span class="p">(</span><span class="n">model_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Use SentencePiece&quot;&quot;&quot;</span>
+    <span class="n">sp</span> <span class="o">=</span> <span class="n">spm</span><span class="o">.</span><span class="n">SentencePieceProcessor</span><span class="p">()</span>
+    <span class="n">sp</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">model_path</span><span class="p">)</span>
+
+    <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;Hello, how are you doing today?&quot;</span>
+
+    <span class="c1"># Encoding</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">out_type</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">pieces</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">out_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Text: </span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Pieces: </span><span class="si">{</span><span class="n">pieces</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;IDs: </span><span class="si">{</span><span class="n">ids</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Decoding</span>
+    <span class="n">decoded</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Decoded: </span><span class="si">{</span><span class="n">decoded</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Probabilistic sampling (Unigram only)</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+        <span class="n">sampled</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">out_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">enable_sampling</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sampled: </span><span class="si">{</span><span class="n">sampled</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="c1"># Training example</span>
+<span class="c1"># train_sentencepiece(&#39;corpus.txt&#39;, &#39;tokenizer&#39;, vocab_size=32000, model_type=&#39;unigram&#39;)</span>
+<span class="c1"># use_sentencepiece(&#39;tokenizer.model&#39;)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-byte-level-bpe">5. Byte-Level BPE<a class="header-link" href="#5-byte-level-bpe" title="Permanent link">&para;</a></h2>
+<h3 id="51-gpt-234-style">5.1 GPT-2/3/4 Style<a class="header-link" href="#51-gpt-234-style" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>Byte-Level BPE:
+- Base vocabulary = 256 bytes
+- Can process any UTF-8 text (no OOV)
+- Used since GPT-2
+
+Special handling:
+- Spaces: marked with &#39;Ġ&#39; (G with dot above)
+- &quot;Hello world&quot; → [&quot;Hello&quot;, &quot;Ġworld&quot;]
+- Explicit word boundary representation
+</code></pre></div>
+
+<h3 id="52-huggingface-tokenizers">5.2 HuggingFace Tokenizers<a class="header-link" href="#52-huggingface-tokenizers" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">tokenizers</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tokenizer</span><span class="p">,</span> <span class="n">models</span><span class="p">,</span> <span class="n">trainers</span><span class="p">,</span> <span class="n">pre_tokenizers</span><span class="p">,</span> <span class="n">decoders</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tokenizers.processors</span><span class="w"> </span><span class="kn">import</span> <span class="n">TemplateProcessing</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">create_byte_level_bpe</span><span class="p">(</span>
+    <span class="n">files</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">vocab_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50257</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tokenizer</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create GPT-2 style Byte-Level BPE&quot;&quot;&quot;</span>
+
+    <span class="c1"># 1. Create empty tokenizer</span>
+    <span class="n">tokenizer</span> <span class="o">=</span> <span class="n">Tokenizer</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">BPE</span><span class="p">())</span>
+
+    <span class="c1"># 2. Pre-tokenization (byte level)</span>
+    <span class="n">tokenizer</span><span class="o">.</span><span class="n">pre_tokenizer</span> <span class="o">=</span> <span class="n">pre_tokenizers</span><span class="o">.</span><span class="n">ByteLevel</span><span class="p">(</span><span class="n">add_prefix_space</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># 3. Decoder</span>
+    <span class="n">tokenizer</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">decoders</span><span class="o">.</span><span class="n">ByteLevel</span><span class="p">()</span>
+
+    <span class="c1"># 4. Training</span>
+    <span class="n">trainer</span> <span class="o">=</span> <span class="n">trainers</span><span class="o">.</span><span class="n">BpeTrainer</span><span class="p">(</span>
+        <span class="n">vocab_size</span><span class="o">=</span><span class="n">vocab_size</span><span class="p">,</span>
+        <span class="n">special_tokens</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;&lt;|endoftext|&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;|padding|&gt;&#39;</span><span class="p">],</span>
+        <span class="n">show_progress</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">tokenizer</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="n">trainer</span><span class="p">)</span>
+
+    <span class="c1"># 5. Post-processing</span>
+    <span class="n">tokenizer</span><span class="o">.</span><span class="n">post_processor</span> <span class="o">=</span> <span class="n">TemplateProcessing</span><span class="p">(</span>
+        <span class="n">single</span><span class="o">=</span><span class="s2">&quot;$A &lt;|endoftext|&gt;&quot;</span><span class="p">,</span>
+        <span class="n">special_tokens</span><span class="o">=</span><span class="p">[(</span><span class="s2">&quot;&lt;|endoftext|&gt;&quot;</span><span class="p">,</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">token_to_id</span><span class="p">(</span><span class="s2">&quot;&lt;|endoftext|&gt;&quot;</span><span class="p">))],</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">tokenizer</span>
+
+
+<span class="c1"># Usage</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">demonstrate_byte_level</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Byte-Level BPE demo&quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">GPT2Tokenizer</span>
+
+    <span class="n">tokenizer</span> <span class="o">=</span> <span class="n">GPT2Tokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;gpt2&#39;</span><span class="p">)</span>
+
+    <span class="n">texts</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;Hello, world!&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;안녕하세요&quot;</span><span class="p">,</span>  <span class="c1"># Korean</span>
+        <span class="s2">&quot;🎉 Party time!&quot;</span><span class="p">,</span>  <span class="c1"># Emoji</span>
+        <span class="s2">&quot;The café serves naïve croissants&quot;</span><span class="p">,</span>  <span class="c1"># Special characters</span>
+    <span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">texts</span><span class="p">:</span>
+        <span class="n">tokens</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="n">ids</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Text: </span><span class="si">{</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tokens: </span><span class="si">{</span><span class="n">tokens</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;IDs: </span><span class="si">{</span><span class="n">ids</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Decoded: </span><span class="si">{</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="n">demonstrate_byte_level</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-multilingual-tokenization">6. Multilingual Tokenization<a class="header-link" href="#6-multilingual-tokenization" title="Permanent link">&para;</a></h2>
+<h3 id="61-challenges">6.1 Challenges<a class="header-link" href="#61-challenges" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">Problems</span><span class="o">:</span>
+<span class="mi">1</span><span class="o">.</span><span class="w"> </span><span class="n">Fertility</span><span class="w"> </span><span class="n">imbalance</span><span class="o">:</span><span class="w"> </span><span class="n">Same</span><span class="w"> </span><span class="n">meaning</span><span class="o">,</span><span class="w"> </span><span class="n">different</span><span class="w"> </span><span class="n">token</span><span class="w"> </span><span class="n">counts</span><span class="w"> </span><span class="n">per</span><span class="w"> </span><span class="n">language</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="s2">&quot;hello&quot;</span><span class="w"> </span><span class="o">(</span><span class="mi">1</span><span class="w"> </span><span class="n">token</span><span class="o">)</span><span class="w"> </span><span class="n">vs</span><span class="w"> </span><span class="s2">&quot;你好&quot;</span><span class="w"> </span><span class="o">(</span><span class="mi">2</span><span class="o">-</span><span class="mi">3</span><span class="w"> </span><span class="n">tokens</span><span class="o">)</span><span class="w"> </span><span class="n">vs</span><span class="w"> </span><span class="s2">&quot;안녕&quot;</span><span class="w"> </span><span class="o">(</span><span class="mi">2</span><span class="o">-</span><span class="mi">4</span><span class="w"> </span><span class="n">tokens</span><span class="o">)</span>
+
+<span class="mi">2</span><span class="o">.</span><span class="w"> </span><span class="n">Under</span><span class="o">-</span><span class="n">representation</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">low</span><span class="o">-</span><span class="n">resource</span><span class="w"> </span><span class="n">languages</span><span class="o">:</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">English</span><span class="o">-</span><span class="n">centric</span><span class="w"> </span><span class="n">training</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">insufficient</span><span class="w"> </span><span class="n">vocabulary</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">other</span><span class="w"> </span><span class="n">languages</span>
+
+<span class="mi">3</span><span class="o">.</span><span class="w"> </span><span class="n">Code</span><span class="w"> </span><span class="n">switching</span><span class="o">:</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="s2">&quot;I love 김치&quot;</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">handling</span><span class="w"> </span><span class="n">English</span><span class="o">/</span><span class="n">Korean</span><span class="w"> </span><span class="n">mixing</span>
+
+<span class="n">Solutions</span><span class="o">:</span>
+<span class="mi">1</span><span class="o">.</span><span class="w"> </span><span class="n">Character</span><span class="w"> </span><span class="n">coverage</span><span class="o">:</span><span class="w"> </span><span class="mf">99.95</span><span class="o">%</span><span class="w"> </span><span class="n">or</span><span class="w"> </span><span class="n">higher</span>
+<span class="mi">2</span><span class="o">.</span><span class="w"> </span><span class="n">Adjust</span><span class="w"> </span><span class="n">sampling</span><span class="w"> </span><span class="n">ratio</span><span class="w"> </span><span class="n">per</span><span class="w"> </span><span class="n">language</span>
+<span class="mi">3</span><span class="o">.</span><span class="w"> </span><span class="n">Enable</span><span class="w"> </span><span class="n">byte</span><span class="w"> </span><span class="n">fallback</span>
+</code></pre></div>
+
+<h3 id="62-building-multilingual-tokenizer">6.2 Building Multilingual Tokenizer<a class="header-link" href="#62-building-multilingual-tokenizer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">unicodedata</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MultilingualTokenizerConfig</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Multilingual tokenizer configuration&quot;&quot;&quot;</span>
+
+    <span class="c1"># Sampling ratio per language (BLOOM style)</span>
+    <span class="n">LANGUAGE_WEIGHTS</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;en&#39;</span><span class="p">:</span> <span class="mf">0.30</span><span class="p">,</span>   <span class="c1"># English</span>
+        <span class="s1">&#39;zh&#39;</span><span class="p">:</span> <span class="mf">0.15</span><span class="p">,</span>   <span class="c1"># Chinese</span>
+        <span class="s1">&#39;code&#39;</span><span class="p">:</span> <span class="mf">0.15</span><span class="p">,</span> <span class="c1"># Programming code</span>
+        <span class="s1">&#39;fr&#39;</span><span class="p">:</span> <span class="mf">0.08</span><span class="p">,</span>   <span class="c1"># French</span>
+        <span class="s1">&#39;es&#39;</span><span class="p">:</span> <span class="mf">0.07</span><span class="p">,</span>   <span class="c1"># Spanish</span>
+        <span class="s1">&#39;pt&#39;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>   <span class="c1"># Portuguese</span>
+        <span class="s1">&#39;de&#39;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>   <span class="c1"># German</span>
+        <span class="s1">&#39;ar&#39;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>   <span class="c1"># Arabic</span>
+        <span class="s1">&#39;hi&#39;</span><span class="p">:</span> <span class="mf">0.03</span><span class="p">,</span>   <span class="c1"># Hindi</span>
+        <span class="s1">&#39;ko&#39;</span><span class="p">:</span> <span class="mf">0.02</span><span class="p">,</span>   <span class="c1"># Korean</span>
+        <span class="s1">&#39;ja&#39;</span><span class="p">:</span> <span class="mf">0.02</span><span class="p">,</span>   <span class="c1"># Japanese</span>
+        <span class="s1">&#39;other&#39;</span><span class="p">:</span> <span class="mf">0.03</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">estimate_fertility</span><span class="p">(</span><span class="n">tokenizer</span><span class="p">,</span> <span class="n">texts_by_lang</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Measure fertility per language</span>
+
+<span class="sd">        Fertility = tokens / characters</span>
+<span class="sd">        Lower is more efficient</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">fertility</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">lang</span><span class="p">,</span> <span class="n">texts</span> <span class="ow">in</span> <span class="n">texts_by_lang</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">total_chars</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">total_tokens</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="k">for</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">texts</span><span class="p">:</span>
+                <span class="n">chars</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+                <span class="n">tokens</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">text</span><span class="p">))</span>
+
+                <span class="n">total_chars</span> <span class="o">+=</span> <span class="n">chars</span>
+                <span class="n">total_tokens</span> <span class="o">+=</span> <span class="n">tokens</span>
+
+            <span class="n">fertility</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_tokens</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">total_chars</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">fertility</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">create_multilingual_tokenizer</span><span class="p">(</span>
+    <span class="n">corpus_files</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>  <span class="c1"># {language: file_path}</span>
+    <span class="n">vocab_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100000</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Multilingual SentencePiece tokenizer&quot;&quot;&quot;</span>
+
+    <span class="c1"># 1. Merge language data (apply weights)</span>
+    <span class="n">merged_file</span> <span class="o">=</span> <span class="s1">&#39;merged_corpus.txt&#39;</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">MultilingualTokenizerConfig</span><span class="o">.</span><span class="n">LANGUAGE_WEIGHTS</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">merged_file</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">lang</span><span class="p">,</span> <span class="n">file_path</span> <span class="ow">in</span> <span class="n">corpus_files</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">weight</span> <span class="o">=</span> <span class="n">weights</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">)</span>
+            <span class="n">sample_ratio</span> <span class="o">=</span> <span class="n">weight</span> <span class="o">/</span> <span class="nb">sum</span><span class="p">(</span><span class="n">weights</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">lines</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+                <span class="n">n_samples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">*</span> <span class="n">sample_ratio</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span>  <span class="c1"># Oversampling</span>
+
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">[:</span><span class="n">n_samples</span><span class="p">]:</span>
+                    <span class="n">out</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+    <span class="c1"># 2. Train SentencePiece</span>
+    <span class="n">spm</span><span class="o">.</span><span class="n">SentencePieceTrainer</span><span class="o">.</span><span class="n">train</span><span class="p">(</span>
+        <span class="nb">input</span><span class="o">=</span><span class="n">merged_file</span><span class="p">,</span>
+        <span class="n">model_prefix</span><span class="o">=</span><span class="s1">&#39;multilingual&#39;</span><span class="p">,</span>
+        <span class="n">vocab_size</span><span class="o">=</span><span class="n">vocab_size</span><span class="p">,</span>
+        <span class="n">model_type</span><span class="o">=</span><span class="s1">&#39;bpe&#39;</span><span class="p">,</span>
+        <span class="n">character_coverage</span><span class="o">=</span><span class="mf">0.9995</span><span class="p">,</span>  <span class="c1"># High coverage</span>
+        <span class="n">byte_fallback</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">split_digits</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="c1"># Special tokens</span>
+        <span class="n">user_defined_symbols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;&lt;code&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;/code&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;math&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;/math&gt;&#39;</span><span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="s1">&#39;multilingual.model&#39;</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7-tokenizer-free-models">7. Tokenizer-Free Models<a class="header-link" href="#7-tokenizer-free-models" title="Permanent link">&para;</a></h2>
+<h3 id="71-byt5-byte-level-t5">7.1 ByT5 (Byte-level T5)<a class="header-link" href="#71-byt5-byte-level-t5" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ByteLevelModel</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    ByT5 style Byte-Level model</span>
+
+<span class="sd">    Features:</span>
+<span class="sd">    - No tokenizer</span>
+<span class="sd">    - Input: raw UTF-8 bytes (0-255)</span>
+<span class="sd">    - Advantages: Language-independent, robust to noise</span>
+<span class="sd">    - Disadvantages: Long sequences (3-4x)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">VOCAB_SIZE</span> <span class="o">=</span> <span class="mi">259</span>  <span class="c1"># 256 bytes + 3 special tokens</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pad_id</span> <span class="o">=</span> <span class="mi">256</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eos_id</span> <span class="o">=</span> <span class="mi">257</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unk_id</span> <span class="o">=</span> <span class="mi">258</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Text → bytes&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">text</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">decode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ids</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;bytes → text&quot;&quot;&quot;</span>
+        <span class="c1"># Remove special tokens</span>
+        <span class="n">bytes_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">b</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">ids</span> <span class="k">if</span> <span class="n">b</span> <span class="o">&lt;</span> <span class="mi">256</span><span class="p">]</span>
+        <span class="k">return</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">bytes_list</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">)</span>
+
+
+<span class="c1"># ByT5 usage example</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoTokenizer</span><span class="p">,</span> <span class="n">T5ForConditionalGeneration</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">use_byt5</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Use ByT5&quot;&quot;&quot;</span>
+    <span class="n">tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;google/byt5-small&quot;</span><span class="p">)</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">T5ForConditionalGeneration</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;google/byt5-small&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Byte-level encoding</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;translate English to German: Hello, how are you?&quot;</span>
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s2">&quot;pt&quot;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Text length: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="si">}</span><span class="s2"> chars&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Token length: </span><span class="si">{</span><span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;input_ids&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> tokens&quot;</span><span class="p">)</span>
+    <span class="c1"># Byte-level so roughly similar</span>
+
+    <span class="c1"># Generation</span>
+    <span class="n">outputs</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="o">**</span><span class="n">inputs</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">skip_special_tokens</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Result: </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="72-megabyte">7.2 MEGABYTE<a class="header-link" href="#72-megabyte" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>MEGABYTE Architecture:
+<span class="k">-</span> Patch-based byte modeling
+<span class="k">-</span> Global model: large transformer, patch level
+<span class="k">-</span> Local model: small transformer, byte level
+
+Advantages:
+<span class="k">-</span> Efficient processing of long byte sequences
+<span class="k">-</span> Complexity: O(n²) → O(n²/p + p * n) (p = patch size)
+</code></pre></div>
+
+<hr />
+<h2 id="8-code-tokenization">8. Code Tokenization<a class="header-link" href="#8-code-tokenization" title="Permanent link">&para;</a></h2>
+<h3 id="81-code-specific-strategies">8.1 Code-Specific Strategies<a class="header-link" href="#81-code-specific-strategies" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">CodeTokenizer</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Tokenizer for programming code</span>
+
+<span class="sd">    Considerations:</span>
+<span class="sd">    1. Preserve indentation</span>
+<span class="sd">    2. Split identifiers (camelCase, snake_case)</span>
+<span class="sd">    3. Number literals</span>
+<span class="sd">    4. Special characters (==, !=, &lt;=, etc.)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">preprocess_code</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">code</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Preprocess code&quot;&quot;&quot;</span>
+        <span class="c1"># Convert indentation to special tokens</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="n">code</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">processed</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+            <span class="c1"># Calculate indentation</span>
+            <span class="n">indent</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">lstrip</span><span class="p">())</span>
+            <span class="n">indent_tokens</span> <span class="o">=</span> <span class="s1">&#39;&lt;INDENT&gt;&#39;</span> <span class="o">*</span> <span class="p">(</span><span class="n">indent</span> <span class="o">//</span> <span class="mi">4</span><span class="p">)</span>
+
+            <span class="n">processed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">indent_tokens</span> <span class="o">+</span> <span class="n">line</span><span class="o">.</span><span class="n">lstrip</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">processed</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">split_identifier</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">identifier</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Split identifier&quot;&quot;&quot;</span>
+        <span class="c1"># camelCase</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+        <span class="n">tokens</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s1">&#39;([A-Z])&#39;</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39; \1&#39;</span><span class="p">,</span> <span class="n">identifier</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+
+        <span class="c1"># snake_case</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">tokens</span><span class="p">:</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">result</span> <span class="k">if</span> <span class="n">t</span><span class="p">]</span>
+
+
+<span class="c1"># Codex/StarCoder style</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_code_tokenizer</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Code tokenizer (StarCoder style)&quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">tokenizers</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tokenizer</span><span class="p">,</span> <span class="n">models</span><span class="p">,</span> <span class="n">trainers</span><span class="p">,</span> <span class="n">pre_tokenizers</span>
+
+    <span class="n">tokenizer</span> <span class="o">=</span> <span class="n">Tokenizer</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">BPE</span><span class="p">())</span>
+
+    <span class="c1"># Pre-tokenization for code</span>
+    <span class="n">tokenizer</span><span class="o">.</span><span class="n">pre_tokenizer</span> <span class="o">=</span> <span class="n">pre_tokenizers</span><span class="o">.</span><span class="n">Sequence</span><span class="p">([</span>
+        <span class="n">pre_tokenizers</span><span class="o">.</span><span class="n">ByteLevel</span><span class="p">(</span><span class="n">add_prefix_space</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+        <span class="c1"># Split digits</span>
+        <span class="n">pre_tokenizers</span><span class="o">.</span><span class="n">Digits</span><span class="p">(</span><span class="n">individual_digits</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="p">])</span>
+
+    <span class="c1"># Special tokens</span>
+    <span class="n">special_tokens</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s1">&#39;&lt;|endoftext|&gt;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;&lt;fim_prefix&gt;&#39;</span><span class="p">,</span>  <span class="c1"># Fill-in-the-middle</span>
+        <span class="s1">&#39;&lt;fim_middle&gt;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;&lt;fim_suffix&gt;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;&lt;filename&gt;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;&lt;gh_stars&gt;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;&lt;issue_start&gt;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;&lt;issue_comment&gt;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;&lt;issue_closed&gt;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;&lt;jupyter_start&gt;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;&lt;jupyter_code&gt;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;&lt;jupyter_output&gt;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;&lt;empty_output&gt;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;&lt;commit_before&gt;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;&lt;commit_msg&gt;&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;&lt;commit_after&gt;&#39;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+    <span class="n">trainer</span> <span class="o">=</span> <span class="n">trainers</span><span class="o">.</span><span class="n">BpeTrainer</span><span class="p">(</span>
+        <span class="n">vocab_size</span><span class="o">=</span><span class="mi">49152</span><span class="p">,</span>
+        <span class="n">special_tokens</span><span class="o">=</span><span class="n">special_tokens</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">tokenizer</span><span class="p">,</span> <span class="n">trainer</span>
+</code></pre></div>
+
+<hr />
+<h2 id="9-practice-tokenizer-analysis">9. Practice: Tokenizer Analysis<a class="header-link" href="#9-practice-tokenizer-analysis" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoTokenizer</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">analyze_tokenizers</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Comparative analysis of various tokenizers&quot;&quot;&quot;</span>
+
+    <span class="n">tokenizers</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;GPT-2&#39;</span><span class="p">:</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;gpt2&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;BERT&#39;</span><span class="p">:</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;bert-base-uncased&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;T5&#39;</span><span class="p">:</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;t5-base&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;LLaMA&#39;</span><span class="p">:</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;meta-llama/Llama-2-7b-hf&#39;</span><span class="p">),</span>
+    <span class="p">}</span>
+
+    <span class="n">test_texts</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;English&#39;</span><span class="p">:</span> <span class="s2">&quot;The quick brown fox jumps over the lazy dog.&quot;</span><span class="p">,</span>
+        <span class="s1">&#39;Korean&#39;</span><span class="p">:</span> <span class="s2">&quot;빠른 갈색 여우가 게으른 개를 뛰어넘습니다.&quot;</span><span class="p">,</span>
+        <span class="s1">&#39;Code&#39;</span><span class="p">:</span> <span class="s2">&quot;def hello_world():</span><span class="se">\n</span><span class="s2">    print(&#39;Hello, World!&#39;)&quot;</span><span class="p">,</span>
+        <span class="s1">&#39;Math&#39;</span><span class="p">:</span> <span class="s2">&quot;The equation e^(iπ) + 1 = 0 is beautiful.&quot;</span><span class="p">,</span>
+        <span class="s1">&#39;Mixed&#39;</span><span class="p">:</span> <span class="s2">&quot;I love eating 김치 with rice 🍚&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="c1"># Analysis</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">tok_name</span><span class="p">,</span> <span class="n">tokenizer</span> <span class="ow">in</span> <span class="n">tokenizers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">results</span><span class="p">[</span><span class="n">tok_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">text_name</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">test_texts</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">tokens</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+                <span class="n">ids</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+
+                <span class="n">results</span><span class="p">[</span><span class="n">tok_name</span><span class="p">][</span><span class="n">text_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">&#39;n_tokens&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">tokens</span><span class="p">),</span>
+                    <span class="s1">&#39;n_chars&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">),</span>
+                    <span class="s1">&#39;fertility&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">),</span>
+                    <span class="s1">&#39;tokens&#39;</span><span class="p">:</span> <span class="n">tokens</span><span class="p">[:</span><span class="mi">10</span><span class="p">],</span>  <span class="c1"># First 10 only</span>
+                <span class="p">}</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">results</span><span class="p">[</span><span class="n">tok_name</span><span class="p">][</span><span class="n">text_name</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># Output</span>
+    <span class="k">for</span> <span class="n">tok_name</span><span class="p">,</span> <span class="n">tok_results</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">50</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Tokenizer: </span><span class="si">{</span><span class="n">tok_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">50</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">text_name</span><span class="p">,</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">tok_results</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">result</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="n">text_name</span><span class="si">}</span><span class="s2">:&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Tokens: </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;n_tokens&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Chars: </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;n_chars&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Fertility: </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;fertility&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Sample: </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;tokens&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Visualize fertility</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">test_texts</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">width</span> <span class="o">=</span> <span class="mf">0.2</span>
+    <span class="n">positions</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">tok_name</span><span class="p">,</span> <span class="n">tok_results</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+        <span class="n">fertilities</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">tok_results</span><span class="p">[</span><span class="n">text_name</span><span class="p">][</span><span class="s1">&#39;fertility&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">tok_results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">text_name</span><span class="p">)</span> <span class="k">else</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">text_name</span> <span class="ow">in</span> <span class="n">x</span>
+        <span class="p">]</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">width</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">bar</span><span class="p">([</span><span class="n">p</span> <span class="o">+</span> <span class="n">offset</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">positions</span><span class="p">],</span> <span class="n">fertilities</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">tok_name</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Text Type&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Fertility (tokens/chars)&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Tokenizer Fertility Comparison&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s1">&#39;tokenizer_comparison.png&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">analyze_tokenizers</span><span class="p">()</span>
+</code></pre></div>
+
+<hr />
+<h2 id="references">References<a class="header-link" href="#references" title="Permanent link">&para;</a></h2>
+<h3 id="papers">Papers<a class="header-link" href="#papers" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Sennrich et al. (2016). "Neural Machine Translation of Rare Words with Subword Units" (BPE)</li>
+<li>Kudo &amp; Richardson (2018). "SentencePiece: A simple and language independent subword tokenizer"</li>
+<li>Xue et al. (2021). "ByT5: Towards a token-free future with pre-trained byte-to-byte models"</li>
+</ul>
+<h3 id="tools">Tools<a class="header-link" href="#tools" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="https://github.com/huggingface/tokenizers">HuggingFace Tokenizers</a></li>
+<li><a href="https://github.com/google/sentencepiece">SentencePiece</a></li>
+<li><a href="https://github.com/openai/tiktoken">tiktoken</a> (OpenAI)</li>
+</ul>
+<h3 id="related-lessons">Related Lessons<a class="header-link" href="#related-lessons" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="../LLM_and_NLP/01_NLP_Basics.md">../LLM_and_NLP/01_NLP_Basics.md</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/Foundation_Models/06_Pretraining_Infrastructure.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">06. Pre-training Infrastructure</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/Foundation_Models/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+        <a href="/study/en/Foundation_Models/08_LLaMA_Family.html" class="nav-next">
+            <span class="nav-label">Next</span>
+            <span class="nav-title">LLaMA Family</span>
+        </a>
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'en';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}

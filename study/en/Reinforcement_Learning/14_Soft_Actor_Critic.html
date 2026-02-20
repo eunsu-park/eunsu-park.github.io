@@ -1,0 +1,912 @@
+{% raw %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>14. Soft Actor-Critic (SAC) - Study Materials</title>
+    <link rel="stylesheet" href="/study/static/css/style.css">
+    <link rel="stylesheet" href="/study/static/css/highlight.css">
+    <!-- KaTeX for LaTeX math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="/study/en/" class="logo">Study Materials</a>
+                <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+                    <span></span>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/study/en/" class="nav-item ">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-text">Home</span>
+                </a>
+                <a href="/study/examples/" class="nav-item ">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-text">Examples</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-search">
+                <form action="/study/en/search.html" method="get" id="search-form">
+                    <input type="search" name="q" placeholder="Search..." id="search-sidebar-input">
+                </form>
+            </div>
+
+            <!-- Language Selector -->
+            <div class="sidebar-lang">
+                <select id="lang-select" class="lang-selector" onchange="switchLanguage(this.value)">
+                    
+                    <option value="en" selected>
+                        English
+                    </option>
+                    
+                    <option value="ko" >
+                        한국어
+                    </option>
+                    
+                </select>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                    <span class="theme-icon light">☀️</span>
+                    <span class="theme-icon dark">🌙</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+                    <span></span>
+                </button>
+                
+<nav class="breadcrumb">
+    <a href="/study/en/">Topics</a>
+    <span class="separator">/</span>
+    <a href="/study/en/Reinforcement_Learning/">Reinforcement Learning</a>
+    <span class="separator">/</span>
+    <span class="current">14. Soft Actor-Critic (SAC)</span>
+</nav>
+
+            </header>
+
+            <div class="content">
+                
+<article class="lesson-article">
+    <header class="lesson-header">
+        <h1>14. Soft Actor-Critic (SAC)</h1>
+    </header>
+
+    
+<div class="lesson-toolbar lesson-toolbar--top">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/Reinforcement_Learning/13_Model_Based_RL.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">13. Model-Based Reinforcement Learning</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/Reinforcement_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+    </div>
+</div>
+
+
+    
+    <nav class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <div class="toc">
+<ul>
+<li><a href="#learning-objectives">Learning Objectives</a></li>
+<li><a href="#table-of-contents">Table of Contents</a></li>
+<li><a href="#1-maximum-entropy-rl">1. Maximum Entropy RL</a><ul>
+<li><a href="#11-standard-rl-vs-maximum-entropy-rl">1.1 Standard RL vs Maximum Entropy RL</a></li>
+<li><a href="#12-soft-bellman-equation">1.2 Soft Bellman Equation</a></li>
+</ul>
+</li>
+<li><a href="#2-sac-algorithm">2. SAC Algorithm</a><ul>
+<li><a href="#21-sac-components">2.1 SAC Components</a></li>
+<li><a href="#22-sac-update-rules">2.2 SAC Update Rules</a></li>
+</ul>
+</li>
+<li><a href="#3-sac-implementation">3. SAC Implementation</a><ul>
+<li><a href="#31-actor-network-squashed-gaussian-policy">3.1 Actor Network (Squashed Gaussian Policy)</a></li>
+<li><a href="#32-critic-networks">3.2 Critic Networks</a></li>
+<li><a href="#33-sac-agent">3.3 SAC Agent</a></li>
+<li><a href="#34-replay-buffer">3.4 Replay Buffer</a></li>
+<li><a href="#35-training-loop">3.5 Training Loop</a></li>
+</ul>
+</li>
+<li><a href="#4-automatic-temperature-tuning">4. Automatic Temperature Tuning</a><ul>
+<li><a href="#41-why-auto-tuning-matters">4.1 Why Auto-Tuning Matters</a></li>
+<li><a href="#42-temperature-loss">4.2 Temperature Loss</a></li>
+</ul>
+</li>
+<li><a href="#5-sac-vs-other-algorithms">5. SAC vs Other Algorithms</a><ul>
+<li><a href="#51-comparison-table">5.1 Comparison Table</a></li>
+<li><a href="#52-when-to-use-sac">5.2 When to Use SAC</a></li>
+</ul>
+</li>
+<li><a href="#6-practical-tips">6. Practical Tips</a><ul>
+<li><a href="#61-hyperparameters">6.1 Hyperparameters</a></li>
+<li><a href="#62-common-issues-and-solutions">6.2 Common Issues and Solutions</a></li>
+</ul>
+</li>
+<li><a href="#7-practice-problems">7. Practice Problems</a><ul>
+<li><a href="#exercise-1-sac-on-pendulum">Exercise 1: SAC on Pendulum</a></li>
+<li><a href="#exercise-2-compare-sac-vs-ppo">Exercise 2: Compare SAC vs PPO</a></li>
+<li><a href="#exercise-3-ablation-study">Exercise 3: Ablation Study</a></li>
+<li><a href="#exercise-4-custom-environment">Exercise 4: Custom Environment</a></li>
+</ul>
+</li>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+</div>
+
+    </nav>
+    
+
+    <div class="lesson-content markdown-body">
+        <h1 id="14-soft-actor-critic-sac">14. Soft Actor-Critic (SAC)<a class="header-link" href="#14-soft-actor-critic-sac" title="Permanent link">&para;</a></h1>
+<p><strong>Difficulty: ⭐⭐⭐⭐ (Advanced)</strong></p>
+<h2 id="learning-objectives">Learning Objectives<a class="header-link" href="#learning-objectives" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Understand maximum entropy reinforcement learning</li>
+<li>Implement the SAC algorithm for continuous action spaces</li>
+<li>Learn automatic temperature (alpha) tuning</li>
+<li>Compare SAC with PPO and TD3</li>
+<li>Apply SAC to practical continuous control tasks</li>
+</ul>
+<hr />
+<h2 id="table-of-contents">Table of Contents<a class="header-link" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#1-maximum-entropy-rl">Maximum Entropy RL</a></li>
+<li><a href="#2-sac-algorithm">SAC Algorithm</a></li>
+<li><a href="#3-sac-implementation">SAC Implementation</a></li>
+<li><a href="#4-automatic-temperature-tuning">Automatic Temperature Tuning</a></li>
+<li><a href="#5-sac-vs-other-algorithms">SAC vs Other Algorithms</a></li>
+<li><a href="#6-practical-tips">Practical Tips</a></li>
+<li><a href="#7-practice-problems">Practice Problems</a></li>
+</ol>
+<hr />
+<h2 id="1-maximum-entropy-rl">1. Maximum Entropy RL<a class="header-link" href="#1-maximum-entropy-rl" title="Permanent link">&para;</a></h2>
+<h3 id="11-standard-rl-vs-maximum-entropy-rl">1.1 Standard RL vs Maximum Entropy RL<a class="header-link" href="#11-standard-rl-vs-maximum-entropy-rl" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│              Maximum Entropy Framework                            │
+│                                                                 │
+│  Standard RL objective:                                         │
+│  π* = argmax_π  E [ Σ γ^t r_t ]                               │
+│                  → maximize expected return only                 │
+│                                                                 │
+│  Maximum Entropy RL objective:                                  │
+│  π* = argmax_π  E [ Σ γ^t (r_t + α H(π(·|s_t))) ]            │
+│                  → maximize return + policy entropy             │
+│                                                                 │
+│  Where:                                                         │
+│  • H(π(·|s)) = -E[log π(a|s)] is the policy entropy           │
+│  • α (temperature) controls exploration-exploitation balance    │
+│                                                                 │
+│  Benefits of maximum entropy:                                   │
+│  1. Encourages exploration (higher entropy = more random)       │
+│  2. Captures multiple modes (doesn&#39;t collapse to one solution)  │
+│  3. More robust to perturbations                                │
+│  4. Better transfer and fine-tuning                             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="12-soft-bellman-equation">1.2 Soft Bellman Equation<a class="header-link" href="#12-soft-bellman-equation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│              Soft Value Functions                                 │
+│                                                                 │
+│  Soft state value:                                              │
+│  V(s) = E_a~π [ Q(s,a) - α log π(a|s) ]                      │
+│                                                                 │
+│  Soft Q-value (Bellman equation):                               │
+│  Q(s,a) = r(s,a) + γ E_s&#39; [ V(s&#39;) ]                          │
+│         = r(s,a) + γ E_s&#39; [ E_a&#39;~π [ Q(s&#39;,a&#39;) - α log π(a&#39;|s&#39;) ] ]
+│                                                                 │
+│  Soft policy improvement:                                       │
+│  π_new = argmin_π  D_KL( π(·|s) || exp(Q(s,·)/α) / Z(s) )   │
+│                                                                 │
+│  In practice: π outputs mean and std of Gaussian               │
+│  a ~ tanh(μ + σ · ε),  ε ~ N(0, I)                            │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="2-sac-algorithm">2. SAC Algorithm<a class="header-link" href="#2-sac-algorithm" title="Permanent link">&para;</a></h2>
+<h3 id="21-sac-components">2.1 SAC Components<a class="header-link" href="#21-sac-components" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│              SAC Architecture                                    │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────┐           │
+│  │                  Actor (Policy)                    │           │
+│  │  π_φ(a|s): Squashed Gaussian                     │           │
+│  │  Input: state s                                   │           │
+│  │  Output: μ(s), σ(s) → a = tanh(μ + σ·ε)         │           │
+│  └──────────────────────────────────────────────────┘           │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────┐           │
+│  │              Twin Critics (Q1, Q2)                 │           │
+│  │  Q_θ1(s, a), Q_θ2(s, a)                          │           │
+│  │  Input: state s, action a                         │           │
+│  │  Output: Q-value                                  │           │
+│  │  → Use min(Q1, Q2) to prevent overestimation     │           │
+│  └──────────────────────────────────────────────────┘           │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────┐           │
+│  │              Target Networks (Q1&#39;, Q2&#39;)            │           │
+│  │  Soft update: θ&#39; ← τθ + (1-τ)θ&#39;                  │           │
+│  │  Provides stable targets for critic training      │           │
+│  └──────────────────────────────────────────────────┘           │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────┐           │
+│  │              Temperature (α)                       │           │
+│  │  Controls entropy bonus                           │           │
+│  │  Can be fixed or automatically tuned              │           │
+│  └──────────────────────────────────────────────────┘           │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="22-sac-update-rules">2.2 SAC Update Rules<a class="header-link" href="#22-sac-update-rules" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│              SAC Training Steps                                  │
+│                                                                 │
+│  For each gradient step:                                        │
+│                                                                 │
+│  1. Sample batch (s, a, r, s&#39;, done) from replay buffer         │
+│                                                                 │
+│  2. Compute target:                                             │
+│     a&#39; ~ π_φ(·|s&#39;)                                              │
+│     y = r + γ(1-done) × [min(Q&#39;₁(s&#39;,a&#39;), Q&#39;₂(s&#39;,a&#39;))          │
+│                           - α log π_φ(a&#39;|s&#39;)]                   │
+│                                                                 │
+│  3. Update Critics (minimize MSE):                              │
+│     L_Q = E[(Q_θi(s,a) - y)²]  for i = 1, 2                  │
+│                                                                 │
+│  4. Update Actor (maximize):                                    │
+│     ã ~ π_φ(·|s)  (reparameterization trick)                   │
+│     L_π = E[α log π_φ(ã|s) - min(Q_θ1(s,ã), Q_θ2(s,ã))]    │
+│                                                                 │
+│  5. Update Temperature (if auto-tuning):                        │
+│     L_α = E[-α (log π_φ(ã|s) + H_target)]                    │
+│                                                                 │
+│  6. Soft update target networks:                                │
+│     θ&#39;i ← τ θi + (1-τ) θ&#39;i                                    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<hr />
+<h2 id="3-sac-implementation">3. SAC Implementation<a class="header-link" href="#3-sac-implementation" title="Permanent link">&para;</a></h2>
+<h3 id="31-actor-network-squashed-gaussian-policy">3.1 Actor Network (Squashed Gaussian Policy)<a class="header-link" href="#31-actor-network-squashed-gaussian-policy" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nn</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch.nn.functional</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">F</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.distributions</span><span class="w"> </span><span class="kn">import</span> <span class="n">Normal</span>
+
+<span class="n">LOG_STD_MIN</span> <span class="o">=</span> <span class="o">-</span><span class="mi">20</span>
+<span class="n">LOG_STD_MAX</span> <span class="o">=</span> <span class="mi">2</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">GaussianActor</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="o">=</span><span class="mi">256</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">net</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">state_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean_head</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_std_head</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+        <span class="n">mean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_head</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">log_std</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_std_head</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">log_std</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">log_std</span><span class="p">,</span> <span class="n">LOG_STD_MIN</span><span class="p">,</span> <span class="n">LOG_STD_MAX</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">mean</span><span class="p">,</span> <span class="n">log_std</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">mean</span><span class="p">,</span> <span class="n">log_std</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">log_std</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span>
+        <span class="n">normal</span> <span class="o">=</span> <span class="n">Normal</span><span class="p">(</span><span class="n">mean</span><span class="p">,</span> <span class="n">std</span><span class="p">)</span>
+
+        <span class="c1"># Reparameterization trick: z = μ + σ·ε</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">normal</span><span class="o">.</span><span class="n">rsample</span><span class="p">()</span>
+
+        <span class="c1"># Squash through tanh</span>
+        <span class="n">action</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+
+        <span class="c1"># Log probability with correction for tanh squashing</span>
+        <span class="n">log_prob</span> <span class="o">=</span> <span class="n">normal</span><span class="o">.</span><span class="n">log_prob</span><span class="p">(</span><span class="n">z</span><span class="p">)</span> <span class="o">-</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">action</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-6</span><span class="p">)</span>
+        <span class="n">log_prob</span> <span class="o">=</span> <span class="n">log_prob</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">action</span><span class="p">,</span> <span class="n">log_prob</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">deterministic_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">mean</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">mean</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="32-critic-networks">3.2 Critic Networks<a class="header-link" href="#32-critic-networks" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">TwinQCritic</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="o">=</span><span class="mi">256</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="c1"># Q1 network</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q1</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">state_dim</span> <span class="o">+</span> <span class="n">action_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Q2 network</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q2</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">state_dim</span> <span class="o">+</span> <span class="n">action_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_dim</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">],</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">q1</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">q2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">q1_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">],</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">q1</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="33-sac-agent">3.3 SAC Agent<a class="header-link" href="#33-sac-agent" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">SACAgent</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span>
+                 <span class="n">lr</span><span class="o">=</span><span class="mf">3e-4</span><span class="p">,</span> <span class="n">gamma</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="mf">0.005</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+                 <span class="n">auto_alpha</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">target_entropy</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="n">gamma</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="o">=</span> <span class="n">tau</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_alpha</span> <span class="o">=</span> <span class="n">auto_alpha</span>
+
+        <span class="c1"># Networks</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor</span> <span class="o">=</span> <span class="n">GaussianActor</span><span class="p">(</span><span class="n">state_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">critic</span> <span class="o">=</span> <span class="n">TwinQCritic</span><span class="p">(</span><span class="n">state_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">critic_target</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">critic</span><span class="p">)</span>
+
+        <span class="c1"># Freeze target parameters</span>
+        <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">critic_target</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
+            <span class="n">param</span><span class="o">.</span><span class="n">requires_grad</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="c1"># Optimizers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor_optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">critic_optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">critic</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">)</span>
+
+        <span class="c1"># Temperature (alpha)</span>
+        <span class="k">if</span> <span class="n">auto_alpha</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">target_entropy</span> <span class="o">=</span> <span class="n">target_entropy</span> <span class="ow">or</span> <span class="o">-</span><span class="n">action_dim</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log_alpha</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_alpha</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">alpha_optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">log_alpha</span><span class="p">],</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="n">alpha</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">select_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">deterministic</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="n">state</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">deterministic</span><span class="p">:</span>
+                <span class="n">action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">deterministic_action</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">action</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">action</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">):</span>
+        <span class="n">states</span><span class="p">,</span> <span class="n">actions</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">next_states</span><span class="p">,</span> <span class="n">dones</span> <span class="o">=</span> <span class="n">batch</span>
+
+        <span class="c1"># --- Update Critics ---</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">next_actions</span><span class="p">,</span> <span class="n">next_log_probs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">next_states</span><span class="p">)</span>
+            <span class="n">q1_target</span><span class="p">,</span> <span class="n">q2_target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">critic_target</span><span class="p">(</span><span class="n">next_states</span><span class="p">,</span> <span class="n">next_actions</span><span class="p">)</span>
+            <span class="n">q_target</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">q1_target</span><span class="p">,</span> <span class="n">q2_target</span><span class="p">)</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="n">rewards</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">dones</span><span class="p">)</span> <span class="o">*</span> \
+                     <span class="p">(</span><span class="n">q_target</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">*</span> <span class="n">next_log_probs</span><span class="p">)</span>
+
+        <span class="n">q1</span><span class="p">,</span> <span class="n">q2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">critic</span><span class="p">(</span><span class="n">states</span><span class="p">,</span> <span class="n">actions</span><span class="p">)</span>
+        <span class="n">critic_loss</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">q1</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span> <span class="o">+</span> <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">q2</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">critic_optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+        <span class="n">critic_loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">critic_optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+        <span class="c1"># --- Update Actor ---</span>
+        <span class="n">new_actions</span><span class="p">,</span> <span class="n">log_probs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actor</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">states</span><span class="p">)</span>
+        <span class="n">q1_new</span><span class="p">,</span> <span class="n">q2_new</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">critic</span><span class="p">(</span><span class="n">states</span><span class="p">,</span> <span class="n">new_actions</span><span class="p">)</span>
+        <span class="n">q_new</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">q1_new</span><span class="p">,</span> <span class="n">q2_new</span><span class="p">)</span>
+
+        <span class="n">actor_loss</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">*</span> <span class="n">log_probs</span> <span class="o">-</span> <span class="n">q_new</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor_optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+        <span class="n">actor_loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actor_optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+        <span class="c1"># --- Update Temperature ---</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">auto_alpha</span><span class="p">:</span>
+            <span class="n">alpha_loss</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_alpha</span> <span class="o">*</span> <span class="p">(</span><span class="n">log_probs</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_entropy</span><span class="p">))</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">alpha_optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+            <span class="n">alpha_loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">alpha_optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_alpha</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+
+        <span class="c1"># --- Soft Update Target Networks ---</span>
+        <span class="k">for</span> <span class="n">param</span><span class="p">,</span> <span class="n">target_param</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">critic</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">critic_target</span><span class="o">.</span><span class="n">parameters</span><span class="p">()</span>
+        <span class="p">):</span>
+            <span class="n">target_param</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">copy_</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="o">*</span> <span class="n">param</span><span class="o">.</span><span class="n">data</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">)</span> <span class="o">*</span> <span class="n">target_param</span><span class="o">.</span><span class="n">data</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;critic_loss&#39;</span><span class="p">:</span> <span class="n">critic_loss</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span>
+            <span class="s1">&#39;actor_loss&#39;</span><span class="p">:</span> <span class="n">actor_loss</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span>
+            <span class="s1">&#39;alpha&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span><span class="p">,</span>
+            <span class="s1">&#39;entropy&#39;</span><span class="p">:</span> <span class="o">-</span><span class="n">log_probs</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+        <span class="p">}</span>
+</code></pre></div>
+
+<h3 id="34-replay-buffer">3.4 Replay Buffer<a class="header-link" href="#34-replay-buffer" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ReplayBuffer</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">,</span> <span class="n">capacity</span><span class="o">=</span><span class="mi">1_000_000</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span> <span class="o">=</span> <span class="n">capacity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">states</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">capacity</span><span class="p">,</span> <span class="n">state_dim</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">capacity</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rewards</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">capacity</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">next_states</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">capacity</span><span class="p">,</span> <span class="n">state_dim</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dones</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">capacity</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">next_state</span><span class="p">,</span> <span class="n">done</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actions</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">action</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rewards</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">reward</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">next_states</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">next_state</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dones</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">done</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">):</span>
+        <span class="n">idxs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="p">[</span><span class="n">idxs</span><span class="p">]),</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">actions</span><span class="p">[</span><span class="n">idxs</span><span class="p">]),</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rewards</span><span class="p">[</span><span class="n">idxs</span><span class="p">]),</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">next_states</span><span class="p">[</span><span class="n">idxs</span><span class="p">]),</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dones</span><span class="p">[</span><span class="n">idxs</span><span class="p">])</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span>
+</code></pre></div>
+
+<h3 id="35-training-loop">3.5 Training Loop<a class="header-link" href="#35-training-loop" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">gymnasium</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">gym</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">train_sac</span><span class="p">(</span><span class="n">env_name</span><span class="o">=</span><span class="s1">&#39;Pendulum-v1&#39;</span><span class="p">,</span> <span class="n">total_steps</span><span class="o">=</span><span class="mi">100_000</span><span class="p">,</span>
+              <span class="n">batch_size</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">start_steps</span><span class="o">=</span><span class="mi">5000</span><span class="p">):</span>
+    <span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="n">env_name</span><span class="p">)</span>
+    <span class="n">state_dim</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">observation_space</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">action_dim</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">action_scale</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">high</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">agent</span> <span class="o">=</span> <span class="n">SACAgent</span><span class="p">(</span><span class="n">state_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">)</span>
+    <span class="n">buffer</span> <span class="o">=</span> <span class="n">ReplayBuffer</span><span class="p">(</span><span class="n">state_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">)</span>
+
+    <span class="n">state</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+    <span class="n">episode_reward</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">episode_rewards</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">total_steps</span><span class="p">):</span>
+        <span class="c1"># Random actions for initial exploration</span>
+        <span class="k">if</span> <span class="n">step</span> <span class="o">&lt;</span> <span class="n">start_steps</span><span class="p">:</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">sample</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="n">agent</span><span class="o">.</span><span class="n">select_action</span><span class="p">(</span><span class="n">state</span><span class="p">)</span> <span class="o">*</span> <span class="n">action_scale</span>
+
+        <span class="n">next_state</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">terminated</span><span class="p">,</span> <span class="n">truncated</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+        <span class="n">done</span> <span class="o">=</span> <span class="n">terminated</span> <span class="ow">or</span> <span class="n">truncated</span>
+        <span class="n">buffer</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">action</span> <span class="o">/</span> <span class="n">action_scale</span><span class="p">,</span> <span class="n">reward</span><span class="p">,</span> <span class="n">next_state</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">terminated</span><span class="p">))</span>
+
+        <span class="n">state</span> <span class="o">=</span> <span class="n">next_state</span>
+        <span class="n">episode_reward</span> <span class="o">+=</span> <span class="n">reward</span>
+
+        <span class="k">if</span> <span class="n">done</span><span class="p">:</span>
+            <span class="n">episode_rewards</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">episode_reward</span><span class="p">)</span>
+            <span class="n">state</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+            <span class="n">episode_reward</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># Update after collecting enough data</span>
+        <span class="k">if</span> <span class="n">step</span> <span class="o">&gt;=</span> <span class="n">start_steps</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">batch_size</span><span class="p">:</span>
+            <span class="n">batch</span> <span class="o">=</span> <span class="n">buffer</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">batch_size</span><span class="p">)</span>
+            <span class="n">metrics</span> <span class="o">=</span> <span class="n">agent</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">step</span> <span class="o">%</span> <span class="mi">1000</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">avg_reward</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">episode_rewards</span><span class="p">[</span><span class="o">-</span><span class="mi">10</span><span class="p">:])</span> <span class="k">if</span> <span class="n">episode_rewards</span> <span class="k">else</span> <span class="mi">0</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Step </span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s2">: avg_reward=</span><span class="si">{</span><span class="n">avg_reward</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">, &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;alpha=</span><span class="si">{</span><span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;alpha&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">, &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;entropy=</span><span class="si">{</span><span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;entropy&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">agent</span><span class="p">,</span> <span class="n">episode_rewards</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-automatic-temperature-tuning">4. Automatic Temperature Tuning<a class="header-link" href="#4-automatic-temperature-tuning" title="Permanent link">&para;</a></h2>
+<h3 id="41-why-auto-tuning-matters">4.1 Why Auto-Tuning Matters<a class="header-link" href="#41-why-auto-tuning-matters" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌─────────────────────────────────────────────────────────────────┐
+│              Temperature (α) Effect                              │
+│                                                                 │
+│  α too high:                     α too low:                     │
+│  ┌─────────────────────┐         ┌─────────────────────┐       │
+│  │ Entropy dominates    │         │ Return dominates     │       │
+│  │ → nearly random     │         │ → premature          │       │
+│  │ → slow learning     │         │   convergence        │       │
+│  │ → poor performance  │         │ → poor exploration   │       │
+│  └─────────────────────┘         └─────────────────────┘       │
+│                                                                 │
+│  Auto-tuning:                                                   │
+│  ┌──────────────────────────────────────────────────┐           │
+│  │ Constraint: H(π(·|s)) ≥ H_target               │           │
+│  │ If entropy &lt; target: increase α (explore more)   │           │
+│  │ If entropy &gt; target: decrease α (exploit more)   │           │
+│  │ H_target = -dim(A) (heuristic for continuous)    │           │
+│  └──────────────────────────────────────────────────┘           │
+│                                                                 │
+│  Typical α trajectory during training:                          │
+│  α                                                              │
+│  │                                                              │
+│  │  ╲                                                           │
+│  │   ╲                                                          │
+│  │    ╲___                                                      │
+│  │        ╲____                                                 │
+│  │             ╲_________                                       │
+│  │                       ─────                                  │
+│  └──────────────────────────────▶ steps                        │
+│  (starts high for exploration, decreases as policy converges)   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div>
+
+<h3 id="42-temperature-loss">4.2 Temperature Loss<a class="header-link" href="#42-temperature-loss" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Automatic temperature tuning objective</span>
+<span class="c1"># L(α) = E_a~π [-α log π(a|s) - α H_target]</span>
+<span class="c1"># = E_a~π [-α (log π(a|s) + H_target)]</span>
+
+<span class="c1"># In the update step:</span>
+<span class="n">alpha_loss</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_alpha</span> <span class="o">*</span> <span class="p">(</span><span class="n">log_probs</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_entropy</span><span class="p">))</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+<span class="c1"># Intuition:</span>
+<span class="c1"># When entropy (-log_probs) &lt; H_target: log_probs + H_target &gt; 0</span>
+<span class="c1"># → gradient pushes log_alpha up → α increases → more entropy encouraged</span>
+<span class="c1"># When entropy &gt; H_target: log_probs + H_target &lt; 0</span>
+<span class="c1"># → gradient pushes log_alpha down → α decreases</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-sac-vs-other-algorithms">5. SAC vs Other Algorithms<a class="header-link" href="#5-sac-vs-other-algorithms" title="Permanent link">&para;</a></h2>
+<h3 id="51-comparison-table">5.1 Comparison Table<a class="header-link" href="#51-comparison-table" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">┌───────────────┬──────────┬──────────┬──────────┬───────────────┐</span>
+<span class="err">│</span><span class="w">               </span><span class="err">│</span><span class="w"> </span><span class="nx">SAC</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="nx">PPO</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="nx">TD3</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="nx">DDPG</span><span class="w">          </span><span class="err">│</span>
+<span class="err">├───────────────┼──────────┼──────────┼──────────┼───────────────┤</span>
+<span class="err">│</span><span class="w"> </span><span class="nx">Policy</span><span class="w"> </span><span class="k">type</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="nx">Stochas</span><span class="p">.</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="nx">Stochas</span><span class="p">.</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="nx">Determin</span><span class="p">.</span><span class="err">│</span><span class="w"> </span><span class="nx">Deterministic</span><span class="w"> </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="nx">On</span><span class="o">/</span><span class="nx">Off</span><span class="w"> </span><span class="nx">policy</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="nx">Off</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="nx">On</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="nx">Off</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="nx">Off</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="nx">Action</span><span class="w"> </span><span class="nx">space</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">Contin</span><span class="p">.</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">Both</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="nx">Contin</span><span class="p">.</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">Continuous</span><span class="w">    </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="nx">Entropy</span><span class="w"> </span><span class="nx">reg</span><span class="p">.</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">Yes</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="nx">Yes</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="nx">No</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="nx">No</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="nx">Twin</span><span class="w"> </span><span class="nx">critics</span><span class="w">  </span><span class="err">│</span><span class="w"> </span><span class="nx">Yes</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="nx">No</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="nx">Yes</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="nx">No</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="nx">Sample</span><span class="w"> </span><span class="nx">eff</span><span class="p">.</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="nx">High</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="nx">Low</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="nx">High</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="nx">Medium</span><span class="w">        </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="nx">Stability</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="nx">High</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="nx">High</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="nx">Medium</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="nx">Low</span><span class="w">           </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="nx">Hyperparams</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="nx">Few</span><span class="w">      </span><span class="err">│</span><span class="w"> </span><span class="nx">Many</span><span class="w">     </span><span class="err">│</span><span class="w"> </span><span class="nx">Medium</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="nx">Many</span><span class="w">          </span><span class="err">│</span>
+<span class="err">│</span><span class="w"> </span><span class="nx">Auto</span><span class="o">-</span><span class="nx">tuning</span><span class="w">   </span><span class="err">│</span><span class="w"> </span><span class="nx">α</span><span class="w"> </span><span class="nx">tuning</span><span class="w"> </span><span class="err">│</span><span class="w"> </span><span class="nx">No</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="nx">No</span><span class="w">       </span><span class="err">│</span><span class="w"> </span><span class="nx">No</span><span class="w">            </span><span class="err">│</span>
+<span class="err">└───────────────┴──────────┴──────────┴──────────┴───────────────┘</span>
+</code></pre></div>
+
+<h3 id="52-when-to-use-sac">5.2 When to Use SAC<a class="header-link" href="#52-when-to-use-sac" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nx">Use</span><span class="w"> </span><span class="nx">SAC</span><span class="w"> </span><span class="nx">when</span><span class="p">:</span>
+<span class="err">✓</span><span class="w"> </span><span class="nx">Continuous</span><span class="w"> </span><span class="nx">action</span><span class="w"> </span><span class="nx">spaces</span><span class="w"> </span><span class="p">(</span><span class="nx">robotics</span><span class="p">,</span><span class="w"> </span><span class="nx">control</span><span class="p">)</span>
+<span class="err">✓</span><span class="w"> </span><span class="nx">Sample</span><span class="w"> </span><span class="nx">efficiency</span><span class="w"> </span><span class="nx">matters</span><span class="w"> </span><span class="p">(</span><span class="nx">real</span><span class="o">-</span><span class="nx">world</span><span class="p">,</span><span class="w"> </span><span class="nx">expensive</span><span class="w"> </span><span class="nx">simulation</span><span class="p">)</span>
+<span class="err">✓</span><span class="w"> </span><span class="nx">You</span><span class="w"> </span><span class="nx">want</span><span class="w"> </span><span class="nx">stable</span><span class="w"> </span><span class="nx">training</span><span class="w"> </span><span class="nx">with</span><span class="w"> </span><span class="nx">minimal</span><span class="w"> </span><span class="nx">tuning</span>
+<span class="err">✓</span><span class="w"> </span><span class="nx">Multi</span><span class="o">-</span><span class="nx">modal</span><span class="w"> </span><span class="nx">optimal</span><span class="w"> </span><span class="nx">policies</span><span class="w"> </span><span class="nx">exist</span>
+
+<span class="nx">Use</span><span class="w"> </span><span class="nx">PPO</span><span class="w"> </span><span class="nx">instead</span><span class="w"> </span><span class="nx">when</span><span class="p">:</span>
+<span class="err">✓</span><span class="w"> </span><span class="nx">Discrete</span><span class="w"> </span><span class="nx">action</span><span class="w"> </span><span class="nx">spaces</span>
+<span class="err">✓</span><span class="w"> </span><span class="nx">On</span><span class="o">-</span><span class="nx">policy</span><span class="w"> </span><span class="nx">learning</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="nx">preferred</span>
+<span class="err">✓</span><span class="w"> </span><span class="nx">Simulation</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="nx">cheap</span><span class="w"> </span><span class="p">(</span><span class="nx">can</span><span class="w"> </span><span class="nx">generate</span><span class="w"> </span><span class="nx">many</span><span class="w"> </span><span class="nx">samples</span><span class="p">)</span>
+<span class="err">✓</span><span class="w"> </span><span class="nx">Distributed</span><span class="w"> </span><span class="nx">training</span><span class="w"> </span><span class="p">(</span><span class="nx">PPO</span><span class="w"> </span><span class="nx">scales</span><span class="w"> </span><span class="nx">better</span><span class="p">)</span>
+
+<span class="nx">Use</span><span class="w"> </span><span class="nx">TD3</span><span class="w"> </span><span class="nx">instead</span><span class="w"> </span><span class="nx">when</span><span class="p">:</span>
+<span class="err">✓</span><span class="w"> </span><span class="nx">Deterministic</span><span class="w"> </span><span class="nx">policy</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="nx">preferred</span>
+<span class="err">✓</span><span class="w"> </span><span class="nx">Simpler</span><span class="w"> </span><span class="nx">implementation</span><span class="w"> </span><span class="nx">needed</span>
+<span class="err">✓</span><span class="w"> </span><span class="nx">No</span><span class="w"> </span><span class="nx">entropy</span><span class="w"> </span><span class="nx">regularization</span><span class="w"> </span><span class="nx">wanted</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-practical-tips">6. Practical Tips<a class="header-link" href="#6-practical-tips" title="Permanent link">&para;</a></h2>
+<h3 id="61-hyperparameters">6.1 Hyperparameters<a class="header-link" href="#61-hyperparameters" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>┌────────────────────────┬──────────────┬──────────────────────────┐
+│<span class="w"> </span><span class="nv">Hyperparameter</span><span class="w">         </span>│<span class="w"> </span><span class="nv">Default</span><span class="w">      </span>│<span class="w"> </span><span class="nv">Notes</span><span class="w">                    </span>│
+├────────────────────────┼──────────────┼──────────────────────────┤
+│<span class="w"> </span><span class="nv">Learning</span><span class="w"> </span><span class="nv">rate</span><span class="w">          </span>│<span class="w"> </span><span class="mi">3</span><span class="nv">e</span><span class="o">-</span><span class="mi">4</span><span class="w">         </span>│<span class="w"> </span><span class="nv">Same</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nv">actor</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="nv">critic</span><span class="w">  </span>│
+│<span class="w"> </span><span class="nv">Discount</span><span class="w"> </span><span class="ss">(</span>γ<span class="ss">)</span><span class="w">           </span>│<span class="w"> </span><span class="mi">0</span>.<span class="mi">99</span><span class="w">         </span>│<span class="w"> </span><span class="nv">Standard</span><span class="w">                 </span>│
+│<span class="w"> </span><span class="nv">Soft</span><span class="w"> </span><span class="nv">update</span><span class="w"> </span><span class="ss">(</span>τ<span class="ss">)</span><span class="w">        </span>│<span class="w"> </span><span class="mi">0</span>.<span class="mi">005</span><span class="w">        </span>│<span class="w"> </span><span class="nv">Slow</span><span class="w"> </span><span class="nv">target</span><span class="w"> </span><span class="nv">updates</span><span class="w">      </span>│
+│<span class="w"> </span><span class="nv">Batch</span><span class="w"> </span><span class="nv">size</span><span class="w">             </span>│<span class="w"> </span><span class="mi">256</span><span class="w">          </span>│<span class="w"> </span><span class="nv">Larger</span><span class="w"> </span><span class="nv">is</span><span class="w"> </span><span class="nv">more</span><span class="w"> </span><span class="nv">stable</span><span class="w">    </span>│
+│<span class="w"> </span><span class="nv">Buffer</span><span class="w"> </span><span class="nv">size</span><span class="w">            </span>│<span class="w"> </span><span class="mi">1</span><span class="nv">M</span><span class="w">           </span>│<span class="w"> </span><span class="nv">Large</span><span class="w"> </span><span class="nv">replay</span><span class="w"> </span><span class="nv">buffer</span><span class="w">      </span>│
+│<span class="w"> </span><span class="nv">Hidden</span><span class="w"> </span><span class="nv">layers</span><span class="w">          </span>│<span class="w"> </span><span class="ss">(</span><span class="mi">256</span>,<span class="w"> </span><span class="mi">256</span><span class="ss">)</span><span class="w">   </span>│<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="nv">layers</span><span class="w"> </span><span class="nv">is</span><span class="w"> </span><span class="nv">standard</span><span class="w">     </span>│
+│<span class="w"> </span><span class="nv">Start</span><span class="w"> </span><span class="nv">steps</span><span class="w">            </span>│<span class="w"> </span><span class="mi">5000</span><span class="o">-</span><span class="mi">10000</span><span class="w">   </span>│<span class="w"> </span><span class="k">Random</span><span class="w"> </span><span class="nv">exploration</span><span class="w"> </span><span class="nv">first</span><span class="w"> </span>│
+│<span class="w"> </span><span class="nv">Target</span><span class="w"> </span><span class="nv">entropy</span><span class="w">         </span>│<span class="w"> </span><span class="o">-</span><span class="nv">dim</span><span class="ss">(</span><span class="nv">A</span><span class="ss">)</span><span class="w">      </span>│<span class="w"> </span><span class="nv">Heuristic</span>,<span class="w"> </span><span class="nv">works</span><span class="w"> </span><span class="nv">well</span><span class="w">    </span>│
+│<span class="w"> </span><span class="nv">Gradient</span><span class="w"> </span><span class="nv">steps</span><span class="o">/</span><span class="nv">env</span><span class="w"> </span><span class="nv">step</span>│<span class="w"> </span><span class="mi">1</span><span class="w">            </span>│<span class="w"> </span><span class="mi">1</span>:<span class="mi">1</span><span class="w"> </span><span class="nv">ratio</span><span class="w"> </span><span class="nv">is</span><span class="w"> </span><span class="nv">standard</span><span class="w">    </span>│
+└────────────────────────┴──────────────┴──────────────────────────┘
+</code></pre></div>
+
+<h3 id="62-common-issues-and-solutions">6.2 Common Issues and Solutions<a class="header-link" href="#62-common-issues-and-solutions" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">Issue</span><span class="o">:</span><span class="w"> </span><span class="n">Training</span><span class="w"> </span><span class="n">instability</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">Q</span><span class="o">-</span><span class="n">values</span><span class="w"> </span><span class="n">diverge</span>
+<span class="err">→</span><span class="w"> </span><span class="n">Check</span><span class="w"> </span><span class="n">reward</span><span class="w"> </span><span class="n">scale</span><span class="w"> </span><span class="o">(</span><span class="n">normalize</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">needed</span><span class="o">)</span>
+<span class="err">→</span><span class="w"> </span><span class="n">Reduce</span><span class="w"> </span><span class="n">learning</span><span class="w"> </span><span class="n">rate</span>
+<span class="err">→</span><span class="w"> </span><span class="n">Increase</span><span class="w"> </span><span class="n">batch</span><span class="w"> </span><span class="n">size</span>
+
+<span class="n">Issue</span><span class="o">:</span><span class="w"> </span><span class="n">Low</span><span class="w"> </span><span class="n">entropy</span><span class="w"> </span><span class="o">(</span><span class="n">premature</span><span class="w"> </span><span class="n">convergence</span><span class="o">)</span>
+<span class="err">→</span><span class="w"> </span><span class="n">Enable</span><span class="w"> </span><span class="n">auto</span><span class="w"> </span><span class="n">alpha</span><span class="w"> </span><span class="n">tuning</span>
+<span class="err">→</span><span class="w"> </span><span class="n">Increase</span><span class="w"> </span><span class="n">initial</span><span class="w"> </span><span class="n">alpha</span>
+<span class="err">→</span><span class="w"> </span><span class="n">Check</span><span class="w"> </span><span class="n">action</span><span class="w"> </span><span class="n">bounds</span>
+
+<span class="n">Issue</span><span class="o">:</span><span class="w"> </span><span class="n">Slow</span><span class="w"> </span><span class="n">learning</span>
+<span class="err">→</span><span class="w"> </span><span class="n">Increase</span><span class="w"> </span><span class="n">start_steps</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">better</span><span class="w"> </span><span class="n">initial</span><span class="w"> </span><span class="n">exploration</span>
+<span class="err">→</span><span class="w"> </span><span class="n">Try</span><span class="w"> </span><span class="n">larger</span><span class="w"> </span><span class="n">networks</span>
+<span class="err">→</span><span class="w"> </span><span class="n">Check</span><span class="w"> </span><span class="n">reward</span><span class="w"> </span><span class="n">shaping</span>
+
+<span class="n">Issue</span><span class="o">:</span><span class="w"> </span><span class="n">Action</span><span class="w"> </span><span class="n">values</span><span class="w"> </span><span class="n">saturating</span><span class="w"> </span><span class="n">at</span><span class="w"> </span><span class="n">bounds</span>
+<span class="err">→</span><span class="w"> </span><span class="n">Ensure</span><span class="w"> </span><span class="n">proper</span><span class="w"> </span><span class="n">action</span><span class="w"> </span><span class="n">scaling</span>
+<span class="err">→</span><span class="w"> </span><span class="n">Check</span><span class="w"> </span><span class="n">tanh</span><span class="w"> </span><span class="n">squashing</span><span class="w"> </span><span class="n">implementation</span>
+<span class="err">→</span><span class="w"> </span><span class="n">Verify</span><span class="w"> </span><span class="n">log_prob</span><span class="w"> </span><span class="n">correction</span><span class="w"> </span><span class="n">term</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7-practice-problems">7. Practice Problems<a class="header-link" href="#7-practice-problems" title="Permanent link">&para;</a></h2>
+<h3 id="exercise-1-sac-on-pendulum">Exercise 1: SAC on Pendulum<a class="header-link" href="#exercise-1-sac-on-pendulum" title="Permanent link">&para;</a></h3>
+<p>Train SAC on <code>Pendulum-v1</code> and plot the learning curve.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Train SAC</span>
+<span class="n">agent</span><span class="p">,</span> <span class="n">rewards</span> <span class="o">=</span> <span class="n">train_sac</span><span class="p">(</span><span class="s1">&#39;Pendulum-v1&#39;</span><span class="p">,</span> <span class="n">total_steps</span><span class="o">=</span><span class="mi">50_000</span><span class="p">)</span>
+
+<span class="c1"># Plot learning curve</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="n">window</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">smoothed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="n">rewards</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">window</span><span class="p">)</span><span class="o">/</span><span class="n">window</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;valid&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">smoothed</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Episode&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Episode Reward&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;SAC on Pendulum-v1&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="c1"># Expected: converges to ~-200 within 20K steps</span>
+</code></pre></div>
+
+<h3 id="exercise-2-compare-sac-vs-ppo">Exercise 2: Compare SAC vs PPO<a class="header-link" href="#exercise-2-compare-sac-vs-ppo" title="Permanent link">&para;</a></h3>
+<p>Train both SAC and PPO on a continuous control task and compare sample efficiency.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Use HalfCheetah-v4 or Hopper-v4</span>
+<span class="c1"># Plot reward vs environment steps for both algorithms</span>
+<span class="c1"># Expected: SAC reaches same performance in ~5x fewer environment steps</span>
+<span class="c1"># But PPO may have lower wall-clock time per step</span>
+</code></pre></div>
+
+<h3 id="exercise-3-ablation-study">Exercise 3: Ablation Study<a class="header-link" href="#exercise-3-ablation-study" title="Permanent link">&para;</a></h3>
+<p>Run SAC with these variations and compare:
+1. Fixed alpha = 0.2 (no auto-tuning)
+2. Auto alpha (default)
+3. No entropy term (alpha = 0, equivalent to TD3-like)
+4. Single Q-network (no twin critics)</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Expected findings:</span>
+<span class="c1"># - Auto alpha &gt; fixed alpha (adapts to task)</span>
+<span class="c1"># - With entropy &gt; without (better exploration)</span>
+<span class="c1"># - Twin critics &gt; single (prevents overestimation)</span>
+</code></pre></div>
+
+<h3 id="exercise-4-custom-environment">Exercise 4: Custom Environment<a class="header-link" href="#exercise-4-custom-environment" title="Permanent link">&para;</a></h3>
+<p>Apply SAC to a custom continuous control task.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Example: reaching task</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">gymnasium</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">gym</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">gymnasium</span><span class="w"> </span><span class="kn">import</span> <span class="n">spaces</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ReachingEnv</span><span class="p">(</span><span class="n">gym</span><span class="o">.</span><span class="n">Env</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;2D reaching task: move arm tip to target.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">observation_space</span> <span class="o">=</span> <span class="n">spaces</span><span class="o">.</span><span class="n">Box</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">action_space</span> <span class="o">=</span> <span class="n">spaces</span><span class="o">.</span><span class="n">Box</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">])</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">target</span><span class="p">]),</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">+</span> <span class="n">action</span> <span class="o">*</span> <span class="mf">0.1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">dist</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">target</span><span class="p">)</span>
+        <span class="n">reward</span> <span class="o">=</span> <span class="o">-</span><span class="n">dist</span>
+        <span class="n">done</span> <span class="o">=</span> <span class="n">dist</span> <span class="o">&lt;</span> <span class="mf">0.05</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">target</span><span class="p">]),</span> <span class="n">reward</span><span class="p">,</span> <span class="n">done</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="p">{}</span>
+</code></pre></div>
+
+<hr />
+<h2 id="summary">Summary<a class="header-link" href="#summary" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">              </span><span class="n">SAC</span><span class="w"> </span><span class="k">Key</span><span class="w"> </span><span class="n">Components</span><span class="w">                                  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">1.</span><span class="w"> </span><span class="n">Maximum</span><span class="w"> </span><span class="n">entropy</span><span class="w"> </span><span class="nl">objective</span><span class="p">:</span><span class="w"> </span><span class="n">reward</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">α</span><span class="w"> </span><span class="err">×</span><span class="w"> </span><span class="n">entropy</span><span class="w">             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">2.</span><span class="w"> </span><span class="n">Squashed</span><span class="w"> </span><span class="n">Gaussian</span><span class="w"> </span><span class="nl">policy</span><span class="p">:</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tanh</span><span class="p">(</span><span class="n">μ</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">σε</span><span class="p">)</span><span class="w">                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">3.</span><span class="w"> </span><span class="n">Twin</span><span class="w"> </span><span class="n">Q</span><span class="o">-</span><span class="nl">critics</span><span class="p">:</span><span class="w"> </span><span class="nf">min</span><span class="p">(</span><span class="n">Q1</span><span class="p">,</span><span class="w"> </span><span class="n">Q2</span><span class="p">)</span><span class="w"> </span><span class="n">prevents</span><span class="w"> </span><span class="n">overestimation</span><span class="w">        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">4.</span><span class="w"> </span><span class="n">Automatic</span><span class="w"> </span><span class="nl">temperature</span><span class="p">:</span><span class="w"> </span><span class="n">α</span><span class="w"> </span><span class="n">adapts</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">maintain</span><span class="w"> </span><span class="n">target</span><span class="w"> </span><span class="n">entropy</span><span class="w">  </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="mf">5.</span><span class="w"> </span><span class="k">Off</span><span class="o">-</span><span class="nl">policy</span><span class="p">:</span><span class="w"> </span><span class="n">high</span><span class="w"> </span><span class="n">sample</span><span class="w"> </span><span class="n">efficiency</span><span class="w"> </span><span class="n">via</span><span class="w"> </span><span class="n">replay</span><span class="w"> </span><span class="n">buffer</span><span class="w">        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">SAC</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="k">go</span><span class="o">-</span><span class="k">to</span><span class="w"> </span><span class="n">algorithm</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">continuous</span><span class="w"> </span><span class="n">control</span><span class="w"> </span><span class="n">tasks</span><span class="w">         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="n">due</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">its</span><span class="w"> </span><span class="n">stability</span><span class="p">,</span><span class="w"> </span><span class="n">sample</span><span class="w"> </span><span class="n">efficiency</span><span class="p">,</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">minimal</span><span class="w"> </span><span class="n">tuning</span><span class="p">.</span><span class="w">   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">                                                                 </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<hr />
+<h2 id="references">References<a class="header-link" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://arxiv.org/abs/1801.01290">SAC Paper (v1)</a> — Haarnoja et al. 2018</li>
+<li><a href="https://arxiv.org/abs/1812.05905">SAC Paper (v2, auto-alpha)</a> — Haarnoja et al. 2018</li>
+<li><a href="https://spinningup.openai.com/en/latest/algorithms/sac.html">Spinning Up: SAC</a></li>
+<li><a href="https://stable-baselines3.readthedocs.io/en/master/modules/sac.html">Stable-Baselines3 SAC</a></li>
+<li><a href="https://docs.cleanrl.dev/rl-algorithms/sac/">CleanRL SAC Implementation</a></li>
+</ul>
+    </div>
+
+    
+<div class="lesson-toolbar lesson-toolbar--bottom">
+    <div class="toolbar-nav toolbar-nav--prev">
+        
+        <a href="/study/en/Reinforcement_Learning/13_Model_Based_RL.html" class="nav-prev">
+            <span class="nav-label">Previous</span>
+            <span class="nav-title">13. Model-Based Reinforcement Learning</span>
+        </a>
+        
+    </div>
+    <div class="toolbar-actions">
+        <button class="btn btn-copy-link" data-action="copy-link" title="Copy link">
+            <span class="icon">🔗</span>
+            <span class="text">Copy link</span>
+        </button>
+        <a href="/study/en/Reinforcement_Learning/" class="btn btn-topic-link" title="Back to topic list">
+            <span class="icon">📋</span>
+            <span class="text">Topic list</span>
+        </a>
+    </div>
+    <div class="toolbar-nav toolbar-nav--next">
+        
+    </div>
+</div>
+
+
+    <div class="toolbar-keyboard-hint">
+        <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate between lessons
+    </div>
+</article>
+
+<!-- Scroll to top floating button -->
+<button class="scroll-to-top" id="scroll-to-top" title="Scroll to top" aria-label="Scroll to top">↑</button>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="/study/static/js/app.js"></script>
+    <script>
+        function switchLanguage(newLang) {
+            const path = window.location.pathname;
+            const base = '/study';
+            const currentLang = 'en';
+            const newPath = path.replace(base + '/' + currentLang + '/', base + '/' + newLang + '/');
+            window.location.href = newPath + window.location.search;
+        }
+    </script>
+    
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Copy link - independent feedback per button
+        document.querySelectorAll('[data-action="copy-link"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href);
+                var textEl = this.querySelector('.text');
+                var originalText = textEl.textContent;
+                textEl.textContent = 'Copied!';
+                setTimeout(function() { textEl.textContent = originalText; }, 2000);
+            });
+        });
+
+        // Add copy buttons to code blocks
+        document.querySelectorAll('.lesson-content pre').forEach(function(pre) {
+            var copyBtn = document.createElement('button');
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', function() {
+                var code = pre.querySelector('code');
+                var text = code ? code.textContent : pre.textContent;
+                navigator.clipboard.writeText(text);
+                copyBtn.textContent = 'Copied!';
+                setTimeout(function() { copyBtn.textContent = 'Copy'; }, 2000);
+            });
+            pre.style.position = 'relative';
+            pre.appendChild(copyBtn);
+        });
+
+        // Scroll to top button
+        var scrollBtn = document.getElementById('scroll-to-top');
+        window.addEventListener('scroll', function() {
+            scrollBtn.classList.toggle('visible', window.scrollY > 300);
+        });
+        scrollBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Keyboard shortcuts: left/right arrows for lesson navigation
+        document.addEventListener('keydown', function(e) {
+            var tag = document.activeElement.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            if (e.key === 'ArrowLeft') {
+                var prevLink = document.querySelector('.nav-prev');
+                if (prevLink) prevLink.click();
+            } else if (e.key === 'ArrowRight') {
+                var nextLink = document.querySelector('.nav-next');
+                if (nextLink) nextLink.click();
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
+{% endraw %}
